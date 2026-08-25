@@ -272,6 +272,11 @@ export class ConfigWriter {
         delete patched.telegram.default_agent;
         notes.push('清空 channels.telegram.default_agent');
       }
+      if (patched.whatsapp?.default_agent === id) {
+        patched.whatsapp = { ...patched.whatsapp };
+        delete patched.whatsapp.default_agent;
+        notes.push('清空 channels.whatsapp.default_agent');
+      }
       if (patched.http?.default_agent === id) {
         patched.http = { ...patched.http };
         delete patched.http.default_agent;

@@ -160,6 +160,18 @@ export const telegramChannelSchema = z.strictObject({
     .optional(),
 });
 
+/** WhatsApp 通道。使用 Baileys 连接 WhatsApp Web，多文件 auth_state 落盘保存二维码登录态。 */
+export const whatsappChannelSchema = z.strictObject({
+  enabled: z.boolean().optional(),
+  auth_dir: z.string().min(1).optional(),
+  default_agent: z.string().min(1).optional(),
+  mention_patterns: z.array(z.string().min(1)).optional(),
+  message_char_limit: z.number().int().positive().optional(),
+  reconnect_initial_ms: z.number().int().positive().optional(),
+  reconnect_max_ms: z.number().int().positive().optional(),
+  qr_log: z.boolean().optional(),
+});
+
 export const httpChannelSchema = z.strictObject({
   enabled: z.boolean().optional(),
   bind: z.string().min(1).optional(),
@@ -175,6 +187,7 @@ export const channelsSchema = z.strictObject({
   edit_interval_ms: z.number().int().positive().optional(),
   async_threshold_ms: z.number().int().positive().optional(),
   telegram: telegramChannelSchema.optional(),
+  whatsapp: whatsappChannelSchema.optional(),
   http: httpChannelSchema.optional(),
   cli: cliChannelSchema.optional(),
 });
@@ -232,6 +245,7 @@ export type LimitsConfig = z.infer<typeof limitsSchema>;
 export type ProfileConfig = z.infer<typeof profileSchema>;
 export type ChannelsConfig = z.infer<typeof channelsSchema>;
 export type TelegramChannelConfig = z.infer<typeof telegramChannelSchema>;
+export type WhatsAppChannelConfig = z.infer<typeof whatsappChannelSchema>;
 export type McpServerConfig = z.infer<typeof mcpServerSchema>;
 export type ToolSelectionConfig = z.infer<typeof toolSelectionSchema>;
 export type ModelBindingConfig = z.infer<typeof modelBindingSchema>;

@@ -634,6 +634,46 @@ function channelSpecs(): KeySpec[] {
       defaults: { extract: (ctx) => ctx.root.channels?.telegram?.webhook?.path, source: 'channels.telegram.webhook.path' },
       builtin: { extract: () => TELEGRAM_WEBHOOK_PATH, source: '内置 ' + TELEGRAM_WEBHOOK_PATH },
     }),
+    makeSpec('channels.whatsapp.enabled', 'global', {
+      env: { extract: (ctx) => envBoolean(ctx.env, 'HAP_WHATSAPP_ENABLED'), source: 'HAP_WHATSAPP_ENABLED' },
+      defaults: { extract: (ctx) => ctx.root.channels?.whatsapp?.enabled, source: 'channels.whatsapp.enabled' },
+      builtin: { extract: () => BUILTIN_CHANNELS.whatsapp.enabled, source: 'BUILTIN_CHANNELS.whatsapp.enabled' },
+    }),
+    makeSpec('channels.whatsapp.auth_dir', 'global', {
+      env: { extract: (ctx) => envString(ctx.env, 'HAP_WHATSAPP_AUTH_DIR'), source: 'HAP_WHATSAPP_AUTH_DIR' },
+      defaults: { extract: (ctx) => ctx.root.channels?.whatsapp?.auth_dir, source: 'channels.whatsapp.auth_dir' },
+      builtin: { extract: () => BUILTIN_CHANNELS.whatsapp.authDir, source: 'BUILTIN_CHANNELS.whatsapp.authDir' },
+    }),
+    makeSpec('channels.whatsapp.default_agent', 'global', {
+      env: { extract: (ctx) => envString(ctx.env, 'HAP_WHATSAPP_DEFAULT_AGENT'), source: 'HAP_WHATSAPP_DEFAULT_AGENT' },
+      defaults: { extract: (ctx) => ctx.root.channels?.whatsapp?.default_agent, source: 'channels.whatsapp.default_agent' },
+      builtin: { extract: () => undefined, source: '留空则回落到 default_agent' },
+    }),
+    makeSpec('channels.whatsapp.mention_patterns', 'global', {
+      env: { extract: (ctx) => envList(ctx.env, 'HAP_WHATSAPP_MENTIONS'), source: 'HAP_WHATSAPP_MENTIONS' },
+      defaults: { extract: (ctx) => ctx.root.channels?.whatsapp?.mention_patterns, source: 'channels.whatsapp.mention_patterns' },
+      builtin: { extract: () => [...BUILTIN_CHANNELS.whatsapp.mentionPatterns], source: 'BUILTIN_CHANNELS.whatsapp.mentionPatterns' },
+    }),
+    makeSpec('channels.whatsapp.message_char_limit', 'global', {
+      env: { extract: (ctx) => envNumber(ctx.env, 'HAP_WHATSAPP_MESSAGE_CHAR_LIMIT'), source: 'HAP_WHATSAPP_MESSAGE_CHAR_LIMIT' },
+      defaults: { extract: (ctx) => ctx.root.channels?.whatsapp?.message_char_limit, source: 'channels.whatsapp.message_char_limit' },
+      builtin: { extract: () => BUILTIN_CHANNELS.whatsapp.messageCharLimit, source: 'BUILTIN_CHANNELS.whatsapp.messageCharLimit' },
+    }),
+    makeSpec('channels.whatsapp.reconnect_initial_ms', 'global', {
+      env: { extract: (ctx) => envNumber(ctx.env, 'HAP_WHATSAPP_RECONNECT_INITIAL_MS'), source: 'HAP_WHATSAPP_RECONNECT_INITIAL_MS' },
+      defaults: { extract: (ctx) => ctx.root.channels?.whatsapp?.reconnect_initial_ms, source: 'channels.whatsapp.reconnect_initial_ms' },
+      builtin: { extract: () => BUILTIN_CHANNELS.whatsapp.reconnectInitialMs, source: 'BUILTIN_CHANNELS.whatsapp.reconnectInitialMs' },
+    }),
+    makeSpec('channels.whatsapp.reconnect_max_ms', 'global', {
+      env: { extract: (ctx) => envNumber(ctx.env, 'HAP_WHATSAPP_RECONNECT_MAX_MS'), source: 'HAP_WHATSAPP_RECONNECT_MAX_MS' },
+      defaults: { extract: (ctx) => ctx.root.channels?.whatsapp?.reconnect_max_ms, source: 'channels.whatsapp.reconnect_max_ms' },
+      builtin: { extract: () => BUILTIN_CHANNELS.whatsapp.reconnectMaxMs, source: 'BUILTIN_CHANNELS.whatsapp.reconnectMaxMs' },
+    }),
+    makeSpec('channels.whatsapp.qr_log', 'global', {
+      env: { extract: (ctx) => envBoolean(ctx.env, 'HAP_WHATSAPP_QR_LOG'), source: 'HAP_WHATSAPP_QR_LOG' },
+      defaults: { extract: (ctx) => ctx.root.channels?.whatsapp?.qr_log, source: 'channels.whatsapp.qr_log' },
+      builtin: { extract: () => BUILTIN_CHANNELS.whatsapp.qrLog, source: 'BUILTIN_CHANNELS.whatsapp.qrLog' },
+    }),
     makeSpec('channels.http.enabled', 'global', {
       env: { extract: (ctx) => envBoolean(ctx.env, 'HAP_HTTP_ENABLED'), source: 'HAP_HTTP_ENABLED' },
       defaults: { extract: (ctx) => ctx.root.channels?.http?.enabled, source: 'channels.http.enabled' },
@@ -676,6 +716,7 @@ export const KEY_ALIASES: Record<string, string> = {
   profile: 'active_profile',
   data_dir: 'paths.data_dir',
   telegram_mode: 'channels.telegram.mode',
+  whatsapp: 'channels.whatsapp.enabled',
 };
 // ─────────── 取值通路：resolve 与 explain 的唯一入口 ───────────
 
@@ -946,6 +987,16 @@ export class ConfigResolver {
         mentionPatterns: asStringArray(this.read('channels.telegram.mention_patterns', ctx)) ?? [...BUILTIN_CHANNELS.telegram.mentionPatterns],
         messageCharLimit: asNumber(this.read('channels.telegram.message_char_limit', ctx)) ?? BUILTIN_CHANNELS.telegram.messageCharLimit,
         webhook,
+      },
+      whatsapp: {
+        enabled: asBoolean(this.read('channels.whatsapp.enabled', ctx)) ?? BUILTIN_CHANNELS.whatsapp.enabled,
+        authDir: expandHome(asString(this.read('channels.whatsapp.auth_dir', ctx)) ?? BUILTIN_CHANNELS.whatsapp.authDir),
+        defaultAgent: asString(this.read('channels.whatsapp.default_agent', ctx)),
+        mentionPatterns: asStringArray(this.read('channels.whatsapp.mention_patterns', ctx)) ?? [...BUILTIN_CHANNELS.whatsapp.mentionPatterns],
+        messageCharLimit: asNumber(this.read('channels.whatsapp.message_char_limit', ctx)) ?? BUILTIN_CHANNELS.whatsapp.messageCharLimit,
+        reconnectInitialMs: asNumber(this.read('channels.whatsapp.reconnect_initial_ms', ctx)) ?? BUILTIN_CHANNELS.whatsapp.reconnectInitialMs,
+        reconnectMaxMs: asNumber(this.read('channels.whatsapp.reconnect_max_ms', ctx)) ?? BUILTIN_CHANNELS.whatsapp.reconnectMaxMs,
+        qrLog: asBoolean(this.read('channels.whatsapp.qr_log', ctx)) ?? BUILTIN_CHANNELS.whatsapp.qrLog,
       },
       http: {
         enabled: asBoolean(this.read('channels.http.enabled', ctx)) ?? BUILTIN_CHANNELS.http.enabled,

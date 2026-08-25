@@ -63,6 +63,16 @@ function channelsOf(patch: Partial<ResolvedChannels['telegram']> = {}): Resolved
       webhook: undefined,
       ...patch,
     },
+    whatsapp: {
+      enabled: false,
+      authDir: join(root, 'wa-auth'),
+      defaultAgent: undefined,
+      mentionPatterns: [],
+      messageCharLimit: 4096,
+      reconnectInitialMs: 1000,
+      reconnectMaxMs: 30000,
+      qrLog: false,
+    },
     http: { enabled: false, bind: '127.0.0.1:8798', defaultAgent: undefined },
     cli: { enabled: false, defaultAgent: undefined },
   };

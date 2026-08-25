@@ -156,6 +156,18 @@ export interface ResolvedTelegramChannel {
   webhook: ResolvedTelegramWebhook | undefined;
 }
 
+/** 解析后的 WhatsApp 通道。authDir 为 Baileys 多文件登录态目录。 */
+export interface ResolvedWhatsAppChannel {
+  enabled: boolean;
+  authDir: string;
+  defaultAgent: string | undefined;
+  mentionPatterns: string[];
+  messageCharLimit: number;
+  reconnectInitialMs: number;
+  reconnectMaxMs: number;
+  qrLog: boolean;
+}
+
 export interface ResolvedHttpChannel {
   enabled: boolean;
   bind: string;
@@ -174,6 +186,7 @@ export interface ResolvedChannels {
   /** 超过该时长转异步卡片（FR-CHAN-008） */
   asyncThresholdMs: number;
   telegram: ResolvedTelegramChannel;
+  whatsapp: ResolvedWhatsAppChannel;
   http: ResolvedHttpChannel;
   cli: ResolvedCliChannel;
 }

@@ -10,6 +10,7 @@
  */
 
 import { TelegramChannel } from './telegram.js';
+import { WhatsAppChannel } from './whatsapp.js';
 import { HttpChannel } from './http.js';
 import { CliChannel } from './cli.js';
 import { describeError } from './dispatcher.js';
@@ -54,6 +55,7 @@ export class ChannelManager {
   private readonly includeCli: boolean;
   private readonly channels: Channel[] = [];
   private telegram: TelegramChannel | undefined;
+  private whatsapp: WhatsAppChannel | undefined;
 
   constructor(options: ChannelManagerOptions) {
     this.orchestrator = options.orchestrator;
@@ -92,6 +94,17 @@ export class ChannelManager {
       this.telegram = telegram;
       this.channels.push(telegram);
     }
+    if (channels.whatsapp.enabled) {
+      const whatsapp = new WhatsAppChannel({
+        host: this.host,
+        channels,
+        limits,
+        paths,
+        log: this.log,
+      });
+      this.whatsapp = whatsapp;
+      this.channels.push(whatsapp);
+    }
     if (channels.http.enabled) {
       this.channels.push(new HttpChannel({ host: this.host, channels, limits, paths, log: this.log }));
     }
@@ -117,6 +130,7 @@ export class ChannelManager {
     }
     this.channels.length = 0;
     this.telegram = undefined;
+    this.whatsapp = undefined;
   }
 
   /**
@@ -140,6 +154,10 @@ export class ChannelManager {
         '如需继续请重新下发指令。';
       if (row.sessionKey.startsWith('chat:') && this.telegram !== undefined) {
         void this.telegram.notify(row.sessionKey.slice('chat:'.length), text);
+        continue;
+      }
+      if (row.sessionKey.startsWith('whatsapp:') && this.whatsapp !== undefined) {
+        void this.whatsapp.notify(row.sessionKey.slice('whatsapp:'.length), text);
         continue;
       }
       this.log(text);

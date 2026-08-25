@@ -313,7 +313,7 @@ HAP 是一个自托管的多智能体运行平台：用一份配置文件即可�
 （架构对标 `openclaw` 的 `ChannelManager` 与通道插件模型）
 
 **FR-CHAN-002**：内置通道与实现分期
-系统应内置 `telegram`、`http`（含 Webhook 与 SSE）、`cli` 三个通道插件作为首发实现，其中 **`telegram` 为手机端首发通道**（已决策，见 §10.2 Q1）；`whatsapp` 插件应在通道接口稳定后作为后续阶段实现，且其加入不应要求改动 ChannelPlugin 接口。
+系统内置 `telegram`、`whatsapp`、`http`（含 Webhook 与 SSE）、`cli` 四个通道插件。`telegram` 与 `whatsapp` 均为手机端通道：telegram 面向 Bot API，whatsapp 基于 @whiskeysockets/baileys 实现多设备协议，二者共用 ChannelPlugin 接口与唤起词/mention 路由语义。whatsapp 已于 2026-08-25 完成（见 §8 实施清单）。
 
 **FR-CHAN-003**：入站归一化
 当任一通道收到平台事件时，系统应将其归一化为包含 `channel`、`account_id`、`peer`、`sender`、`body`、`attachments`、`command`、`platform_message_id`、`received_at` 字段的统一结构。
@@ -597,7 +597,7 @@ message_char_limit = 4096            # 平台硬上限，超出分片（FR-CHAN-
 enabled = true
 bind = "127.0.0.1:8787"
 
-# [channels.whatsapp] 后续阶段实现，接口已预留（FR-CHAN-002）
+# [channels.whatsapp] 已实现：enabled/auth_dir/default_agent/mention_patterns/message_char_limit/reconnect_initial_ms/reconnect_max_ms/qr_log
 
 # ─────────── 外部 MCP 工具 ───────────
 [mcp_servers.filesystem]
@@ -847,7 +847,7 @@ Then 编辑间隔均不小于 `edit_interval_ms`；内容未变化的编辑被�
 - [x] 实现 CommandParser：8 个斜杠命令 + `@` 指派 + 群聊 mention 触发
 - [x] 实现 TelegramChannel（**首发通道**：polling / webhook 互斥校验 + 4096 分片 + 编辑幂等处理 + 断线补投）
 - [x] 实现 HttpChannel（Webhook + SSE）与 CliChannel
-- [ ] （后续阶段 / 范围外）实现 WhatsAppChannel：连接持有 + 重连循环 + 断线补投，不得改动 ChannelPlugin 接口
+- [x] 实现 WhatsAppChannel：Baileys socket 工厂可注入、QR 扫码登录、凭据落盘、指数退避重连、消息 id 去重、fromMe 过滤、群聊唤起词门禁、@agentId 路由、附件下载落盘、出站 spool 重投（2026-08-25）
 - [x] 实现 OutboundWriter：流式编辑同一消息 + 长文语义分片 + 附件落地
 - [x] 实现异步任务卡片与进度更新
 - [x] 功能测试覆盖 AC-001 ~ AC-022（§7.3）

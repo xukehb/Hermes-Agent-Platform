@@ -97,7 +97,24 @@ Telegram 支持以下指令：
 @hap @researcher 查一下这个接口的行为
 ```
 
-## 5. HTTP 与 CLI 通道
+## 5. WhatsApp 手机端通道
+
+WhatsApp 通道基于 @whiskeysockets/baileys 实现，首次启动会在终端打印二维码，用手机 WhatsApp「已链接的设备」扫码即可完成登录。登录凭据持久化在 channels.whatsapp.auth_dir（默认 ~/.hap/whatsapp-auth），重启后免扫码。
+
+在 hap.toml 中启用：
+
+```toml
+[channels.whatsapp]
+enabled = true
+# auth_dir = '~/.hap/whatsapp-auth'
+# default_agent = 'coder'
+# mention_patterns = ['@hap']
+# qr_log = true
+```
+
+群聊与 Telegram 一致：只有唤起词、@智能体id 或斜杠命令会触发响应；私聊默认全部响应。断线后自动按指数退避重连，用户主动登出不再重连。
+
+## 6. HTTP 与 CLI 通道
 
 本地一次性运行：
 
@@ -107,7 +124,7 @@ npx tsx src/cli/bin.ts run "解释当前项目结构" --agent coder
 
 HTTP 通道提供 webhook 与 SSE 流式能力，可用于将外部系统接入同一套任务编排器。
 
-## 6. 本地验证
+## 7. 本地验证
 
 类型检查：
 

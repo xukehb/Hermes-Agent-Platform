@@ -19,7 +19,7 @@ import type {
 } from '../agent/index.js';
 
 /** 已实现的通道种类。 */
-export type ChannelName = 'telegram' | 'http' | 'cli';
+export type ChannelName = 'telegram' | 'whatsapp' | 'http' | 'cli';
 
 /** 附件沿用消息层定义，通道不自造格式。 */
 export type ChannelAttachments = NonNullable<AgentMessage['attachments']>;
@@ -42,7 +42,7 @@ export interface OutboundTarget {
 /** 归一化后的入站消息（FR-CHAN-001）。 */
 export interface InboundMessage {
   channel: ChannelName;
-  /** 会话键：Telegram 用 chat:<id>，HTTP 用 http:<session>，CLI 用 cli:<agent> */
+  /** 会话键：Telegram 用 chat:<id>，WhatsApp 用 whatsapp:<jid>，HTTP 用 http:<session>，CLI 用 cli:<agent> */
   sessionKey: string;
   /** 已剥离命令前缀与 @mention 的正文 */
   text: string;

@@ -67,6 +67,16 @@ function channelsOf(defaultAgent?: string): ResolvedChannels {
       messageCharLimit: BUILTIN_CHANNELS.telegram.messageCharLimit,
       webhook: undefined,
     },
+    whatsapp: {
+      enabled: false,
+      authDir: join(root, 'wa-auth'),
+      defaultAgent: undefined,
+      mentionPatterns: [],
+      messageCharLimit: 4096,
+      reconnectInitialMs: 1000,
+      reconnectMaxMs: 30000,
+      qrLog: false,
+    },
     http: { enabled: true, bind: '127.0.0.1:8799', defaultAgent },
     cli: { enabled: true, defaultAgent: undefined },
   };

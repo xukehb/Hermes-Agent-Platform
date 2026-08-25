@@ -27,6 +27,11 @@ export {
 } from './dispatcher.js';
 export { parseBind, type BindAddress } from './bind.js';
 export { TelegramChannel, describeAttachments, type AttachmentSpec, type TelegramChannelOptions } from './telegram.js';
+export {
+  WhatsAppChannel,
+  type SocketFactory,
+  type WhatsAppChannelOptions,
+} from './whatsapp.js';
 export { HttpChannel, type HttpChannelOptions } from './http.js';
 export { CliChannel, type CliChannelOptions } from './cli.js';
 export { ChannelManager, createChannelHost, type ChannelManagerOptions } from './manager.js';

@@ -344,6 +344,9 @@ function registerConfig(program: Command, globals: () => GlobalOptions): void {
         ['Telegram', yesNo(channels.telegram.enabled) + '（' + channels.telegram.mode + '，token 取自 ' + channels.telegram.tokenEnv + '）'],
         ['Telegram 默认智能体', orDash(channels.telegram.defaultAgent)],
         ['Telegram 唤起词', channels.telegram.mentionPatterns.join(' / ')],
+        ['WhatsApp', yesNo(channels.whatsapp.enabled) + '（凭据目录 ' + channels.whatsapp.authDir + '）'],
+        ['WhatsApp 默认智能体', orDash(channels.whatsapp.defaultAgent)],
+        ['WhatsApp 唤起词', channels.whatsapp.mentionPatterns.join(' / ')],
         ['HTTP', yesNo(channels.http.enabled) + '（' + channels.http.bind + '）'],
         ['CLI', yesNo(channels.cli.enabled)],
       ];

@@ -228,6 +228,7 @@ export function validateCrossReferences(config: HapConfig, filePath: string): vo
   const agentPointers: Array<[string, string | undefined]> = [
     ['default_agent', config.default_agent],
     ['channels.telegram.default_agent', config.channels?.telegram?.default_agent],
+    ['channels.whatsapp.default_agent', config.channels?.whatsapp?.default_agent],
     ['channels.http.default_agent', config.channels?.http?.default_agent],
     ['channels.cli.default_agent', config.channels?.cli?.default_agent],
   ];

@@ -61,6 +61,18 @@
 
 ## 六、最终判定
 
+## 七、WhatsApp 通道补齐记录（2026-08-25）
+
+本轮在既有 telegram/http/cli 三通道基础上新增 whatsapp 通道，规格 §9 的唯一后续阶段项已闭环：
+
+- 配置层：schema/resolved/defaults/resolver/loader/writer 全部接入 [channels.whatsapp]，含 enabled、auth_dir、default_agent、mention_patterns、message_char_limit、reconnect_initial_ms、reconnect_max_ms、qr_log 八个键；agent remove 时自动清空 default_agent 引用。
+- 通道实现：src/channels/whatsapp.ts 基于 @whiskeysockets/baileys v7 rc14。socket 工厂可注入，支持 QR 扫码登录、凭据持久化、断线指数退避重连（loggedOut 不重连）、消息 id 去重、fromMe 过滤、群聊唤起词门禁与 @agentId 路由、附件下载落盘、出站 spool 重投。
+- 集成点：ChannelManager 按 enabled 启停并在中断通知里路由 whatsapp: 会话；src/channels/index.ts 导出；CLI config channels 显示三行 WhatsApp 状态。
+- 测试：tests/channels-whatsapp.test.ts 覆盖构造、notify 未连接静默失败、stop 未启动 no-op；telegram/http 测试夹具同步补上 whatsapp 字段。
+- 验证结果：tsc --noEmit 通过（0 错误）；vitest run 通过（15 文件 / 436 项）。
+
+WhatsApp 真机扫码登录与收发属部署期验证项，需要用户手机操作，不在本地自动化范围内。
+
 类型检查与全量测试均通过，规格的 79 条功能需求全部有对应实现与测试覆盖，用户四项核心诉求全部落地。2026-08-25 已将规格 §8 的实施清单由过期空勾同步为真实完成状态，并新增 `docs/index.md` 使用说明。判定：**通过**。
 
 剩余的三项联网验证属部署期确认事项，不构成实现缺陷，已在上表标注风险等级与已有的替代验证手段。
