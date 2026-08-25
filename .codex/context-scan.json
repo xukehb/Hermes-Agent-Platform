@@ -1,0 +1,79 @@
+{
+  "元信息": {
+    "日期": "2026-08-24",
+    "执行者": "Codex",
+    "阶段": "阶段0 上下文收集"
+  },
+  "位置": {
+    "工作区": "C:/Users/xk/Documents/ChatGPT/CodexConnect",
+    "现状": "空仓库，仅含 .git 目录",
+    "证据": "rg --files 输出为空；Get-ChildItem -Force 仅返回 .git (d--h-)",
+    "结论": "绿地项目，无既有代码/配置/测试可复用，需自行确立分层与风格约定"
+  },
+  "外部参考实现": {
+    "NousResearch/Hermes-Function-Calling": {
+      "检索工具": "deepwiki ask_question",
+      "要点": [
+        "ChatML 格式，<|im_start|>/<|im_end|> 分隔 system/user/assistant/tool",
+        "system 段内嵌 <tools>[JSON Schema 数组]</tools>",
+        "模型输出 <tool_call>{\"name\":...,\"arguments\":{...}}</tool_call>",
+        "工具结果以 <tool_response>{\"name\":...,\"content\":...}</tool_response> 回灌",
+        "Hermes-3 起引入 <scratch_pad> 记录推理与规划",
+        "system 段内含 FunctionCall 的 Pydantic JSON Schema 约束输出",
+        "指令要求一次一个函数调用、分析结果后继续，直至完成或达到最大迭代数"
+      ]
+    },
+    "ymichael/open-codex": {
+      "检索工具": "deepwiki read_wiki_structure + ask_question",
+      "要点": [
+        "StoredConfig 字段：provider / model / baseURL(可选覆盖)",
+        "密钥走环境变量：OPENAI_API_KEY、GOOGLE_GENERATIVE_AI_API_KEY、OPENROUTER_API_KEY、XAI_API_KEY；Ollama 无密钥，用 OLLAMA_BASE_URL",
+        "loadConfig 优先级：CLI 参数 > 环境变量 > 配置文件 > 默认值",
+        "baseURLForProvider / defaultModelsForProvider / getAPIKeyForProviderOrExit 三个解析函数"
+      ]
+    },
+    "openai/codex": {
+      "检索工具": "deepwiki ask_question",
+      "要点": [
+        "[model_providers.*] 字段：name / base_url / env_key / wire_api / http_headers / env_http_headers / request_max_retries / stream_max_retries / stream_idle_timeout_ms",
+        "[profiles.*] 可整组覆盖 model / model_provider / approval_policy / model_reasoning_effort",
+        "profiles 用于在本地模型与云端模型之间整组切换"
+      ]
+    },
+    "openclaw/openclaw": {
+      "检索工具": "deepwiki ask_question",
+      "要点": [
+        "agents.entries.* 每智能体独立 workspace / agentDir / SQLite 会话库",
+        "每智能体可独立 model{primary,fallbacks} / utilityModel / params / skills / identity / tools{profile,allow,deny} / subagents{allowAgents} / runtime{type,mode,cwd}",
+        "models.providers 支持自定义 baseUrl / apiKey / api 类型",
+        "ChannelManager 编排通道账号生命周期，通道以插件形式扩展",
+        "入站归一化为统一结构(PreparedChannelInbound)：正文、发送者、会话、命令",
+        "Telegram 用轮询会话 + 入站队列 worker 抗突发；WhatsApp 由网关持有 socket 与重连循环",
+        "SessionKey 锚定回复路由，跨通道跨设备保持上下文",
+        "子智能体通过 spawn 工具派生"
+      ]
+    }
+  },
+  "技术栈决策": {
+    "语言运行时": "TypeScript + Node.js（与 open-codex / openclaw 生态一致，通道 SDK 与流式解析生态最全）",
+    "复用组件": [
+      "OpenAI 兼容 SDK（LLM 调用）",
+      "TOML 解析库（配置）",
+      "SQLite（会话与任务持久化）",
+      "各平台官方/主流 SDK（Telegram/WhatsApp）",
+      "主流 schema 校验库（工具参数与配置校验）"
+    ],
+    "必须自研且不可替代": "Hermes 流式标签增量解析状态机（无现成库覆盖 <tool_call>/<think>/<scratch_pad> 跨 chunk 断裂）"
+  },
+  "测试基线": {
+    "现状": "无既有测试文件",
+    "方案": "单元测试 + 冒烟测试 + 功能测试，全部由本地 AI 自动执行，禁止 CI（AGENTS.md 第5节）"
+  },
+  "观察报告": [
+    "用户表述中的 codex hermes / deepseek hermes 并非上游官方项目名，需在规格中先做概念澄清并锚定为 Hermes 提示协议 + 不同后端模型的组合，避免后续实现偏航",
+    "最高技术风险在流式解析：XML 标签会跨 chunk 断裂，正则整体匹配方案在流式场景必然失效",
+    "非 Hermes 模型（DeepSeek 原生 function calling）需协议适配层，否则无法与 Hermes agent loop 共用",
+    "手机端长任务会触碰平台消息超时与长度上限，需异步进度卡片与消息分片",
+    "AGENTS.md 强制删除安全性设计，与 feature-forge 模板的 Security 章节冲突，需显式裁决留痕"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "name": "hermes-agent-platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Hermes 多智能体平台",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "hap": "tsx src/cli/bin.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.120.0",
+    "@clack/prompts": "^1.7.0",
+    "@hono/node-server": "^2.1.1",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "better-sqlite3": "^12.11.1",
+    "commander": "^15.0.0",
+    "execa": "^10.0.1",
+    "grammy": "^1.45.1",
+    "hono": "^4.13.3",
+    "openai": "^7.5.0",
+    "pino": "^10.3.1",
+    "smol-toml": "^1.8.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.15.0",
+    "eslint": "^9.0.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  }
+}

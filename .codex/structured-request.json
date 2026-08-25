@@ -1,0 +1,102 @@
+{
+  "元信息": {
+    "日期": "2026-08-24",
+    "执行者": "Codex",
+    "阶段": "阶段0 结构化需求（v1.1.0：已并入用户第二轮决策）",
+    "规格版本": "v1.1.0"
+  },
+  "原始指令": "帮我结合 codex hermes、deepseek hermes 以及 opencodex，写一个 hermes 的智能体；需要可以类似 opencodex 随意配置模型，可以类似 openclaw 生成对应智能体，将每个智能体指向不同模型执行不同任务，并且可以通过手机端下发指令；调用对应 skill 生成详细的需求文档",
+  "目标": "产出可直接进入实现阶段的 Hermes 多智能体平台需求规格",
+  "范围": {
+    "本次交付": [
+      "需求规格文档 specs/hermes-agent-platform.spec.md",
+      ".codex/ 上下文与审查留痕"
+    ],
+    "不含": [
+      "生产实现代码",
+      "UI 视觉设计稿"
+    ]
+  },
+  "核心能力": [
+    {
+      "编号": "C1",
+      "名称": "任意模型可配置",
+      "对标": "open-codex + openai/codex 配置分层"
+    },
+    {
+      "编号": "C2",
+      "名称": "Hermes 协议运行时",
+      "对标": "NousResearch Hermes 函数调用规范"
+    },
+    {
+      "编号": "C3",
+      "名称": "智能体生成器",
+      "对标": "openclaw agents.entries"
+    },
+    {
+      "编号": "C4",
+      "名称": "多智能体多模型多任务路由",
+      "对标": "openclaw model.fallbacks + 能力标签"
+    },
+    {
+      "编号": "C5",
+      "名称": "手机端指令下发",
+      "对标": "openclaw ChannelManager + SessionKey"
+    }
+  ],
+  "使用的技能": [
+    "feature-forge（结构化需求研讨 + EARS + Given/When/Then + 实施清单）"
+  ],
+  "约束裁决": [
+    {
+      "冲突": "feature-forge 模板要求 Security 非功能需求章节 vs 生效操作手册 C:/Users/xk/.codex/AGENTS.md 第2节要求删除所有安全性设计并拒绝新增",
+      "裁决": "AGENTS.md 优先，规格不含认证/鉴权/加密/沙箱/权限模型；以可靠性与配额类非功能需求替代",
+      "依据": "AGENTS.md 第2节约束优先级；用户与项目指令优先于技能模板。注：本仓库内无 AGENTS.md，生效文件为 C:/Users/xk/.codex/AGENTS.md"
+    },
+    {
+      "冲突": "feature-forge 要求用 AskUserQuestions 做结构化访谈 vs 当前 Default 协作模式要求优先做合理假设直接执行",
+      "裁决": "以调研证据替代人工访谈，所有假设显式落入『假设与裁决』与『待决问题』章节供用户复核",
+      "依据": "Default 模式指令 + AGENTS.md 第9节最大化自主性"
+    }
+  ],
+  "验证方式": "本地 AI 自动执行单元测试、冒烟测试、功能测试；禁止 CI 与人工外包验证",
+  "用户决策记录": [
+    {
+      "编号": "Q1",
+      "问题": "首个实现的手机端通道",
+      "决策": "Telegram",
+      "决策时间": "2026-08-24",
+      "落实位置": "规格 §2.7 FR-CHAN-002/015/016、§4 通道配置、§5 AC-022、§8 阶段三",
+      "影响": "WhatsApp 降级为后续阶段实现，ChannelPlugin 接口须保持其可插入而不改接口"
+    },
+    {
+      "编号": "Q2",
+      "问题": "默认主力模型走本地还是云端",
+      "决策": "云端为主力，并列 DeepSeek、OpenAI(ChatGPT)、Anthropic Claude、智谱 GLM、Google Gemini 五家主流厂商；本地 Ollama 保留为离线备用 profile",
+      "决策时间": "2026-08-24",
+      "落实位置": "规格 §2.2 FR-PROV-008/009、§2.5 FR-LOOP-011/011A/012/015、§4 全部配置、§5 AC-019~AC-021、§7.1、§8 阶段一",
+      "影响": "需求范围实质扩大：协议适配器由 3 个增至 4 个（新增 anthropic）；新增跨协议降级历史重译需求"
+    }
+  ],
+  "厂商线制判定": {
+    "结论": "五家云端厂商仅 Anthropic 需新增专用适配器，DeepSeek/GLM/Gemini 均复用 openai-tools",
+    "证据来源": "context7 查询 Google Gemini 官方文档 ai.google.dev/gemini-api/docs/openai，确认其 OpenAI 兼容端点支持标准 tools + tool_choice 函数调用",
+    "明细": [
+      { "厂商": "deepseek", "base_url": "https://api.deepseek.com/v1", "线制": "OpenAI 兼容 chat", "适配器": "deepseek（仅为分离 reasoning_content）" },
+      { "厂商": "openai", "base_url": "https://api.openai.com/v1", "线制": "responses", "适配器": "openai-tools" },
+      { "厂商": "anthropic", "base_url": "https://api.anthropic.com/v1", "线制": "anthropic-messages（不兼容）", "适配器": "anthropic（本轮唯一新增）" },
+      { "厂商": "zhipu", "base_url": "https://open.bigmodel.cn/api/paas/v4", "线制": "OpenAI 兼容 chat", "适配器": "openai-tools（复用）" },
+      { "厂商": "gemini", "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/", "线制": "OpenAI 兼容 chat", "适配器": "openai-tools（复用）" }
+    ],
+    "Anthropic 四处不对称": [
+      "工具 Schema 字段名为 input_schema，而非 function.parameters",
+      "助手侧工具调用为 content[] 内的 tool_use 块，input 已是对象无需再解析",
+      "工具结果须以 user 角色的 tool_result 块回灌，而非独立 tool 角色消息",
+      "max_tokens 为必填参数"
+    ]
+  },
+  "剩余待决": [
+    "Q3 智能体阵容是否匹配实际分工（仅影响示例配置，不影响模块设计）",
+    "Q4 是否立即进入阶段一编码"
+  ]
+}

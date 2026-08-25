@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+.tmp-probe/
+*.log
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.env
+.env.*
+!.env.example
