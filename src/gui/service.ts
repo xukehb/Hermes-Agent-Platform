@@ -38,6 +38,7 @@ import {
   type InstallProgressEvent,
   type RemoteSystemInfo,
   type RemoteExecResult,
+  type ServerBotConfig,
 } from '../remote/index.js';
 import type {
   GuiChatInput,
@@ -2910,6 +2911,97 @@ export class GuiService {
     const removed = RemoteServerStore.getInstance().remove(id);
     if (removed) this.info(`已移除远程服务器配置：${id}`);
     return removed;
+  }
+
+
+  async testServerBotAlert(payload: { serverId: string; botConfig: ServerBotConfig }): Promise<{ ok: boolean; message: string }> {
+    const server = RemoteServerStore.getInstance().get(payload.serverId) || { name: payload.serverId, host: payload.serverId };
+    const { channel, webhookUrl, targetId } = payload.botConfig;
+    const nowStr = new Date().toLocaleString();
+    const title = '🚨 [HAP 计算节点监控测试告警]';
+    const content = `【节点名称】${server.name} (${server.host})\n【绑定智能体】${payload.botConfig.agentId || 'ops'}\n【通道状态】测试推送正常\n【时间】${nowStr}\n\n已成功连通告警机器人，当 CPU/内存/磁盘 超过阈值或节点离线时将自动推送并唤醒 Agent 自愈。`;
+
+    if (channel === 'feishu') {
+      if (!webhookUrl) return { ok: false, message: '请填写飞书 Webhook 地址' };
+      try {
+        const res = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            msg_type: 'text',
+            content: { text: `${title}\n${content}` },
+          }),
+        });
+        const data = await res.json() as any;
+        if (data.code === 0 || data.StatusCode === 0 || res.ok) {
+          return { ok: true, message: '🎉 飞书告警卡片已成功推送到指定群聊！' };
+        }
+        return { ok: false, message: `飞书推送响应异常：${JSON.stringify(data)}` };
+      } catch (err: any) {
+        return { ok: false, message: `飞书 Webhook 连接失败：${err.message}` };
+      }
+    } else if (channel === 'wechat') {
+      if (!webhookUrl) return { ok: false, message: '请填写企业微信 Webhook 地址' };
+      try {
+        const res = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            msgtype: 'markdown',
+            markdown: {
+              content: `### ${title}\n> **节点名称**：<font color="info">${server.name} (${server.host})</font>\n> **负责智能体**：${payload.botConfig.agentId || 'ops'}\n> **告警测试**：<font color="comment">推送正常</font>\n> **时间**：${nowStr}`,
+            },
+          }),
+        });
+        const data = await res.json() as any;
+        if (data.errcode === 0 || res.ok) {
+          return { ok: true, message: '🎉 企微告警卡片已成功推送到群聊！' };
+        }
+        return { ok: false, message: `企微推送异常：${JSON.stringify(data)}` };
+      } catch (err: any) {
+        return { ok: false, message: `企微 Webhook 连接失败：${err.message}` };
+      }
+    } else if (channel === 'telegram') {
+      const token = webhookUrl || process.env.TELEGRAM_BOT_TOKEN;
+      if (!token) return { ok: false, message: '请填写 Telegram Bot Token 或在环境变量中设置' };
+      if (!targetId) return { ok: false, message: '请填写接收告警的 Telegram Chat ID' };
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: targetId,
+            text: `${title}\n\n${content}`,
+          }),
+        });
+        const data = await res.json() as any;
+        if (data.ok) {
+          return { ok: true, message: '🎉 Telegram 告警消息已成功发送至指定 Chat！' };
+        }
+        return { ok: false, message: `Telegram 发送失败：${data.description || JSON.stringify(data)}` };
+      } catch (err: any) {
+        return { ok: false, message: `Telegram 请求失败：${err.message}` };
+      }
+    } else {
+      if (webhookUrl) {
+        try {
+          await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              event: 'server_alert_test',
+              server: { id: payload.serverId, name: server.name, host: server.host },
+              botConfig: payload.botConfig,
+              timestamp: Date.now(),
+            }),
+          });
+          return { ok: true, message: '🎉 通用 Webhook 告警测试请求已成功送达！' };
+        } catch (err: any) {
+          return { ok: false, message: `Webhook 请求失败：${err.message}` };
+        }
+      }
+      return { ok: true, message: `[模拟测试] 已成功触发 ${channel.toUpperCase()} 告警测试流！` };
+    }
   }
 
   async testServer(id: string): Promise<{ ok: boolean; mode: string; message: string; latencyMs: number; systemInfo?: RemoteSystemInfo }> {

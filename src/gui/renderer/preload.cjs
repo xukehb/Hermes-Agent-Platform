@@ -103,6 +103,7 @@ contextBridge.exposeInMainWorld('hap', {
   upsertServer: (input) => call('gui:upsertServer', input),
   removeServer: (id) => call('gui:removeServer', id),
   testServer: (id) => call('gui:testServer', id),
+  testServerBotAlert: (payload) => call('gui:testServerBotAlert', payload),
   installServer: (id) => call('gui:installServer', id),
   onInstallProgress: (callback) => {
     ipcRenderer.on('gui:installProgress', (_event, data) => callback(data));

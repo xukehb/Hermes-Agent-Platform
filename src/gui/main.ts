@@ -111,6 +111,7 @@ function registerIpc(): void {
   ipcMain.handle('gui:listServers', () => invoke(() => service.listServers()));
   ipcMain.handle('gui:upsertServer', (_event, input) => invoke(() => service.upsertServer(input)));
   ipcMain.handle('gui:removeServer', (_event, id) => invoke(() => service.removeServer(id)));
+  ipcMain.handle('gui:testServerBotAlert', (_event, payload) => invoke(() => service.testServerBotAlert(payload)));
   ipcMain.handle('gui:testServer', (_event, id) => invoke(() => service.testServer(id)));
   ipcMain.handle('gui:installServer', (event, id) => invoke(() => service.installServer(id, (progress) => {
     event.sender.send('gui:installProgress', progress);

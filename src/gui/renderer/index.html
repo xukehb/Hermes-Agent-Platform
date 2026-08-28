@@ -402,6 +402,11 @@
                 </select>
               </div>
 
+              <!-- 节点机器人配置入口 -->
+              <button type="button" class="btn primary" onclick="window.openNodeBotConfigModal()" style="font-size:12.5px;padding:6px 14px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);display:flex;align-items:center;gap:6px;">
+                <span>🤖 节点机器人与告警设置</span>
+              </button>
+
               <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-secondary);cursor:pointer;background:#f8fafc;padding:5px 10px;border-radius:8px;border:1px solid #e2e8f0;">
                 <input type="checkbox" id="hostAutoRefreshToggle" checked />
                 <span>自动轮询 (3s)</span>
@@ -409,6 +414,38 @@
               <button id="refreshHostBtn" class="btn primary" style="font-size:12.5px;padding:6px 14px;">
                 🔄 立即刷新
               </button>
+            </div>
+          </div>
+
+          
+          <!-- 节点专属智能体与告警机器人实时状态卡片 -->
+          <div class="card" id="panoramaBotCard" style="margin-bottom:18px;background:linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);border:1px solid #bbf7d0;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(16,185,129,0.06);">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:#fff;display:grid;place-items:center;font-size:20px;box-shadow:0 2px 6px rgba(16,185,129,0.3);">
+                  🤖
+                </div>
+                <div>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <strong style="font-size:14.5px;color:var(--text-main);" id="panoramaBotTitle">节点专属智能体与告警机器人</strong>
+                    <span id="panoramaBotStatusBadge" class="badge success" style="font-size:11px;">● 已配置并监听</span>
+                  </div>
+                  <p style="margin:2px 0 0 0;font-size:12px;color:var(--text-secondary);" id="panoramaBotSub">
+                    绑定智能体: ops (全栈智能运维专家) | 告警通道: 飞书自定义机器人 | 异常自愈: 已开启
+                  </p>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button type="button" class="btn primary" onclick="window.openNodeBotConfigModal()" style="font-size:12px;padding:6px 14px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                  ⚙️ 机器人设置
+                </button>
+                <button type="button" class="btn secondary" onclick="window.testNodeBotAlert()" style="font-size:12px;padding:6px 12px;">
+                  🔔 测试推送
+                </button>
+                <button type="button" class="btn secondary" onclick="window.chatWithNodeAgent()" style="font-size:12px;padding:6px 12px;">
+                  💬 呼叫专属 Agent
+                </button>
+              </div>
             </div>
           </div>
 
@@ -3145,6 +3182,110 @@
           </div>
         </div>
       </form>
+    </dialog>
+
+    
+    <!-- 弹窗: 远端节点专属机器人与告警策略配置 (Node Bot & Alarm Settings Modal) -->
+    <dialog id="nodeBotConfigModal" class="modal modal-lg">
+      <div class="modal-form-wrap" style="padding:22px 26px;">
+        <div class="modal-header-row" style="margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border-default);">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:#fff;display:grid;place-items:center;font-size:18px;">🤖</div>
+            <div>
+              <h2 style="font-size:16.5px;margin:0;font-weight:700;">设置节点专属智能体与告警机器人</h2>
+              <p style="font-size:12px;color:var(--text-muted);margin:2px 0 0 0;">为该计算节点绑定负责运维的专属 Agent，并配置飞书、微信、Telegram 告警通道与自动自愈策略</p>
+            </div>
+          </div>
+          <button type="button" class="btn-close" onclick="$('nodeBotConfigModal').close()"></button>
+        </div>
+
+        <form id="nodeBotConfigForm" onsubmit="window.saveNodeBotConfig(event)">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>目标计算节点 *</label>
+              <select id="nodeBotServerSelect" required style="padding:7px 10px;font-size:13px;"></select>
+            </div>
+
+            <div class="form-group">
+              <label>绑定的专属智能体角色 (Agent) *</label>
+              <select id="nodeBotAgentSelect" style="padding:7px 10px;font-size:13px;">
+                <option value="ops">ops (全栈智能运维与巡检专家)</option>
+                <option value="coder">coder (代码构建与部署专家)</option>
+                <option value="researcher">researcher (数据分析与日志检索专家)</option>
+                <option value="reviewer">reviewer (安全合规与代码审计专家)</option>
+                <option value="writer">writer (技术文档与周报撰写专家)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>告警推送机器人通道 (Channel) *</label>
+              <select id="nodeBotChannelSelect" style="padding:7px 10px;font-size:13px;">
+                <option value="feishu">飞书自定义机器人 (Feishu Webhook)</option>
+                <option value="wechat">企业微信机器人 (WeChat Webhook)</option>
+                <option value="telegram">Telegram 机器人 (Telegram Bot)</option>
+                <option value="qq">QQ 机器人 (OneBot)</option>
+                <option value="webhook">通用自定义 Webhook (REST API)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label id="nodeBotTargetLabel">接收目标 (Chat ID / 群号 / 接收人)</label>
+              <input id="nodeBotTargetId" placeholder="例如: -100123456789 (Telegram) 或 群号 (QQ)" />
+            </div>
+
+            <div class="form-group full-width">
+              <label id="nodeBotWebhookLabel">Webhook 地址 / 机器人 Endpoint *</label>
+              <input id="nodeBotWebhookUrl" placeholder="例如: https://open.feishu.cn/open-apis/bot/v2/hook/xxxx" style="font-family:monospace;font-size:12px;" />
+            </div>
+
+            <div class="form-group full-width">
+              <label>安全校验密钥 / Secret <span style="font-weight:normal;font-size:11px;color:var(--text-muted);">(可选，如飞书签名密钥或企微密钥)</span></label>
+              <input type="password" id="nodeBotSecret" placeholder="若机器人开启了签名校验请填写，否则可留空" autocomplete="off" />
+            </div>
+
+            <!-- 告警触发阈值与自动自愈配置 -->
+            <div class="form-group full-width" style="background:#f8fafc;padding:12px 14px;border-radius:8px;border:1px solid #e2e8f0;">
+              <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#1e293b;display:flex;align-items:center;gap:6px;">
+                <span>⚡ 智能告警触发条件与 AI 自动化自愈：</span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:10px;font-size:12.5px;">
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                  <input type="checkbox" id="nodeBotAlertCpu" checked />
+                  <span>CPU 负载 > 85% 告警</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                  <input type="checkbox" id="nodeBotAlertMem" checked />
+                  <span>物理内存占用 > 90% 告警</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                  <input type="checkbox" id="nodeBotAlertDisk" checked />
+                  <span>磁盘根挂载卷 > 85% 告警</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                  <input type="checkbox" id="nodeBotAlertOffline" checked />
+                  <span>节点心跳失联/离线自动告警</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;grid-column:1 / -1;margin-top:4px;padding-top:6px;border-top:1px dashed #cbd5e1;">
+                  <input type="checkbox" id="nodeBotAutoHealing" checked />
+                  <span style="font-weight:600;color:#0284c7;">开启 AI 智能自愈 (检测到指标异常时自动唤醒绑定的 Agent 排查并推送自愈报告)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid var(--border-default);margin-top:14px;">
+            <button type="button" class="btn secondary" onclick="window.testNodeBotAlertModal()" style="font-size:12.5px;padding:6px 14px;">
+              🔔 发送测试通知
+            </button>
+            <div style="display:flex;gap:8px;">
+              <button type="button" class="btn secondary" onclick="$('nodeBotConfigModal').close()">取消</button>
+              <button type="submit" class="btn primary" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                💾 保存机器人与告警设置
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
     </dialog>
 
     <div id="toastContainer" class="toast-container"></div>
