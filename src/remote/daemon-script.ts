@@ -71,6 +71,14 @@ function getSystemInfo() {
   };
 }
 
+process.on('uncaughtException', (err) => {
+  console.error('[HAP-Daemon] Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[HAP-Daemon] Unhandled Rejection:', reason);
+});
+
 const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -83,7 +91,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Health check endpoint (can be checked without token for ping)
-  if (req.url === '/health' || req.url === '/ping') {
+  if (req.url === '/health' || req.url === '/ping' || req.url === '/') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: true, status: 'online', uptime: Date.now() - START_TIME }));
     return;
@@ -189,6 +197,11 @@ const server = http.createServer(async (req, res) => {
   // Fallback 404
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ ok: false, error: 'Endpoint not found' }));
+});
+
+server.on('error', (err) => {
+  console.error(\`[HAP-Daemon] Server error: \${err.message}\`);
+  process.exit(1);
 });
 
 server.listen(PORT, '0.0.0.0', () => {

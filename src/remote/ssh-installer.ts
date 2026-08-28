@@ -56,12 +56,13 @@ export function execSshCommand(
         let stdout = '';
         let stderr = '';
 
-        stream.on('close', (code: number) => {
+        stream.on('close', (code: number | undefined, signal?: string) => {
           clearTimeout(timer);
           isResolved = true;
           conn.end();
           resolve({
-            code: typeof code === 'number' ? code : 0,
+            // 被信号终止的远端命令不能被误判为成功。
+            code: typeof code === 'number' ? code : (signal ? 1 : 0),
             stdout,
             stderr,
           });
@@ -294,6 +295,7 @@ export async function installRemoteDaemon(
     const deployCmd = `
       HAP_DIR="$HOME/.hap-daemon"
       mkdir -p "$HAP_DIR"
+      PID_FILE="$HAP_DIR/daemon.pid"
       echo "${b64Content}" | base64 -d > "$HAP_DIR/daemon.mjs"
       chmod +x "$HAP_DIR/daemon.mjs"
 
@@ -312,11 +314,14 @@ export async function installRemoteDaemon(
     }
     report(4, 'success', '守护进程脚本已成功部署至 ~/.hap-daemon/daemon.mjs');
 
-    // 步骤 5: 配置并启动服务 (systemd user 服务 / 系统服务 / nohup 守护)
+    // 步骤 5: 配置并启动服务 (自适应系统级 systemd / 用户级 systemd / setsid 脱离进程)
     report(5, 'running', '正在配置并启动常驻服务 (自适应 systemd / 后台进程守护)...');
 
     const startServiceCmd = `
       HAP_DIR="$HOME/.hap-daemon"
+      mkdir -p "$HAP_DIR"
+
+      # 智能探测可用的 Node.js 绝对路径
       NODE_BIN=$(which node || true)
       if [ -z "$NODE_BIN" ] || [ ! -x "$NODE_BIN" ]; then
         NODE_BIN=$(find "$HOME/.nvm" -name node -type f -perm -111 2>/dev/null | tail -n 1)
@@ -330,78 +335,205 @@ export async function installRemoteDaemon(
 
       echo "Using Node Binary: $NODE_BIN"
 
-      # 停止旧进程
-      pkill -f "hap-daemon/daemon.mjs" || true
-      pkill -f "$HAP_DIR/daemon.mjs" || true
+      # 仅终止本部署记录的旧进程，避免按命令行匹配时误杀当前 SSH shell。
+      if [ -s "$PID_FILE" ]; then
+        OLD_PID=$(cat "$PID_FILE" 2>/dev/null || true)
+        if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
+          kill "$OLD_PID" 2>/dev/null || true
+          sleep 1
+          kill -0 "$OLD_PID" 2>/dev/null && kill -9 "$OLD_PID" 2>/dev/null || true
+        fi
+        rm -f "$PID_FILE"
+      fi
+      if command -v fuser >/dev/null 2>&1; then
+        fuser -k -9 ${daemonPort}/tcp 2>/dev/null || true
+      fi
       sleep 1
 
-      STARTED=0
+      CURRENT_USER=$(whoami)
+      CURRENT_GROUP=$(id -gn 2>/dev/null || echo "$CURRENT_USER")
 
-      # 策略 1: 尝试普通用户 systemd --user 服务 (针对非 root 用户如 xk，免 sudo 且开机自启)
-      if command -v systemctl >/dev/null 2>&1 && [ -d "/run/user/$(id -u)" ]; then
-        USER_SERVICE_DIR="$HOME/.config/systemd/user"
-        mkdir -p "$USER_SERVICE_DIR"
-        cat << 'EOF' > "$USER_SERVICE_DIR/hap-daemon.service"
+      # 构造 systemd service 描述文件
+      cat << EOF > "$HAP_DIR/hap-daemon.service"
 [Unit]
-Description=HAP Remote Agent Daemon (User Mode)
+Description=HAP Remote Agent Daemon
 After=network.target
 
 [Service]
 Type=simple
-Environment=NODE_ENV=production
-ExecStart=\${NODE_BIN} \${HAP_DIR}/daemon.mjs
+User=$CURRENT_USER
+Group=$CURRENT_GROUP
+WorkingDirectory=$HAP_DIR
+ExecStart=$NODE_BIN $HAP_DIR/daemon.mjs
 Restart=always
 RestartSec=3
+Environment=HOME=$HOME
+Environment=NODE_ENV=production
+StandardOutput=journal
+StandardError=journal
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
 EOF
-        sed -i "s|\${NODE_BIN}|$NODE_BIN|g" "$USER_SERVICE_DIR/hap-daemon.service"
-        sed -i "s|\${HAP_DIR}|$HAP_DIR|g" "$USER_SERVICE_DIR/hap-daemon.service"
+
+      STARTED=0
+      START_METHOD=""
+
+      # 策略 1: 系统级 systemd (如果为 root 或可 sudo 提权)
+      if [ "$(id -u)" -eq 0 ] && command -v systemctl >/dev/null 2>&1; then
+        cp -f "$HAP_DIR/hap-daemon.service" /etc/systemd/system/hap-daemon.service
+        systemctl daemon-reload 2>/dev/null || true
+        systemctl enable hap-daemon 2>/dev/null || true
+        systemctl restart hap-daemon 2>/dev/null || true
+        sleep 1.5
+        if systemctl is-active --quiet hap-daemon || ss -tulpn 2>/dev/null | grep -q "${daemonPort}" || netstat -tulpn 2>/dev/null | grep -q "${daemonPort}"; then
+          STARTED=1
+          START_METHOD="system_systemd"
+        fi
+      elif [ -n "${b64Pass}" ] && command -v systemctl >/dev/null 2>&1; then
+        PASS=$(echo "${b64Pass}" | base64 -d)
+        echo "$PASS" | sudo -S cp -f "$HAP_DIR/hap-daemon.service" /etc/systemd/system/hap-daemon.service 2>/dev/null || true
+        echo "$PASS" | sudo -S systemctl daemon-reload 2>/dev/null || true
+        echo "$PASS" | sudo -S systemctl enable hap-daemon 2>/dev/null || true
+        echo "$PASS" | sudo -S systemctl restart hap-daemon 2>/dev/null || true
+        echo "$PASS" | sudo -S ufw allow ${daemonPort}/tcp 2>/dev/null || true
+        echo "$PASS" | sudo -S iptables -I INPUT -p tcp --dport ${daemonPort} -j ACCEPT 2>/dev/null || true
+        sleep 1.5
+        if systemctl is-active --quiet hap-daemon || ss -tulpn 2>/dev/null | grep -q "${daemonPort}" || netstat -tulpn 2>/dev/null | grep -q "${daemonPort}"; then
+          STARTED=1
+          START_METHOD="sudo_systemd"
+        fi
+      fi
+
+      # 策略 2: 用户级 systemd (针对非 root 普通用户)
+      if [ "$STARTED" -eq 0 ] && command -v systemctl >/dev/null 2>&1 && [ -d "/run/user/$(id -u)" ]; then
+        export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+        export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
+        loginctl enable-linger "$CURRENT_USER" 2>/dev/null || true
+
+        USER_SERVICE_DIR="$HOME/.config/systemd/user"
+        mkdir -p "$USER_SERVICE_DIR"
+        cp -f "$HAP_DIR/hap-daemon.service" "$USER_SERVICE_DIR/hap-daemon.service"
+        sed -i 's/WantedBy=multi-user.target/WantedBy=default.target/g' "$USER_SERVICE_DIR/hap-daemon.service"
 
         systemctl --user daemon-reload 2>/dev/null || true
         systemctl --user enable hap-daemon 2>/dev/null || true
-        if systemctl --user restart hap-daemon 2>/dev/null; then
-          echo "SYSTEMD_USER_STARTED"
+        systemctl --user restart hap-daemon 2>/dev/null || true
+        sleep 1.5
+        if systemctl --user is-active --quiet hap-daemon || ss -tulpn 2>/dev/null | grep -q "${daemonPort}" || netstat -tulpn 2>/dev/null | grep -q "${daemonPort}"; then
           STARTED=1
+          START_METHOD="user_systemd"
         fi
       fi
 
-      # 策略 2: 如果是 root 或可通过 sudo -S 提权，尝试系统级 systemd
-      if [ "$STARTED" -eq 0 ] && command -v systemctl >/dev/null 2>&1; then
-        SYS_SERVICE="[Unit]\\nDescription=HAP Remote Agent Daemon\\nAfter=network.target\\n\\n[Service]\\nType=simple\\nEnvironment=NODE_ENV=production\\nExecStart=$NODE_BIN $HAP_DIR/daemon.mjs\\nRestart=always\\nRestartSec=3\\nStandardOutput=journal\\nStandardError=journal\\n\\n[Install]\\nWantedBy=multi-user.target"
-        
-        if [ "$(id -u)" -eq 0 ]; then
-          echo -e "$SYS_SERVICE" > /etc/systemd/system/hap-daemon.service
-          systemctl daemon-reload && systemctl enable hap-daemon && systemctl restart hap-daemon && STARTED=1 || true
-        elif [ -n "${b64Pass}" ]; then
-          PASS=$(echo "${b64Pass}" | base64 -d)
-          echo "$PASS" | sudo -S sh -c "echo -e '$SYS_SERVICE' > /etc/systemd/system/hap-daemon.service && systemctl daemon-reload && systemctl enable hap-daemon && systemctl restart hap-daemon" 2>/dev/null && STARTED=1 || true
-        fi
-      fi
-
-      # 策略 3: 通用可靠的 nohup 后台持久化进程守护 (100% 可用)
+      # 策略 3: 通用可靠的后台持久化进程 (脱离会话 & 完全重定向)
       if [ "$STARTED" -eq 0 ]; then
-        nohup "$NODE_BIN" "$HAP_DIR/daemon.mjs" > "$HAP_DIR/daemon.log" 2>&1 &
+        nohup "$NODE_BIN" "$HAP_DIR/daemon.mjs" >> "$HAP_DIR/daemon.log" 2>&1 < /dev/null &
+        DAEMON_PID=$!
+        echo "$DAEMON_PID" > "$PID_FILE"
         sleep 1
-        echo "NOHUP_STARTED: pid $!"
+        if kill -0 "$DAEMON_PID" 2>/dev/null; then
+          STARTED=1
+          START_METHOD="background_node (pid $DAEMON_PID)"
+        else
+          rm -f "$PID_FILE"
+          echo "无法启动 HAP 守护进程，请检查 $HAP_DIR/daemon.log" >&2
+          exit 1
+        fi
       fi
+
+      echo "START_METHOD: $START_METHOD"
     `;
 
     const startRes = await execSshCommand(config, startServiceCmd);
+    if (startRes.code !== 0) {
+      const errorDetail = startRes.stderr || startRes.stdout || `远端启动命令异常退出 (${startRes.code})`;
+      report(5, 'failed', '守护进程启动命令执行失败', errorDetail);
+      return { ok: false, token, daemonPort, error: errorDetail };
+    }
     report(5, 'success', '守护进程已在远端拉起并运行', startRes.stdout.trim());
 
-    // 步骤 6: 健康校验与通信打通
+    // 步骤 6: 健康校验与通信打通 (带多重重试与容错探测)
     report(6, 'running', `正在验证远端通信端口 (${daemonPort}) 存活状态...`);
-    // 给服务 2 秒启动缓冲
-    await new Promise(r => setTimeout(r, 2000));
 
-    const verifyCmd = `curl -s -f http://127.0.0.1:${daemonPort}/health || wget -qO- http://127.0.0.1:${daemonPort}/health || echo "HEALTH_CHECK_FAIL"`;
-    const verifyRes = await execSshCommand(config, verifyCmd);
+    let isHealthy = false;
+    let lastCheckOutput = '';
+    let diagLogs = '';
 
-    if (verifyRes.stdout.includes('HEALTH_CHECK_FAIL')) {
-      report(6, 'failed', '守护进程未能正常响应健康检查请求', verifyRes.stdout);
-      return { ok: false, token, daemonPort, error: '远端服务健康检查未通过 (端口响应异常)' };
+    // 重试 5 次（每次间隔 1.2 秒），给 Node.js 启动和端口监听充分时间
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      await new Promise((r) => setTimeout(r, 1200));
+
+      const checkCmd = `
+        NODE_BIN=$(which node || true)
+        if [ -z "$NODE_BIN" ] || [ ! -x "$NODE_BIN" ]; then
+          NODE_BIN=$(find "$HOME/.nvm" -name node -type f -perm -111 2>/dev/null | tail -n 1)
+        fi
+        if [ -z "$NODE_BIN" ] || [ ! -x "$NODE_BIN" ]; then
+          NODE_BIN="/opt/node-dist/bin/node"
+        fi
+
+        # 优先使用 Node.js 发起本机 HTTP 请求，完全不依赖外部 curl/wget
+        if [ -x "$NODE_BIN" ]; then
+          "$NODE_BIN" -e "
+            const http = require('node:http');
+            const req = http.get('http://127.0.0.1:${daemonPort}/health', (res) => {
+              if (res.statusCode === 200) {
+                console.log('HEALTH_CHECK_OK');
+                process.exit(0);
+              } else {
+                process.exit(1);
+              }
+            });
+            req.on('error', () => process.exit(1));
+            req.setTimeout(2000, () => { req.destroy(); process.exit(1); });
+          " 2>/dev/null && exit 0
+        fi
+
+        # 备选: curl / wget
+        curl -s -f http://127.0.0.1:${daemonPort}/health && exit 0
+        wget -qO- http://127.0.0.1:${daemonPort}/health && exit 0
+
+        echo "HEALTH_CHECK_RETRY"
+      `;
+
+      const checkRes = await execSshCommand(config, checkCmd, 8000);
+      lastCheckOutput = checkRes.stdout.trim();
+
+      if (
+        lastCheckOutput.includes('HEALTH_CHECK_OK') ||
+        lastCheckOutput.includes('"status":"online"') ||
+        lastCheckOutput.includes('"ok":true')
+      ) {
+        isHealthy = true;
+        break;
+      }
+    }
+
+    if (!isHealthy) {
+      // 提取远端诊断信息（包含 systemd journal 与文件日志）
+      const diagCmd = `
+        echo "=== 进程状态 (ps aux) ==="
+        ps aux | grep -E "daemon\\.mjs|hap-daemon" | grep -v grep || echo "（未检索到运行中的守护进程）"
+        echo "=== 端口监听状态 (ss / netstat) ==="
+        ss -tulpn 2>/dev/null | grep "${daemonPort}" || netstat -tulpn 2>/dev/null | grep "${daemonPort}" || echo "（端口 ${daemonPort} 未在监听）"
+        echo "=== 系统服务日志 (journalctl -u hap-daemon) ==="
+        journalctl -u hap-daemon -n 20 --no-pager 2>/dev/null || systemctl status hap-daemon --no-pager 2>/dev/null || echo "（无系统服务日志）"
+        echo "=== 用户服务日志 (journalctl --user -u hap-daemon) ==="
+        journalctl --user -u hap-daemon -n 20 --no-pager 2>/dev/null || systemctl --user status hap-daemon --no-pager 2>/dev/null || echo "（无用户服务日志）"
+        echo "=== 守护进程日志 ($HOME/.hap-daemon/daemon.log) ==="
+        cat "$HOME/.hap-daemon/daemon.log" 2>/dev/null || echo "（暂无日志输出）"
+      `;
+      const diagRes = await execSshCommand(config, diagCmd, 12000);
+      diagLogs = diagRes.stdout.trim() || lastCheckOutput;
+
+      report(6, 'failed', `守护进程未能正常响应健康检查请求 (端口 ${daemonPort})`, diagLogs);
+      return {
+        ok: false,
+        token,
+        daemonPort,
+        error: `远端服务健康检查未通过 (端口响应异常)\n\n诊断日志：\n${diagLogs}`,
+      };
     }
 
     report(6, 'success', `守护进程已成功上线！通信 Token 与端口 (${daemonPort}) 握手完毕`);

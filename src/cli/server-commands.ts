@@ -54,7 +54,7 @@ export function registerServerCommands(root: Command, globals: () => GlobalOptio
       let daemonPort = parseInt(opts.daemonPort, 10) || 9527;
 
       if (!id || !host) {
-        intro('➕ 添加远程服务器节点');
+        intro('添加远程服务器节点');
         if (!id) {
           const res = await promptText({
             message: '请输入服务器节点唯一 ID (例如 vps-1, node-dev):',
@@ -139,10 +139,10 @@ export function registerServerCommands(root: Command, globals: () => GlobalOptio
       const s = store.get(id);
       if (!s) return fail(`未找到服务器: ${id}`);
 
-      console.log(`🚀 开始在服务器 [${s.name}] (${s.host}) 上一键部署 HAP Agent 守护进程...\n`);
+      console.log(`开始在服务器 [${s.name}] (${s.host}) 上一键部署 HAP Agent 守护进程...\n`);
 
       const res = await installRemoteDaemon(s, (event) => {
-        const icon = event.status === 'success' ? '✓' : event.status === 'failed' ? '✗' : '⏳';
+        const icon = event.status === 'success' ? '[OK]' : event.status === 'failed' ? '[FAIL]' : '[RUN]';
         console.log(`[${event.stepIndex}/${event.totalSteps}] ${icon} ${event.message}`);
         if (event.details) {
           console.log(`    ↳ ${event.details.trim().split('\n')[0]}`);
@@ -158,7 +158,7 @@ export function registerServerCommands(root: Command, globals: () => GlobalOptio
         });
         emit(
           ctx,
-          `\n✨ 远端 Agent 守护进程部署成功！\n- 通信端口: ${res.daemonPort}\n- 安全 Token: ${res.token}\n可通过 'hap server info ${s.id}' 或 'hap server exec ${s.id} "uname -a"' 进行实时操控`,
+          `\n远端 Agent 守护进程部署成功！\n- 通信端口: ${res.daemonPort}\n- 安全 Token: ${res.token}\n可通过 'hap server info ${s.id}' 或 'hap server exec ${s.id} "uname -a"' 进行实时操控`,
           res
         );
       } else {
@@ -175,7 +175,7 @@ export function registerServerCommands(root: Command, globals: () => GlobalOptio
       const s = store.get(id);
       if (!s) return fail(`未找到服务器: ${id}`);
 
-      console.log(`🖥️  正在向 [${s.name}] 发送执行: ${command}\n`);
+      console.log(`正在向 [${s.name}] 发送执行: ${command}\n`);
       const res = await clientManager.execCommand(s, command, (chunk) => {
         if (chunk.type === 'stdout' && chunk.text) process.stdout.write(chunk.text);
         if (chunk.type === 'stderr' && chunk.text) process.stderr.write(chunk.text);
@@ -203,7 +203,7 @@ export function registerServerCommands(root: Command, globals: () => GlobalOptio
         const hours = Math.floor(info.uptimeSeconds / 3600);
         const minutes = Math.floor((info.uptimeSeconds % 3600) / 60);
 
-        console.log(`\n📊 远程服务器 [${s.name}] 实时状态：`);
+        console.log(`\n远程服务器 [${s.name}] 实时状态：`);
         console.log(`- 主机名: ${info.hostname} (${info.platform} ${info.arch})`);
         console.log(`- 系统发行版: ${info.osRelease}`);
         console.log(`- CPU 占用: ${info.cpuUsagePercent}% (${info.cpuCount} 核 - ${info.cpuModel})`);

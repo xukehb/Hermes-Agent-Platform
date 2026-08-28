@@ -1,7 +1,8 @@
 import { describe, it, expect, afterAll, beforeAll } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import http from 'node:http';
 import {
   generateRemoteDaemonScript,
@@ -33,6 +34,15 @@ describe('Remote Server Management & Protocol', () => {
     expect(script).toContain('AUTH_TOKEN = "test-secret-token"');
     expect(script).toContain('getSystemInfo()');
     expect(script).toContain('server.listen(PORT');
+  });
+
+  it('uses a PID file instead of pkill pattern matching when restarting the daemon', () => {
+    const installerPath = fileURLToPath(new URL('../src/remote/ssh-installer.ts', import.meta.url));
+    const installerSource = readFileSync(installerPath, 'utf-8');
+
+    expect(installerSource).toContain('PID_FILE="$HAP_DIR/daemon.pid"');
+    expect(installerSource).not.toContain('pkill -9 -f');
+    expect(installerSource).toContain('if (startRes.code !== 0)');
   });
 
   it('performs CRUD on RemoteServerStore in isolation', () => {
@@ -215,6 +225,68 @@ describe('Remote Server Management & Protocol', () => {
       expect(execResult.code).toBe(0);
       expect(execResult.stdout).toContain('Executed: uname -a');
       expect(execResult.stdout).toContain('Linux mock-vps');
+    });
+
+    it('allows AI Agents to invoke remote tools (remote_list_servers, remote_exec, remote_sysinfo)', async () => {
+      const store = RemoteServerStore.getInstance();
+      store.upsert({
+        id: 'agent-node',
+        name: 'Agent Test Node',
+        host: '127.0.0.1',
+        port: 22,
+        username: 'root',
+        authType: 'password',
+        daemonPort: mockPort,
+        token: MOCK_TOKEN,
+        status: 'online',
+      });
+
+      const { remoteListServersTool, remoteExecTool, remoteSysinfoTool } = await import('../src/tools/builtin/remote-tools.js');
+
+      // 1. remote_list_servers
+      const listRes = await remoteListServersTool.handler({}, {} as any);
+      expect(listRes.content).toContain('Agent Test Node');
+      expect(listRes.content).toContain('agent-node');
+
+      // 2. remote_exec
+      const execRes = await remoteExecTool.handler({ command: 'docker ps', server: 'agent-node' }, {} as any);
+      expect(execRes.isError).toBeFalsy();
+      expect(execRes.content).toContain('Executed: docker ps');
+
+      // 3. remote_sysinfo
+      const sysinfoRes = await remoteSysinfoTool.handler({ server: 'agent-node' }, {} as any);
+      expect(sysinfoRes.isError).toBeFalsy();
+      expect(sysinfoRes.content).toContain('实时硬件状态');
+      expect(sysinfoRes.content).toContain('mock-vps');
+
+      // 4. remote_upgrade_daemon (error case on invalid SSH credentials handled cleanly)
+      const { remoteUpgradeDaemonTool } = await import('../src/tools/builtin/remote-tools.js');
+      const upgradeRes = await remoteUpgradeDaemonTool.handler({ server: 'agent-node' }, {} as any);
+      expect(upgradeRes.content).toBeDefined();
+
+      // Clean up
+      store.remove('agent-node');
+    });
+
+    it('persists and retrieves dedicated ops agent (agentId) on RemoteServerConfig', () => {
+      const storeFile = tempFile();
+      const store = new RemoteServerStore(storeFile);
+
+      const server = store.upsert({
+        id: 'gpu-server-1',
+        host: '10.0.0.8',
+        agentId: 'coder',
+      });
+
+      expect(server.agentId).toBe('coder');
+      const retrieved = store.get('gpu-server-1');
+      expect(retrieved?.agentId).toBe('coder');
+
+      const serverDefault = store.upsert({
+        id: 'vps-2',
+        host: '10.0.0.9',
+      });
+      expect(serverDefault.agentId).toBe('ops');
     });
   });
 });

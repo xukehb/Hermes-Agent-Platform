@@ -34,6 +34,9 @@ export interface RemoteServerConfig {
   daemonPort: number; // default 9527
   token?: string | undefined; // security token for daemon communication
   
+  // Dedicated Ops Agent
+  agentId?: string | undefined; // e.g. 'ops', 'coder'
+
   // Runtime status
   status: 'online' | 'offline' | 'installing' | 'error' | 'uninstalled';
   lastConnectedAt?: number | undefined;
