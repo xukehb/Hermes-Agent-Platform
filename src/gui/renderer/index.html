@@ -49,13 +49,48 @@
       </div>
 
       <!-- 侧边栏底部独立模块导航 -->
+      
+      <!-- 侧边栏底部精简结构化导航面板 -->
       <div class="sidebar-bottom-panel">
-        <nav class="nav-menu">
+        <!-- 分组 1: 核心控制台 -->
+        <div class="nav-category-group">
+          <div class="nav-category-title">核心控制台</div>
           <div class="nav active" data-view="chat" id="navChatBtn">
             <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
             <span>对话工作台</span>
+          </div>
+          <div class="nav" data-view="host" id="navHostBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+              <line x1="8" y1="21" x2="16" y2="21"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+            <span>本机系统桌面</span>
+          </div>
+          <div class="nav" data-view="servers" id="navServersBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+              <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+              <line x1="6" y1="6" x2="6.01" y2="6"/>
+              <line x1="6" y1="18" x2="6.01" y2="18"/>
+            </svg>
+            <span>远程服务器 & 节点</span>
+          </div>
+        </div>
+
+        <!-- 分组 2: 智能体与能力 -->
+        <div class="nav-category-group">
+          <div class="nav-category-title">智能体与扩展</div>
+          <div class="nav" data-view="agents" id="navAgentsBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            <span>智能体角色管理</span>
           </div>
           <div class="nav" data-view="skills" id="navSkillsBtn">
             <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -69,26 +104,30 @@
             </svg>
             <span>MCP 插件市场</span>
           </div>
-          <div class="nav" data-view="permissions" id="navPermissionsBtn">
+          <div class="nav" data-view="memory" id="navMemoryBtn">
             <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"/>
+              <line x1="9" y1="21" x2="15" y2="21"/>
             </svg>
-            <span>权限与安全策略</span>
+            <span>智能体记忆库</span>
           </div>
-          <div class="nav" data-view="agents" id="navAgentsBtn">
+          <div class="nav" data-view="schedules" id="navSchedulesBtn">
             <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
-            <span>智能体角色管理</span>
+            <span>自动化定时任务</span>
           </div>
-          <div class="nav" data-view="projects" id="navProjectsBtn">
+        </div>
+
+        <!-- 分组 3: 算力与通道网关 -->
+        <div class="nav-category-group">
+          <div class="nav-category-title">算力与通道网关</div>
+          <div class="nav" data-view="models" id="navModelsBtn">
             <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              <rect x="4" y="4" width="16" height="16" rx="2" ry="2"/>
+              <rect x="9" y="9" width="6" height="6"/>
             </svg>
-            <span>工作区项目库</span>
+            <span>模型目录</span>
           </div>
           <div class="nav" data-view="providers" id="navProvidersBtn">
             <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -96,12 +135,30 @@
             </svg>
             <span>模型服务商</span>
           </div>
-          <div class="nav" data-view="models" id="navModelsBtn">
+          <div class="nav" data-view="wechat" id="navWeChatBtn">
             <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="4" y="4" width="16" height="16" rx="2" ry="2"/>
-              <rect x="9" y="9" width="6" height="6"/>
+              <path d="M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm7 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
+              <path d="M12 2C6.48 2 2 6.03 2 11c0 2.87 1.5 5.42 3.84 7.04L5 22l4.22-1.41C10.12 20.84 11.04 21 12 21c5.52 0 10-4.03 10-9s-4.48-10-10-10z"/>
             </svg>
-            <span>模型目录</span>
+            <span>多通道协同网关</span>
+          </div>
+          <div class="nav" data-view="telegram" id="navTelegramBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+            <span>Telegram 机器人</span>
+          </div>
+          <div class="nav" data-view="projects" id="navProjectsBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span>工作区项目库</span>
+          </div>
+          <div class="nav" data-view="permissions" id="navPermissionsBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            <span>权限与安全</span>
           </div>
           <div class="nav" data-view="switcher" id="navSwitcherBtn">
             <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -111,53 +168,7 @@
               <line x1="15" y1="15" x2="21" y2="21"/>
               <line x1="4" y1="4" x2="9" y2="9"/>
             </svg>
-            <span>CLI 目标同步</span>
-          </div>
-          <div class="nav" data-view="telegram" id="navTelegramBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-            </svg>
-            <span>Telegram 机器人</span>
-          </div>
-          <div class="nav" data-view="wechat" id="navWeChatBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm7 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
-              <path d="M12 2C6.48 2 2 6.03 2 11c0 2.87 1.5 5.42 3.84 7.04L5 22l4.22-1.41C10.12 20.84 11.04 21 12 21c5.52 0 10-4.03 10-9s-4.48-10-10-10z"/>
-            </svg>
-            <span>微信 / 企微连接</span>
-          </div>
-          
-          <div class="nav" data-view="host" id="navHostBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-              <line x1="8" y1="21" x2="16" y2="21"/>
-              <line x1="12" y1="17" x2="12" y2="21"/>
-            </svg>
-            <span>本机环境与系统桌面</span>
-          </div>
-          <div class="nav" data-view="servers" id="navServersBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
-              <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
-              <line x1="6" y1="6" x2="6.01" y2="6"/>
-              <line x1="6" y1="18" x2="6.01" y2="18"/>
-            </svg>
-            <span>远程服务器 & 节点</span>
-          </div>
-          
-          <div class="nav" data-view="schedules" id="navSchedulesBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-            </svg>
-            <span>自动化定时任务</span>
-          </div>
-          
-          <div class="nav" data-view="memory" id="navMemoryBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"/>
-              <line x1="9" y1="21" x2="15" y2="21"/>
-            </svg>
-            <span>智能体记忆库</span>
+            <span>CLI 同步</span>
           </div>
           <div class="nav" data-view="logs" id="navLogsBtn">
             <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -166,14 +177,15 @@
             </svg>
             <span>运行日志</span>
           </div>
-        </nav>
+        </div>
 
-        <div class="config-footer-row" id="configPathBtn" title="点击复制完整路径">
+        <!-- 底部配置路径快速复制 -->
+        <div class="config-footer-row" id="configPathBtn" title="点击复制完整配置文件路径">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
           </svg>
-          <span id="configPathText" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">~/.hap/config.toml</span>
+          <span id="configPathText">~/.hap/config.toml</span>
         </div>
       </div>
     </aside>

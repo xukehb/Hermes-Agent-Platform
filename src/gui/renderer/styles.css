@@ -3170,3 +3170,111 @@ dialog .toast-container.in-dialog {
   border-color: #0ea5e9 !important;
   box-shadow: 0 10px 36px rgba(14, 165, 233, 0.15), 0 0 0 3px rgba(14, 165, 233, 0.18) !important;
 }
+
+
+/* ==========================================================================
+   侧边栏与分组结构化导航 (Categorized Sidebar Layout)
+   ========================================================================== */
+.sidebar-bottom-panel {
+  border-top: 1px solid #e0f2fe;
+  background: #f8fafc;
+  padding: 8px 10px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 52vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #bae6fd transparent;
+}
+
+.sidebar-bottom-panel::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-bottom-panel::-webkit-scrollbar-thumb {
+  background: #bae6fd;
+  border-radius: 4px;
+}
+
+.nav-category-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-category-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  text-transform: uppercase;
+  padding: 6px 8px 3px 8px;
+  user-select: none;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  height: 32px;
+  border-radius: 8px;
+  color: #334155;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.nav:hover {
+  background: #f0f9ff;
+  color: #0284c7;
+  border-color: #e0f2fe;
+}
+
+.nav.active {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%) !important;
+  color: #0369a1 !important;
+  font-weight: 600 !important;
+  border: 1px solid #7dd3fc !important;
+  box-shadow: 0 2px 6px rgba(14, 165, 233, 0.12) !important;
+}
+
+.nav-icon {
+  color: #0ea5e9;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.nav:hover .nav-icon {
+  transform: scale(1.08);
+}
+
+.config-footer-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  margin-top: 6px;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  font-size: 11px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.config-footer-row:hover {
+  background: #f0f9ff;
+  border-color: #7dd3fc;
+  color: #0284c7;
+}
+
+.config-footer-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
