@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { dialog, shell } from 'electron';
 import { execa } from 'execa';
 import { AgentOrchestrator } from '../agent/index.js';
-import { ChannelManager, createChannelHost, parseCommand, HELP_TEXT, ChannelContactStore, WeChatContactStore, FeishuChannel, QQChannel, type ChannelContact, type ChannelChatMessage, type ChannelName, type WeChatContact, type WeChatChatMessage } from '../channels/index.js';
+import { ChannelManager, TelegramChannel, createChannelHost, parseCommand, HELP_TEXT, ChannelContactStore, WeChatContactStore, FeishuChannel, QQChannel, type ChannelContact, type ChannelChatMessage, type ChannelName, type WeChatContact, type WeChatChatMessage } from '../channels/index.js';
 import { BUILTIN_PROVIDERS, ConfigResolver, ConfigWriter, loadConfig, resolveConfigPath, sanitizeModelRef, type ModelPatch, type ProviderPatch, type ResolvedAgent, type ResolvedProvider } from '../config/index.js';
 import { describeError, type Attachment } from '../domain/index.js';
 import { planInjection, writeInjection, type InjectionTarget } from '../inject/index.js';
@@ -1428,7 +1428,7 @@ export class GuiService {
     }
   }
 
-  private telegramManager: ChannelManager | undefined;
+  private telegramManager: ChannelManager | TelegramChannel | undefined;
   private telegramRunning = false;
   private telegramBotInfo: { username: string; name: string } | undefined;
 
@@ -1531,11 +1531,13 @@ export class GuiService {
     const orchestrator = new AgentOrchestrator({ configPath: this.configPath });
     await orchestrator.loadMcpTools();
 
-    const manager = new ChannelManager({
-      orchestrator,
+    const manager = new TelegramChannel({
+      host: createChannelHost(orchestrator),
+      channels: orchestrator.config.resolveChannels(),
+      limits: orchestrator.config.resolveLimits(),
+      paths: orchestrator.resolvedPaths,
       env: process.env,
       log: (line) => this.info(`[Telegram] ${line}`),
-      includeCli: false,
     });
 
     await manager.start();
@@ -2224,7 +2226,43 @@ export class GuiService {
     return res;
   }
 
-  async getServerInfo(id: string): Promise<RemoteSystemInfo> {
+  async getServerInfo(id?: string): Promise<any> {
+    if (!id || id === 'host' || id === 'local') {
+      const hostInfo = getHostSystemInfo();
+      return {
+        hostname: hostInfo.network.hostname,
+        platform: hostInfo.os.platform,
+        arch: hostInfo.os.arch,
+        osRelease: hostInfo.os.release,
+        uptimeSeconds: hostInfo.os.uptimeSeconds,
+        cpuCount: hostInfo.cpu.cores,
+        cpuModel: hostInfo.cpu.model,
+        cpuUsagePercent: hostInfo.cpu.usagePercent,
+        totalMemBytes: hostInfo.memory.totalBytes,
+        freeMemBytes: hostInfo.memory.freeBytes,
+        usedMemPercent: hostInfo.memory.usedPercent,
+        loadAvg: hostInfo.loadAvg,
+        nodeVersion: hostInfo.os.nodeVersion,
+        timestamp: hostInfo.timestamp,
+        os: {
+          platform: hostInfo.os.platform,
+          release: hostInfo.os.release,
+          arch: hostInfo.os.arch,
+          hostname: hostInfo.network.hostname,
+        },
+        cpu: {
+          model: hostInfo.cpu.model,
+          cores: hostInfo.cpu.cores,
+        },
+        memory: {
+          total: hostInfo.memory.totalBytes,
+          used: hostInfo.memory.usedBytes,
+          free: hostInfo.memory.freeBytes,
+          usagePercent: hostInfo.memory.usedPercent,
+        },
+        uptime: hostInfo.os.processUptimeSeconds,
+      };
+    }
     const server = RemoteServerStore.getInstance().get(id);
     if (!server) throw new Error(`未找到服务器：${id}`);
     return RemoteClientManager.getInstance().getSystemInfo(server);
