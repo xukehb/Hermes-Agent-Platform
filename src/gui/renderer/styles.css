@@ -2230,8 +2230,12 @@ dialog.modal {
   box-shadow: var(--shadow-modal);
   max-width: 560px;
   width: 90vw;
+  max-height: 90vh;
   animation: modalIn 0.2s var(--ease-spring);
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: fixed;
+  margin: auto;
 }
 
 dialog.modal.modal-sm { max-width: 440px; }
@@ -2282,6 +2286,9 @@ dialog.modal::backdrop {
   color: #1e293b;
 }
 
+/* ==========================================================================
+   全局统一输入控件规范 (Universal Input & Form Controls System)
+   ========================================================================== */
 .form-group {
   display: flex;
   flex-direction: column;
@@ -2289,15 +2296,26 @@ dialog.modal::backdrop {
   margin-bottom: 14px;
 }
 
-.form-group label {
+.form-group label,
+.form-grid label {
   font-size: 12.5px;
   font-weight: 600;
   color: var(--text-main);
+  letter-spacing: -0.01em;
 }
 
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]),
+textarea,
+.form-control,
 .form-group input,
-.form-group textarea {
-  padding: 8.5px 12px;
+.form-group textarea,
+.form-grid input,
+.form-grid textarea,
+.switch-form input,
+.modal input,
+.modal textarea {
+  width: 100%;
+  padding: 8px 12px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-input);
   font-size: 13px;
@@ -2306,82 +2324,107 @@ dialog.modal::backdrop {
   background: #ffffff;
   color: var(--text-main);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
 }
 
-.form-group input:hover,
-.form-group textarea:hover {
-  border-color: #a1a1aa;
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]):hover,
+textarea:hover,
+.form-control:hover {
+  border-color: #94a3b8;
+  background-color: #fcfcfd;
 }
 
-.form-group input:focus,
-.form-group textarea:focus {
-  border-color: var(--border-focus);
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]):focus,
+textarea:focus,
+.form-control:focus {
+  border-color: var(--accent);
   background-color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.14), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+input:disabled,
+textarea:disabled {
+  background-color: #f8fafc;
+  border-color: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
 }
 
 /* ==========================================================================
-   现代化高级下拉菜单规范 (Modern Dropdown & Select System)
+   全局统一现代化下拉菜单规范 (Universal Modern Dropdown & Select System)
    ========================================================================== */
-select,
-.form-group select,
+select:not(.agent-switch-select):not(.model-switch-select),
+.form-select,
+.form-group select:not(.agent-switch-select):not(.model-switch-select),
 .form-grid select,
 .switch-form select,
-.card-body select {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
+.card-body select,
+.modal select,
+.modal-form-wrap select,
+.dialog select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  display: block;
   width: 100%;
   height: 38px;
-  padding: 0 38px 0 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-input);
-  font-size: 13px;
-  font-weight: 500;
-  font-family: var(--font-sans);
-  color: var(--text-main);
-  background-color: #ffffff;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: calc(100% - 12px) center;
-  background-size: 14px 14px;
-  outline: none;
-  cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 38px;
+  padding: 0 36px 0 12px !important;
+  border-radius: var(--radius-sm) !important;
+  border: 1px solid var(--border-input) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  font-family: var(--font-sans) !important;
+  color: var(--text-main) !important;
+  background-color: #ffffff !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: calc(100% - 12px) center !important;
+  background-size: 14px 14px !important;
+  outline: none !important;
+  cursor: pointer !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-sizing: border-box !important;
 }
 
-select:hover,
-.form-group select:hover,
+select:not(.agent-switch-select):not(.model-switch-select):hover,
+.form-select:hover,
+.form-group select:not(.agent-switch-select):not(.model-switch-select):hover,
 .form-grid select:hover,
 .switch-form select:hover,
-.card-body select:hover {
-  border-color: #94a3b8;
-  background-color: #fcfcfd;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+.card-body select:hover,
+.modal select:hover,
+.modal-form-wrap select:hover {
+  border-color: #64748b !important;
+  background-color: #f8fafc !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230284c7' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  box-shadow: 0 2px 6px rgba(14, 165, 233, 0.08) !important;
 }
 
-select:focus,
-.form-group select:focus,
+select:not(.agent-switch-select):not(.model-switch-select):focus,
+.form-select:focus,
+.form-group select:not(.agent-switch-select):not(.model-switch-select):focus,
 .form-grid select:focus,
 .switch-form select:focus,
-.card-body select:focus {
-  border-color: var(--primary-black);
-  background-color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.09), 0 1px 2px rgba(0, 0, 0, 0.04);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23000000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+.card-body select:focus,
+.modal select:focus,
+.modal-form-wrap select:focus {
+  border-color: var(--accent) !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.16), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230284c7' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
 }
 
 select:disabled,
 .form-group select:disabled {
-  background-color: #f4f4f5;
-  border-color: #e4e4e7;
-  color: #9ca3af;
-  cursor: not-allowed;
-  opacity: 0.75;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23d4d4d8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #94a3b8 !important;
+  cursor: not-allowed !important;
+  opacity: 0.75 !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
 }
 
 /* 选项列表美化 */

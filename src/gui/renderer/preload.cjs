@@ -59,6 +59,7 @@ contextBridge.exposeInMainWorld('hap', {
   removeMemory: (id) => call('gui:removeMemory', id),
   findDefinition: (symbol, workspace) => call('gui:findDefinition', { symbol, workspace }),
   findReferences: (symbol, workspace) => call('gui:findReferences', { symbol, workspace }),
+  listSymbols: (file) => call('gui:listSymbols', file),
   getWebInfo: () => call('gui:getWebInfo'),
   getHostSysInfo: () => call('gui:getHostSysInfo'),
   scanDiskCleanable: (server) => call('gui:scanDiskCleanable', server),

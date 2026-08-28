@@ -851,8 +851,8 @@
                   </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">
-                  <label style="font-size:12px;color:var(--text-secondary);">执行智能体：</label>
-                  <select id="sdOpsAgentSelect" style="padding:4px 8px;font-size:12px;width:120px;">
+                  <label style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">执行智能体：</label>
+                  <select id="sdOpsAgentSelect" style="width:140px;">
                     <option value="ops">ops (巡检运维)</option>
                     <option value="coder">coder (部署构建)</option>
                   </select>
@@ -1050,8 +1050,8 @@
           </div>
           <div class="card-body" style="padding:16px;">
             <div style="margin-bottom:12px;display:flex;gap:8px;">
-              <input id="memorySearchInput" placeholder="按关键字搜索记忆条目..." style="flex:1;padding:6px 12px;font-size:12.5px;border:1px solid var(--border-default);border-radius:var(--radius-sm);" />
-              <select id="memoryAgentFilter" style="padding:6px 10px;font-size:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);">
+              <input id="memorySearchInput" placeholder="按关键字搜索记忆条目..." style="flex:1;" />
+              <select id="memoryAgentFilter" style="width:150px;">
                 <option value="">全部智能体</option>
               </select>
             </div>
@@ -1220,7 +1220,7 @@
                   <form id="wxConfigForm" style="display:flex;flex-direction:column;gap:12px;">
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">接入模式 (Integration Mode) *</label>
-                      <select id="wxModeSelect" class="form-control" style="font-size:12.5px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;">
+                      <select id="wxModeSelect">
                         <option value="personal">个人微信 (二维码扫码免密登录 / Puppet 协议)</option>
                         <option value="wecom">企业微信自建应用 (CorpID & Secret 模式)</option>
                       </select>
@@ -1230,15 +1230,15 @@
                     <div id="wxWeComFields" style="display:none;flex-direction:column;gap:10px;background:#f8fafc;padding:12px;border-radius:8px;border:1px solid #e2e8f0;">
                       <div class="form-group">
                         <label style="font-size:11.5px;font-weight:600;">企业微信企业 ID (CorpID)</label>
-                        <input id="wxCorpIdInput" placeholder="例如：wwa1b2c3d4e5f6..." style="font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid #cbd5e1;" />
+                        <input id="wxCorpIdInput" placeholder="例如：wwa1b2c3d4e5f6..." />
                       </div>
                       <div class="form-group">
                         <label style="font-size:11.5px;font-weight:600;">应用 AgentID</label>
-                        <input id="wxAgentIdInput" type="number" placeholder="例如：1000002" style="font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid #cbd5e1;" />
+                        <input id="wxAgentIdInput" type="number" placeholder="例如：1000002" />
                       </div>
                       <div class="form-group">
                         <label style="font-size:11.5px;font-weight:600;">应用 Secret</label>
-                        <input id="wxSecretInput" type="password" placeholder="企业微信应用凭证 Secret" style="font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid #cbd5e1;" />
+                        <input id="wxSecretInput" type="password" placeholder="企业微信应用凭证 Secret" />
                       </div>
                     </div>
 
@@ -1267,13 +1267,13 @@
 
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">默认响应智能体 (Default Agent)</label>
-                      <select id="wxAgentSelect" style="font-size:12.5px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;"></select>
+                      <select id="wxAgentSelect"></select>
                     </div>
 
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">绑定工作区目录 (Workspace Path)</label>
-                      <input id="wxWorkspaceInput" placeholder="留空默认使用当前激活的项目工作区" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;" />
-                      <select id="wxWorkspacePickerSelect" style="margin-top:6px;font-size:11.5px;padding:4px 8px;border-radius:6px;border:1px solid #e2e8f0;background:#f8fafc;">
+                      <input id="wxWorkspaceInput" placeholder="留空默认使用当前激活的项目工作区" />
+                      <select id="wxWorkspacePickerSelect" style="margin-top:6px;">
                         <option value="">-- 从项目库快捷点选 --</option>
                       </select>
                     </div>
@@ -1319,7 +1319,7 @@
 
                   <!-- 模拟测试消息 -->
                   <div style="display:flex;gap:8px;">
-                    <input id="wxTestMessageInput" placeholder="向选中的微信联系人或群发送测试消息..." style="flex:1;padding:6px 10px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" />
+                    <input id="wxTestMessageInput" placeholder="向选中的微信联系人或群发送测试消息..." style="flex:1;" />
                     <button type="button" class="btn primary" id="sendWxTestMsgBtn" style="font-size:12px;">发送</button>
                   </div>
                 </div>
@@ -1368,12 +1368,12 @@
                         <label style="font-size:12px;font-weight:600;">Bot API Token *</label>
                         <button type="button" class="btn text-btn" id="toggleTgTokenVisibilityBtn" style="font-size:11.5px;padding:2px 6px;">显示明文</button>
                       </div>
-                      <input id="tgTokenInput" type="password" placeholder="例如：123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ..." required style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;" />
+                      <input id="tgTokenInput" type="password" placeholder="例如：123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ..." required />
                     </div>
 
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">通信监听模式 (Connection Mode)</label>
-                      <select id="tgModeSelect" style="font-size:12.5px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;">
+                      <select id="tgModeSelect">
                         <option value="polling">长轮询模式 (Long Polling，推荐，无需公网 IP)</option>
                         <option value="webhook">Webhook 回调模式 (需要外网 HTTPS 域名)</option>
                       </select>
@@ -1381,19 +1381,19 @@
 
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">授权用户白名单 (Allowed Users ID)</label>
-                      <input id="tgAllowedUsersInput" placeholder="例如：12345678, 87654321 (逗号分隔，留空允许所有用户)" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;" />
+                      <input id="tgAllowedUsersInput" placeholder="例如：12345678, 87654321 (逗号分隔，留空允许所有用户)" />
                       <span style="font-size:11px;color:var(--text-muted);margin-top:2px;">仅白名单内的 Telegram User ID 能够唤醒智能体执行系统命令</span>
                     </div>
 
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">默认响应智能体 (Default Agent)</label>
-                      <select id="tgAgentSelect" style="font-size:12.5px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;"></select>
+                      <select id="tgAgentSelect"></select>
                     </div>
 
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">绑定工作区目录 (Workspace Path)</label>
-                      <input id="tgWorkspaceInput" placeholder="留空默认使用当前激活的项目工作区" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;" />
-                      <select id="tgWorkspacePickerSelect" style="margin-top:6px;font-size:11.5px;padding:4px 8px;border-radius:6px;border:1px solid #e2e8f0;background:#f8fafc;">
+                      <input id="tgWorkspaceInput" placeholder="留空默认使用当前激活的项目工作区" />
+                      <select id="tgWorkspacePickerSelect" style="margin-top:6px;">
                         <option value="">-- 从项目库快捷点选 --</option>
                       </select>
                     </div>
@@ -1467,23 +1467,23 @@
                   <form id="feishuConfigForm" style="display:flex;flex-direction:column;gap:12px;">
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">App ID (应用唯一标识) *</label>
-                      <input id="feishuAppIdInput" placeholder="cli_a1b2c3d4e5..." style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;" />
+                      <input id="feishuAppIdInput" placeholder="cli_a1b2c3d4e5..." />
                     </div>
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">App Secret (应用密钥) *</label>
-                      <input id="feishuAppSecretInput" type="password" placeholder="在此输入飞书 App Secret" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;" />
+                      <input id="feishuAppSecretInput" type="password" placeholder="在此输入飞书 App Secret" />
                     </div>
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">Encrypt Key (消息加解密 Key，可选)</label>
-                      <input id="feishuEncryptKeyInput" placeholder="如开启加密则填写" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;" />
+                      <input id="feishuEncryptKeyInput" placeholder="如开启加密则填写" />
                     </div>
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">Verification Token (事件校验 Token，可选)</label>
-                      <input id="feishuVerifyTokenInput" placeholder="用于安全校验请求合法性" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;" />
+                      <input id="feishuVerifyTokenInput" placeholder="用于安全校验请求合法性" />
                     </div>
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">默认响应智能体 (Default Agent)</label>
-                      <select id="feishuAgentSelect" style="font-size:12.5px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;"></select>
+                      <select id="feishuAgentSelect"></select>
                     </div>
                     <button type="submit" class="btn primary" id="saveFeishuConfigBtn" style="font-size:12.5px;font-weight:600;margin-top:4px;">
                       💾 保存飞书配置
@@ -1498,7 +1498,7 @@
                   <div style="background:#f8fafc;padding:12px;border-radius:8px;border:1px solid #e2e8f0;font-size:12px;line-height:1.6;">
                     <div style="color:var(--text-secondary);font-weight:600;">事件请求网址 (Request URL):</div>
                     <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
-                      <input id="feishuWebhookUrlDisplay" readonly value="http://127.0.0.1:8765/api/channels/feishu/events" style="flex:1;background:#fff;font-family:var(--font-mono);font-size:11.5px;padding:6px 8px;border-radius:6px;border:1px solid #cbd5e1;" />
+                      <input id="feishuWebhookUrlDisplay" readonly value="http://127.0.0.1:8765/api/channels/feishu/events" style="flex:1;font-family:var(--font-mono);font-size:11.5px;" />
                       <button type="button" class="btn secondary" onclick="copyText($('feishuWebhookUrlDisplay')?.value, '飞书回调地址')" style="font-size:11.5px;padding:5px 10px;">复制</button>
                     </div>
                     <div style="margin-top:10px;color:var(--text-muted);font-size:11px;">
@@ -1533,19 +1533,19 @@
                   <form id="qqConfigForm" style="display:flex;flex-direction:column;gap:12px;">
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">OneBot 接口地址 (WebSocket / HTTP) *</label>
-                      <input id="qqEndpointInput" placeholder="例如：ws://127.0.0.1:3001 或 http://127.0.0.1:3000" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;" />
+                      <input id="qqEndpointInput" placeholder="例如：ws://127.0.0.1:3001 或 http://127.0.0.1:3000" />
                     </div>
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">Access Token (访问凭证)</label>
-                      <input id="qqTokenInput" type="password" placeholder="OneBot 服务端配置的 Access Token" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;" />
+                      <input id="qqTokenInput" type="password" placeholder="OneBot 服务端配置的 Access Token" />
                     </div>
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">管理员 QQ 号 (逗号分隔)</label>
-                      <input id="qqAdminListInput" placeholder="例如：10001, 10002" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;" />
+                      <input id="qqAdminListInput" placeholder="例如：10001, 10002" />
                     </div>
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">默认响应智能体 (Default Agent)</label>
-                      <select id="qqAgentSelect" style="font-size:12.5px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;"></select>
+                      <select id="qqAgentSelect"></select>
                     </div>
                     <button type="submit" class="btn primary" id="saveQQConfigBtn" style="font-size:12.5px;font-weight:600;margin-top:4px;">
                       💾 保存 QQ 配置
@@ -1561,7 +1561,7 @@
                     <div style="color:var(--text-muted);text-align:center;padding:24px 0;">连接 OneBot 服务后，QQ 消息与群聊指令将在此实时输出</div>
                   </div>
                   <div style="display:flex;gap:8px;">
-                    <input id="qqTestMessageInput" placeholder="向选中的 QQ 好友或群发送测试消息..." style="flex:1;padding:6px 10px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" />
+                    <input id="qqTestMessageInput" placeholder="向选中的 QQ 好友或群发送测试消息..." style="flex:1;" />
                     <button type="button" class="btn primary" id="sendQQTestMsgBtn" style="font-size:12px;">发送</button>
                   </div>
                 </div>
@@ -1592,19 +1592,19 @@
                   <form id="dingtalkConfigForm" style="display:flex;flex-direction:column;gap:12px;">
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">AppKey (应用凭证) *</label>
-                      <input id="dingAppKeyInput" placeholder="dingxxxxxxxx" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;" />
+                      <input id="dingAppKeyInput" placeholder="dingxxxxxxxx" />
                     </div>
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">AppSecret (应用密钥) *</label>
-                      <input id="dingAppSecretInput" type="password" placeholder="在此输入钉钉 AppSecret" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;" />
+                      <input id="dingAppSecretInput" type="password" placeholder="在此输入钉钉 AppSecret" />
                     </div>
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">自定义 Webhook 地址 (可选)</label>
-                      <input id="dingWebhookInput" placeholder="https://oapi.dingtalk.com/robot/send?access_token=..." style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;" />
+                      <input id="dingWebhookInput" placeholder="https://oapi.dingtalk.com/robot/send?access_token=..." />
                     </div>
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">默认响应智能体 (Default Agent)</label>
-                      <select id="dingAgentSelect" style="font-size:12.5px;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;"></select>
+                      <select id="dingAgentSelect"></select>
                     </div>
                     <button type="submit" class="btn primary" id="saveDingConfigBtn" style="font-size:12.5px;font-weight:600;margin-top:4px;">
                       💾 保存钉钉配置
@@ -1693,6 +1693,47 @@
         </div>
       </section>
     </main>
+
+    <!-- 弹窗: 添加智能体记忆条目 (Memory Dialog) -->
+    <dialog id="memoryDialog" class="modal modal-md">
+      <form id="memoryForm" class="modal-form-wrap">
+        <div class="modal-header-row">
+          <h2 id="memoryDialogTitle">添加智能体记忆条目</h2>
+          <button type="button" class="btn-close" id="closeMemoryDialogBtn"></button>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>记忆类型 / 范畴 *</label>
+            <select id="memoryInputCategory" required>
+              <option value="preference">用户习惯与偏好 (Preference)</option>
+              <option value="architecture">架构与工程约束 (Architecture)</option>
+              <option value="convention">代码规范与风格 (Convention)</option>
+              <option value="domain">业务背景与专有名词 (Domain)</option>
+              <option value="custom">自定义知识点 (Custom)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>指定生效智能体 (可选)</label>
+            <select id="memoryAgentSelect">
+              <option value="">全部智能体通用</option>
+            </select>
+          </div>
+
+          <div class="form-group full-width">
+            <label>记忆内容 *</label>
+            <textarea id="memoryInputContent" rows="4" placeholder="例如：前端代码一律采用 TypeScript + ESM 规范；项目构建必须使用 pnpm 等..." required></textarea>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:14px;border-top:1px solid var(--border-default);">
+          <button type="button" class="btn secondary" id="cancelMemoryDialogBtn">取消</button>
+          <button type="submit" class="btn primary">保存记忆</button>
+        </div>
+      </form>
+    </dialog>
+
 
     <!-- 弹窗: 定时任务 新增/修改 (Schedule Dialog) -->
     <dialog id="scheduleDialog" class="modal modal-md">
@@ -2661,7 +2702,7 @@
             <div style="display:grid;grid-template-columns: 1fr 1fr;gap:10px;">
               <div class="form-group" style="margin-bottom:0;">
                 <label style="font-size:12px;font-weight:600;">艺术风格 (Style)</label>
-                <select id="imageGenStyleSelect" class="form-control" style="font-size:12.5px;padding:6px 10px;">
+                <select id="imageGenStyleSelect">
                   <option value="vivid">鲜艳生动 (Vivid - 推荐)</option>
                   <option value="photorealistic">写实摄影 (Photorealistic)</option>
                   <option value="digital-art">数字艺术 (Digital Art)</option>
@@ -2675,7 +2716,7 @@
 
               <div class="form-group" style="margin-bottom:0;">
                 <label style="font-size:12px;font-weight:600;">宽高比与分辨率 (Aspect Ratio)</label>
-                <select id="imageGenRatioSelect" class="form-control" style="font-size:12.5px;padding:6px 10px;">
+                <select id="imageGenRatioSelect">
                   <option value="1:1" data-size="1024x1024">1:1 正方形 (1024x1024 头像/图标)</option>
                   <option value="16:9" data-size="1792x1024">16:9 横屏 (1792x1024 桌面壁纸/插画)</option>
                   <option value="9:16" data-size="1024x1792">9:16 竖屏 (1024x1792 手机海报/壁纸)</option>
@@ -2690,7 +2731,7 @@
                 <label style="font-size:12px;font-weight:600;">生图服务商与模型 (Model & Provider) *</label>
                 <span id="imageModelStatusChip" style="font-size:11px;color:#10b981;"></span>
               </div>
-              <select id="imageGenModelSelect" class="form-control" style="font-size:12.5px;padding:6px 10px;">
+              <select id="imageGenModelSelect">
                 <optgroup label="🌟 官方与商用生图大模型 (画质顶尖 · 需 API Key)">
                   <option value="openai:dall-e-3" data-provider="openai" data-model="dall-e-3" selected>OpenAI DALL-E 3 (画质顶尖 · 官方推荐)</option>
                   <option value="openai:dall-e-2" data-provider="openai" data-model="dall-e-2">OpenAI DALL-E 2 (极速低成本)</option>
@@ -2871,7 +2912,7 @@
           <div class="form-grid">
             <div class="form-group full-width">
               <label>目标服务器节点 *</label>
-              <select id="sslServerSelect" required style="padding:7px 10px;font-size:13px;"></select>
+              <select id="sslServerSelect" required></select>
             </div>
 
             <div class="form-group full-width">
@@ -2886,7 +2927,7 @@
 
             <div class="form-group">
               <label>申请与验证方式 *</label>
-              <select id="sslModeSelect" style="padding:7px 10px;font-size:13px;">
+              <select id="sslModeSelect">
                 <option value="nginx">Nginx 模式 (自动配置并重载 Nginx)</option>
                 <option value="standalone">Standalone 独立模式 (临时占用 80 端口验证)</option>
                 <option value="certonly">仅生成证书 (手动指定配置路径)</option>
@@ -2941,7 +2982,7 @@
           <div class="form-grid">
             <div class="form-group full-width">
               <label>目标服务器节点 *</label>
-              <select id="proxyServerSelect" required style="padding:7px 10px;font-size:13px;"></select>
+              <select id="proxyServerSelect" required></select>
             </div>
 
             <div class="form-group">
@@ -3050,7 +3091,7 @@
     </dialog>
 
     <!-- 弹窗: 多机器人实例 新增/编辑 (Bot Dialog) -->
-    <dialog id="botDialog" class="modal" style="max-width:580px;">
+    <dialog id="botDialog" class="modal" style="max-width:580px;max-height:90vh;">
       <form id="botForm" class="modal-form-wrap">
         <div class="modal-header-row">
           <div style="display:flex;align-items:center;gap:8px;">
@@ -3186,7 +3227,7 @@
 
     
     <!-- 弹窗: 远端节点专属机器人与告警策略配置 (Node Bot & Alarm Settings Modal) -->
-    <dialog id="nodeBotConfigModal" class="modal modal-lg">
+    <dialog id="nodeBotConfigModal" class="modal modal-lg" style="max-height:90vh;">
       <div class="modal-form-wrap" style="padding:22px 26px;">
         <div class="modal-header-row" style="margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:10px;">
@@ -3203,12 +3244,12 @@
           <div class="form-grid">
             <div class="form-group">
               <label>目标计算节点 *</label>
-              <select id="nodeBotServerSelect" required style="padding:7px 10px;font-size:13px;"></select>
+              <select id="nodeBotServerSelect" required></select>
             </div>
 
             <div class="form-group">
               <label>绑定的专属智能体角色 (Agent) *</label>
-              <select id="nodeBotAgentSelect" style="padding:7px 10px;font-size:13px;">
+              <select id="nodeBotAgentSelect">
                 <option value="ops">ops (全栈智能运维与巡检专家)</option>
                 <option value="coder">coder (代码构建与部署专家)</option>
                 <option value="researcher">researcher (数据分析与日志检索专家)</option>
@@ -3219,7 +3260,7 @@
 
             <div class="form-group">
               <label>告警推送机器人通道 (Channel) *</label>
-              <select id="nodeBotChannelSelect" style="padding:7px 10px;font-size:13px;">
+              <select id="nodeBotChannelSelect">
                 <option value="feishu">飞书自定义机器人 (Feishu Webhook)</option>
                 <option value="wechat">企业微信机器人 (WeChat Webhook)</option>
                 <option value="telegram">Telegram 机器人 (Telegram Bot)</option>

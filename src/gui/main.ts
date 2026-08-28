@@ -32,6 +32,7 @@ function registerIpc(): void {
   ipcMain.handle('gui:batchRemoveProviders', (_event, ids) => invoke(() => service.batchRemoveProviders(ids)));
   ipcMain.handle('gui:upsertModel', (_event, input) => invoke(() => service.upsertModel(input)));
   ipcMain.handle('gui:removeModel', (_event, alias) => invoke(() => service.removeModel(alias)));
+  ipcMain.handle('gui:batchRemoveModels', (_event, aliases) => invoke(() => service.batchRemoveModels(aliases)));
   ipcMain.handle('gui:upsertAgent', (_event, input) => invoke(() => service.upsertAgent(input)));
   ipcMain.handle('gui:openInVsCode', (_event, path) => invoke(() => service.openInVsCode(path)));
   ipcMain.handle('gui:openInExplorer', (_event, path) => invoke(() => service.openInExplorer(path)));
@@ -56,6 +57,7 @@ function registerIpc(): void {
   ipcMain.handle('gui:getGitStatus', (_event, projectPath) => invoke(() => service.getGitStatus(projectPath)));
   ipcMain.handle('gui:gitCommit', (_event, payload) => invoke(() => service.gitCommit(payload.projectPath, payload.message)));
   ipcMain.handle('gui:gitPush', (_event, projectPath) => invoke(() => service.gitPush(projectPath)));
+  ipcMain.handle('gui:gitPull', (_event, projectPath) => invoke(() => service.gitPull(projectPath)));
   ipcMain.handle('gui:gitDiff', (_event, payload) => invoke(() => service.gitDiff(payload.projectPath, payload.file)));
   ipcMain.handle('gui:getVisualDiff', (_event, payload) => invoke(() => service.getVisualDiff(payload.projectPath, payload.file)));
   ipcMain.handle('gui:revertFileDiff', (_event, payload) => invoke(() => service.revertFileDiff(payload.projectPath, payload.file)));
@@ -64,6 +66,7 @@ function registerIpc(): void {
   ipcMain.handle('gui:upsertSchedule', (_event, input) => invoke(() => service.upsertSchedule(input)));
   ipcMain.handle('gui:removeSchedule', (_event, id) => invoke(() => service.removeSchedule(id)));
   ipcMain.handle('gui:toggleSchedule', (_event, payload) => invoke(() => service.toggleSchedule(payload.id, payload.enabled)));
+  ipcMain.handle('gui:runScheduleNow', (_event, id) => invoke(() => service.runScheduleNow(id)));
   ipcMain.handle('gui:getScheduleHistory', (_event, scheduleId) => invoke(() => service.getScheduleHistory(scheduleId)));
   ipcMain.handle('gui:listMemories', (_event, category) => invoke(() => service.listMemories(category)));
   ipcMain.handle('gui:addMemory', (_event, input) => invoke(() => service.addMemory(input)));
@@ -103,6 +106,7 @@ function registerIpc(): void {
   ipcMain.handle('gui:getChannelMessages', (_event, contactId, channel) => invoke(() => service.getChannelMessages(contactId, channel)));
   ipcMain.handle('gui:upsertChannelContact', (_event, input) => invoke(() => service.upsertChannelContact(input)));
   ipcMain.handle('gui:removeChannelContact', (_event, id, channel) => invoke(() => service.removeChannelContact(id, channel)));
+  ipcMain.handle('gui:sendChannelMessage', (_event, payload) => invoke(() => service.sendChannelMessage(payload)));
   ipcMain.handle('gui:listBots', () => invoke(() => service.listBots()));
   ipcMain.handle('gui:upsertBot', (_event, bot) => invoke(() => service.upsertBot(bot)));
   ipcMain.handle('gui:deleteBot', (_event, id) => invoke(() => service.deleteBot(id)));

@@ -1530,6 +1530,7 @@ async function refresh() {
 
     renderProjects();
     renderSchedules();
+    renderMemories();
     renderProjectsTree();
     renderSkills();
     renderPlugins();
@@ -1879,10 +1880,10 @@ $('savePermissionsBtn')?.addEventListener('click', async () => {
 
   const config = {
     mode: activeMode,
-    allowShell: $('permAllowShell').checked,
-    allowFsWrite: $('permAllowFsWrite').checked,
-    allowNetwork: $('permAllowNetwork').checked,
-    allowSpawnSubagent: $('permAllowSubagent').checked,
+    allowShell: $('permAllowShell')?.checked ?? true,
+    allowFsWrite: $('permAllowFsWrite')?.checked ?? true,
+    allowNetwork: $('permAllowNetwork')?.checked ?? true,
+    allowSpawnSubagent: $('permAllowSubagent')?.checked ?? true,
     autoApproveTools: activeMode === 'full-access' ? ['*'] : [],
   };
 
@@ -3430,7 +3431,7 @@ document.querySelectorAll('dialog.modal').forEach((modal) => {
 });
 
 $('copyPreviewBtn')?.addEventListener('click', () => {
-  const content = $('syncPreview').textContent;
+  const content = $('syncPreview')?.textContent || '';
   copyText(content, '配置预览');
 });
 
@@ -3466,11 +3467,11 @@ $('switchForm')?.addEventListener('submit', async (event) => {
       model: data.model,
       write: isWrite,
     });
-    $('syncPreview').textContent = JSON.stringify(result, null, 2);
+    if ($('syncPreview')) $('syncPreview').textContent = JSON.stringify(result, null, 2);
     showToast(isWrite ? `已成功写入同步到 ${data.target}` : `已生成 ${data.target} 注入预览`, 'success');
     await refresh();
   } catch (error) {
-    $('syncPreview').textContent = `// 错误：\n${error.message}`;
+    if ($('syncPreview')) $('syncPreview').textContent = `// 错误：\n${error.message}`;
     showToast('同步失败：' + error.message, 'error');
   }
 });
@@ -4373,7 +4374,7 @@ document.querySelectorAll('.quick-cmd-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
     const cmd = btn.dataset.cmd;
     if (cmd && $('remoteCommandInput')) {
-      $('remoteCommandInput').value = cmd;
+      if ($('remoteCommandInput')) $('remoteCommandInput').value = cmd;
       $('remoteExecForm')?.requestSubmit();
     }
   });
@@ -6507,12 +6508,12 @@ window.installPresetMcp = async (presetId) => {
 window.openEditPluginModal = (id) => {
   const p = (state.plugins || []).find(item => item.id === id);
   if (!p) return;
-  $('pluginInputName').value = p.name || '';
-  $('pluginInputType').value = p.type || 'mcp';
-  $('pluginInputCategory').value = p.category || 'developer';
-  $('pluginInputCommand').value = p.command || '';
-  $('pluginInputArgs').value = (p.args || []).join(' ');
-  $('pluginInputDescription').value = p.description || '';
+  if ($('pluginInputName')) $('pluginInputName').value = p.name || '';
+  if ($('pluginInputType')) $('pluginInputType').value = p.type || 'mcp';
+  if ($('pluginInputCategory')) $('pluginInputCategory').value = p.category || 'developer';
+  if ($('pluginInputCommand')) $('pluginInputCommand').value = p.command || '';
+  if ($('pluginInputArgs')) $('pluginInputArgs').value = (p.args || []).join(' ');
+  if ($('pluginInputDescription')) $('pluginInputDescription').value = p.description || '';
   $('addPluginModal')?.showModal();
 };
 
@@ -8065,26 +8066,49 @@ ${prompt}`,
 // 节点专属机器人与告警策略控制器 (Node Bot & Alarm Controller)
 // ==========================================================================
 
-window.openNodeBotConfigModal = (preServerId) => {
-  const modal = $('nodeBotConfigModal');
-  if (!modal) return;
+window.updateNodeBotChannelFields = () => {
+  const channel = $('nodeBotChannelSelect')?.value || 'feishu';
+  const urlLabel = $('nodeBotWebhookLabel');
+  const urlInput = $('nodeBotWebhookUrl');
+  const targetLabel = $('nodeBotTargetLabel');
+  const targetInput = $('nodeBotTargetId');
 
-  const targetId = preServerId || activePanoramaTarget || 'local';
-  const select = $('nodeBotServerSelect');
-  if (select) {
-    const servers = cachedServers.length > 0 ? cachedServers : (state.servers || []);
-    const opts = ['<option value="local">🖥️ 本机宿主系统 (Local Host)</option>']
-      .concat(servers.map(s => `<option value="${esc(s.id)}">🌐 ${esc(s.name)} (${esc(s.host)})</option>`))
-      .join('');
-    select.innerHTML = opts;
-    select.value = targetId;
+  if (channel === 'feishu') {
+    if (urlLabel) urlLabel.textContent = '飞书群机器人 Webhook 地址 *';
+    if (urlInput) urlInput.placeholder = 'https://open.feishu.cn/open-apis/bot/v2/hook/xxxx';
+    if (targetLabel) targetLabel.textContent = '接收人 / 备注 (可选)';
+    if (targetInput) targetInput.placeholder = '可选，可留空';
+  } else if (channel === 'wechat') {
+    if (urlLabel) urlLabel.textContent = '企业微信群机器人 Webhook 地址 *';
+    if (urlInput) urlInput.placeholder = 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxx';
+    if (targetLabel) targetLabel.textContent = '接收人 / 备注 (可选)';
+    if (targetInput) targetInput.placeholder = '可选，可留空';
+  } else if (channel === 'telegram') {
+    if (urlLabel) urlLabel.textContent = 'Telegram Bot Token *';
+    if (urlInput) urlInput.placeholder = '123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ (或在环境变量中配置)';
+    if (targetLabel) targetLabel.textContent = '接收告警的 Telegram Chat ID *';
+    if (targetInput) targetInput.placeholder = '例如: -100123456789 或 @my_chat_id';
+  } else if (channel === 'qq') {
+    if (urlLabel) urlLabel.textContent = 'OneBot WS/HTTP 接口地址 *';
+    if (urlInput) urlInput.placeholder = 'ws://127.0.0.1:3001 或 http://127.0.0.1:3000';
+    if (targetLabel) targetLabel.textContent = '接收告警的目标群号 / QQ 号 *';
+    if (targetInput) targetInput.placeholder = '例如: 123456789 (群号)';
+  } else {
+    if (urlLabel) urlLabel.textContent = '自定义 Webhook Endpoint *';
+    if (urlInput) urlInput.placeholder = 'https://my-domain.com/api/alerts';
+    if (targetLabel) targetLabel.textContent = '自定义接收标识 (可选)';
+    if (targetInput) targetInput.placeholder = '可选';
   }
+};
 
-  // 读取并回填当前节点已配置的 botConfig
-  const server = targetId === 'local' ? null : cachedServers.find(s => s.id === targetId);
-  const botCfg = server?.botConfig || {
+$('nodeBotChannelSelect')?.addEventListener('change', window.updateNodeBotChannelFields);
+
+$('nodeBotServerSelect')?.addEventListener('change', (e) => {
+  const sId = e.target.value;
+  const s = sId === 'local' ? null : cachedServers.find(item => item.id === sId);
+  const botCfg = s?.botConfig || {
     enabled: true,
-    agentId: server?.agentId || 'ops',
+    agentId: s?.agentId || 'ops',
     channel: 'feishu',
     webhookUrl: '',
     targetId: '',
@@ -8097,7 +8121,10 @@ window.openNodeBotConfigModal = (preServerId) => {
   };
 
   if ($('nodeBotAgentSelect')) $('nodeBotAgentSelect').value = botCfg.agentId || 'ops';
-  if ($('nodeBotChannelSelect')) $('nodeBotChannelSelect').value = botCfg.channel || 'feishu';
+  if ($('nodeBotChannelSelect')) {
+    $('nodeBotChannelSelect').value = botCfg.channel || 'feishu';
+    window.updateNodeBotChannelFields();
+  }
   if ($('nodeBotWebhookUrl')) $('nodeBotWebhookUrl').value = botCfg.webhookUrl || '';
   if ($('nodeBotTargetId')) $('nodeBotTargetId').value = botCfg.targetId || '';
   if ($('nodeBotSecret')) $('nodeBotSecret').value = botCfg.secret || '';
@@ -8106,8 +8133,70 @@ window.openNodeBotConfigModal = (preServerId) => {
   if ($('nodeBotAlertDisk')) $('nodeBotAlertDisk').checked = botCfg.alertOnHighDisk !== false;
   if ($('nodeBotAlertOffline')) $('nodeBotAlertOffline').checked = botCfg.alertOnOffline !== false;
   if ($('nodeBotAutoHealing')) $('nodeBotAutoHealing').checked = botCfg.autoHealing !== false;
+});
 
-  modal.showModal();
+window.openNodeBotConfigModal = (preServerId) => {
+  try {
+    const modal = $('nodeBotConfigModal');
+    if (!modal) {
+      showToast('未能定位机器人配置弹窗组件', 'error');
+      return;
+    }
+
+    const targetId = (typeof preServerId === 'string' && preServerId && !preServerId.includes('object'))
+      ? preServerId
+      : (activePanoramaTarget || 'local');
+
+    const select = $('nodeBotServerSelect');
+    if (select) {
+      const servers = cachedServers.length > 0 ? cachedServers : (state.servers || []);
+      const opts = ['<option value="local">🖥️ 本机宿主系统 (Local Host)</option>']
+        .concat(servers.map(s => `<option value="${esc(s.id)}">🌐 ${esc(s.name)} (${esc(s.host)})</option>`))
+        .join('');
+      select.innerHTML = opts;
+      select.value = targetId;
+    }
+
+    // 读取并回填当前节点已配置的 botConfig
+    const server = targetId === 'local' ? null : cachedServers.find(s => s.id === targetId);
+    const botCfg = server?.botConfig || {
+      enabled: true,
+      agentId: server?.agentId || 'ops',
+      channel: 'feishu',
+      webhookUrl: '',
+      targetId: '',
+      secret: '',
+      alertOnHighCpu: true,
+      alertOnHighMem: true,
+      alertOnHighDisk: true,
+      alertOnOffline: true,
+      autoHealing: true,
+    };
+
+    if ($('nodeBotAgentSelect')) $('nodeBotAgentSelect').value = botCfg.agentId || 'ops';
+    if ($('nodeBotChannelSelect')) {
+      $('nodeBotChannelSelect').value = botCfg.channel || 'feishu';
+      if (typeof window.updateNodeBotChannelFields === 'function') {
+        window.updateNodeBotChannelFields();
+      }
+    }
+    if ($('nodeBotWebhookUrl')) $('nodeBotWebhookUrl').value = botCfg.webhookUrl || '';
+    if ($('nodeBotTargetId')) $('nodeBotTargetId').value = botCfg.targetId || '';
+    if ($('nodeBotSecret')) $('nodeBotSecret').value = botCfg.secret || '';
+    if ($('nodeBotAlertCpu')) $('nodeBotAlertCpu').checked = botCfg.alertOnHighCpu !== false;
+    if ($('nodeBotAlertMem')) $('nodeBotAlertMem').checked = botCfg.alertOnHighMem !== false;
+    if ($('nodeBotAlertDisk')) $('nodeBotAlertDisk').checked = botCfg.alertOnHighDisk !== false;
+    if ($('nodeBotAlertOffline')) $('nodeBotAlertOffline').checked = botCfg.alertOnOffline !== false;
+    if ($('nodeBotAutoHealing')) $('nodeBotAutoHealing').checked = botCfg.autoHealing !== false;
+
+    if (modal.open) {
+      modal.close();
+    }
+    modal.showModal();
+  } catch (err) {
+    console.error('打开机器人配置弹窗失败:', err);
+    showToast('打开弹窗异常: ' + err.message, 'error');
+  }
 };
 
 window.saveNodeBotConfig = async (e) => {
@@ -8228,5 +8317,180 @@ window.chatWithNodeAgent = () => {
       ? '请帮我巡检本机宿主系统的 CPU、内存与磁盘占用情况。'
       : `请帮我巡检远程服务器 [${s?.name || targetId}] (${s?.host || ''}) 的系统健康状况与 Docker 服务。`;
     textarea.focus();
+  }
+};
+
+
+// ==========================================================================
+// 专属服务器 SSH 交互终端控制器 (Dedicated Server Terminal)
+// ==========================================================================
+
+window.sdClearTerminal = () => {
+  const out = $('sdTerminalOutput');
+  if (out) out.textContent = '终端已清屏。请输入命令后按回车执行...\n';
+};
+
+window.sdSendTerminalCmd = async () => {
+  const input = $('sdTerminalInput');
+  const out = $('sdTerminalOutput');
+  if (!input || !out) return;
+  const cmd = input.value.trim();
+  if (!cmd) return;
+
+  out.textContent += `\n$ ${cmd}\n`;
+  out.scrollTop = out.scrollHeight;
+  input.value = '';
+  input.disabled = true;
+
+  try {
+    const sId = activeDedicatedServerId || cachedServers[0]?.id;
+    if (!sId) {
+      out.textContent += '[Error] 未选定目标远程服务器\n';
+      return;
+    }
+    const res = await window.hap.execServerCommand({ id: sId, command: cmd });
+    const output = (res.stdout || '') + (res.stderr ? `\n[stderr] ${res.stderr}` : '');
+    out.textContent += (output.trim() || '(无输出返回)') + '\n';
+  } catch (err) {
+    out.textContent += `[执行异常] ${err.message}\n`;
+  } finally {
+    input.disabled = false;
+    input.focus();
+    out.scrollTop = out.scrollHeight;
+  }
+};
+
+$('sdTerminalInput')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    window.sdSendTerminalCmd();
+  }
+});
+
+// ==========================================================================
+// 智能体持久化多层记忆库控制器 (Agent Memory Manager)
+// ==========================================================================
+
+let cachedMemories = [];
+
+async function renderMemories(searchQuery = '') {
+  const listEl = $('memoryList');
+  const filterSelect = $('memoryAgentFilter');
+  if (!listEl) return;
+
+  try {
+    const selectedAgent = filterSelect ? filterSelect.value : '';
+    const memories = await window.hap.listMemories?.() || [];
+    cachedMemories = memories;
+
+    // 填充智能体筛选器
+    if (filterSelect && filterSelect.options.length <= 1) {
+      const agents = state.agents || [];
+      agents.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.id;
+        opt.textContent = a.name || a.id;
+        filterSelect.appendChild(opt);
+      });
+    }
+
+    let filtered = memories;
+    if (selectedAgent) {
+      filtered = filtered.filter(m => !m.agentId || m.agentId === selectedAgent);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(m => (m.content || '').toLowerCase().includes(q) || (m.category || '').toLowerCase().includes(q));
+    }
+
+    if (filtered.length === 0) {
+      listEl.innerHTML = `
+        <div style="padding:32px;text-align:center;background:#ffffff;border:1px dashed #cbd5e1;border-radius:10px;color:var(--text-muted);font-size:13px;">
+          暂无符合条件的记忆条目。点击右上角「+ 添加记忆条目」为智能体沉淀偏好与规则。
+        </div>
+      `;
+      return;
+    }
+
+    const catMap = {
+      preference: { label: '用户偏好', color: '#0284c7', bg: '#f0f9ff' },
+      architecture: { label: '架构约束', color: '#7c3aed', bg: '#f5f3ff' },
+      convention: { label: '代码规范', color: '#16a34a', bg: '#f0fdf4' },
+      domain: { label: '业务背景', color: '#ea580c', bg: '#fff7ed' },
+      custom: { label: '自定义', color: '#475569', bg: '#f8fafc' },
+    };
+
+    listEl.innerHTML = filtered.map(m => {
+      const cat = catMap[m.category] || catMap.custom;
+      return `
+        <div class="card" style="padding:12px 16px;background:#ffffff;border:1px solid var(--border-default);border-radius:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+              <span class="prop-chip" style="background:${cat.bg};color:${cat.color};font-weight:600;font-size:11px;">${cat.label}</span>
+              ${m.agentId ? `<span class="prop-chip" style="font-size:11px;">🤖 ${esc(m.agentId)}</span>` : '<span class="prop-chip" style="font-size:11px;color:#94a3b8;">🌐 全局通用</span>'}
+              <span style="font-size:11px;color:#94a3b8;margin-left:auto;">${new Date(m.createdAt || m.updatedAt || Date.now()).toLocaleDateString()}</span>
+            </div>
+            <div style="font-size:13px;color:var(--text-main);line-height:1.5;white-space:pre-wrap;word-break:break-all;">${esc(m.content)}</div>
+          </div>
+          <button type="button" class="btn danger" style="padding:3px 8px;font-size:11.5px;" onclick="window.deleteMemoryItem('${escJs(m.id)}')">删除</button>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    console.warn('渲染记忆库失败:', err);
+  }
+}
+
+window.openAddMemoryDialog = () => {
+  const dialog = $('memoryDialog');
+  const form = $('memoryForm');
+  if (!dialog || !form) return;
+  form.reset();
+  const agentSelect = $('memoryAgentSelect');
+  if (agentSelect) {
+    agentSelect.innerHTML = '<option value="">全部智能体通用</option>' + (state.agents || []).map(a => `<option value="${esc(a.id)}">${esc(a.name || a.id)} (${esc(a.id)})</option>`).join('');
+  }
+  dialog.showModal();
+};
+
+$('memoryForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const category = $('memoryInputCategory').value;
+  const agentId = $('memoryAgentSelect').value || undefined;
+  const content = $('memoryInputContent').value.trim();
+
+  if (!content) return;
+
+  try {
+    await window.hap.addMemory({ category, agentId, content });
+    $('memoryDialog')?.close();
+    showToast('记忆条目已成功添加', 'success');
+    await renderMemories();
+  } catch (err) {
+    showToast('添加记忆失败：' + err.message, 'error');
+  }
+});
+
+$('closeMemoryDialogBtn')?.addEventListener('click', () => $('memoryDialog')?.close());
+$('cancelMemoryDialogBtn')?.addEventListener('click', () => $('memoryDialog')?.close());
+
+$('memorySearchInput')?.addEventListener('input', (e) => renderMemories(e.target.value));
+$('memoryAgentFilter')?.addEventListener('change', () => renderMemories($('memorySearchInput')?.value || ''));
+
+window.deleteMemoryItem = async (id) => {
+  const ok = await showConfirm({
+    title: '删除记忆条目',
+    message: '确定要删除该条记忆吗？删除后智能体将不再自动参考该规则。',
+    okText: '确认删除',
+    isDanger: true,
+  });
+  if (!ok) return;
+
+  try {
+    await window.hap.removeMemory(id);
+    showToast('记忆条目已删除', 'success');
+    await renderMemories();
+  } catch (err) {
+    showToast('删除失败：' + err.message, 'error');
   }
 };
