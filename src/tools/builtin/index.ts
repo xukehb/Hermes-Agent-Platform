@@ -19,6 +19,7 @@ import { remoteExecTool, remoteSysinfoTool, remoteListServersTool, remoteUpgrade
 import { findDefinitionTool, findReferencesTool, listSymbolsTool } from './symbol-tools.js';
 import { hostSysinfoTool } from './host-tools.js';
 import { diskCleanupTool, ipLookupTool } from './cleanup-tools.js';
+import { generateImageTool } from './image-tools.js';
 
 export const BUILTIN_TOOL_MODULES: readonly ToolModule[] = [
   shellTool,
@@ -40,6 +41,7 @@ export const BUILTIN_TOOL_MODULES: readonly ToolModule[] = [
   hostSysinfoTool,
   diskCleanupTool,
   ipLookupTool,
+  generateImageTool,
 ];
 
 /** 返回内置工具的新数组，避免调用方改动共享常量。 */
@@ -67,6 +69,7 @@ export {
   hostSysinfoTool,
   diskCleanupTool,
   ipLookupTool,
+  generateImageTool,
 };
 export { applyHunks, parsePatch } from './patch-envelope.js';
 export type { PatchHunk, PatchLine, PatchOperation } from './patch-envelope.js';

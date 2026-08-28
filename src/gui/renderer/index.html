@@ -230,6 +230,110 @@
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><line x1="1.05" y1="12" x2="7" y2="12"/><line x1="17.01" y1="12" x2="22.96" y2="12"/></svg>
                 <span>/commit 提交</span>
               </button>
+    </aside>
+
+    <!-- 主工作舞台 (Main Canvas) -->
+    <main class="main-content">
+      <!-- 独立视图 1: 对话工作台 (Chat) -->
+      <section id="chat" class="view active">
+        <header class="chat-header">
+          <div class="header-left-tools">
+            <div class="model-switch-pill" title="切换当前对话模型">
+              <span class="model-brand-badge">HAP</span>
+              <select id="chatModelPickerSelect" class="model-switch-select"></select>
+              <svg class="pill-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+
+            <div class="workspace-pill-badge" id="currentWorkspacePill" title="当前对话绑定的工作区目录">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+              <span id="currentWorkspaceNameText">默认工作区</span>
+            </div>
+          </div>
+
+          <div class="header-right-tools">
+            <button id="gitStatusTopBtn" class="btn text-btn git-capsule-btn" title="Git 关联、提交与推送代码">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 9v12"/><path d="M18 9a9 9 0 0 0-9 9"/>
+              </svg>
+              <span id="gitBranchTopText">Git</span>
+              <span class="git-badge-pill" id="gitChangesTopBadge" style="display:none;">0</span>
+            </button>
+            <div class="tool-capsule" title="切换处理智能体">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+              <select id="chatAgentSelect" class="agent-switch-select"></select>
+              <svg class="pill-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <button id="openProjectVsCodeTopBtn" class="btn text-btn" title="在 VS Code 中打开当前绑定的项目">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              <span>VS Code</span>
+            </button>
+            <button id="clearChatHistoryTopBtn" class="btn text-btn" title="清空上下文开启新对话 (/new)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+              </svg>
+              <span>清空</span>
+            </button>
+            <button id="deleteCurrentChatBtn" class="btn text-btn" title="删除当前会话">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <div class="chat-thread-container" id="chatThreadContainer">
+          <div class="thread-inner" id="messagesInner">
+            <div class="hero-welcome" id="heroWelcome">
+              <div class="hero-logo">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+              </div>
+              <h1 class="hero-title">今天有什么我可以帮你的？</h1>
+              <p class="hero-subtitle" id="heroSubtitleText">选择或导入工作区项目，开启高效智能编排与自动化修复</p>
+              <div class="hero-grid">
+                <div class="hero-card" data-hero-prompt="分析当前绑定的项目工程结构并列出关键模块与潜在风险" onclick="triggerHeroPrompt('分析当前绑定的项目工程结构并列出关键模块与潜在风险')">
+                  <div class="hero-card-icon"></div>
+                  <div class="hero-card-title">分析工程架构</div>
+                  <div class="hero-card-sub">梳理模块依赖、调用拓扑与架构建议</div>
+                </div>
+                <div class="hero-card" data-hero-prompt="对当前项目进行全面的代码质量、安全漏洞与潜在 Bug 审查" onclick="triggerHeroPrompt('对当前项目进行全面的代码质量、安全漏洞与潜在 Bug 审查')">
+                  <div class="hero-card-icon"></div>
+                  <div class="hero-card-title">代码安全审查</div>
+                  <div class="hero-card-sub">自动化排查潜在代码缺陷与性能瓶颈</div>
+                </div>
+                <div class="hero-card" data-hero-prompt="为当前核心功能模块设计并编写高覆盖率的单元测试用例" onclick="triggerHeroPrompt('为当前核心功能模块设计并编写高覆盖率的单元测试用例')">
+                  <div class="hero-card-icon"></div>
+                  <div class="hero-card-title">编写测试套件</div>
+                  <div class="hero-card-sub">生成高覆盖率的自动化测试用例并执行</div>
+                </div>
+                <div class="hero-card" data-hero-prompt="审查 Git 变更并协助生成规范的 Commit 提交和推送代码" onclick="triggerHeroPrompt('审查 Git 变更并协助生成规范的 Commit 提交和推送代码')">
+                  <div class="hero-card-icon"></div>
+                  <div class="hero-card-title">Git 协同与推送</div>
+                  <div class="hero-card-sub">一键审查 Diff 差异并自动提交代码</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="composer-dock">
+          <div class="composer-inner">
+            <!-- 快捷指令胶囊栏 -->
+            <div class="composer-quick-chips">
+              <button type="button" class="quick-chip" data-quick-prefix="/git " onclick="insertPromptPrefix('/git ')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 9v12"/></svg>
+                <span>/git 状态</span>
+              </button>
+              <button type="button" class="quick-chip" data-quick-prefix="/diff " onclick="insertPromptPrefix('/diff ')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                <span>/diff 变更</span>
+              </button>
+              <button type="button" class="quick-chip" data-quick-prefix="/commit " onclick="insertPromptPrefix('/commit ')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><line x1="1.05" y1="12" x2="7" y2="12"/><line x1="17.01" y1="12" x2="22.96" y2="12"/></svg>
+                <span>/commit 提交</span>
+              </button>
               <button type="button" class="quick-chip" data-quick-prefix="/sh " onclick="insertPromptPrefix('/sh ')">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
                 <span>/sh 执行命令</span>
@@ -265,6 +369,11 @@
                   </button>
                   <input type="file" id="chatFileInput" multiple accept="image/*,.txt,.md,.json,.ts,.js,.py,.pdf,.log,.html,.css,.sql" style="display:none;" />
 
+                  <button type="button" class="composer-attach-btn" id="aiGenImageBtn" title="一键生成 AI 图像 (插画、架构概念图、UI 设计图、壁纸等)" style="color:#0284c7;background:#f0f9ff;border-color:#bae6fd;">
+                    <span style="font-size:13px;">🎨</span>
+                    <span style="font-weight:600;">AI 生图</span>
+                  </button>
+
                   <span class="composer-hint-tag">
                     <span class="composer-kbd">Enter</span> 发送
                   </span>
@@ -288,7 +397,7 @@
         </div>
       </section>
 
-      <!-- 独立视图 2: Skill 技能市场 -->
+      <!-- 独立视图: Skill 技能市场 -->
       <section id="skills" class="view">
         <div class="page-container">
           <div class="page-header-row">
@@ -300,7 +409,7 @@
           </div>
 
           <div class="page-actions-bar">
-            <input type="text" id="skillSearchInput" placeholder=" 搜索开源技能 (如 Security, Git, Testing, React)..." style="max-width:360px;" />
+            <input type="text" id="skillSearchInput" placeholder="🔍 搜索开源技能 (如 Security, Git, Testing, React)..." style="max-width:360px;" />
             <span style="font-size:12px;color:var(--text-muted);margin-left:auto;">支持 GitHub 开源仓库地址直连安装</span>
           </div>
 
@@ -308,7 +417,7 @@
         </div>
       </section>
 
-      <!-- 独立视图 3: MCP 插件市场 -->
+      <!-- 独立视图: MCP 插件市场 -->
       <section id="plugins" class="view">
         <div class="page-container">
           <div class="page-header-row">
@@ -329,102 +438,6 @@
         </div>
       </section>
 
-      <!-- 独立视图 4: 权限与安全策略 -->
-      <section id="permissions" class="view">
-        <div class="page-container">
-          <div class="page-header-row">
-            <div>
-              <h2 class="page-title">权限与安全策略</h2>
-              <p class="page-subtitle">控制智能体在执行任务时的自动化权限级别与授权模式</p>
-            </div>
-            <button id="savePermissionsBtn" class="btn primary">保存权限配置</button>
-          </div>
-
-          <div class="permission-mode-grid">
-            <div class="permission-mode-card full-access" id="modeCardFullAccess" onclick="selectPermissionMode('full-access')">
-              <div class="mode-icon-title">
-                <span style="font-size:18px;"></span>
-                <span>完完全全放开权限</span>
-              </div>
-              <div class="mode-desc">
-                全自主极速执行！自动允许文件读写、执行终端 Shell、调用所有 MCP 插件与子智能体，零阻断弹窗。
-              </div>
-              <span class="badge" style="margin-top:auto;width:fit-content;">推荐开发者使用</span>
-            </div>
-
-            <div class="permission-mode-card" id="modeCardConfirmWrites" onclick="selectPermissionMode('confirm-writes')">
-              <div class="mode-icon-title">
-                <span style="font-size:18px;"></span>
-                <span>敏感写操作确认</span>
-              </div>
-              <div class="mode-desc">
-                读取文件和代码分析自动执行，修改本地磁盘文件或执行终端危险命令前进行弹窗确认。
-              </div>
-              <span class="badge warn" style="margin-top:auto;width:fit-content;">平衡模式</span>
-            </div>
-
-            <div class="permission-mode-card" id="modeCardStrict" onclick="selectPermissionMode('strict')">
-              <div class="mode-icon-title">
-                <span style="font-size:18px;"></span>
-                <span>严格单步确认</span>
-              </div>
-              <div class="mode-desc">
-                最严格安全模式。智能体的每一个工具调用、网络请求和命令执行均需人工逐项审核授权。
-              </div>
-              <span class="badge neutral" style="margin-top:auto;width:fit-content;">高安全要求</span>
-            </div>
-          </div>
-
-          <div class="permission-toggle-box">
-            <h3 style="margin:0 0 4px 0;font-size:15px;font-weight:700;">细粒度权限开关</h3>
-
-            <div class="permission-toggle-row">
-              <div class="toggle-info">
-                <span class="toggle-title">系统终端 Shell 命令执行 (allowShell)</span>
-                <span class="toggle-desc">允许智能体在工作区运行 build, test, git, npm 等终端命令</span>
-              </div>
-              <label class="switch">
-                <input type="checkbox" id="permAllowShell" checked />
-                <span class="slider green"></span>
-              </label>
-            </div>
-
-            <div class="permission-toggle-row">
-              <div class="toggle-info">
-                <span class="toggle-title">工作区文件磁盘写入与修改 (allowFsWrite)</span>
-                <span class="toggle-desc">允许智能体创建、修改与应用代码 Patch 到本地文件</span>
-              </div>
-              <label class="switch">
-                <input type="checkbox" id="permAllowFsWrite" checked />
-                <span class="slider green"></span>
-              </label>
-            </div>
-
-            <div class="permission-toggle-row">
-              <div class="toggle-info">
-                <span class="toggle-title">网络请求与外网数据抓取 (allowNetwork)</span>
-                <span class="toggle-desc">允许智能体发起 HTTP 请求抓取远程 API 与文档数据</span>
-              </div>
-              <label class="switch">
-                <input type="checkbox" id="permAllowNetwork" checked />
-                <span class="slider green"></span>
-              </label>
-            </div>
-
-            <div class="permission-toggle-row">
-              <div class="toggle-info">
-                <span class="toggle-title">多智能体分工与子 Agent 编排 (allowSpawnSubagent)</span>
-                <span class="toggle-desc">允许主智能体派发并调度子智能体并发执行专项子任务</span>
-              </div>
-              <label class="switch">
-                <input type="checkbox" id="permAllowSubagent" checked />
-                <span class="slider green"></span>
-              </label>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <!-- 独立视图: 智能体角色管理 (Agents) -->
       <section id="agents" class="view">
         <div class="page-container">
@@ -437,381 +450,6 @@
 
           <div id="agentList" class="grid"></div>
         </div>
-      </section>
-
-      <!-- 独立视图 5: 工作区项目 (Projects) -->
-      <section id="projects" class="view">
-        <div class="page-container">
-          <div class="page-header-row">
-            <div>
-              <h2 class="page-title">工作区项目库</h2>
-              <p class="page-subtitle">管理本地工程代码库，支持一键在 VS Code 中打开编辑</p>
-            </div>
-            <div style="display:flex;gap:8px;">
-              <button id="addProjectManualBtn" class="btn secondary">手动添加</button>
-              <button id="importProjectBtn" class="btn primary">导入本地目录</button>
-            </div>
-          </div>
-
-          <div class="page-actions-bar">
-            <div class="batch-bar" id="projectBatchBar" style="display:none;">
-              <button id="batchDeleteProjectsBtn" class="btn danger">
-                <span id="batchDeleteProjectsText">批量移除 (0)</span>
-              </button>
-            </div>
-            <button id="selectAllProjectsBtn" class="btn text-btn" style="margin-left:auto;">全选</button>
-          </div>
-
-          <div id="projectList" class="grid"></div>
-        </div>
-      </section>
-
-      <!-- 独立视图 6: 模型服务商 (Providers) -->
-      <section id="providers" class="view">
-        <div class="page-container">
-          <div class="page-header-row">
-            <div>
-              <h2 class="page-title">模型服务商</h2>
-              <p class="page-subtitle">配置大模型服务商 API URL、API Key 凭据与通信协议</p>
-            </div>
-            <button id="addProviderBtn" class="btn primary">新增服务商</button>
-          </div>
-
-          <div class="page-actions-bar">
-            <div class="batch-bar" id="providerBatchBar" style="display:none;">
-              <button id="batchDeleteProvidersBtn" class="btn danger">
-                <span id="batchDeleteProvidersText">批量删除 (0)</span>
-              </button>
-            </div>
-            <button id="selectAllProvidersBtn" class="btn text-btn" style="margin-left:auto;">全选</button>
-          </div>
-
-          <div id="providerList" class="grid"></div>
-        </div>
-      </section>
-
-      <!-- 独立视图 7: 模型目录 (Models) -->
-      <section id="models" class="view">
-        <div class="page-container">
-          <div class="page-header-row">
-            <div>
-              <h2 class="page-title">模型目录</h2>
-              <p class="page-subtitle">在线拉取或自定义注册可用模型，设定上下文与输出上限</p>
-            </div>
-            <button id="addModelBtn" class="btn primary">新增模型</button>
-          </div>
-
-          <div class="page-actions-bar">
-            <div class="batch-bar" id="modelBatchBar" style="display:none;">
-              <button id="batchDeleteModelsBtn" class="btn danger">
-                <span id="batchDeleteModelsText">批量删除 (0)</span>
-              </button>
-            </div>
-            <button id="selectAllModelsBtn" class="btn text-btn" style="margin-left:auto;">全选</button>
-          </div>
-
-          <div id="modelList" class="grid"></div>
-        </div>
-      </section>
-
-      <!-- 独立视图 8: CLI 目标同步 (Switcher) -->
-      <section id="switcher" class="view">
-        <div class="page-container">
-          <div class="page-header-row">
-            <div>
-              <h2 class="page-title">CLI 目标同步</h2>
-              <p class="page-subtitle">一键将已配置模型注入同步到 Codex、Claude、Gemini 等 CLI 工具</p>
-            </div>
-          </div>
-
-          <div style="background:#ffffff;border:1px solid var(--border-default);border-radius:var(--radius-md);padding:22px;margin-bottom:24px;">
-            <form id="switchForm" class="switch-form">
-              <div class="form-group">
-                <label>目标 CLI 工具</label>
-                <select name="target">
-                  <option value="codex">Codex (~/.codex/config.toml)</option>
-                  <option value="claude">Claude (~/.claude/settings.json)</option>
-                  <option value="gemini">Gemini (~/.gemini/settings.json)</option>
-                  <option value="grok">Grok (~/.grok/config.json)</option>
-                  <option value="openclaw">OpenClaw (~/.openclaw/settings.json)</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label>注入模型</label>
-                <select name="model" id="switchModelSelect"></select>
-              </div>
-              <div class="switch-actions" style="margin-top:10px;display:flex;gap:8px;">
-                <button type="submit" name="preview" value="preview" class="btn secondary">预览变更</button>
-                <button type="submit" name="write" value="write" class="btn primary">写入同步</button>
-              </div>
-            </form>
-            <div class="preview-box" style="margin-top:16px;">
-              <div class="preview-header" style="display:flex;justify-content:space-between;align-items:center;background:#202123;padding:8px 12px;color:#ececf1;font-size:12px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;">
-                <span>同步结果 / 注入预览</span>
-                <button id="copyPreviewBtn" class="btn text-btn" style="color:#ffffff;font-size:11.5px;padding:2px 6px;">复制内容</button>
-              </div>
-              <pre id="syncPreview" style="margin:0;padding:14px;background:#000000;color:#ececf1;font-family:var(--font-mono);font-size:12.5px;border-radius:0 0 var(--radius-sm) var(--radius-sm);overflow-x:auto;">// 点击上方“预览变更”或“写入同步”查看配置注入详情...</pre>
-            </div>
-          </div>
-
-          <div id="targetList" class="grid"></div>
-        </div>
-      </section>
-
-      <!-- 独立视图 9: Telegram 机器人与远程协同 (Telegram Channel) -->
-      <section id="telegram" class="view">
-        <div class="page-container">
-          <div class="page-header-row">
-            <div>
-              <h1 class="page-title">Telegram 机器人与远程协同</h1>
-              <p class="page-subtitle">连接 Telegram Bot，随时随地在手机端与智能体对话，直接远程审查与修复本地代码</p>
-            </div>
-            <div style="display:flex;gap:8px;">
-              <button class="btn secondary" id="testTgBotBtn">测试 Token 连通性</button>
-              <button class="btn primary" id="toggleTgServiceBtn">启动 Telegram 机器人</button>
-            </div>
-          </div>
-
-          <!-- 状态横幅卡片 -->
-          <div class="card" style="margin-bottom:20px;background:linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);border-color:#bae0ff;">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
-              <div style="display:flex;align-items:center;gap:14px;">
-                <div style="width:42px;height:42px;border-radius:50%;background:#0088cc;color:#ffffff;display:grid;place-items:center;flex-shrink:0;">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                  </svg>
-                </div>
-                <div>
-                  <div style="display:flex;align-items:center;gap:8px;">
-                    <strong id="tgBotDisplayName" style="font-size:15px;">未连接机器人</strong>
-                    <span id="tgBotUsernameBadge" class="prop-chip" style="color:#0088cc;display:none;">@bot</span>
-                    <span id="tgStatusBadge" class="badge neutral">未运行</span>
-                  </div>
-                  <div id="tgStatusDescription" style="font-size:12.5px;color:var(--text-secondary);margin-top:2px;">
-                    填写 Bot Token 并启动后，即可在 Telegram 直接向机器人发送指令
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 配置表单 -->
-          <div class="card" style="margin-bottom:20px;">
-            <div class="card-header">
-              <div class="card-title-wrap">
-                <span class="card-title">机器人连接参数配置</span>
-                <span class="card-subtitle">配置 Telegram Bot Token 与绑定的默认工作区工程</span>
-              </div>
-            </div>
-            <form id="tgConfigForm" class="card-body" style="display:flex;flex-direction:column;gap:14px;">
-              <div class="form-group full-width">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                  <label style="font-weight:600;font-size:12.5px;">Telegram Bot Token *</label>
-                  <span style="font-size:11.5px;color:var(--text-muted);">从 Telegram @BotFather 获取</span>
-                </div>
-                <div style="display:flex;gap:8px;">
-                  <input type="password" id="tgTokenInput" name="token" placeholder="例如：1234567890:ABCdefGhIJKlmNoPQRsTUVwxyZ" style="flex:1;" />
-                  <button type="button" class="btn secondary" id="toggleTgTokenVisibilityBtn" style="font-size:12px;">显示明文</button>
-                </div>
-              </div>
-
-              <div class="form-grid">
-                <div class="form-group">
-                  <label style="font-weight:600;font-size:12.5px;">运行模式 (Mode)</label>
-                  <select id="tgModeSelect" name="mode">
-                    <option value="polling">Polling (长轮询 · 本地开箱即用，无需公网IP)</option>
-                    <option value="webhook">Webhook (网络钩子 · 适合服务器反代)</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label style="font-weight:600;font-size:12.5px;">默认处理智能体 (Default Agent)</label>
-                  <select id="tgAgentSelect" name="defaultAgent">
-                    <option value="coder">coder (核心代码编程与修复专家)</option>
-                    <option value="researcher">researcher (调研与检索智能体)</option>
-                    <option value="reviewer">reviewer (代码审查与质量控制)</option>
-                    <option value="ops">ops (运维与部署专家)</option>
-                  </select>
-                </div>
-
-                <div class="form-group full-width">
-                  <label style="font-weight:600;font-size:12.5px;">默认绑定的工作区工程 (Workspace)</label>
-                  <div style="display:flex;gap:8px;">
-                    <input id="tgWorkspaceInput" name="workspace" placeholder="选择或填入智能体默认操作的项目根目录绝对路径" style="flex:1;" />
-                    <select id="tgWorkspacePickerSelect" class="workspace-quick-select" style="max-width:210px;">
-                      <option value="">-- 从项目库快捷点选 --</option>
-                    </select>
-                  </div>
-                  <span style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">智能体在 Telegram 中执行代码审查、创建文件、运行命令时，默认在此目录下生效</span>
-                </div>
-              </div>
-
-              <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
-                <button type="submit" class="btn primary" id="saveTgConfigBtn">保存配置</button>
-              </div>
-            </form>
-          </div>
-
-          <!-- 快速上手指南卡片 -->
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title-wrap">
-                <span class="card-title"> Telegram 远程修复指令指南</span>
-                <span class="card-subtitle">启动机器人后，可在 Telegram 中发送以下指令与智能体协同</span>
-              </div>
-            </div>
-            <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-              <div style="padding:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-main);">
-                <div style="font-weight:700;font-size:13px;margin-bottom:4px;"> 审查与修复工程</div>
-                <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">
-                  向 Bot 发送：<br/>
-                  <code>“分析当前工程中的报错并直接修改修复”</code><br/>
-                  <code>“运行 npm test，如果失败请定位并修复”</code>
-                </div>
-              </div>
-
-              <div style="padding:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-main);">
-                <div style="font-weight:700;font-size:13px;margin-bottom:4px;"> 控制与状态指令</div>
-                <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">
-                  <code>/status</code>：查看当前模型与 Token 用量<br/>
-                  <code>/stop</code>：紧急中止当前正在执行的任务<br/>
-                  <code>项目路径：D:/work/app 请帮我新增登录组件</code>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 独立视图: 微信 / 企业微信连接 (WeChat / WeCom) -->
-      
-      <!-- 独立视图: 多通道机器人与消息中心 (微信 / 企微 / 飞书 / QQ) -->
-      <section id="wechat" class="view">
-        <div class="card" style="margin-bottom:16px;">
-          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;">
-            <div style="display:flex;align-items:center;gap:8px;">
-              <div class="channel-tabs" style="display:flex;gap:6px;">
-                <button type="button" class="channel-tab-btn active" id="tabBtnWeChat" onclick="window.switchChannelTab('wechat')" style="padding:4px 12px;font-size:12.5px;font-weight:600;border-radius:6px;border:1px solid #d1d5db;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;cursor:pointer;">微信 / 企微</button>
-                <button type="button" class="channel-tab-btn" id="tabBtnFeishu" onclick="window.switchChannelTab('feishu')" style="padding:4px 12px;font-size:12.5px;font-weight:600;border-radius:6px;border:1px solid #d1d5db;background:#fff;color:#374151;cursor:pointer;">飞书机器人</button>
-                <button type="button" class="channel-tab-btn" id="tabBtnQQ" onclick="window.switchChannelTab('qq')" style="padding:4px 12px;font-size:12.5px;font-weight:600;border-radius:6px;border:1px solid #d1d5db;background:#fff;color:#374151;cursor:pointer;">QQ / OneBot</button>
-              </div>
-            </div>
-            <div id="channelStatusBadge" style="font-size:11.5px;color:#64748b;">通道协同中心</div>
-          </div>
-
-          <!-- 子通道 1: 微信/企微 -->
-          <div id="channelPaneWeChat" class="channel-pane" style="padding:16px;">
-            <div class="wechat-hub-layout" style="display:grid;grid-template-columns:320px 1fr;gap:16px;min-height:480px;">
-              <!-- 微信配置与状态面板 -->
-              <div class="channel-sidebar" style="display:flex;flex-direction:column;gap:12px;">
-                <form id="wxConfigForm" style="display:flex;flex-direction:column;gap:10px;">
-                  <div class="form-group">
-                    <label style="font-size:12px;font-weight:600;">运行模式</label>
-                    <select id="wxModeSelect" style="padding:6px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;">
-                      <option value="padlocal">PadLocal (稳定协议)</option>
-                      <option value="web">Web 网页协议 (扫码免 Key)</option>
-                      <option value="mock">开发模拟模式</option>
-                    </select>
-                  </div>
-                  <div class="form-group" id="wxTokenGroup">
-                    <label style="font-size:12px;font-weight:600;">PadLocal Token / Key</label>
-                    <input type="password" id="wxTokenInput" placeholder="输入 Token" style="padding:6px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" />
-                  </div>
-                  <div style="display:flex;gap:8px;">
-                    <button type="submit" class="btn secondary" style="flex:1;font-size:12px;">保存配置</button>
-                    <button type="button" class="btn primary" id="toggleWxServiceBtn" style="flex:1;font-size:12px;">启动微信服务</button>
-                  </div>
-                </form>
-                <!-- 二维码展示区 -->
-                <div id="wxQrContainer" style="text-align:center;padding:12px;border:1px dashed #cbd5e1;border-radius:8px;background:#f8fafc;display:none;">
-                  <div style="font-size:12px;font-weight:600;margin-bottom:6px;">请使用微信扫码登录</div>
-                  <img id="wxQrImg" src="" style="width:160px;height:160px;margin:0 auto;display:block;" />
-                  <div style="display:flex;gap:6px;justify-content:center;margin-top:8px;">
-                    <button type="button" class="btn secondary" id="refreshWxQrBtn" style="font-size:11px;padding:2px 8px;">刷新二维码</button>
-                    <button type="button" class="btn primary" id="confirmWxLoginBtn" style="font-size:11px;padding:2px 8px;">我已在手机确认</button>
-                  </div>
-                </div>
-              </div>
-              <!-- 微信联系人与消息流 -->
-              <div class="channel-main" style="display:flex;flex-direction:column;gap:12px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                  <span style="font-weight:600;font-size:13px;">微信联系人与消息路由</span>
-                  <button type="button" class="btn secondary" id="openAddWxContactDialogBtn" style="font-size:11.5px;padding:2px 8px;">+ 添加白名单规则</button>
-                </div>
-                <div id="wxContactsList" style="max-height:160px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:6px;font-size:12px;"></div>
-                <div style="font-weight:600;font-size:13px;margin-top:4px;">实时消息交互流</div>
-                <div id="wxMsgFeed" style="flex:1;min-height:180px;max-height:220px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px;background:#fafafa;font-size:12px;"></div>
-                <div style="display:flex;gap:8px;">
-                  <input id="wxTestMessageInput" placeholder="向选中联系人发送测试消息..." style="flex:1;padding:6px 10px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" />
-                  <button type="button" class="btn primary" id="sendWxTestMsgBtn" style="font-size:12px;">发送</button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 子通道 2: 飞书机器人 -->
-          <div id="channelPaneFeishu" class="channel-pane" style="display:none;padding:16px;">
-            <div class="wechat-hub-layout" style="display:grid;grid-template-columns:320px 1fr;gap:16px;min-height:480px;">
-              <div class="channel-sidebar" style="display:flex;flex-direction:column;gap:12px;">
-                <form id="feishuConfigForm" style="display:flex;flex-direction:column;gap:10px;">
-                  <div class="form-group">
-                    <label style="font-size:12px;font-weight:600;">飞书 App ID (cli_xxx)</label>
-                    <input id="feishuAppIdInput" placeholder="cli_a1b2c3..." style="padding:6px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" required />
-                  </div>
-                  <div class="form-group">
-                    <label style="font-size:12px;font-weight:600;">飞书 App Secret</label>
-                    <input type="password" id="feishuAppSecretInput" placeholder="输入密钥" style="padding:6px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" required />
-                  </div>
-                  <div class="form-group">
-                    <label style="font-size:12px;font-weight:600;">Encrypt Key (可选加密密钥)</label>
-                    <input type="password" id="feishuEncryptKeyInput" placeholder="留空则不加密" style="padding:6px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" />
-                  </div>
-                  <div class="form-group">
-                    <label style="font-size:12px;font-weight:600;">Verification Token (事件校验码)</label>
-                    <input id="feishuVerificationTokenInput" placeholder="输入 Verification Token" style="padding:6px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" />
-                  </div>
-                  <div style="display:flex;gap:8px;">
-                    <button type="submit" class="btn secondary" style="flex:1;font-size:12px;">保存配置</button>
-                    <button type="button" class="btn primary" id="toggleFeishuServiceBtn" style="flex:1;font-size:12px;">启动飞书服务</button>
-                  </div>
-                </form>
-              </div>
-              <div class="channel-main" style="display:flex;flex-direction:column;gap:12px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                  <span style="font-weight:600;font-size:13px;">飞书联系人与群组路由</span>
-                  <button type="button" class="btn secondary" id="openAddFeishuContactDialogBtn" style="font-size:11.5px;padding:2px 8px;">+ 添加飞书规则</button>
-                </div>
-                <div id="feishuContactsList" style="max-height:160px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:6px;font-size:12px;"></div>
-                <div style="font-weight:600;font-size:13px;margin-top:4px;">飞书实时消息流</div>
-                <div id="feishuMsgFeed" style="flex:1;min-height:180px;max-height:220px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px;background:#fafafa;font-size:12px;"></div>
-                <div style="display:flex;gap:8px;">
-                  <input id="feishuTestMessageInput" placeholder="向选中的飞书群或用户发送测试消息..." style="flex:1;padding:6px 10px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" />
-                  <button type="button" class="btn primary" id="sendFeishuTestMsgBtn" style="font-size:12px;">发送</button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 子通道 3: QQ 机器人 (OneBot) -->
-          <div id="channelPaneQQ" class="channel-pane" style="display:none;padding:16px;">
-            <div class="wechat-hub-layout" style="display:grid;grid-template-columns:320px 1fr;gap:16px;min-height:480px;">
-              <div class="channel-sidebar" style="display:flex;flex-direction:column;gap:12px;">
-                <form id="qqConfigForm" style="display:flex;flex-direction:column;gap:10px;">
-                  <div class="form-group">
-                    <label style="font-size:12px;font-weight:600;">OneBot / NapCat 终结点 (HTTP/WS)</label>
-                    <input id="qqEndpointInput" placeholder="http://127.0.0.1:3000 或 ws://..." value="http://127.0.0.1:3000" style="padding:6px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" required />
-                  </div>
-                  <div class="form-group">
-                    <label style="font-size:12px;font-weight:600;">Access Token (访问令牌)</label>
-                    <input type="password" id="qqTokenInput" placeholder="OneBot 鉴权 Token" style="padding:6px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" />
-                  </div>
-                  <div style="display:flex;gap:8px;">
-                    <button type="submit" class="btn secondary" style="flex:1;font-size:12px;">保存配置</button>
-                    <button type="button" class="btn primary" id="toggleQQServiceBtn" style="flex:1;font-size:12px;">启动 QQ 服务</button>
-                  </div>
-                </form>
-              </div>
-              <div class="channel-main" style="display:flex;flex-direction:column;gap:12px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                   <span style="font-weight:600;font-size:13px;">QQ 好友与群组路由</span>
                   <button type="button" class="btn secondary" id="openAddQQContactDialogBtn" style="font-size:11.5px;padding:2px 8px;">+ 添加 QQ 规则</button>

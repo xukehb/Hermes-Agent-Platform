@@ -2285,9 +2285,13 @@ function fillSelects() {
 
   const agentSelect = $('chatAgentSelect');
   if (agentSelect) {
+    const previousAgent = agentSelect.value || localStorage.getItem('hap:selected-chat-agent') || 'coder';
     agentSelect.innerHTML = state.agents.map((a) => `
-      <option value="${esc(a.id)}">${esc(a.name || a.id)}</option>
+      <option value="${esc(a.id)}">${esc(a.name || a.id)} (${esc(a.id)})</option>
     `).join('');
+    if (previousAgent && state.agents.some((a) => a.id === previousAgent)) {
+      agentSelect.value = previousAgent;
+    }
   }
 
   const provSelect = $('modelProviderSelect');
