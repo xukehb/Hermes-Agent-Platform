@@ -35,7 +35,7 @@ export interface DispatcherOptions {
 
 /** 命令帮助文案，/help 与未知命令共用。 */
 export const HELP_TEXT = [
-  '🚀 开发者远程协同指令：',
+  '开发者远程协同指令：',
   '【项目与工作区】',
   '/projects 列出所有已导入工程工作区',
   '/project [序号/名称] 切换当前会话绑定的工作区工程',
@@ -291,9 +291,9 @@ export class ChannelDispatcher {
         await this.reply(message.target, '正在向远端仓库推送代码...');
         const res = await this.options.host.gitPush(curWs || process.cwd());
         if (res.ok) {
-          await this.reply(message.target, `🚀 ${res.summary}`);
+          await this.reply(message.target, `[OK] ${res.summary}`);
         } else {
-          await this.reply(message.target, `✗ Git 推送失败：${res.summary}`);
+          await this.reply(message.target, `[FAIL] Git 推送失败：${res.summary}`);
         }
         return;
       }
@@ -337,21 +337,65 @@ export class ChannelDispatcher {
         return;
       }
       case 'agents': {
+        const list = this.options.host.agentsList ? this.options.host.agentsList() : [];
         const ids = this.options.host.agentIds();
-        await this.reply(
-          message.target,
-          ids.length === 0 ? '尚未配置任何智能体。' : '已配置智能体：\n' + ids.map((id) => '· ' + id).join('\n'),
-        );
+        const currentAgent = this.options.host.sessionAgent ? this.options.host.sessionAgent(message.sessionKey) : undefined;
+        const activeId = currentAgent || message.agentId || message.defaultAgent || ids[0] || 'ops';
+
+        if (list.length > 0) {
+          const lines = [
+            '🤖 已配置智能体列表：',
+            ...list.map((a) => {
+              const isCurrent = a.id === activeId ? ' 👉 [当前生效]' : '';
+              const desc = a.description ? ` - ${a.description}` : '';
+              return `· ${a.name || a.id} (${a.id})${desc}${isCurrent}`;
+            }),
+            '',
+            '💡 提示：使用 /agent <id>（例如 /agent ops）可随时切换当前会话绑定的智能体。',
+          ];
+          await this.reply(message.target, lines.join('\n'));
+        } else {
+          await this.reply(
+            message.target,
+            ids.length === 0 ? '尚未配置任何智能体。' : '已配置智能体：\n' + ids.map((id) => '· ' + id).join('\n'),
+          );
+        }
         return;
       }
       case 'agent': {
+        const ids = this.options.host.agentIds();
+        const currentAgent = this.options.host.sessionAgent ? this.options.host.sessionAgent(message.sessionKey) : undefined;
+        const activeId = currentAgent || message.agentId || message.defaultAgent || ids[0] || 'ops';
+
         if (command.agentId === undefined) {
-          const status = this.options.host.status(message.sessionKey, message.defaultAgent);
-          await this.reply(message.target, renderStatus(status));
+          const status = this.options.host.status(message.sessionKey, activeId);
+          await this.reply(message.target, `🤖 当前会话生效智能体：${activeId}\n\n` + renderStatus(status) + `\n\n💡 提示：发送 /agent <id>（如 /agent ops）切换智能体，或发送 /agents 查看全部。`);
           return;
         }
-        const status = this.options.host.status(message.sessionKey, command.agentId);
-        await this.reply(message.target, renderStatus(status));
+
+        const targetId = command.agentId.trim();
+        if (!ids.includes(targetId)) {
+          await this.reply(
+            message.target,
+            `✗ 未找到智能体 "${targetId}"。\n\n当前可用智能体：\n` + ids.map((id) => `· ${id}`).join('\n') + `\n\n请使用 /agent <id> 切换。`,
+          );
+          return;
+        }
+
+        if (this.options.host.setSessionAgent) {
+          this.options.host.setSessionAgent(message.sessionKey, targetId);
+        }
+
+        const list = this.options.host.agentsList ? this.options.host.agentsList() : [];
+        const found = list.find((a) => a.id === targetId);
+        const name = found?.name || targetId;
+        const desc = found?.description ? `\n岗位职责：${found.description}` : '';
+        const ws = found?.workspace ? `\n工作目录：${found.workspace}` : '';
+
+        await this.reply(
+          message.target,
+          `✅ 已成功将当前会话智能体切换为：${name} (${targetId})${desc}${ws}\n\n后续发送的运维指令与开发需求将直接由该智能体处理！`,
+        );
         return;
       }
       case 'trace': {

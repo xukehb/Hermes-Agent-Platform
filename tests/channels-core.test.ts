@@ -429,8 +429,8 @@ describe('TaskRenderer', () => {
     const shown = new TaskRenderer({ header: 'h', reasoningVisible: true });
     shown.push({ type: 'reasoning', text: '内部思考' });
     shown.push({ type: 'text', text: '答案' });
-    expect(shown.progress()).toContain('🧠 内部思考');
-    expect(shown.final()).toContain('🧠 内部思考');
+    expect(shown.progress()).toContain('[思考] 内部思考');
+    expect(shown.final()).toContain('[思考] 内部思考');
   });
 
   it('终态无正文时给出占位说明并附加收尾提示', () => {

@@ -16,6 +16,8 @@ import { execa } from 'execa';
 import { TelegramChannel } from './telegram.js';
 import { WhatsAppChannel } from './whatsapp.js';
 import { WeChatChannel } from './wechat.js';
+import { FeishuChannel } from './feishu.js';
+import { QQChannel } from './qq.js';
 import { HttpChannel } from './http.js';
 import { CliChannel } from './cli.js';
 import { describeError } from './dispatcher.js';
@@ -32,6 +34,7 @@ export interface ChannelManagerOptions {
 
 const sessionModels = new Map<string, string>();
 const sessionWorkspaces = new Map<string, string>();
+const sessionAgents = new Map<string, string>();
 
 function readGuiProjects(): Array<{ id: string; name: string; path: string }> {
   try {
@@ -69,6 +72,9 @@ function readGuiPlugins(): Array<{ id: string; name: string; description: string
 export function createChannelHost(orchestrator: AgentOrchestrator): ChannelHost {
   return {
     runTask: (request) => {
+      if (request.agentId === undefined && request.sessionKey && sessionAgents.has(request.sessionKey)) {
+        request.agentId = sessionAgents.get(request.sessionKey);
+      }
       if (request.model === undefined && request.sessionKey && sessionModels.has(request.sessionKey)) {
         request.model = sessionModels.get(request.sessionKey);
       }
@@ -80,7 +86,8 @@ export function createChannelHost(orchestrator: AgentOrchestrator): ChannelHost 
     },
     abortSession: (sessionKey) => orchestrator.abortSession(sessionKey),
     status: (sessionKey, channelDefaultAgent) => {
-      const status = orchestrator.status(sessionKey, channelDefaultAgent);
+      const activeAgent = (sessionKey && sessionAgents.has(sessionKey)) ? sessionAgents.get(sessionKey) : channelDefaultAgent;
+      const status = orchestrator.status(sessionKey, activeAgent);
       if (sessionModels.has(sessionKey)) {
         status.model = sessionModels.get(sessionKey)!;
       }
@@ -88,6 +95,24 @@ export function createChannelHost(orchestrator: AgentOrchestrator): ChannelHost 
     },
     trace: (taskId) => orchestrator.trace(taskId),
     agentIds: () => orchestrator.agents.agentIds(),
+    agentsList: () => {
+      const resolver = orchestrator.config;
+      return resolver.listAgentIds().map((id) => {
+        const ag = resolver.resolveAgent(id);
+        return {
+          id: ag.id,
+          name: ag.identity.displayName || ag.id,
+          displayName: ag.identity.displayName,
+          description: ag.description,
+          model: ag.model.primary,
+          workspace: ag.workspace,
+        };
+      });
+    },
+    sessionAgent: (sessionKey) => sessionAgents.get(sessionKey),
+    setSessionAgent: (sessionKey, agentId) => {
+      sessionAgents.set(sessionKey, agentId);
+    },
     models: () => {
       const resolver = orchestrator.config;
       return [...resolver.resolveModels().values()].map((m) => ({
@@ -299,6 +324,28 @@ export class ChannelManager {
       });
       this.wechat = wechat;
       this.channels.push(wechat);
+    }
+    if (channels.feishu?.enabled) {
+      const feishu = new FeishuChannel({
+        host: this.host,
+        config: channels.feishu,
+        channels,
+        limits,
+        paths,
+        env: this.env,
+      });
+      this.channels.push(feishu);
+    }
+    if (channels.qq?.enabled) {
+      const qq = new QQChannel({
+        host: this.host,
+        config: channels.qq,
+        channels,
+        limits,
+        paths,
+        env: this.env,
+      });
+      this.channels.push(qq);
     }
     if (channels.http.enabled) {
       this.channels.push(new HttpChannel({ host: this.host, channels, limits, paths, log: this.log }));

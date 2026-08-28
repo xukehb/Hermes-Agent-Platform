@@ -126,7 +126,7 @@ export class TaskRenderer {
     }
     if (this.options.reasoningVisible && this.reasoning.trim().length > 0) {
       lines.push('');
-      lines.push('🧠 ' + clampTail(this.reasoning.trim(), 400));
+      lines.push('[思考] ' + clampTail(this.reasoning.trim(), 400));
     }
     const preview = clampTail(this.text.trim(), this.options.previewLimit);
     if (preview.length > 0) {
@@ -142,7 +142,7 @@ export class TaskRenderer {
   final(terminalNote?: string): string {
     const lines: string[] = [];
     if (this.options.reasoningVisible && this.reasoning.trim().length > 0) {
-      lines.push('🧠 ' + this.reasoning.trim());
+      lines.push('[思考] ' + this.reasoning.trim());
       lines.push('');
     }
     const body = this.text.trim();

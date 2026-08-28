@@ -21,6 +21,7 @@ import { Hono } from 'hono';
 import { ChannelDispatcher, describeError } from './dispatcher.js';
 import { extractMention, stripWakeWord } from './command-parser.js';
 import { OutboundSender } from './outbound.js';
+import { WeChatContactStore } from './wechat-contacts.js';
 import type { Channel, ChannelAttachments, ChannelHost, InboundMessage, OutboundTarget } from './types.js';
 import type { AttachmentKind } from '../domain/index.js';
 import type { ResolvedChannels, ResolvedLimits, ResolvedPaths, ResolvedWeChatChannel } from '../config/index.js';
@@ -288,13 +289,23 @@ export class WeChatChannel implements Channel {
     fromId: string;
     fromName: string;
     isRoom: boolean;
-    roomId?: string;
-    roomName?: string;
+    roomId?: string | undefined;
+    roomName?: string | undefined;
     text: string;
-    attachments?: ChannelAttachments;
+    attachments?: ChannelAttachments | undefined;
   }): Promise<void> {
     let cleanText = msg.text.trim();
     let agentId: string | undefined;
+
+    const contactStore = WeChatContactStore.getInstance();
+    const { contact } = contactStore.recordIncomingMessage({
+      fromId: msg.fromId,
+      fromName: msg.fromName,
+      isRoom: msg.isRoom,
+      roomId: msg.roomId,
+      roomName: msg.roomName,
+      text: msg.text,
+    });
 
     const sessionKey = msg.isRoom && msg.roomId ? `wechat:room:${msg.roomId}` : `wechat:user:${msg.fromId}`;
     const targetId = msg.isRoom && msg.roomId ? msg.roomId : msg.fromId;
@@ -306,8 +317,8 @@ export class WeChatChannel implements Channel {
         agentId = mention.agentId;
       } else {
         const stripped = stripWakeWord(cleanText, this.config.mentionPatterns, []);
-        if (!stripped.wake && this.config.mentionPatterns.length > 0) {
-          // 群聊中未 @ 且未命中唤醒词时忽略
+        if (!stripped.wake && contact.replyMode === 'mention') {
+          // 群聊中未 @ 且规则要求仅 @ 时回复，则仅记录消息不触发 AI 执行
           return;
         }
         if (stripped.wake) {
@@ -322,10 +333,28 @@ export class WeChatChannel implements Channel {
       }
     }
 
+    // 若联系人配置了专属回复智能体，且消息未显式指定 @agent，则使用联系人专属配置
+    if (!agentId && contact.agentId) {
+      agentId = contact.agentId;
+    }
+
+    // 若联系人关闭了自动回复
+    if (!contact.autoReply || contact.replyMode === 'manual') {
+      this.log(`[WeChat] 联系人 [${contact.name}] 已暂停自动回复，仅记录消息。`);
+      return;
+    }
+
+    const assignedAgent = agentId || this.config.defaultAgent || 'coder';
+
     const target: OutboundTarget = {
       channel: 'wechat',
       targetId,
       send: async (text: string) => {
+        contactStore.recordOutgoingMessage({
+          contactId: targetId,
+          agentId: assignedAgent,
+          text,
+        });
         if (!this.personalDriver) return undefined;
         return this.personalDriver.sendMessage(targetId, text);
       },

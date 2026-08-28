@@ -19,7 +19,7 @@ import type {
 } from '../agent/index.js';
 
 /** 已实现的通道种类。 */
-export type ChannelName = 'telegram' | 'whatsapp' | 'wechat' | 'http' | 'cli';
+export type ChannelName = 'telegram' | 'whatsapp' | 'wechat' | 'feishu' | 'qq' | 'dingtalk' | 'http' | 'cli';
 
 /** 附件沿用消息层定义，通道不自造格式。 */
 export type ChannelAttachments = NonNullable<AgentMessage['attachments']>;
@@ -73,6 +73,12 @@ export interface ChannelHost {
   sessionModel?(sessionKey: string): string | undefined;
   /** 切换当前会话生效的模型 */
   setSessionModel?(sessionKey: string, model: string): void;
+  /** 列出已配置的全部智能体详情 */
+  agentsList?(): Array<{ id: string; name: string; displayName?: string; description?: string; model?: string; workspace?: string }>;
+  /** 获取当前会话生效的智能体 */
+  sessionAgent?(sessionKey: string): string | undefined;
+  /** 切换当前会话生效的智能体 */
+  setSessionAgent?(sessionKey: string, agentId: string): void;
   /** 列出已导入的工作区项目列表 */
   projects?(): Array<{ id: string; name: string; path: string }>;
   /** 获取当前会话生效的项目工作区 */

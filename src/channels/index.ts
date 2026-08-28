@@ -38,6 +38,26 @@ export {
   type PersonalDriverFactory,
   type WeChatChannelOptions,
 } from './wechat.js';
+export {
+  FeishuChannel,
+  type FeishuChannelConfig,
+  type FeishuChannelOptions,
+} from './feishu.js';
+export {
+  QQChannel,
+  type QQChannelConfig,
+  type QQChannelOptions,
+} from './qq.js';
+export {
+  ChannelContactStore,
+  type ChannelContact,
+  type ChannelChatMessage,
+} from './contacts-store.js';
+export {
+  WeChatContactStore,
+  type WeChatContact,
+  type WeChatChatMessage,
+} from './wechat-contacts.js';
 export { HttpChannel, type HttpChannelOptions } from './http.js';
 export { CliChannel, type CliChannelOptions } from './cli.js';
 export { ChannelManager, createChannelHost, type ChannelManagerOptions } from './manager.js';
