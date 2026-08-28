@@ -397,6 +397,7 @@ $('openProjectVsCodeTopBtn')?.addEventListener('click', () => {
 function renderMarkdownContent(rawText) {
   if (!rawText) return '';
 
+  // 1. 抽取代码块，防止内部 Markdown 字符被误解析
   const codeBlocks = [];
   let processed = rawText.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
     const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
@@ -404,28 +405,63 @@ function renderMarkdownContent(rawText) {
     return placeholder;
   });
 
-  let safe = esc(processed);
+  // 2. 预处理 Markdown 表格 (GFM Tables)
+  const lines = processed.split(/\r?\n/);
+  const outLines = [];
+  let i = 0;
 
-  // Markdown 表格解析 (| Header | Header |)
-  safe = safe.replace(/((?:\|[^\n\r|]+\|[\r\n]+)+(?:\|[-:\s|]+\|[\r\n]+)(?:(?:\|[^\n\r|]+\|(?:[\r\n]+|$))+))/g, (match) => {
-    const rows = match.trim().split('\n').map(r => r.trim()).filter(Boolean);
-    if (rows.length < 2) return match;
-    const headerCols = rows[0].slice(1, -1).split('|').map(c => c.trim());
-    const bodyRows = rows.slice(2);
-    let html = '<div style="overflow-x:auto;margin:12px 0;"><table class="md-table"><thead><tr>';
-    headerCols.forEach(col => { html += `<th>${col}</th>`; });
-    html += '</tr></thead><tbody>';
-    bodyRows.forEach(row => {
-      const cols = row.slice(1, -1).split('|').map(c => c.trim());
-      html += '<tr>';
-      cols.forEach(col => { html += `<td>${col}</td>`; });
-      html += '</tr>';
-    });
-    html += '</tbody></table></div>';
-    return html;
-  });
+  while (i < lines.length) {
+    const line = lines[i];
+    const isTableRow = /^\s*\|.+\|\s*$/.test(line);
 
+    if (isTableRow && i + 1 < lines.length && /^\s*\|(?:\s*:?-+:?\s*\|)+\s*$/.test(lines[i + 1])) {
+      const tableLines = [];
+      while (i < lines.length && /^\s*\|.+\|\s*$/.test(lines[i])) {
+        tableLines.push(lines[i].trim());
+        i++;
+      }
+
+      if (tableLines.length >= 2) {
+        const headerCols = tableLines[0].replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+        const alignCols = tableLines[1].replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => {
+          const t = c.trim();
+          if (t.startsWith(':') && t.endsWith(':')) return 'center';
+          if (t.endsWith(':')) return 'right';
+          return 'left';
+        });
+
+        const bodyRows = tableLines.slice(2);
+        let tableHtml = '<div class="md-table-wrap"><table class="md-table"><thead><tr>';
+        headerCols.forEach((col, idx) => {
+          const align = alignCols[idx] || 'left';
+          tableHtml += `<th style="text-align:${align};">${parseInlineMarkdown(col)}</th>`;
+        });
+        tableHtml += '</tr></thead><tbody>';
+
+        bodyRows.forEach((row) => {
+          const cols = row.replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+          tableHtml += '<tr>';
+          cols.forEach((col, idx) => {
+            const align = alignCols[idx] || 'left';
+            tableHtml += `<td style="text-align:${align};">${parseInlineMarkdown(col)}</td>`;
+          });
+          tableHtml += '</tr>';
+        });
+        tableHtml += '</tbody></table></div>';
+        outLines.push(tableHtml);
+        continue;
+      }
+    }
+
+    outLines.push(line);
+    i++;
+  }
+
+  let safe = outLines.join('\n');
+
+  // 3. 块级元素解析
   // 标题
+  safe = safe.replace(/^#### (.*$)/gim, '<h4 style="margin:12px 0 4px;font-size:13.5px;font-weight:700;color:var(--text-main);">$1</h4>');
   safe = safe.replace(/^### (.*$)/gim, '<h3 style="margin:14px 0 6px;font-size:15px;font-weight:700;color:var(--text-main);">$1</h3>');
   safe = safe.replace(/^## (.*$)/gim, '<h2 style="margin:16px 0 8px;font-size:16.5px;font-weight:700;color:var(--text-main);">$1</h2>');
   safe = safe.replace(/^# (.*$)/gim, '<h1 style="margin:18px 0 10px;font-size:18.5px;font-weight:700;color:var(--text-main);">$1</h1>');
@@ -434,37 +470,24 @@ function renderMarkdownContent(rawText) {
   safe = safe.replace(/^---+$/gim, '<hr style="border:none;border-top:1px solid var(--border-default);margin:14px 0;" />');
 
   // 引用块 (Blockquote)
-  safe = safe.replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>');
+  safe = safe.replace(/^\> (.*$)/gim, '<blockquote style="margin:8px 0;padding:6px 12px;border-left:3px solid #38bdf8;background:#f0f9ff;color:#0369a1;border-radius:0 6px 6px 0;font-size:12.5px;">$1</blockquote>');
 
-  // 任务复选框 (Checklists)
-  safe = safe.replace(/^[\*\-] \[ \] (.*$)/gim, '<div class="md-list-item"><span style="color:#94a3b8;font-size:14px;"></span><span>$1</span></div>');
-  safe = safe.replace(/^[\*\-] \[x\] (.*$)/gim, '<div class="md-list-item"><span style="color:#16a34a;font-weight:700;font-size:14px;"></span><span style="text-decoration:line-through;color:var(--text-muted);">$1</span></div>');
+  // 任务复选框
+  safe = safe.replace(/^[\*\-] \[ \] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:center;gap:6px;margin:3px 0;"><span style="color:#94a3b8;font-size:14px;">☐</span><span>$1</span></div>');
+  safe = safe.replace(/^[\*\-] \[x\] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:center;gap:6px;margin:3px 0;"><span style="color:#16a34a;font-weight:700;font-size:14px;">☑</span><span style="text-decoration:line-through;color:var(--text-muted);">$1</span></div>');
 
   // 无序列表与有序列表
-  safe = safe.replace(/^[*-] (.*$)/gim, '<div class="md-list-item"><span class="md-bullet">•</span><span>$1</span></div>');
-  safe = safe.replace(/^(\d+)\. (.*$)/gim, '<div class="md-list-item"><span class="md-number">$1.</span><span>$2</span></div>');
+  safe = safe.replace(/^[*-] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:baseline;gap:6px;margin:3px 0;"><span class="md-bullet" style="color:#0284c7;font-weight:bold;">•</span><span>$1</span></div>');
+  safe = safe.replace(/^(\d+)\. (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:baseline;gap:6px;margin:3px 0;"><span class="md-number" style="color:#64748b;font-weight:600;font-family:var(--font-mono);font-size:12px;">$1.</span><span>$2</span></div>');
 
-  // 图片解析 (![alt](url))
-  safe = safe.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
-    return `<div class="user-img-card" style="margin:10px 0;max-width:320px;" onclick="window.openImageLightbox('${src}', '${alt || '图片'}')"><img src="${src}" alt="${alt || '图片'}" /><div class="img-zoom-hint">查看大图</div></div>`;
-  });
-
-  // 加粗与行内代码
-  safe = safe.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  safe = safe.replace(/`([^`]+)`/g, '<code class="md-inline-code">$1</code>');
-
-  // 段落
-  safe = safe.replace(/\n\n/g, '</p><p>');
-  safe = '<p>' + safe.replace(/\n/g, '<br/>') + '</p>';
-
-  // 清理多余空段落包裹
-  safe = safe.replace(/<p><\/p>/g, '');
+  // 行内元素解析 (图片、加粗、代码)
+  safe = parseInlineMarkdown(safe, false);
 
   // 恢复代码块
   codeBlocks.forEach((block, index) => {
     const encoded = encodeURIComponent(block.code);
     const blockHtml = `
-      <div class="codeblock-wrap">
+      <div class="codeblock-wrap" style="margin:10px 0;">
         <div class="codeblock-bar">
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="codeblock-dots">
@@ -475,7 +498,7 @@ function renderMarkdownContent(rawText) {
             <span class="codeblock-lang">${esc(block.lang)}</span>
           </div>
           <div class="codeblock-actions">
-            <button type="button" class="codeblock-btn" onclick="window.viewCodeSnippet('${esc(block.lang)}', '${encoded}')" title="在全屏窗口查看代码">
+            <button type="button" class="codeblock-btn" onclick="window.viewCodeSnippet('${escJs(block.lang)}', '${encoded}')" title="在全屏窗口查看代码">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               <span>查看</span>
             </button>
@@ -492,6 +515,36 @@ function renderMarkdownContent(rawText) {
   });
 
   return safe;
+}
+
+function parseInlineMarkdown(text, doEscape = true) {
+  let s = doEscape ? esc(text) : text;
+
+  // 图片解析 (![alt](src))
+  s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+    return `
+      <div class="ai-generated-image-card" style="margin:10px 0;display:inline-block;max-width:100%;background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+        <div style="position:relative;cursor:zoom-in;" onclick="window.openImageLightbox('${escJs(src)}', '${escJs(alt)}')">
+          <img src="${esc(src)}" alt="${esc(alt)}" style="display:block;max-width:100%;max-height:420px;object-fit:contain;background:#f8fafc;" loading="lazy" />
+          <div style="position:absolute;bottom:6px;right:6px;background:rgba(15,23,42,0.7);color:#ffffff;font-size:11px;padding:2px 8px;border-radius:12px;display:flex;align-items:center;gap:4px;">
+            <span>🔍 点击放大</span>
+          </div>
+        </div>
+        ${alt ? `<div style="padding:6px 12px;font-size:12px;color:#475569;background:#f8fafc;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;">
+          <span>${esc(alt)}</span>
+          <a href="${esc(src)}" download="image.png" target="_blank" style="color:#0284c7;text-decoration:none;font-size:11px;font-weight:600;" onclick="event.stopPropagation();">下载</a>
+        </div>` : ''}
+      </div>
+    `;
+  });
+
+  // 加粗
+  s = s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+  // 行内代码
+  s = s.replace(/`([^\`]+)`/g, '<code class="md-inline-code" style="background:#f1f5f9;color:#0f172a;padding:2px 6px;border-radius:4px;font-size:11.5px;font-family:var(--font-mono);border:1px solid #e2e8f0;">$1</code>');
+
+  return s;
 }
 
 window.copyCodeSnippet = (encoded) => {
