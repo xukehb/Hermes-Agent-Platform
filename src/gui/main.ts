@@ -3,6 +3,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GuiService } from './service.js';
 
+process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
+
 const service = new GuiService();
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 

@@ -2,6 +2,10 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ws: wss: http: https:;"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ChatGPT · HAP Studio</title>
     <link rel="stylesheet" href="./styles.css" />
@@ -295,44 +299,67 @@
         </div>
       </section>
 
-      <!-- 独立视图: Skill 技能市场 -->
+      <!-- 独立视图: Skill & MCP 统一扩展生态中心 -->
       <section id="skills" class="view">
         <div class="page-container">
-          <div class="page-header-row">
+          <!-- 顶部现代化横幅与操作台 -->
+          <div class="market-header-banner">
             <div>
-              <h2 class="page-title">Skill 技能市场</h2>
-              <p class="page-subtitle">关联 GitHub 开源技能生态，支持一键安装专业领域技能增强智能体</p>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg, #6366f1 0%, #a855f7 100%);color:#fff;display:grid;place-items:center;font-size:16px;box-shadow:0 3px 10px rgba(99,102,241,0.25);">⚡</div>
+                <div>
+                  <h2 class="page-title" style="margin:0;font-size:18px;">Skill & MCP 扩展生态市场</h2>
+                  <p class="page-subtitle" style="margin:2px 0 0 0;font-size:12px;">融合 GitHub 专家技能包与 Model Context Protocol (MCP) 标准插件，赋予智能体任意外部能力</p>
+                </div>
+              </div>
             </div>
-            <button id="openInstallSkillModalBtn" class="btn primary">从 GitHub 安装 Skill</button>
-          </div>
-
-          <div class="page-actions-bar">
-            <input type="text" id="skillSearchInput" placeholder="🔍 搜索开源技能 (如 Security, Git, Testing, React)..." style="max-width:360px;" />
-            <span style="font-size:12px;color:var(--text-muted);margin-left:auto;">支持 GitHub 开源仓库地址直连安装</span>
-          </div>
-
-          <div id="skillsList" class="grid"></div>
-        </div>
-      </section>
-
-      <!-- 独立视图: MCP 插件市场 -->
-      <section id="plugins" class="view">
-        <div class="page-container">
-          <div class="page-header-row">
-            <div>
-              <h2 class="page-title">MCP 插件市场</h2>
-              <p class="page-subtitle">管理内置工具与 Model Context Protocol (MCP) 扩展插件</p>
-            </div>
-            <button id="openAddPluginModalBtn" class="btn primary">添加自定义 MCP 插件</button>
-          </div>
-
-          <div class="page-actions-bar">
-            <div style="font-size:12.5px;color:var(--text-secondary);">
-              智能体在对话与编排任务中可自动调度已启用的 MCP 插件
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button id="openPresetMcpModalBtn" class="btn secondary" style="font-size:12.5px;padding:6px 14px;">
+                📦 热门 MCP 插件库
+              </button>
+              <button id="openAddPluginModalBtn" class="btn secondary" style="font-size:12.5px;padding:6px 14px;">
+                + 添加自定义 MCP
+              </button>
+              <button id="openInstallSkillModalBtn" class="btn primary" style="font-size:12.5px;padding:6px 14px;">
+                + 从 GitHub 安装 Skill
+              </button>
             </div>
           </div>
 
-          <div id="pluginsList" class="grid"></div>
+          <!-- 分类筛选选项卡与检索工具栏 -->
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:14px;">
+            <div class="market-tabs-bar" id="marketTabsBar">
+              <button type="button" class="market-tab-btn active" data-market-tab="all">
+                <span>🔥 全部生态</span>
+                <span class="market-tab-badge" id="tabCountAll">0</span>
+              </button>
+              <button type="button" class="market-tab-btn" data-market-tab="mcp">
+                <span>🧩 MCP 插件</span>
+                <span class="market-tab-badge" id="tabCountMcp">0</span>
+              </button>
+              <button type="button" class="market-tab-btn" data-market-tab="skill">
+                <span>⚡ Skills 技能</span>
+                <span class="market-tab-badge" id="tabCountSkill">0</span>
+              </button>
+              <button type="button" class="market-tab-btn" data-market-tab="builtin">
+                <span>🛠️ 内置工具</span>
+                <span class="market-tab-badge" id="tabCountBuiltin">0</span>
+              </button>
+              <button type="button" class="market-tab-btn" data-market-tab="active">
+                <span>✅ 仅看已启用</span>
+                <span class="market-tab-badge" id="tabCountActive">0</span>
+              </button>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:8px;min-width:280px;flex:1;max-width:420px;">
+              <input type="text" id="marketSearchInput" placeholder="🔍 搜索生态插件 (如 GitHub, Docker, Postgres, React)..." style="width:100%;font-size:12.5px;padding:7px 12px;" />
+            </div>
+          </div>
+
+          <!-- 统一网格列表 -->
+          <div id="marketEcoGrid" class="market-eco-grid">
+            <!-- 动态渲染现代化卡片 -->
+          </div>
         </div>
       </section>
 
@@ -342,26 +369,11 @@
           <div class="page-header-row">
             <div>
               <h2 class="page-title">智能体角色管理</h2>
-              <p class="page-subtitle">配置各个专项智能体（Coder、Researcher、Reviewer 等）的主模型、工作区与工具权限</p>
+              <p class="page-subtitle">配置各个专项智能体（Coder、Researcher、Reviewer、Ops、Writer 等）的主模型、工作区与工具权限</p>
             </div>
           </div>
 
           <div id="agentList" class="grid"></div>
-        </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                  <span style="font-weight:600;font-size:13px;">QQ 好友与群组路由</span>
-                  <button type="button" class="btn secondary" id="openAddQQContactDialogBtn" style="font-size:11.5px;padding:2px 8px;">+ 添加 QQ 规则</button>
-                </div>
-                <div id="qqContactsList" style="max-height:160px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:6px;font-size:12px;"></div>
-                <div style="font-weight:600;font-size:13px;margin-top:4px;">QQ 实时消息流</div>
-                <div id="qqMsgFeed" style="flex:1;min-height:180px;max-height:220px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px;background:#fafafa;font-size:12px;"></div>
-                <div style="display:flex;gap:8px;">
-                  <input id="qqTestMessageInput" placeholder="向选中的 QQ 好友或群发送测试消息..." style="flex:1;padding:6px 10px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" />
-                  <button type="button" class="btn primary" id="sendQQTestMsgBtn" style="font-size:12px;">发送</button>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -662,12 +674,13 @@
         </div>
       </section>
 
+      <!-- 独立视图: 远程服务器集群概览 (Servers Overview) -->
       <section id="servers" class="view">
         <div class="page-container">
           <div class="page-header-row">
             <div>
-              <h2 class="page-title">远程服务器与节点管理</h2>
-              <p class="page-subtitle">一键 SSH 部署 HAP 守护进程，打通双向低延迟通信与远程算力操控</p>
+              <h2 class="page-title">远程服务器与计算节点</h2>
+              <p class="page-subtitle">集中管理多台云主机与物理机，点击任意服务器卡片进入专属运维与管理控制台</p>
             </div>
             <div style="display:flex;gap:8px;">
               <button id="refreshServersBtn" class="btn secondary">
@@ -682,28 +695,27 @@
           </div>
 
           <!-- 本机宿主计算节点实时卡片 (Local Host System Node) -->
-          <div class="card host-node-card" style="margin-bottom:20px;background:linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);border:1px solid #cbd5e1;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">
-            <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid #e2e8f0;flex-wrap:wrap;gap:10px;">
+          <div class="card host-node-card" style="margin-bottom:20px;background:linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);border:1px solid #bae6fd;border-radius:14px;box-shadow:0 2px 10px rgba(14,165,233,0.06);">
+            <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid #e0f2fe;flex-wrap:wrap;gap:10px;">
               <div style="display:flex;align-items:center;gap:12px;">
-                <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;font-size:16px;">🖥️</div>
+                <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;font-size:18px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </div>
                 <div>
                   <div style="display:flex;align-items:center;gap:8px;">
-                    <strong style="font-size:14px;color:var(--text-main);" id="localHostCardName">本机宿主系统 (Local Host System)</strong>
+                    <strong style="font-size:14.5px;color:var(--text-main);" id="localHostCardName">本机宿主系统 (Local Host System)</strong>
                     <span class="badge success" style="font-size:10.5px;">● 在线 (本地直接控制)</span>
                   </div>
-                  <div style="font-size:11.5px;color:var(--text-muted);" id="localHostCardSub">当前 CodexConnect 运行的物理/虚拟机环境</div>
+                  <div style="font-size:11.5px;color:var(--text-muted);" id="localHostCardSub">当前 CodexConnect 运行的物理环境</div>
                 </div>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button type="button" class="btn secondary" onclick="window.openHostDetailsModal()" style="font-size:12px;padding:5px 12px;" title="查看本机 CPU/内存/磁盘/进程全量详情">
-                  🔍 查看本机完整系统详情
-                </button>
-                <button type="button" class="btn primary" onclick="show('host')" style="font-size:12px;padding:5px 12px;" title="跳转到全景监控桌面">
-                  🖥️ 进入本机全景监控桌面 ↗
+                <button type="button" class="btn primary" onclick="show('host')" style="font-size:12px;padding:6px 14px;">
+                  进入本机全景桌面 ↗
                 </button>
               </div>
             </div>
-            <div class="card-body" style="padding:14px 18px;">
+            <div class="card-body" style="padding:14px 20px;">
               <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;font-size:12.5px;">
                 <div class="server-stat-pill">
                   <span style="color:var(--text-secondary);">操作系统:</span>
@@ -725,121 +737,253 @@
             </div>
           </div>
 
-          <!-- 服务器卡片网格 -->
-          <div id="serverCardsGrid" class="cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(360px, 1fr));gap:16px;margin-bottom:24px;">
+          <!-- 远程服务器卡片网格 -->
+          <div id="serverCardsGrid" class="cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(350px, 1fr));gap:16px;margin-bottom:24px;">
             <!-- 动态渲染服务器卡片 -->
           </div>
+        </div>
+      </section>
 
-          <!-- 专属智能体运维与升级交互台 (Server Ops Agent Assistant) -->
-          <div class="card server-ops-agent-card" style="margin-bottom:16px;">
-            <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-              <div style="display:flex;align-items:center;gap:10px;">
-                <div class="agent-avatar-badge" style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;">OPS</div>
-                <div>
-                  <div style="font-weight:700;font-size:13.5px;color:var(--text-main);">服务器智能运维与升级助理</div>
-                  <div style="font-size:11.5px;color:var(--text-muted);">由智能体自主探测硬件、执行故障诊断、一键自愈修复与升级远端守护服务</div>
+      <!-- 独立视图: 专属服务器管理与智能运维工作台 (Dedicated Server Management & Ops View) -->
+      <section id="serverDetail" class="view">
+        <div class="page-container">
+          <!-- 顶部面包屑与标题栏 -->
+          <div class="page-header-row" style="margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #e0f2fe;">
+            <div style="display:flex;align-items:center;gap:14px;">
+              <button type="button" class="btn secondary" onclick="show('servers')" style="padding:6px 12px;font-size:12.5px;display:flex;align-items:center;gap:6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                返回服务器列表
+              </button>
+              <div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <h2 class="page-title" id="sdServerName" style="margin:0;font-size:18px;">--</h2>
+                  <span id="sdServerStatusBadge" class="badge neutral" style="font-size:11px;">检测中</span>
                 </div>
-              </div>
-              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                <label style="font-size:12px;color:var(--text-secondary);">目标节点：</label>
-                <select id="serverOpsTargetSelect" style="padding:4px 8px;font-size:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--text-main);min-width:150px;">
-                  <option value="">-- 请选择服务器 --</option>
-                </select>
-                <label style="font-size:12px;color:var(--text-secondary);margin-left:4px;">执行智能体：</label>
-                <select id="serverOpsAgentSelect" style="padding:4px 8px;font-size:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--text-main);min-width:110px;">
-                  <option value="ops">ops (巡检与运维)</option>
-                  <option value="coder">coder (编码与部署)</option>
-                </select>
+                <p class="page-subtitle" id="sdServerSub" style="margin:2px 0 0 0;font-size:12px;color:var(--text-muted);">--</p>
               </div>
             </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <button type="button" class="btn secondary" id="sdTestBtn" onclick="window.sdTriggerTest()" style="font-size:12px;padding:6px 12px;">
+                连通测试
+              </button>
+              <button type="button" class="btn secondary" id="sdRefreshBtn" onclick="window.sdTriggerRefresh()" style="font-size:12px;padding:6px 12px;">
+                刷新监控
+              </button>
+              <button type="button" class="btn secondary" id="sdDeployBtn" onclick="window.sdTriggerDeploy()" style="font-size:12px;padding:6px 12px;">
+                重新部署 Daemon
+              </button>
+              <button type="button" class="btn primary" id="sdJumpChatBtn" onclick="window.sdJumpToChat()" style="font-size:12px;padding:6px 14px;">
+                在对话中呼叫 Agent ↗
+              </button>
+            </div>
+          </div>
 
-            <div class="card-body" style="padding:14px;">
-              <!-- 快捷智能动作胶囊 -->
-              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
-                <span style="font-size:11.5px;color:var(--text-secondary);align-self:center;">智能动作:</span>
-                <button type="button" class="quick-ops-chip" onclick="window.triggerServerOpsQuickAction('inspect')">全盘硬件与负载巡检</button>
-                <button type="button" class="quick-ops-chip" onclick="window.triggerServerOpsQuickAction('upgrade_daemon')">升级与重启守护进程</button>
-                <button type="button" class="quick-ops-chip" onclick="window.triggerServerOpsQuickAction('check_services')">排查 Docker 与后台服务</button>
-                <button type="button" class="quick-ops-chip" onclick="window.triggerServerOpsQuickAction('clean_disk')">清理临时垃圾与释放磁盘</button>
-                <button type="button" class="quick-ops-chip" onclick="window.triggerServerOpsQuickAction('diagnose_logs')">排查近 50 行运行日志</button>
+          <!-- 专属服务器工作台 4 大分类选项卡 -->
+          <div class="settings-nav-tabs" style="display:flex;gap:8px;border-bottom:1px solid #e0f2fe;padding-bottom:12px;margin-bottom:18px;overflow-x:auto;">
+            <button type="button" class="settings-tab-btn active" data-tab="ops" onclick="window.switchServerDetailTab('ops')">
+              智能运维 Copilot
+            </button>
+            <button type="button" class="settings-tab-btn" data-tab="metrics" onclick="window.switchServerDetailTab('metrics')">
+              实时硬件与系统指标
+            </button>
+            <button type="button" class="settings-tab-btn" data-tab="scripts" onclick="window.switchServerDetailTab('scripts')">
+              运维指令与脚本库
+            </button>
+            <button type="button" class="settings-tab-btn" data-tab="terminal" onclick="window.switchServerDetailTab('terminal')">
+              远程 SSH 交互终端
+            </button>
+          </div>
+
+          <!-- Tab 1: 智能运维 Copilot (Agent Ops) -->
+          <div id="sdPane_ops" class="sd-pane" style="display:block;">
+            <div class="card" style="margin-bottom:16px;border:1px solid #bae6fd;box-shadow:0 4px 16px rgba(14,165,233,0.06);">
+              <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%);padding:12px 18px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;">OPS</div>
+                  <div>
+                    <div style="font-weight:700;font-size:13.5px;color:var(--text-main);">专属智能体运维助手</div>
+                    <div style="font-size:11.5px;color:var(--text-muted);">针对当前服务器下发智能运维指令，支持自动诊断、故障自愈与多模态指令</div>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <label style="font-size:12px;color:var(--text-secondary);">执行智能体：</label>
+                  <select id="sdOpsAgentSelect" style="padding:4px 8px;font-size:12px;width:120px;">
+                    <option value="ops">ops (巡检运维)</option>
+                    <option value="coder">coder (部署构建)</option>
+                  </select>
+                </div>
               </div>
 
-              <!-- 智能运维对话交互框 -->
-              <form id="serverOpsChatForm" style="display:flex;flex-direction:column;gap:8px;margin-bottom:6px;border:1px solid #d1d5db;border-radius:12px;padding:8px 12px;background:#ffffff;box-shadow:0 2px 8px rgba(0,0,0,0.02);transition:border-color 0.15s ease;">
-                <!-- 多模态附件预览 -->
-                <div id="serverOpsAttachmentsTray" style="display:none;align-items:center;gap:8px;overflow-x:auto;padding-bottom:6px;border-bottom:1px dashed #e2e8f0;"></div>
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <button type="button" id="serverOpsAttachBtn" title="上传图片/文件进行分析" style="background:transparent;border:none;color:#64748b;cursor:pointer;padding:4px;display:grid;place-items:center;border-radius:6px;transition:all 0.15s ease;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              <div class="card-body" style="padding:16px;">
+                <!-- 快捷动作 Chips -->
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+                  <button type="button" class="btn secondary" onclick="window.sdQuickAction('硬件巡检')" style="font-size:12px;padding:5px 12px;background:#f8fafc;border-color:#bae6fd;color:#0284c7;">
+                    全盘硬件与负载巡检
                   </button>
-                  <input type="file" id="serverOpsFileInput" multiple style="display:none;" />
-                  <input id="serverOpsChatInput" placeholder="输入自然语言运维指令 (如: 帮我分析为什么端口无法连接并修复)..." style="flex:1;padding:4px 0;font-size:13px;border:none;background:transparent;color:#0f172a;outline:none;" required />
-                  <button type="button" class="btn secondary" onclick="window.jumpToServerMainChat()" title="在完整对话舞台中打开此服务器专属运维会话" style="padding:4px 8px;font-size:11.5px;height:26px;">
-                    完整会话 ↗
+                  <button type="button" class="btn secondary" onclick="window.sdQuickAction('升级守护进程')" style="font-size:12px;padding:5px 12px;background:#f8fafc;border-color:#bae6fd;color:#0284c7;">
+                    升级与重启 HAP 守护进程
                   </button>
-                  <button type="submit" id="sendServerOpsBtn" style="background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;border:none;border-radius:6px;width:30px;height:30px;display:grid;place-items:center;cursor:pointer;transition:transform 0.1s ease;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  <button type="button" class="btn secondary" onclick="window.sdQuickAction('排查服务')" style="font-size:12px;padding:5px 12px;background:#f8fafc;border-color:#bae6fd;color:#0284c7;">
+                    排查 Docker 与后台服务
+                  </button>
+                  <button type="button" class="btn secondary" onclick="window.sdQuickAction('清理磁盘')" style="font-size:12px;padding:5px 12px;background:#f8fafc;border-color:#bae6fd;color:#0284c7;">
+                    清理临时垃圾与释放磁盘
+                  </button>
+                  <button type="button" class="btn secondary" onclick="window.sdQuickAction('查看日志')" style="font-size:12px;padding:5px 12px;background:#f8fafc;border-color:#bae6fd;color:#0284c7;">
+                    排查近 50 行运行日志
                   </button>
                 </div>
-              </form>
 
-              <!-- 智能体执行与诊断输出区域 -->
-              <div id="serverOpsStreamContainer" style="display:none;margin-top:10px;background:#fbfbfd;border:1px solid var(--border-default);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.65;max-height:340px;overflow-y:auto;">
-                <div id="serverOpsStreamContent"></div>
+                <!-- 交互输入栏 -->
+                <div class="composer-island-card" style="margin-bottom:12px;border:1px solid #bae6fd;">
+                  <textarea id="sdOpsInputText" class="composer-textarea" rows="2" placeholder="在此输入运维指令（如：检查 80 端口占用并重启 nginx、分析内存泄漏原因...）" style="min-height:50px;"></textarea>
+                  <div class="composer-bottom-bar">
+                    <div class="composer-bottom-left">
+                      <span class="composer-hint-tag">按 <span class="composer-kbd">Ctrl+Enter</span> 发送指令</span>
+                    </div>
+                    <button type="button" class="btn primary" id="sdOpsSendBtn" onclick="window.sdExecuteOpsPrompt()" style="padding:6px 16px;font-size:12.5px;">
+                      下发执行
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 执行状态与诊断日志输出 -->
+                <div id="sdOpsOutputWrap" style="display:none;margin-top:12px;">
+                  <div style="font-size:12px;font-weight:700;color:var(--text-main);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+                    <span>执行结果与诊断输出</span>
+                    <span id="sdOpsStatusText" style="font-size:11px;color:#0284c7;">执行中...</span>
+                  </div>
+                  <pre id="sdOpsOutputText" style="background:#18181b;color:#e4e4e7;padding:12px;border-radius:8px;font-family:var(--font-mono);font-size:11.5px;max-height:280px;overflow-y:auto;white-space:pre-wrap;"></pre>
+                </div>
               </div>
             </div>
           </div>
 
-
-          <!-- 远程命令终端与交互操控台 -->
-          <div class="card" style="margin-top:16px;">
-            <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
-              <div style="display:flex;align-items:center;gap:10px;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-                <span style="font-weight:700;font-size:14px;">远程命令终端 & 操控台</span>
+          <!-- Tab 2: 实时硬件与系统指标 (Live Metrics) -->
+          <div id="sdPane_metrics" class="sd-pane" style="display:none;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:14px;margin-bottom:16px;">
+              <div class="stat-card">
+                <div class="stat-label">操作系统与平台</div>
+                <div class="stat-val" id="sdMetricOs" style="font-size:15px;margin-top:4px;">--</div>
+                <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;" id="sdMetricArch">--</div>
               </div>
-              <div style="display:flex;align-items:center;gap:8px;">
-                <label style="font-size:12px;color:var(--text-secondary);">目标节点：</label>
-                <select id="terminalServerSelect" style="padding:4px 8px;font-size:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--text-main);min-width:140px;">
-                  <option value="">-- 请选择服务器 --</option>
-                </select>
-                <button type="button" class="btn secondary" id="clearTerminalOutputBtn" style="padding:3px 8px;font-size:11.5px;">清屏</button>
+              <div class="stat-card">
+                <div class="stat-label">CPU 核心与负载</div>
+                <div class="stat-val" id="sdMetricCpu">--%</div>
+                <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;" id="sdMetricCores">-- 核</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">物理内存使用</div>
+                <div class="stat-val" id="sdMetricMem">--%</div>
+                <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;" id="sdMetricMemDetail">-- / -- GB</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">磁盘存储空间</div>
+                <div class="stat-val" id="sdMetricDisk">--%</div>
+                <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;" id="sdMetricDiskDetail">-- / -- GB</div>
               </div>
             </div>
 
-            <div class="card-body" style="padding:14px;">
-              <!-- 快捷指令胶囊 -->
-              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
-                <span style="font-size:11.5px;color:var(--text-secondary);align-self:center;">快捷指令:</span>
-                <button type="button" class="quick-cmd-btn" data-cmd="uname -a">uname -a</button>
-                <button type="button" class="quick-cmd-btn" data-cmd="df -h">df -h (磁盘)</button>
-                <button type="button" class="quick-cmd-btn" data-cmd="free -m">free -m (内存)</button>
-                <button type="button" class="quick-cmd-btn" data-cmd="top -b -n 1 | head -n 12">top 负载</button>
-                <button type="button" class="quick-cmd-btn" data-cmd="systemctl status hap-daemon">hap-daemon 状态</button>
-                <button type="button" class="quick-cmd-btn" data-cmd="node -v">node -v</button>
+            <div class="card" style="padding:16px;">
+              <div style="font-weight:700;font-size:13.5px;margin-bottom:12px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">
+                系统网络与环境信息
               </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:12.5px;">
+                <div><span style="color:var(--text-muted);">主机 IP 地址:</span> <strong id="sdMetricIp">--</strong></div>
+                <div><span style="color:var(--text-muted);">SSH 端口:</span> <strong id="sdMetricPort">--</strong></div>
+                <div><span style="color:var(--text-muted);">登录用户:</span> <strong id="sdMetricUser">--</strong></div>
+                <div><span style="color:var(--text-muted);">Daemon 通信端口:</span> <strong>9527</strong></div>
+                <div><span style="color:var(--text-muted);">系统持续运行时间 (Uptime):</span> <strong id="sdMetricUptime">--</strong></div>
+                <div><span style="color:var(--text-muted);">最近更新时间:</span> <strong id="sdMetricTime">--</strong></div>
+              </div>
+            </div>
+          </div>
 
-              <!-- 命令输入条 -->
-              <form id="remoteExecForm" style="display:flex;gap:8px;margin-bottom:12px;">
-                <input id="remoteCommandInput" placeholder="输入要执行的 Shell 指令 (如: ls -la /opt)..." style="flex:1;font-family:monospace;padding:8px 12px;font-size:13px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--text-main);" required />
-                <button type="submit" class="btn primary" id="execRemoteCmdBtn" style="display:flex;align-items:center;gap:6px;">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                  执行
-                </button>
-              </form>
-
-              <!-- 终端输出黑底控制台 -->
-              <div class="terminal-container" style="background:#141414;border:1px solid #2d2d2d;border-radius:6px;overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,0.5);">
-                <div class="terminal-titlebar" style="background:#1e1e1e;padding:6px 12px;border-bottom:1px solid #2d2d2d;display:flex;align-items:center;justify-content:space-between;">
-                  <div style="display:flex;align-items:center;gap:6px;">
-                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ff5f56;"></span>
-                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ffbd2e;"></span>
-                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#27c93f;"></span>
-                    <span style="margin-left:8px;font-size:11.5px;color:#888;font-family:monospace;" id="terminalConsoleTitle">Console (Ready)</span>
+          <!-- Tab 3: 运维指令与脚本库 (Scripts & Commands) -->
+          <div id="sdPane_scripts" class="sd-pane" style="display:none;">
+            <div class="card" style="margin-bottom:16px;">
+              <div class="card-header">
+                <div style="font-weight:700;font-size:14px;">常用运维功能与一键脚本</div>
+                <div style="font-size:11.5px;color:var(--text-muted);">点击常用功能一键在远程服务器执行并查看输出结果</div>
+              </div>
+              <div class="card-body" style="padding:16px;">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:12px;margin-bottom:18px;">
+                  <div class="card" style="padding:12px;background:#f8fafc;border:1px solid #e2e8f0;display:flex;flex-direction:column;justify-content:space-between;">
+                    <div>
+                      <div style="font-weight:600;font-size:13px;">Docker 容器状态</div>
+                      <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">列出所有运行中的容器及资源占用</div>
+                    </div>
+                    <button type="button" class="btn secondary" onclick="window.sdRunScript('docker ps -a && docker stats --no-stream')" style="margin-top:10px;font-size:12px;">
+                      执行查询
+                    </button>
                   </div>
-                  <span style="font-size:11px;color:#666;" id="terminalDuration">0ms</span>
+
+                  <div class="card" style="padding:12px;background:#f8fafc;border:1px solid #e2e8f0;display:flex;flex-direction:column;justify-content:space-between;">
+                    <div>
+                      <div style="font-weight:600;font-size:13px;">网络监听与开放端口</div>
+                      <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">排查所有监听中的 TCP/UDP 端口</div>
+                    </div>
+                    <button type="button" class="btn secondary" onclick="window.sdRunScript('ss -tulpn || netstat -tulpn')" style="margin-top:10px;font-size:12px;">
+                      执行查询
+                    </button>
+                  </div>
+
+                  <div class="card" style="padding:12px;background:#f8fafc;border:1px solid #e2e8f0;display:flex;flex-direction:column;justify-content:space-between;">
+                    <div>
+                      <div style="font-weight:600;font-size:13px;">内存占用最高的进程 TOP 10</div>
+                      <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">定位消耗内存最大的前 10 个进程</div>
+                    </div>
+                    <button type="button" class="btn secondary" onclick="window.sdRunScript('ps aux --sort=-%mem | head -n 11')" style="margin-top:10px;font-size:12px;">
+                      执行排查
+                    </button>
+                  </div>
+
+                  <div class="card" style="padding:12px;background:#f8fafc;border:1px solid #e2e8f0;display:flex;flex-direction:column;justify-content:space-between;">
+                    <div>
+                      <div style="font-weight:600;font-size:13px;">全盘空间占用大文件排行</div>
+                      <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">扫描 /var/log 和常见日志目录大文件</div>
+                    </div>
+                    <button type="button" class="btn secondary" onclick="window.sdRunScript('df -h && du -ah /var/log 2>/dev/null | sort -rh | head -n 10')" style="margin-top:10px;font-size:12px;">
+                      执行扫描
+                    </button>
+                  </div>
                 </div>
-                <pre id="remoteTerminalOutput" style="margin:0;padding:12px 14px;color:#00ff66;font-family:'Cascadia Code', Consolas, Menlo, Monaco, monospace;font-size:12.5px;line-height:1.5;overflow:auto;max-height:280px;min-height:120px;white-space:pre-wrap;word-break:break-all;"># 等待执行指令...</pre>
+
+                <!-- 自定义 Shell 命令快速下发 -->
+                <div style="font-weight:700;font-size:13px;margin-bottom:8px;">下发自定义 Shell 指令</div>
+                <div style="display:flex;gap:8px;margin-bottom:12px;">
+                  <input id="sdCustomCommandInput" placeholder="输入任意 Linux 命令，如：uptime, uname -a, systemctl status nginx..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;font-family:var(--font-mono);" />
+                  <button type="button" class="btn primary" onclick="window.sdRunCustomCommand()" style="padding:8px 18px;font-size:13px;">
+                    执行指令
+                  </button>
+                </div>
+
+                <!-- 脚本执行结果窗口 -->
+                <div id="sdScriptOutputWrap" style="display:none;margin-top:14px;">
+                  <div style="font-size:12px;font-weight:700;margin-bottom:6px;display:flex;justify-content:space-between;">
+                    <span>命令输出结果</span>
+                    <button type="button" class="btn secondary" onclick="window.sdClearScriptOutput()" style="padding:2px 8px;font-size:11px;">清空</button>
+                  </div>
+                  <pre id="sdScriptOutputText" style="background:#18181b;color:#e4e4e7;padding:12px;border-radius:8px;font-family:var(--font-mono);font-size:12px;max-height:300px;overflow-y:auto;white-space:pre-wrap;"></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 4: 远程 SSH 交互终端 (Remote Terminal) -->
+          <div id="sdPane_terminal" class="sd-pane" style="display:none;">
+            <div class="card" style="border:1px solid #bae6fd;">
+              <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-weight:700;font-size:14px;">远程交互控制台</div>
+                <button type="button" class="btn secondary" onclick="window.sdClearTerminal()" style="font-size:11.5px;padding:3px 8px;">清屏</button>
+              </div>
+              <div class="card-body" style="padding:14px;">
+                <div id="sdTerminalOutput" style="background:#18181b;color:#38bdf8;padding:12px;border-radius:8px;font-family:var(--font-mono);font-size:12px;height:350px;overflow-y:auto;white-space:pre-wrap;">终端就绪，正在连接服务器...</div>
+                <div style="display:flex;gap:8px;margin-top:10px;">
+                  <span style="display:grid;place-items:center;font-family:var(--font-mono);font-size:13px;color:#0284c7;font-weight:700;">$</span>
+                  <input id="sdTerminalInput" placeholder="输入远程命令并回车..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;font-family:var(--font-mono);" />
+                  <button type="button" class="btn primary" onclick="window.sdSendTerminalCmd()" style="padding:8px 16px;font-size:12.5px;">发送</button>
+                </div>
               </div>
             </div>
           </div>
@@ -1503,6 +1647,69 @@
         </div>
       </section>
     </main>
+
+    <!-- 弹窗: 定时任务 新增/修改 (Schedule Dialog) -->
+    <dialog id="scheduleDialog" class="modal modal-md">
+      <form id="scheduleForm" class="modal-form-wrap">
+        <div class="modal-header-row">
+          <h2 id="scheduleDialogTitle">新建自动化定时任务</h2>
+          <button type="button" class="btn-close" id="closeScheduleDialogBtn"></button>
+        </div>
+
+        <input type="hidden" id="scheduleInputId" />
+
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>任务名称 *</label>
+            <input type="text" id="scheduleInputName" placeholder="例如：每日代码复盘与报告、服务器健康巡检" required />
+          </div>
+
+          <div class="form-group">
+            <label>Cron 周期表达式 *</label>
+            <input type="text" id="scheduleInputCron" placeholder="例如：0 9 * * * 或 */30 * * * *" required />
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">如 `0 9 * * *` (每天早9点), `*/15 * * * *` (每15分钟)</div>
+          </div>
+
+          <div class="form-group">
+            <label>执行智能体角色 *</label>
+            <select id="scheduleAgentSelect" required></select>
+          </div>
+
+          <div class="form-group full-width">
+            <label>任务 Prompt 指令 *</label>
+            <textarea id="scheduleInputPrompt" rows="3" placeholder="例如：分析当前工作区最近的提交，生成一份简要的项目健康分析报告" required></textarea>
+          </div>
+
+          <div class="form-group full-width">
+            <label>可选通知渠道</label>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                <input type="checkbox" id="scheduleNotifyWechat" />
+                <span>微信通知</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                <input type="checkbox" id="scheduleNotifyFeishu" />
+                <span>飞书推送</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                <input type="checkbox" id="scheduleNotifyQQ" />
+                <span>QQ 群/好友</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                <input type="checkbox" id="scheduleNotifyTg" />
+                <span>Telegram</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:14px;border-top:1px solid var(--border-default);">
+          <button type="button" class="btn secondary" id="cancelScheduleDialogBtn">取消</button>
+          <button type="submit" class="btn primary">保存定时任务</button>
+        </div>
+      </form>
+    </dialog>
+
 
     <!-- 弹窗: 快速模型同步与点选导入 (Quick Model Sync Modal) -->
     <dialog id="quickModelSyncModal" class="modal modal-md">
@@ -2245,6 +2452,27 @@
       </div>
     </dialog>
 
+    <!-- 弹窗: 热门 MCP 插件库 (Preset MCP Store) -->
+    <dialog id="presetMcpModal" class="modal modal-lg">
+      <div class="modal-form-wrap" style="max-height:85vh;display:flex;flex-direction:column;padding:22px 24px;">
+        <div class="modal-header-row" style="margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border-default);">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);color:#fff;display:grid;place-items:center;font-size:18px;">🧩</div>
+            <div>
+              <h2 style="margin:0;font-size:16px;font-weight:700;">热门官方与社区 MCP 扩展库</h2>
+              <p style="margin:2px 0 0 0;font-size:12px;color:var(--text-muted);">一键快捷安装标准 Model Context Protocol 插件，无须手动编写命令行与 JSON 参数</p>
+            </div>
+          </div>
+          <button type="button" class="btn-close" id="closePresetMcpBtn">✕</button>
+        </div>
+
+        <div style="flex:1;overflow-y:auto;padding-right:4px;">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:12px;" id="presetMcpGrid">
+            <!-- 动态渲染预设 MCP 卡片 -->
+          </div>
+        </div>
+      </div>
+    </dialog>
     <!-- 弹窗: 一键安装部署进度面板 (Install Server Dialog) -->
     <dialog id="installServerDialog" class="modal modal-lg">
       <div class="modal-form-wrap" style="max-height:85vh;display:flex;flex-direction:column;">

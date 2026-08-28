@@ -1463,6 +1463,7 @@ async function refresh() {
     }
 
     renderProjects();
+    renderSchedules();
     renderProjectsTree();
     renderSkills();
     renderPlugins();
@@ -2292,11 +2293,26 @@ function fillSelects() {
   const modelPicker = $('chatModelPickerSelect');
   if (modelPicker) {
     const previousModel = modelPicker.value || localStorage.getItem('hap:selected-chat-model') || '';
-    modelPicker.innerHTML = state.models.map((m) => `
-      <option value="${esc(m.fullName || m.alias)}">${esc(m.alias)} (${esc(m.providerId || m.provider || 'default')})</option>
-    `).join('');
+    const providersMap = new Map((state.providers || []).map(p => [p.id, p]));
+
+    modelPicker.innerHTML = (state.models || []).map((m) => {
+      const p = providersMap.get(m.providerId);
+      const isReady = p && (Boolean(p.hasCredential) || p.id === 'ollama' || p.envKey === undefined);
+      const icon = isReady ? '🟢 ' : '⚪ ';
+      const statusText = isReady ? '就绪' : '需配置 Key';
+      return `<option value="${esc(m.fullName || m.alias)}">${icon}${esc(m.alias)} (${esc(p?.name || m.providerId)} · ${statusText})</option>`;
+    }).join('');
+
     if (previousModel && state.models.some((m) => (m.fullName || m.alias) === previousModel)) {
       modelPicker.value = previousModel;
+    } else {
+      const firstReady = (state.models || []).find((m) => {
+        const p = providersMap.get(m.providerId);
+        return p && (Boolean(p.hasCredential) || p.id === 'ollama' || p.envKey === undefined);
+      });
+      if (firstReady) {
+        modelPicker.value = firstReady.fullName || firstReady.alias;
+      }
     }
   }
 
@@ -3668,145 +3684,85 @@ let activeTerminalServerId = '';
 
 async function renderServers() {
   const grid = $('serverCardsGrid');
-  const selectEl = $('terminalServerSelect');
   if (!grid) return;
 
-  // 同步刷新顶部本机宿主状态卡片
-  updateLocalHostCard();
+  const servers = state.servers || [];
 
-  try {
-    cachedServers = await window.hap.listServers();
-  } catch {
-    cachedServers = [];
+  // 同步下拉框选项
+  const select = $('terminalServerSelect');
+  if (select) {
+    select.innerHTML = '<option value="">-- 选择目标服务器 --</option>' +
+      servers.map(s => `<option value="${esc(s.id)}">${esc(s.name)} (${esc(s.host)}:${esc(s.port)})${s.status === 'online' ? ' [在线]' : ''}</option>`).join('');
   }
 
-  // 更新终端与智能运维目标下拉选择框
-  const opsTargetSelect = $('serverOpsTargetSelect');
-  if (selectEl || opsTargetSelect) {
-    const defaultId = activeTerminalServerId || (cachedServers.length > 0 ? cachedServers[0].id : '');
-    const optionsHtml = '<option value="">-- 请选择目标服务器 --</option>' +
-      cachedServers.map(s => `<option value="${esc(s.id)}">${esc(s.name)} (${esc(s.host)})</option>`).join('');
-    
-    if (selectEl) {
-      const curVal = selectEl.value || defaultId;
-      selectEl.innerHTML = optionsHtml;
-      if (curVal) selectEl.value = curVal;
-      if (!activeTerminalServerId && cachedServers.length > 0) {
-        activeTerminalServerId = cachedServers[0].id;
-        selectEl.value = activeTerminalServerId;
-      }
-    }
-
-    if (opsTargetSelect) {
-      const curVal = opsTargetSelect.value || defaultId;
-      opsTargetSelect.innerHTML = optionsHtml;
-      if (curVal) opsTargetSelect.value = curVal;
-      else if (cachedServers.length > 0) opsTargetSelect.value = cachedServers[0].id;
-    }
-  }
-
-  if (cachedServers.length === 0) {
+  if (servers.length === 0) {
     grid.innerHTML = `
-      <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 42px 20px; color: var(--text-secondary);">
-        <div style="font-size: 32px; margin-bottom: 12px;">️</div>
-        <div style="font-weight: 700; font-size: 15px; color: var(--text-main); margin-bottom: 6px;">尚未添加任何远程服务器</div>
-        <div style="font-size: 13px; max-width: 440px; margin: 0 auto 18px auto; line-height: 1.5;">
-          输入服务器 IP (公网或局域网) 与 SSH 凭据，即可一键自动化部署 HAP 守护进程，实现跨机器算力协同与实时操控。
-        </div>
-        <button type="button" class="btn primary" onclick="window.openServerDialog()" style="margin:0 auto;">
-          + 立即添加第一台服务器
-        </button>
+      <div class="empty-card" style="grid-column: 1 / -1; padding: 48px; text-align: center; color: var(--text-muted);">
+        <div style="font-size: 32px; margin-bottom: 8px;">🌐</div>
+        <div style="font-size: 14px; font-weight: 600; color: var(--text-main);">暂未添加任何远程服务器</div>
+        <div style="font-size: 12px; margin-top: 4px;">点击右上角「+ 添加服务器」配置 Linux 节点，打通双向智能运维与远程算力操控</div>
       </div>
     `;
     return;
   }
 
-  grid.innerHTML = cachedServers.map((s) => {
-    const statusMap = {
-      online: { text: '● 在线 (Daemon 已就绪)', cls: 'badge', color: '#16a34a' },
-      offline: { text: '○ 离线', cls: 'badge neutral', color: '#64748b' },
-      installing: { text: '⏳ 正在部署...', cls: 'badge warn', color: '#d97706' },
-      error: { text: ' 异常', cls: 'badge danger', color: '#dc2626' },
-      uninstalled: { text: '未部署 Daemon', cls: 'badge neutral', color: '#475569' },
-    };
-    const st = statusMap[s.status] || statusMap.uninstalled;
-
+  grid.innerHTML = servers.map(s => {
+    const isOnline = s.status === 'online';
+    const isDeploying = s.status === 'deploying';
     const info = s.systemInfo;
-    const cpuPercent = info ? info.cpuUsagePercent : 0;
-    const memPercent = info ? info.usedMemPercent : 0;
-    const memUsedGb = info ? ((info.totalMemBytes - info.freeMemBytes) / (1024 * 1024 * 1024)).toFixed(1) : '—';
-    const memTotalGb = info ? (info.totalMemBytes / (1024 * 1024 * 1024)).toFixed(1) : '—';
-    const uptimeStr = info ? `${Math.floor(info.uptimeSeconds / 3600)}h ${Math.floor((info.uptimeSeconds % 3600) / 60)}m` : '—';
+    const cpuPercent = info ? Math.round(info.cpu?.usagePercent ?? 0) : 0;
+    const memPercent = info ? Math.round(info.memory?.usagePercent ?? 0) : 0;
+    const memUsedGb = info ? (info.memory?.used / 1024 / 1024 / 1024).toFixed(1) : '0';
+    const memTotalGb = info ? (info.memory?.total / 1024 / 1024 / 1024).toFixed(1) : '0';
 
     return `
-      <div class="card server-card" id="server-card-${esc(s.id)}">
-        <div class="card-header">
-          <div class="card-title-wrap" style="cursor:pointer;" onclick="window.openServerDetailsModal('${esc(s.id)}')" title="点击查看此服务器系统详情">
-            <div class="card-title" style="display:flex;align-items:center;gap:6px;">
-              <span>${esc(s.name)}</span>
-              <span style="font-size:11px;color:#3b82f6;font-weight:normal;">[详情 ↗]</span>
+      <div class="card server-node-card ${isOnline ? 'online' : 'offline'}" style="border:1px solid #e0f2fe;border-radius:14px;transition:all 0.2s ease;">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:flex-start;padding:14px 16px;border-bottom:1px solid #f1f5f9;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);color:#0284c7;display:grid;place-items:center;font-weight:700;font-size:14px;">
+              ${esc(s.name.slice(0, 2).toUpperCase())}
             </div>
-            <div class="card-subtitle">${esc(s.username)}@${esc(s.host)}:${esc(s.port)}</div>
+            <div>
+              <div style="font-weight:700;font-size:14px;color:var(--text-main);">${esc(s.name)}</div>
+              <div style="font-size:11.5px;color:var(--text-muted);font-family:var(--font-mono);">${esc(s.username)}@${esc(s.host)}:${esc(s.port)}</div>
+            </div>
           </div>
-          <span class="${st.cls}" style="font-size:11px;">${st.text}</span>
+          <span class="badge ${isOnline ? 'success' : isDeploying ? 'warning' : 'neutral'}" style="font-size:10.5px;">
+            ${isOnline ? '● 在线' : isDeploying ? '⏳ 部署中' : '○ 离线'}
+          </span>
         </div>
 
-        <div class="card-body">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
-            <div class="server-stat-pill">
-              <span style="color:var(--text-secondary);">OS:</span>
-              <span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${info ? esc(info.osRelease || info.platform) : 'Linux'}</span>
-            </div>
-            <div class="server-stat-pill">
-              <span style="color:var(--text-secondary);">运行:</span>
-              <span style="font-weight:600;">${uptimeStr}</span>
-            </div>
-          </div>
-
-          <!-- CPU 监控指示条 -->
-          <div style="margin-top:4px;">
-            <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-secondary);">
+        <div class="card-body" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-secondary);margin-bottom:3px;">
               <span>CPU 占用</span>
-              <span style="font-weight:600;color:var(--text-main);">${info ? cpuPercent + '%' : '—'}</span>
+              <strong style="color:var(--text-main);">${info ? `${cpuPercent}%` : '—'}</strong>
             </div>
             <div class="server-meter-bar">
               <div class="server-meter-fill ${cpuPercent > 80 ? 'danger' : cpuPercent > 50 ? 'warn' : ''}" style="width:${info ? cpuPercent : 0}%;"></div>
             </div>
           </div>
 
-          <!-- 内存 监控指示条 -->
           <div>
-            <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-secondary);">
+            <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-secondary);margin-bottom:3px;">
               <span>内存 占用</span>
-              <span style="font-weight:600;color:var(--text-main);">${info ? `${memPercent}% (${memUsedGb}/${memTotalGb}G)` : '—'}</span>
+              <strong style="color:var(--text-main);">${info ? `${memPercent}% (${memUsedGb}/${memTotalGb}G)` : '—'}</strong>
             </div>
             <div class="server-meter-bar">
               <div class="server-meter-fill ${memPercent > 85 ? 'danger' : memPercent > 60 ? 'warn' : ''}" style="width:${info ? memPercent : 0}%;"></div>
             </div>
           </div>
-
         </div>
 
-        <div class="card-footer" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #f1f5f9;margin-top:6px;">
+        <div class="card-footer" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-top:1px solid #f1f5f9;background:#f8fafc;border-radius:0 0 14px 14px;">
+          <button type="button" class="btn primary" onclick="window.openServerDetail('${esc(s.id)}')" style="font-size:12px;padding:5px 14px;">
+            进入管理详情 ↗
+          </button>
           <div style="display:flex;gap:6px;">
-            <button type="button" class="btn primary" onclick="window.openServerDetailsModal('${esc(s.id)}')" style="padding:4px 10px;font-size:12px;" title="查看服务器完整硬件与系统详情">
-              🔍 详情
-            </button>
-            <button type="button" class="btn secondary" onclick="window.testServerNode('${esc(s.id)}')" style="padding:4px 10px;font-size:12px;" title="测试 SSH 连通性">
-              连通测试
-            </button>
-            <button type="button" class="btn ${s.status === 'online' ? 'secondary' : 'primary'}" onclick="window.openInstallServerModal('${esc(s.id)}')" style="padding:4px 10px;font-size:12px;" title="一键远程部署守护服务">
-              ${s.status === 'online' ? '重新部署' : '一键安装'}
-            </button>
-          </div>
-          <div style="display:flex;gap:6px;">
-            <button type="button" class="btn secondary" onclick="window.selectTerminalServer('${esc(s.id)}')" style="padding:4px 8px;font-size:12px;" title="在下方终端中选中此机器">
-              终端
-            </button>
-            <button type="button" class="btn secondary" onclick="window.openServerDialog('${esc(s.id)}')" style="padding:4px 8px;font-size:12px;" title="编辑配置">
+            <button type="button" class="btn secondary" onclick="window.openServerDialog('${esc(s.id)}')" style="padding:4px 8px;font-size:12px;">
               编辑
             </button>
-            <button type="button" class="btn secondary" onclick="window.deleteServerNode('${esc(s.id)}')" style="padding:4px 8px;font-size:12px;color:#ef4444;border-color:#fecaca;background:#fef2f2;" title="移除此服务器">
+            <button type="button" class="btn secondary" onclick="window.deleteServerNode('${esc(s.id)}')" style="padding:4px 8px;font-size:12px;color:#ef4444;border-color:#fecaca;background:#fef2f2;">
               删除
             </button>
           </div>
@@ -5544,3 +5500,553 @@ $('refreshServerDetailsBtn')?.addEventListener('click', () => {
   showToast('已刷新服务器详细指标', 'info');
 });
 $('closeServerDetailsBtn')?.addEventListener('click', () => $('serverDetailsModal')?.close());
+
+// ==========================================================================
+// Skill & MCP 统一扩展生态中心控制器 (Unified Market Controller)
+// ==========================================================================
+
+let activeMarketTab = 'all';
+
+const PRESET_MCP_CATALOG = [
+  {
+    id: 'github-mcp',
+    name: 'GitHub 官方 MCP',
+    desc: '管理 Issues、Pull Requests、分支代码审查与文件树',
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-github'],
+    icon: '🐙',
+    category: 'developer',
+    tags: ['GitHub', 'Code', 'Official'],
+  },
+  {
+    id: 'sqlite-mcp',
+    name: 'SQLite 本地数据库',
+    desc: '分析 SQLite 本地数据库、提取 Schema 结构并自动化执行 SQL',
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-sqlite'],
+    icon: '🗄️',
+    category: 'database',
+    tags: ['SQLite', 'SQL', 'Database'],
+  },
+  {
+    id: 'postgres-mcp',
+    name: 'PostgreSQL 数据库',
+    desc: '连接远程或本地 Postgres，进行表结构反向工程与复杂 SQL 编排',
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-postgres'],
+    icon: '🐘',
+    category: 'database',
+    tags: ['PostgreSQL', 'SQL', 'Database'],
+  },
+  {
+    id: 'brave-search-mcp',
+    name: 'Brave Search 实时联网检索',
+    desc: '调用 Brave 搜索 API 获取实时互联网最新文档、技术动态与解决思路',
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-brave-search'],
+    icon: '🦁',
+    category: 'search',
+    tags: ['Search', 'Web', 'Live'],
+  },
+  {
+    id: 'memory-mcp',
+    name: '知识图谱持久化记忆',
+    desc: '构建项目与用户长期知识图谱，跨多轮会话持久化关键决策与偏好',
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-memory'],
+    icon: '🧠',
+    category: 'system',
+    tags: ['Knowledge Graph', 'Memory'],
+  },
+  {
+    id: 'chrome-devtools',
+    name: 'Puppeteer 浏览器自动化',
+    desc: '无头浏览器页面排版审查、控制台错误抓取、渲染视觉快照与截图',
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-puppeteer'],
+    icon: '🌐',
+    category: 'browser',
+    tags: ['Browser', 'DevTools', 'UI'],
+  },
+  {
+    id: 'docker-mcp',
+    name: 'Docker 容器与镜像运维',
+    desc: '监控本地 Docker 容器生命周期、Compose 编排与日志排查',
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-docker'],
+    icon: '🐳',
+    category: 'ops',
+    tags: ['Docker', 'DevOps', 'Containers'],
+  },
+  {
+    id: 'fetch-mcp',
+    name: 'Fetch 网页文档解析器',
+    desc: '高效抓取任意 URL 页面并转化为 Markdown，供智能体深度研读',
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-fetch'],
+    icon: '📥',
+    category: 'developer',
+    tags: ['Fetch', 'Markdown', 'Web'],
+  },
+  {
+    id: 'slack-mcp',
+    name: 'Slack 团队消息协作',
+    desc: '向 Slack 频道发送构建通知、告警消息或与团队实时异步沟通',
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-slack'],
+    icon: '💬',
+    category: 'im',
+    tags: ['Slack', 'Collaboration'],
+  },
+];
+
+function renderMarket(query = '', tab = activeMarketTab) {
+  const container = $('marketEcoGrid');
+  if (!container) return;
+
+  const skills = state.skills || [];
+  const plugins = state.plugins || [];
+  const q = (query || $('marketSearchInput')?.value || '').toLowerCase().trim();
+
+  // 统计角标计数
+  const mcpCount = plugins.filter(p => p.type === 'mcp').length;
+  const skillCount = skills.length;
+  const builtinCount = plugins.filter(p => p.type === 'builtin').length;
+  const activeCount = skills.filter(s => s.enabled).length + plugins.filter(p => p.enabled).length;
+  const totalCount = skills.length + plugins.length;
+
+  if ($('tabCountAll')) $('tabCountAll').textContent = String(totalCount);
+  if ($('tabCountMcp')) $('tabCountMcp').textContent = String(mcpCount);
+  if ($('tabCountSkill')) $('tabCountSkill').textContent = String(skillCount);
+  if ($('tabCountBuiltin')) $('tabCountBuiltin').textContent = String(builtinCount);
+  if ($('tabCountActive')) $('tabCountActive').textContent = String(activeCount);
+
+  // 聚合生成统一生态卡片数据
+  const allCards = [];
+
+  // 1. 添加 MCP 与 内置插件
+  for (const p of plugins) {
+    const isMcp = p.type === 'mcp';
+    allCards.push({
+      id: p.id,
+      name: p.name,
+      kind: isMcp ? 'mcp' : 'builtin',
+      kindLabel: isMcp ? 'MCP 插件' : '内置工具',
+      description: p.description || '无描述',
+      enabled: Boolean(p.enabled),
+      command: isMcp ? `${p.command || 'npx'} ${(p.args || []).join(' ')}` : '',
+      tags: [isMcp ? 'Model Context Protocol' : 'Built-in Tool', p.category || 'developer'],
+      author: isMcp ? 'MCP Ecosystem' : 'Codex System',
+      stars: isMcp ? '⭐⭐⭐⭐⭐' : '',
+      raw: p,
+    });
+  }
+
+  // 2. 添加 Skills 技能
+  for (const s of skills) {
+    allCards.push({
+      id: s.id,
+      name: s.name,
+      kind: 'skill',
+      kindLabel: 'Skill 技能',
+      description: s.description || '无描述',
+      enabled: Boolean(s.enabled),
+      repo: s.repo,
+      tags: s.tags || ['Skill', 'GitHub'],
+      author: s.author || 'Community',
+      stars: s.stars ? `★ ${s.stars}` : '',
+      raw: s,
+    });
+  }
+
+  // 筛选过滤
+  const filtered = allCards.filter(item => {
+    // 选项卡过滤
+    if (tab === 'mcp' && item.kind !== 'mcp') return false;
+    if (tab === 'skill' && item.kind !== 'skill') return false;
+    if (tab === 'builtin' && item.kind !== 'builtin') return false;
+    if (tab === 'active' && !item.enabled) return false;
+
+    // 关键词搜索过滤
+    if (!q) return true;
+    const matchName = item.name.toLowerCase().includes(q);
+    const matchDesc = item.description.toLowerCase().includes(q);
+    const matchRepo = item.repo && item.repo.toLowerCase().includes(q);
+    const matchCommand = item.command && item.command.toLowerCase().includes(q);
+    const matchTag = item.tags && item.tags.some(t => t.toLowerCase().includes(q));
+    return matchName || matchDesc || matchRepo || matchCommand || matchTag;
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="empty-card" style="grid-column:1/-1;padding:48px 20px;text-align:center;color:var(--text-muted);background:#ffffff;border-radius:12px;border:1px dashed #cbd5e1;">
+        <div style="font-size:32px;margin-bottom:10px;">🔍</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text-main);margin-bottom:6px;">未检索到匹配的插件或技能</div>
+        <div style="font-size:12.5px;max-width:400px;margin:0 auto 16px auto;">您可以清空搜索条件，或者点击上方按钮安装热门 MCP 或导入 GitHub Skill</div>
+        <button type="button" class="btn primary" onclick="$('openPresetMcpModalBtn').click()" style="margin:0 auto;">
+          📦 浏览热门 MCP 扩展市场
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = filtered.map(item => {
+    const isMcp = item.kind === 'mcp';
+    const isSkill = item.kind === 'skill';
+    const icon = isMcp ? '🧩' : isSkill ? '⚡' : '🛠️';
+
+    let commandSnippetHtml = '';
+    if (item.command) {
+      commandSnippetHtml = `
+        <div class="eco-command-wrap" title="MCP 启动命令">
+          <span class="eco-command-text">${esc(item.command)}</span>
+          <button type="button" class="btn secondary" style="padding:1px 6px;font-size:10px;" onclick="copyText('${esc(item.command)}')">复制</button>
+        </div>
+      `;
+    } else if (item.repo) {
+      commandSnippetHtml = `
+        <div class="eco-command-wrap" style="color:#2563eb;" title="GitHub 开源仓库">
+          <span class="eco-command-text">github.com/${esc(item.repo)}</span>
+          <button type="button" class="btn secondary" style="padding:1px 6px;font-size:10px;" onclick="window.open('https://github.com/${esc(item.repo)}', '_blank')">访问</button>
+        </div>
+      `;
+    }
+
+    let actionsHtml = '';
+    if (isSkill) {
+      actionsHtml = `
+        <div style="display:flex;gap:6px;">
+          <button type="button" class="btn secondary" style="padding:3px 8px;font-size:11.5px;" onclick="window.open('https://github.com/${esc(item.repo)}', '_blank')">GitHub</button>
+          <button type="button" class="btn danger" style="padding:3px 8px;font-size:11.5px;" onclick="uninstallSkill('${escJs(item.id)}', '${escJs(item.name)}')">卸载</button>
+        </div>
+      `;
+    } else if (isMcp) {
+      actionsHtml = `
+        <div style="display:flex;gap:6px;">
+          <button type="button" class="btn secondary" style="padding:3px 8px;font-size:11.5px;" onclick="window.openEditPluginModal('${escJs(item.id)}')">配置</button>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="eco-card" id="eco-card-${esc(item.id)}">
+        <div class="eco-card-top">
+          <div class="eco-title-group">
+            <div class="eco-icon-badge ${item.kind}">${icon}</div>
+            <div>
+              <div class="eco-name">${esc(item.name)}</div>
+              <div class="eco-sub">by ${esc(item.author)} ${item.stars ? `· ${item.stars}` : ''}</div>
+            </div>
+          </div>
+          <span class="eco-type-tag ${item.kind}">${item.kindLabel}</span>
+        </div>
+
+        <div class="eco-desc">${esc(item.description)}</div>
+
+        ${commandSnippetHtml}
+
+        <div class="eco-tags-row">
+          ${(item.tags || []).map(t => `<span class="eco-tag">${esc(t)}</span>`).join('')}
+        </div>
+
+        <div class="eco-footer">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <label class="switch">
+              <input type="checkbox" ${item.enabled ? 'checked' : ''} onchange="${isSkill ? `toggleSkillEnabled('${esc(item.id)}', this.checked)` : `togglePluginEnabled('${esc(item.id)}', this.checked)`}" />
+              <span class="slider green"></span>
+            </label>
+            <div class="eco-status-indicator">
+              <span class="eco-status-dot ${item.enabled ? 'active' : 'inactive'}"></span>
+              <span style="color:${item.enabled ? 'var(--success)' : 'var(--text-muted)'};">${item.enabled ? '运行就绪' : '已停用'}</span>
+            </div>
+          </div>
+          ${actionsHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// 选项卡切换交互
+$('marketTabsBar')?.addEventListener('click', (e) => {
+  const tabBtn = e.target.closest('[data-market-tab]');
+  if (!tabBtn) return;
+  document.querySelectorAll('.market-tab-btn').forEach(b => b.classList.remove('active'));
+  tabBtn.classList.add('active');
+  activeMarketTab = tabBtn.getAttribute('data-market-tab');
+  renderMarket();
+});
+
+$('marketSearchInput')?.addEventListener('input', (e) => {
+  renderMarket(e.target.value);
+});
+
+function renderSkills() {
+  renderMarket();
+}
+
+function renderPlugins() {
+  renderMarket();
+}
+
+// 预设 MCP 市场对话框
+function renderPresetMcpModal() {
+  const grid = $('presetMcpGrid');
+  if (!grid) return;
+
+  const currentPlugins = state.plugins || [];
+  const installedIds = new Set(currentPlugins.map(p => p.id));
+
+  grid.innerHTML = PRESET_MCP_CATALOG.map(p => {
+    const isInstalled = installedIds.has(p.id);
+    return `
+      <div class="card" style="padding:14px;background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:20px;">${p.icon}</span>
+            <div>
+              <div style="font-weight:700;font-size:13.5px;color:#0f172a;">${esc(p.name)}</div>
+              <div style="font-size:11px;color:#64748b;">${esc(p.tags.join(' · '))}</div>
+            </div>
+          </div>
+          <span class="badge ${isInstalled ? 'success' : 'neutral'}" style="font-size:10.5px;">${isInstalled ? '已在列表中' : '未添加'}</span>
+        </div>
+        <div style="font-size:12px;color:#475569;line-height:1.4;">${esc(p.desc)}</div>
+        <div style="font-family:var(--font-mono);font-size:10.5px;background:#f8fafc;padding:4px 8px;border-radius:4px;border:1px solid #e2e8f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+          ${p.command} ${p.args.join(' ')}
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:auto;padding-top:6px;">
+          <button type="button" class="btn ${isInstalled ? 'secondary' : 'primary'}" style="font-size:12px;padding:4px 12px;" onclick="window.installPresetMcp('${p.id}')">
+            ${isInstalled ? '重新激活/启用' : '+ 一键添加'}
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+window.installPresetMcp = async (presetId) => {
+  const preset = PRESET_MCP_CATALOG.find(p => p.id === presetId);
+  if (!preset) return;
+
+  try {
+    const plugin = {
+      id: preset.id,
+      name: preset.name,
+      description: preset.desc,
+      type: 'mcp',
+      category: preset.category,
+      enabled: true,
+      command: preset.command,
+      args: preset.args,
+    };
+    await window.hap.upsertPlugin(plugin);
+    await refresh();
+    $('presetMcpModal')?.close();
+    showToast(`已成功添加 MCP 插件：${preset.name}`, 'success');
+  } catch (err) {
+    showToast('添加插件失败: ' + err.message, 'error');
+  }
+};
+
+window.openEditPluginModal = (id) => {
+  const p = (state.plugins || []).find(item => item.id === id);
+  if (!p) return;
+  $('pluginInputName').value = p.name || '';
+  $('pluginInputType').value = p.type || 'mcp';
+  $('pluginInputCategory').value = p.category || 'developer';
+  $('pluginInputCommand').value = p.command || '';
+  $('pluginInputArgs').value = (p.args || []).join(' ');
+  $('pluginInputDescription').value = p.description || '';
+  $('addPluginModal')?.showModal();
+};
+
+$('openPresetMcpModalBtn')?.addEventListener('click', () => {
+  renderPresetMcpModal();
+  $('presetMcpModal')?.showModal();
+});
+$('closePresetMcpBtn')?.addEventListener('click', () => $('presetMcpModal')?.close());
+
+// ==========================================================================
+// 自动化定时任务控制器 (Schedule & Cron Manager)
+// ==========================================================================
+
+async function renderSchedules() {
+  const grid = $('schedulesGrid');
+  const historyList = $('scheduleHistoryList');
+  if (!grid) return;
+
+  try {
+    const list = await window.hap.listSchedules?.() || [];
+    const history = await window.hap.getScheduleHistory?.() || [];
+
+    if (list.length === 0) {
+      grid.innerHTML = `
+        <div style="grid-column:1/-1;padding:32px;text-align:center;background:#ffffff;border:1px dashed #cbd5e1;border-radius:10px;color:var(--text-muted);font-size:13px;">
+          暂无配置的定时任务。点击右上角「+ 新建定时任务」由智能体按周期自动工作。
+        </div>
+      `;
+    } else {
+      grid.innerHTML = list.map(job => `
+        <div class="card schedule-card" style="padding:14px;background:#ffffff;border:1px solid ${job.enabled ? 'var(--border-default)' : '#e2e8f0'};border-radius:10px;opacity:${job.enabled ? 1 : 0.75};">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+            <div>
+              <strong style="font-size:14px;color:var(--text-main);">${esc(job.name)}</strong>
+              <div style="margin-top:4px;display:flex;align-items:center;gap:6px;">
+                <span class="prop-chip" style="font-family:var(--font-mono);font-size:11.5px;color:#0284c7;background:#f0f9ff;">⏰ ${esc(job.cron)}</span>
+                <span class="prop-chip" style="font-size:11.5px;">🤖 ${esc(job.agent || 'coder')}</span>
+              </div>
+            </div>
+            <label class="switch" style="position:relative;display:inline-block;width:34px;height:18px;">
+              <input type="checkbox" ${job.enabled ? 'checked' : ''} onchange="window.toggleScheduleEnabled('${escJs(job.id)}', this.checked)" />
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div style="font-size:12px;color:#475569;background:#f8fafc;padding:8px 10px;border-radius:6px;margin:8px 0;line-height:1.4;word-break:break-all;">
+            ${esc(job.prompt)}
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid #f1f5f9;">
+            <span style="font-size:11px;color:#94a3b8;">${job.lastRunAt ? '上次执行: ' + new Date(job.lastRunAt).toLocaleTimeString() : '尚未执行'}</span>
+            <div style="display:flex;gap:6px;">
+              <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="window.runScheduleNow('${escJs(job.id)}')">立即执行</button>
+              <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="window.openEditScheduleDialog('${escJs(job.id)}')">编辑</button>
+              <button type="button" class="btn danger" style="font-size:11.5px;padding:3px 8px;" onclick="window.deleteSchedule('${escJs(job.id)}')">删除</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    if (historyList) {
+      if (history.length === 0) {
+        historyList.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);">暂无执行记录</div>';
+      } else {
+        historyList.innerHTML = history.slice(0, 15).map(h => `
+          <div style="padding:8px 10px;margin-bottom:6px;background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <span class="badge ${h.status === 'success' ? 'success' : 'danger'}" style="margin-right:6px;font-size:10.5px;">${h.status === 'success' ? '成功' : '失败'}</span>
+              <strong style="font-size:12px;">${esc(h.scheduleName || h.scheduleId)}</strong>
+              <span style="font-size:11.5px;color:#64748b;margin-left:8px;">耗时 ${h.durationMs ? (h.durationMs / 1000).toFixed(1) + 's' : '-'}</span>
+            </div>
+            <span style="font-size:11px;color:#94a3b8;">${new Date(h.executedAt).toLocaleString()}</span>
+          </div>
+        `).join('');
+      }
+    }
+  } catch (err) {
+    console.warn('渲染定时任务异常:', err);
+  }
+}
+
+window.openAddScheduleDialog = () => {
+  const dialog = $('scheduleDialog');
+  const form = $('scheduleForm');
+  if (!dialog || !form) return;
+  form.reset();
+  $('scheduleDialogTitle').textContent = '新建自动化定时任务';
+  $('scheduleInputId').value = '';
+  const agentSelect = $('scheduleAgentSelect');
+  if (agentSelect) {
+    agentSelect.innerHTML = (state.agents || []).map(a => `<option value="${esc(a.id)}">${esc(a.name || a.id)} (${esc(a.id)})</option>`).join('');
+  }
+  dialog.showModal();
+};
+
+window.openEditScheduleDialog = async (id) => {
+  const list = await window.hap.listSchedules?.() || [];
+  const job = list.find(j => j.id === id);
+  if (!job) return;
+
+  const dialog = $('scheduleDialog');
+  $('scheduleDialogTitle').textContent = '编辑定时任务';
+  $('scheduleInputId').value = job.id;
+  $('scheduleInputName').value = job.name || '';
+  $('scheduleInputCron').value = job.cron || '';
+  $('scheduleInputPrompt').value = job.prompt || '';
+  const agentSelect = $('scheduleAgentSelect');
+  if (agentSelect) {
+    agentSelect.innerHTML = (state.agents || []).map(a => `<option value="${esc(a.id)}">${esc(a.name || a.id)} (${esc(a.id)})</option>`).join('');
+    agentSelect.value = job.agent || 'coder';
+  }
+  dialog.showModal();
+};
+
+$('scheduleForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = $('scheduleInputId').value.trim();
+  const name = $('scheduleInputName').value.trim();
+  const cron = $('scheduleInputCron').value.trim();
+  const agent = $('scheduleAgentSelect').value;
+  const prompt = $('scheduleInputPrompt').value.trim();
+
+  try {
+    await window.hap.upsertSchedule({
+      id: id || undefined,
+      name,
+      cron,
+      agent,
+      prompt,
+      enabled: true,
+      channels: {
+        wechat: $('scheduleNotifyWechat')?.checked,
+        feishu: $('scheduleNotifyFeishu')?.checked,
+        qq: $('scheduleNotifyQQ')?.checked,
+        telegram: $('scheduleNotifyTg')?.checked,
+      }
+    });
+    $('scheduleDialog').close();
+    showToast(`定时任务 [${name}] 已成功保存`, 'success');
+    await renderSchedules();
+  } catch (err) {
+    showToast('保存定时任务失败：' + err.message, 'error');
+  }
+});
+
+$('closeScheduleDialogBtn')?.addEventListener('click', () => $('scheduleDialog')?.close());
+$('cancelScheduleDialogBtn')?.addEventListener('click', () => $('scheduleDialog')?.close());
+
+window.toggleScheduleEnabled = async (id, enabled) => {
+  try {
+    await window.hap.toggleSchedule(id, enabled);
+    showToast(enabled ? '定时任务已启用' : '定时任务已暂停', 'info');
+    await renderSchedules();
+  } catch (err) {
+    showToast('操作失败：' + err.message, 'error');
+  }
+};
+
+window.runScheduleNow = async (id) => {
+  showToast('正在手动触发定时任务...', 'info');
+  try {
+    const res = await window.hap.runScheduleNow(id);
+    if (res.status === 'success') {
+      showToast('🎉 定时任务执行成功！', 'success');
+    } else {
+      showToast('任务执行返回异常：' + (res.error || '未完成'), 'error');
+    }
+    await renderSchedules();
+  } catch (err) {
+    showToast('执行异常：' + err.message, 'error');
+  }
+};
+
+window.deleteSchedule = async (id) => {
+  const ok = await showConfirm({
+    title: '删除定时任务',
+    message: '确定要删除此定时任务吗？',
+    okText: '确认删除',
+    isDanger: true,
+  });
+  if (!ok) return;
+
+  try {
+    await window.hap.removeSchedule(id);
+    showToast('定时任务已删除', 'success');
+    await renderSchedules();
+  } catch (err) {
+    showToast('删除失败：' + err.message, 'error');
+  }
+};

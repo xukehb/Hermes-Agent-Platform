@@ -89,7 +89,7 @@ export interface GuiPlugin {
   name: string;
   description: string;
   type: 'mcp' | 'builtin';
-  category: 'system' | 'developer' | 'browser' | 'database';
+  category: 'system' | 'developer' | 'browser' | 'database' | 'search' | 'ops' | 'im';
   enabled: boolean;
   command?: string;
   args?: string[];

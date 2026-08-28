@@ -168,7 +168,7 @@ const DEFAULT_PLUGINS: GuiPlugin[] = [
   {
     id: 'filesystem',
     name: '本地文件系统 (Filesystem)',
-    description: '提供工作区目录遍历、文件安全读写、智能 Patch 应用与全文本搜索能力',
+    description: '提供工作区目录遍历、文件安全读写、智能 Patch 应用与代码全文本搜索能力',
     type: 'builtin',
     category: 'system',
     enabled: true,
@@ -176,15 +176,23 @@ const DEFAULT_PLUGINS: GuiPlugin[] = [
   {
     id: 'shell-terminal',
     name: '系统终端执行器 (Shell & CLI)',
-    description: '在工作区工程环境下运行 build、test、git 与 npm 等命令',
+    description: '在工作区工程环境下自主运行 build、test、git 与 npm 等任意 CLI 命令',
     type: 'builtin',
     category: 'system',
     enabled: true,
   },
   {
+    id: 'network-fetch',
+    name: '网络检索与数据抓取 (HTTP Fetch)',
+    description: '直接抓取并解析远程网页、REST API 数据与在线技术文档，转换为 Markdown',
+    type: 'builtin',
+    category: 'developer',
+    enabled: true,
+  },
+  {
     id: 'github-mcp',
     name: 'GitHub 官方 MCP 插件',
-    description: '通过 GitHub API 管理 Issues、Pull Requests、分支与代码库上下文',
+    description: '通过 GitHub 协议管理 Issues、Pull Requests、分支比较与代码库检索',
     type: 'mcp',
     category: 'developer',
     enabled: true,
@@ -192,22 +200,64 @@ const DEFAULT_PLUGINS: GuiPlugin[] = [
     args: ['-y', '@modelcontextprotocol/server-github'],
   },
   {
-    id: 'network-fetch',
-    name: '网络检索与数据抓取 (HTTP Fetch)',
-    description: '直接抓取并解析远程网页、API 数据与在线技术文档',
-    type: 'builtin',
-    category: 'developer',
+    id: 'sqlite-mcp',
+    name: 'SQLite 数据库 MCP 插件',
+    description: '提供 SQLite 本地数据库连接、Schema 结构分析、SQL 生成与自动化执行能力',
+    type: 'mcp',
+    category: 'database',
     enabled: true,
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-sqlite'],
+  },
+  {
+    id: 'postgres-mcp',
+    name: 'PostgreSQL 数据库 MCP 插件',
+    description: '连接远程或本地 PostgreSQL 数据库，进行安全只读/读写查询与表结构反向工程',
+    type: 'mcp',
+    category: 'database',
+    enabled: false,
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-postgres'],
+  },
+  {
+    id: 'brave-search-mcp',
+    name: 'Brave Search 实时联网检索',
+    description: '通过 Brave 搜索引擎实时检索互联网最新技术资讯、文档与报错解决方案',
+    type: 'mcp',
+    category: 'search',
+    enabled: false,
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-brave-search'],
+  },
+  {
+    id: 'memory-mcp',
+    name: '知识图谱持久化记忆 MCP',
+    description: '基于 Graph 知识图谱模型，记录用户的项目偏好、技术架构约束与长期上下文',
+    type: 'mcp',
+    category: 'system',
+    enabled: true,
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-memory'],
   },
   {
     id: 'chrome-devtools',
     name: '浏览器自动化与 DevTools 调试',
-    description: '通过 Puppeteer / Chrome DevTools 协议进行前端页面排版调试与快照审查',
+    description: '通过 Puppeteer / Chrome 协议进行前端页面排版调试、控制台异常捕获与视觉快照',
     type: 'mcp',
     category: 'browser',
     enabled: false,
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-puppeteer'],
+  },
+  {
+    id: 'docker-mcp',
+    name: 'Docker 容器与镜像运维 MCP',
+    description: '查询本地及远端 Docker 容器运行状态、镜像拉取、Compose 编排与日志排查',
+    type: 'mcp',
+    category: 'ops',
+    enabled: false,
+    command: 'npx',
+    args: ['-y', '@modelcontextprotocol/server-docker'],
   },
 ];
 
@@ -236,7 +286,17 @@ function readState(): GuiState {
       hiddenProviders = Array.isArray(raw.hiddenProviders) ? raw.hiddenProviders : [];
       hiddenModels = Array.isArray(raw.hiddenModels) ? raw.hiddenModels : [];
       if (raw.skills && raw.skills.length > 0) skills = raw.skills;
-      if (raw.plugins && raw.plugins.length > 0) plugins = raw.plugins;
+      if (raw.plugins && raw.plugins.length > 0) {
+        // 合并已有与新增的官方预设
+        const existingIds = new Set(raw.plugins.map((p) => p.id));
+        const merged = [...raw.plugins];
+        for (const dp of DEFAULT_PLUGINS) {
+          if (!existingIds.has(dp.id)) {
+            merged.push(dp);
+          }
+        }
+        plugins = merged;
+      }
       if (raw.permissions) permissions = raw.permissions;
     } catch {}
   } else {
@@ -1437,12 +1497,16 @@ export class GuiService {
       try {
         outcome = await orchestrator.runTask(request);
         this.info('聊天完成：' + outcome.taskId);
+        if (outcome.status === 'failed' || outcome.finishReason === 'error' || (!outcome.text && outcome.error)) {
+          const reason = outcome.error || '大模型接口未返回有效回复';
+          outcome.text = `⚠️ **智能体回复提示：**\n\n\`${reason}\`\n\n> 💡 **解决建议：**\n> 1. 请前往左侧导航 **【⚙️ 设置中心 -> AI 服务商与模型】**，检查对应服务商的 **API 基础地址 (Base URL)** 与 **API Key** 是否填写正确；\n> 2. 点击服务商卡片上的 **【连通测试】** 验证网络与 Key 有效性；\n> 3. 您也可以点击顶部模型下拉框，切换到其它已就绪的模型（如 DeepSeek、OpenAI 或本地免费的 Ollama）。\n> 4. 支持本地斜杠系统指令，例如发送 \`/models\` 查看所有已配置模型。\n`;
+        }
       } catch (taskErr) {
         const errMsg = describeError(taskErr);
         this.error('智能体对话执行异常：' + errMsg);
         outcome = {
           taskId: 'err_' + Date.now(),
-          text: `⚠️ **智能体回复提示：**\n\n\`${errMsg}\`\n\n> 💡 **解决建议：**\n> 1. 请前往左侧导航 **【AI 服务商与模型】**，检查对应服务商的 **API 基础地址 (Base URL)** 与 **API Key** 是否填写正确；\n> 2. 点击服务商卡片上的 **【连通测试】** 验证连通性；\n> 3. 您也可以点击顶部模型下拉框，切换到其它已就绪的模型直接对话。\n> 4. 若需生图，点击左下角 **🎨 AI 生图** 即可。\n`,
+          text: `⚠️ **智能体回复提示：**\n\n\`${errMsg}\`\n\n> 💡 **解决建议：**\n> 1. 请前往左侧导航 **【⚙️ 设置中心 -> AI 服务商与模型】**，检查对应服务商的 **API 基础地址 (Base URL)** 与 **API Key** 是否填写正确；\n> 2. 点击服务商卡片上的 **【连通测试】** 验证连通性；\n> 3. 您也可以点击顶部模型下拉框，切换到其它已就绪的模型直接对话。\n> 4. 支持本地斜杠系统指令（如 \`/models\`、\`/help\`）。\n`,
           iterations: 0,
           model: targetModel || 'default',
         };
