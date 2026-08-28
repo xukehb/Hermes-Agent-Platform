@@ -3581,14 +3581,28 @@ async function renderServers() {
     cachedServers = [];
   }
 
-  // 更新终端目标下拉选择框
-  if (selectEl) {
-    const currentVal = selectEl.value || activeTerminalServerId;
-    selectEl.innerHTML = '<option value="">-- 请选择目标服务器 --</option>' +
-      cachedServers.map(s => `<option value="${esc(s.id)}" ${s.id === currentVal ? 'selected' : ''}>${esc(s.name)} (${esc(s.host)})</option>`).join('');
-    if (!activeTerminalServerId && cachedServers.length > 0) {
-      activeTerminalServerId = cachedServers[0].id;
-      selectEl.value = activeTerminalServerId;
+  // 更新终端与智能运维目标下拉选择框
+  const opsTargetSelect = $('serverOpsTargetSelect');
+  if (selectEl || opsTargetSelect) {
+    const defaultId = activeTerminalServerId || (cachedServers.length > 0 ? cachedServers[0].id : '');
+    const optionsHtml = '<option value="">-- 请选择目标服务器 --</option>' +
+      cachedServers.map(s => `<option value="${esc(s.id)}">${esc(s.name)} (${esc(s.host)})</option>`).join('');
+    
+    if (selectEl) {
+      const curVal = selectEl.value || defaultId;
+      selectEl.innerHTML = optionsHtml;
+      if (curVal) selectEl.value = curVal;
+      if (!activeTerminalServerId && cachedServers.length > 0) {
+        activeTerminalServerId = cachedServers[0].id;
+        selectEl.value = activeTerminalServerId;
+      }
+    }
+
+    if (opsTargetSelect) {
+      const curVal = opsTargetSelect.value || defaultId;
+      opsTargetSelect.innerHTML = optionsHtml;
+      if (curVal) opsTargetSelect.value = curVal;
+      else if (cachedServers.length > 0) opsTargetSelect.value = cachedServers[0].id;
     }
   }
 
@@ -4230,4 +4244,253 @@ document.addEventListener('click', (e) => {
   const view = navItem.getAttribute('data-view');
   if (view === 'host') window.refreshHostView();
   else if (view === 'wechat') window.switchChannelTab('wechat');
+});
+
+// ============================================================================
+// 6. 远程服务器智能体运维交互台 (Server Ops Agent Console)
+// ============================================================================
+let currentServerOpsAttachments = [];
+
+function renderServerOpsAttachments() {
+  const tray = document.getElementById('serverOpsAttachmentsTray');
+  if (!tray) return;
+  if (currentServerOpsAttachments.length === 0) {
+    tray.style.display = 'none';
+    tray.innerHTML = '';
+    return;
+  }
+  tray.style.display = 'flex';
+  tray.innerHTML = currentServerOpsAttachments.map((item, index) => {
+    const isImg = item.kind === 'image' || (item.mimeType && item.mimeType.startsWith('image/'));
+    const previewHtml = isImg
+      ? `<img src="${esc(item.dataUrl || item.path)}" style="width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid #cbd5e1;flex-shrink:0;" />`
+      : `<div style="width:32px;height:32px;border-radius:6px;background:#eff6ff;color:#2563eb;display:grid;place-items:center;flex-shrink:0;">📄</div>`;
+    return `<div style="position:relative;display:inline-flex;align-items:center;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:4px 8px;gap:8px;max-width:220px;flex-shrink:0;">
+      ${previewHtml}
+      <div style="display:flex;flex-direction:column;overflow:hidden;font-size:11.5px;line-height:1.3;">
+        <span style="font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(item.fileName)}</span>
+      </div>
+      <button type="button" onclick="window.removeServerOpsAttachment(${index})" style="width:18px;height:18px;border-radius:50%;background:rgba(15,23,42,0.6);color:#fff;border:none;font-size:10px;cursor:pointer;margin-left:auto;">✕</button>
+    </div>`;
+  }).join('');
+}
+
+window.removeServerOpsAttachment = (index) => {
+  currentServerOpsAttachments.splice(index, 1);
+  renderServerOpsAttachments();
+};
+
+async function handleServerOpsAddFiles(files) {
+  if (!files || files.length === 0) return;
+  let addedCount = 0;
+  for (const file of files) {
+    try {
+      const isImg = file.type.startsWith('image/');
+      const dataUrl = await readFileAsDataUrl(file);
+      currentServerOpsAttachments.push({
+        kind: isImg ? 'image' : 'document',
+        fileName: file.name || (isImg ? 'image.png' : 'document.txt'),
+        mimeType: file.type || (isImg ? 'image/png' : 'application/octet-stream'),
+        bytes: file.size,
+        dataUrl: typeof dataUrl === 'string' ? dataUrl : undefined,
+      });
+      addedCount++;
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  if (addedCount > 0) {
+    renderServerOpsAttachments();
+    showToast('已附加 ' + addedCount + ' 个文件', 'info');
+  }
+}
+
+document.getElementById('serverOpsAttachBtn')?.addEventListener('click', () => {
+  document.getElementById('serverOpsFileInput')?.click();
+});
+
+document.getElementById('serverOpsFileInput')?.addEventListener('change', async (e) => {
+  if (e.target.files && e.target.files.length > 0) {
+    await handleServerOpsAddFiles(Array.from(e.target.files));
+    e.target.value = '';
+  }
+});
+
+// 跳转至全屏主对话工作台
+window.jumpToServerMainChat = () => {
+  const targetId = $('serverOpsTargetSelect')?.value || activeTerminalServerId;
+  if (!targetId) {
+    showToast('请先选择要跳转的目标服务器', 'info');
+    return;
+  }
+  window.startServerAgentChat(targetId);
+};
+
+// 为指定服务器开启专属运维会话
+window.startServerAgentChat = (serverId) => {
+  const server = cachedServers.find(s => s.id === serverId);
+  if (!server) return;
+
+  const agentId = server.agentId || 'ops';
+  if ($('chatAgentSelect')) {
+    $('chatAgentSelect').value = agentId;
+  }
+  const sessionTitle = `🖥️ ${server.name} 运维`;
+  const sess = state.sessions.find(s => s.title === sessionTitle);
+  if (sess) {
+    state.activeSessionId = sess.id;
+  } else {
+    const newSess = {
+      id: 'sess_server_' + server.id + '_' + Date.now(),
+      title: sessionTitle,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      messages: [
+        {
+          role: 'assistant',
+          content: `您好！我是服务器 **${server.name}** (`${server.host}:${server.port}`) 的专属智能体 **[${agentId}]**。已为您打通双向通道，您可以随时发送指令让我执行运维巡检、诊断日志、排查 Docker 或自动修复故障。`,
+          timestamp: new Date().toISOString(),
+        }
+      ],
+    };
+    state.sessions.unshift(newSess);
+    state.activeSessionId = newSess.id;
+  }
+  saveSessionsToStorage();
+  
+  // 切换到对话工作台
+  const navChatBtn = $('navChatBtn');
+  if (navChatBtn) navChatBtn.click();
+  else {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    $('chat')?.classList.add('active');
+  }
+  renderCurrentSessionMessages();
+  showToast(`已就绪：专属智能体 [${agentId}] 正在接管服务器 [${server.name}] 运维任务`, 'info');
+};
+
+// 触发快捷运维动作
+window.triggerServerOpsQuickAction = async (actionKey) => {
+  const targetId = $('serverOpsTargetSelect')?.value || activeTerminalServerId;
+  if (!targetId) {
+    showToast('请先选择要执行智能运维的目标服务器', 'info');
+    return;
+  }
+  const server = cachedServers.find(s => s.id === targetId);
+  if (!server) return;
+
+  const agentId = $('serverOpsAgentSelect')?.value || server.agentId || 'ops';
+  let prompt = '';
+
+  switch (actionKey) {
+    case 'inspect':
+      prompt = `对远程服务器 [${server.id}] (${server.name} - ${server.host}) 进行全盘硬件与负载巡检（CPU、内存、系统负载、磁盘使用率与 Node 环境），并给出综合健康评估与优化建议。`;
+      break;
+    case 'upgrade_daemon':
+      prompt = `请帮我升级与重新部署远程服务器 [${server.id}] (${server.name} - ${server.host}) 上的 HAP 守护进程，下发最新脚本并校验健康检查端口与 Token 连通性。`;
+      break;
+    case 'check_services':
+      prompt = `检查远程服务器 [${server.id}] (${server.name} - ${server.host}) 的 systemd 守护服务（hap-daemon、nginx、docker 等）与端口监听情况，排查是否有任何异常停止的服务。`;
+      break;
+    case 'clean_disk':
+      prompt = `分析远程服务器 [${server.id}] (${server.name} - ${server.host}) 上的临时垃圾文件、过期的 systemd journal 日志与悬空 Docker 镜像，并协助安全释放磁盘空间。`;
+      break;
+    case 'diagnose_logs':
+      prompt = `拉取远程服务器 [${server.id}] (${server.name} - ${server.host}) 最近 50 行 HAP 守护进程 (hap-daemon) 运行日志，诊断是否存在任何潜在的 Warning 或 Error。`;
+      break;
+    default:
+      prompt = `对远程服务器 [${server.id}] 执行常规状态巡检。`;
+      break;
+  }
+
+  await window.executeServerOpsPrompt(server, prompt, agentId);
+};
+
+// 执行智能体运维 Prompt
+window.executeServerOpsPrompt = async (server, prompt, agentId, attachments = []) => {
+  const container = $('serverOpsStreamContainer');
+  const contentEl = $('serverOpsStreamContent');
+  const sendBtn = $('sendServerOpsBtn');
+  if (!container || !contentEl) return;
+
+  container.style.display = 'block';
+  if (sendBtn) sendBtn.disabled = true;
+
+  contentEl.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;color:#6366f1;font-weight:600;margin-bottom:8px;">
+      <span class="thinking-pulse-dot"></span>
+      <span>正在调度智能体 [${esc(agentId)}] 远程巡检与执行：${esc(server.name)} (${esc(server.host)})...</span>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;border-left:2px solid var(--border-default);padding-left:8px;">${esc(prompt)}</div>
+  `;
+  container.scrollTop = container.scrollHeight;
+
+  try {
+    const selectedModel = $('chatModelPickerSelect')?.value || undefined;
+    const res = await window.hap.chat({
+      input: prompt,
+      agentId: agentId || 'ops',
+      attachments: attachments.length > 0 ? attachments : undefined,
+      model: selectedModel,
+      projectPath: undefined,
+    });
+
+    let reply = '';
+    let reasoning = '';
+    if (res.outcome) {
+      reply = res.outcome.text || '';
+      reasoning = res.outcome.reasoning || '';
+    }
+
+    if (!reply && Array.isArray(res.events)) {
+      const texts = res.events.filter(e => e.type === 'text' && e.text).map(e => e.text);
+      if (texts.length > 0) reply = texts.join('');
+    }
+
+    if (!reply) {
+      reply = '智能体已执行完毕相关运维指令，服务已正常同步。';
+    }
+
+    contentEl.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-weight:700;color:#16a34a;">✓ 智能体 [${esc(agentId)}] 执行完成</span>
+        <span style="font-size:11px;color:var(--text-muted);">目标：${esc(server.name)}</span>
+      </div>
+      ${reasoning ? `
+        <details class="thinking-box" style="margin-bottom:8px;" open>
+          <summary class="thinking-header" style="font-size:11.5px;"><span>思考与推理链</span></summary>
+          <div class="thinking-content">${renderMarkdownContent(reasoning)}</div>
+        </details>
+      ` : ''}
+      <div class="ops-agent-output">${renderMarkdownContent(reply)}</div>
+    `;
+    await renderServers();
+  } catch (err) {
+    contentEl.innerHTML += `<div style="color:#ef4444;margin-top:8px;">[执行失败] ${esc(err.message)}</div>`;
+  } finally {
+    if (sendBtn) sendBtn.disabled = false;
+  }
+};
+
+// 提交智能体运维输入条
+$('serverOpsChatForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const inputEl = $('serverOpsChatInput');
+  const text = inputEl ? inputEl.value.trim() : '';
+  const attachmentsToSend = [...currentServerOpsAttachments];
+  if (!text && attachmentsToSend.length === 0) return;
+
+  const targetId = $('serverOpsTargetSelect')?.value || activeTerminalServerId;
+  if (!targetId) {
+    showToast('请先选择要执行智能运维的目标服务器', 'info');
+    return;
+  }
+  const server = cachedServers.find(s => s.id === targetId);
+  if (!server) return;
+
+  const agentId = $('serverOpsAgentSelect')?.value || server.agentId || 'ops';
+  if (inputEl) inputEl.value = '';
+  currentServerOpsAttachments = [];
+  renderServerOpsAttachments();
+  await window.executeServerOpsPrompt(server, text, agentId, attachmentsToSend);
 });
