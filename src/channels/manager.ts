@@ -9,8 +9,13 @@
  * 日期：2026-08-24  执行者：Codex
  */
 
+import { existsSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import { execa } from 'execa';
 import { TelegramChannel } from './telegram.js';
 import { WhatsAppChannel } from './whatsapp.js';
+import { WeChatChannel } from './wechat.js';
 import { HttpChannel } from './http.js';
 import { CliChannel } from './cli.js';
 import { describeError } from './dispatcher.js';
@@ -25,19 +30,196 @@ export interface ChannelManagerOptions {
   includeCli?: boolean;
 }
 
-/**
- * 把编排层包成通道宿主。
- *
- * clearSession 需要先确定会话归属的智能体才能拿到对应 SessionStore，
- * 因此这里复用 status() 的路由结果，避免通道层自己再实现一次路由。
- */
+const sessionModels = new Map<string, string>();
+const sessionWorkspaces = new Map<string, string>();
+
+function readGuiProjects(): Array<{ id: string; name: string; path: string }> {
+  try {
+    const statePath = join(homedir(), '.hap', 'gui', 'state.json');
+    if (existsSync(statePath)) {
+      const data = JSON.parse(readFileSync(statePath, 'utf8')) as { projects?: Array<{ id: string; name: string; path: string }> };
+      if (Array.isArray(data.projects) && data.projects.length > 0) return data.projects;
+    }
+  } catch {}
+  return [{ id: 'default', name: '当前工作区', path: process.cwd() }];
+}
+
+function readGuiSkills(): Array<{ id: string; name: string; description: string; enabled: boolean }> {
+  try {
+    const statePath = join(homedir(), '.hap', 'gui', 'state.json');
+    if (existsSync(statePath)) {
+      const data = JSON.parse(readFileSync(statePath, 'utf8')) as { skills?: Array<{ id: string; name: string; description: string; enabled: boolean }> };
+      if (Array.isArray(data.skills)) return data.skills;
+    }
+  } catch {}
+  return [];
+}
+
+function readGuiPlugins(): Array<{ id: string; name: string; description: string; enabled: boolean }> {
+  try {
+    const statePath = join(homedir(), '.hap', 'gui', 'state.json');
+    if (existsSync(statePath)) {
+      const data = JSON.parse(readFileSync(statePath, 'utf8')) as { plugins?: Array<{ id: string; name: string; description: string; enabled: boolean }> };
+      if (Array.isArray(data.plugins)) return data.plugins;
+    }
+  } catch {}
+  return [];
+}
+
 export function createChannelHost(orchestrator: AgentOrchestrator): ChannelHost {
   return {
-    runTask: (request) => orchestrator.runTask(request),
+    runTask: (request) => {
+      if (request.model === undefined && request.sessionKey && sessionModels.has(request.sessionKey)) {
+        request.model = sessionModels.get(request.sessionKey);
+      }
+      if (request.sessionKey && sessionWorkspaces.has(request.sessionKey)) {
+        const ws = sessionWorkspaces.get(request.sessionKey)!;
+        request.input = `项目路径：${ws}\n\n${request.input}`;
+      }
+      return orchestrator.runTask(request);
+    },
     abortSession: (sessionKey) => orchestrator.abortSession(sessionKey),
-    status: (sessionKey, channelDefaultAgent) => orchestrator.status(sessionKey, channelDefaultAgent),
+    status: (sessionKey, channelDefaultAgent) => {
+      const status = orchestrator.status(sessionKey, channelDefaultAgent);
+      if (sessionModels.has(sessionKey)) {
+        status.model = sessionModels.get(sessionKey)!;
+      }
+      return status;
+    },
     trace: (taskId) => orchestrator.trace(taskId),
     agentIds: () => orchestrator.agents.agentIds(),
+    models: () => {
+      const resolver = orchestrator.config;
+      return [...resolver.resolveModels().values()].map((m) => ({
+        fullName: m.fullName,
+        alias: m.alias,
+        providerId: m.providerId,
+      }));
+    },
+    sessionModel: (sessionKey) => sessionModels.get(sessionKey),
+    setSessionModel: (sessionKey, model) => {
+      sessionModels.set(sessionKey, model);
+    },
+    projects: () => readGuiProjects(),
+    sessionWorkspace: (sessionKey) => {
+      if (sessionWorkspaces.has(sessionKey)) return sessionWorkspaces.get(sessionKey);
+      const prjs = readGuiProjects();
+      return prjs[0]?.path || process.cwd();
+    },
+    setSessionWorkspace: (sessionKey, workspace) => {
+      sessionWorkspaces.set(sessionKey, workspace);
+    },
+    gitStatus: async (projectPath) => {
+      if (!existsSync(join(projectPath, '.git'))) {
+        return {
+          isRepo: false,
+          branch: '',
+          changedFiles: [],
+          uncommittedCount: 0,
+          totalAdditions: 0,
+          totalDeletions: 0,
+          recentCommits: [],
+        };
+      }
+      let branch = 'main';
+      try {
+        const b = await execa('git', ['branch', '--show-current'], { cwd: projectPath });
+        branch = b.stdout.trim() || 'HEAD';
+      } catch {}
+      let remoteUrl: string | undefined;
+      try {
+        const r = await execa('git', ['remote', 'get-url', 'origin'], { cwd: projectPath });
+        remoteUrl = r.stdout.trim() || undefined;
+      } catch {}
+
+      const numstatMap = new Map<string, { additions: number; deletions: number }>();
+      try {
+        const numstatRes = await execa('git', ['diff', 'HEAD', '--numstat'], { cwd: projectPath });
+        for (const line of numstatRes.stdout.split('\n').filter(Boolean)) {
+          const parts = line.split('\t');
+          if (parts.length >= 3 && parts[2] !== undefined) {
+            numstatMap.set(parts[2].trim(), { additions: Number(parts[0]) || 0, deletions: Number(parts[1]) || 0 });
+          }
+        }
+      } catch {}
+
+      const changedFiles: Array<{ status: string; file: string; additions: number; deletions: number }> = [];
+      let totalAdditions = 0;
+      let totalDeletions = 0;
+      try {
+        const sRes = await execa('git', ['status', '--porcelain'], { cwd: projectPath });
+        for (const line of sRes.stdout.split('\n').filter(Boolean)) {
+          const status = line.slice(0, 2).trim();
+          const file = line.slice(3).trim();
+          const stat = numstatMap.get(file) || { additions: 0, deletions: 0 };
+          totalAdditions += stat.additions;
+          totalDeletions += stat.deletions;
+          changedFiles.push({ status, file, additions: stat.additions, deletions: stat.deletions });
+        }
+      } catch {}
+
+      const recentCommits: Array<{ hash: string; message: string }> = [];
+      try {
+        const logRes = await execa('git', ['log', '-n', '5', '--oneline'], { cwd: projectPath });
+        for (const line of logRes.stdout.split('\n').filter(Boolean)) {
+          const spaceIdx = line.indexOf(' ');
+          if (spaceIdx > 0) {
+            recentCommits.push({ hash: line.slice(0, spaceIdx), message: line.slice(spaceIdx + 1) });
+          }
+        }
+      } catch {}
+
+      return {
+        isRepo: true,
+        branch,
+        remoteUrl,
+        changedFiles,
+        uncommittedCount: changedFiles.length,
+        totalAdditions,
+        totalDeletions,
+        recentCommits,
+      };
+    },
+    gitDiff: async (projectPath, file) => {
+      try {
+        const args = file ? ['diff', 'HEAD', '--', file] : ['diff', 'HEAD'];
+        const res = await execa('git', args, { cwd: projectPath });
+        if (res.stdout.trim()) return { ok: true, diff: res.stdout.trim() };
+        const workingDiff = await execa('git', file ? ['diff', '--', file] : ['diff'], { cwd: projectPath });
+        if (workingDiff.stdout.trim()) return { ok: true, diff: workingDiff.stdout.trim() };
+        return { ok: true, diff: '（当前暂无变更差异代码）' };
+      } catch (err) {
+        return { ok: false, diff: describeError(err) };
+      }
+    },
+    gitCommit: async (projectPath, message) => {
+      try {
+        await execa('git', ['add', '-A'], { cwd: projectPath });
+        const res = await execa('git', ['commit', '-m', message || 'chore: update project by hap'], { cwd: projectPath });
+        return { ok: true, summary: res.stdout.trim() };
+      } catch (err) {
+        return { ok: false, summary: describeError(err) };
+      }
+    },
+    gitPush: async (projectPath) => {
+      try {
+        const res = await execa('git', ['push'], { cwd: projectPath });
+        return { ok: true, summary: res.stdout.trim() || '代码已成功推送至远端！' };
+      } catch (err) {
+        return { ok: false, summary: describeError(err) };
+      }
+    },
+    execShell: async (projectPath, command) => {
+      try {
+        const res = await execa(command, { cwd: projectPath, shell: true, timeout: 30000 });
+        const out = (res.stdout + (res.stderr ? '\n' + res.stderr : '')).trim();
+        return { ok: true, output: out || '（命令执行完毕，无输出）' };
+      } catch (err) {
+        return { ok: false, output: describeError(err) };
+      }
+    },
+    skills: () => readGuiSkills(),
+    plugins: () => readGuiPlugins(),
     clearSession: (sessionKey, channelDefaultAgent) => {
       const status = orchestrator.status(sessionKey, channelDefaultAgent);
       orchestrator.store(status.agentId).clearSession(sessionKey);
@@ -56,6 +238,7 @@ export class ChannelManager {
   private readonly channels: Channel[] = [];
   private telegram: TelegramChannel | undefined;
   private whatsapp: WhatsAppChannel | undefined;
+  wechat: WeChatChannel | undefined;
 
   constructor(options: ChannelManagerOptions) {
     this.orchestrator = options.orchestrator;
@@ -104,6 +287,18 @@ export class ChannelManager {
       });
       this.whatsapp = whatsapp;
       this.channels.push(whatsapp);
+    }
+    if (channels.wechat.enabled) {
+      const wechat = new WeChatChannel({
+        host: this.host,
+        channels,
+        limits,
+        paths,
+        env: this.env,
+        log: this.log,
+      });
+      this.wechat = wechat;
+      this.channels.push(wechat);
     }
     if (channels.http.enabled) {
       this.channels.push(new HttpChannel({ host: this.host, channels, limits, paths, log: this.log }));

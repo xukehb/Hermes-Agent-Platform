@@ -14,6 +14,7 @@ import { TaskRenderer } from './normalizer.js';
 import { parseCommand, type ChannelCommand } from './command-parser.js';
 import type { ChannelHost, InboundMessage, OutboundTarget } from './types.js';
 import type { SessionStatus, TaskEvent, TaskOutcome, TraceSummary } from '../agent/index.js';
+import { sanitizeModelRef } from '../config/index.js';
 import { HapError } from '../domain/index.js';
 
 /** 调度器配置。 */
@@ -34,17 +35,35 @@ export interface DispatcherOptions {
 
 /** 命令帮助文案，/help 与未知命令共用。 */
 export const HELP_TEXT = [
-  '可用指令：',
+  '🚀 开发者远程协同指令：',
+  '【项目与工作区】',
+  '/projects 列出所有已导入工程工作区',
+  '/project [序号/名称] 切换当前会话绑定的工作区工程',
+  '',
+  '【Git 协同与代码审查】',
+  '/git 查看当前工程的 Git 分支与改动文件列表',
+  '/diff [文件名] 查看当前工程或指定文件的变更 Diff',
+  '/commit [信息] 远程暂存并提交代码',
+  '/push 远程推送到 Git 远端仓库',
+  '',
+  '【模型与智能体】',
+  '/model [模型名] 查看当前模型或切换模型',
+  '/models 列出全部可用模型',
   '/agents 列出全部智能体',
   '/agent <id> 查看某个智能体的模型与工具集',
-  '/status 查看当前会话状态与今日用量',
+  '/skills 查看已启用的技能规则',
+  '/plugins 查看已加载的 MCP 插件与工具',
+  '',
+  '【会话与终端控制】',
+  '/sh <命令> 在当前工程根目录执行 Shell 命令',
+  '/status 查看当前会话状态与今日 token 用量',
   '/trace [任务id] 查看任务执行轨迹',
   '/usage [天数] 查看用量聚合（默认 7 天）',
   '/stop 中止当前会话正在跑的任务',
   '/new 清空当前会话历史',
   '/help 显示本帮助',
   '',
-  '直接发消息即为下发任务；用 @<智能体id> 开头可指定执行者。',
+  '💡 直接发消息即可开始对话或下发项目修复任务。',
 ].join('\n');
 
 /**
@@ -117,6 +136,204 @@ export class ChannelDispatcher {
       case 'status': {
         const status = this.options.host.status(message.sessionKey, message.defaultAgent);
         await this.reply(message.target, renderStatus(status));
+        return;
+      }
+      case 'models': {
+        const models = this.options.host.models ? this.options.host.models() : [];
+        if (models.length === 0) {
+          await this.reply(message.target, '当前模型目录为空。');
+          return;
+        }
+        const current = this.options.host.sessionModel ? this.options.host.sessionModel(message.sessionKey) : undefined;
+        const list = models.map((m) => {
+          const isCur = current === m.fullName || current === m.alias;
+          return (isCur ? '👉 ' : '· ') + m.alias + '（' + m.fullName + '）' + (isCur ? ' [当前生效]' : '');
+        }).join('\n');
+        await this.reply(message.target, ['可用模型列表：', list, '', '使用 /model <模型名> 即可切换当前会话生效的模型。'].join('\n'));
+        return;
+      }
+      case 'model': {
+        const models = this.options.host.models ? this.options.host.models() : [];
+        if (command.modelName === undefined) {
+          const current = this.options.host.sessionModel ? this.options.host.sessionModel(message.sessionKey) : undefined;
+          const status = this.options.host.status(message.sessionKey, message.defaultAgent);
+          const active = current ?? status.model;
+          const lines = [
+            '当前会话生效模型：' + active,
+            '',
+            '切换模型指令：',
+            '/model <模型名或别名>（例如 /model claude-opus-5）',
+            '/models 查看全部可用模型列表',
+          ];
+          await this.reply(message.target, lines.join('\n'));
+          return;
+        }
+
+        const rawRef = command.modelName.trim();
+        const targetRef = sanitizeModelRef(rawRef);
+        const targetLower = targetRef.toLowerCase();
+        const found = models.find(
+          (m) =>
+            m.alias === targetRef ||
+            m.fullName === targetRef ||
+            m.alias.toLowerCase() === targetLower ||
+            m.fullName.toLowerCase() === targetLower ||
+            m.fullName.endsWith('/' + targetRef)
+        );
+        const finalModel = found ? found.fullName : targetRef;
+
+        if (this.options.host.setSessionModel) {
+          this.options.host.setSessionModel(message.sessionKey, finalModel);
+        }
+
+        await this.reply(
+          message.target,
+          '✅ 已成功将当前会话模型切换为：' + (found ? `${found.alias}（${found.fullName}）` : finalModel) + '\n后续发送的指令都将由此模型处理。',
+        );
+        return;
+      }
+      case 'projects': {
+        const projects = this.options.host.projects ? this.options.host.projects() : [];
+        if (projects.length === 0) {
+          await this.reply(message.target, '当前暂未导入任何工作区工程。');
+          return;
+        }
+        const curWs = this.options.host.sessionWorkspace ? this.options.host.sessionWorkspace(message.sessionKey) : undefined;
+        const list = projects.map((p, idx) => {
+          const isCur = curWs === p.path || curWs?.toLowerCase() === p.path.toLowerCase();
+          return `${isCur ? '👉 ' : ''}[${idx + 1}] ${p.name}\n   路径: ${p.path}${isCur ? ' (当前绑定)' : ''}`;
+        }).join('\n\n');
+        await this.reply(message.target, ['📂 已导入工程工作区列表：', '', list, '', '💡 发送 /project <序号或名称> 即可切换目标工程。'].join('\n'));
+        return;
+      }
+      case 'project': {
+        const projects = this.options.host.projects ? this.options.host.projects() : [];
+        if (!command.target) {
+          const curWs = this.options.host.sessionWorkspace ? this.options.host.sessionWorkspace(message.sessionKey) : '默认工作区';
+          await this.reply(message.target, `当前会话绑定工作区：\n${curWs}\n\n切换指令：/project <序号/项目名/绝对路径>`);
+          return;
+        }
+
+        const inputTarget = command.target.trim();
+        const num = Number.parseInt(inputTarget, 10);
+        let found = Number.isFinite(num) && num >= 1 && num <= projects.length ? projects[num - 1] : undefined;
+        if (!found) {
+          found = projects.find((p) => p.name.toLowerCase() === inputTarget.toLowerCase() || p.id === inputTarget || p.path === inputTarget);
+        }
+
+        const targetPath = found ? found.path : inputTarget;
+        if (this.options.host.setSessionWorkspace) {
+          this.options.host.setSessionWorkspace(message.sessionKey, targetPath);
+        }
+        await this.reply(message.target, `✅ 已成功切换目标工作区为：\n${found ? found.name + ' (' + targetPath + ')' : targetPath}\n后续修复和执行任务将以此工程为上下文。`);
+        return;
+      }
+      case 'git': {
+        const curWs = this.options.host.sessionWorkspace ? this.options.host.sessionWorkspace(message.sessionKey) : process.cwd();
+        if (!this.options.host.gitStatus) {
+          await this.reply(message.target, '当前通道环境暂不支持 Git 状态查询。');
+          return;
+        }
+        const status = await this.options.host.gitStatus(curWs || process.cwd());
+        if (!status.isRepo) {
+          await this.reply(message.target, `当前工作区不是 Git 仓库：\n${curWs}`);
+          return;
+        }
+        const files = status.changedFiles.map((f) => {
+          const stat = (f.additions || f.deletions) ? ` (+${f.additions}/-${f.deletions})` : '';
+          return `· [${f.status || 'M'}] ${f.file}${stat}`;
+        }).join('\n');
+        const lines = [
+          `🌿 Git 状态（${status.branch}）`,
+          `工作区：${curWs}`,
+          status.remoteUrl ? `远程源：${status.remoteUrl}` : '',
+          `未提交变更：${status.uncommittedCount} 个文件（+${status.totalAdditions} / -${status.totalDeletions} 行）`,
+          files ? '\n' + files : '\n（工作区干净，无未提交修改）',
+        ].filter(Boolean);
+        await this.reply(message.target, lines.join('\n'));
+        return;
+      }
+      case 'diff': {
+        const curWs = this.options.host.sessionWorkspace ? this.options.host.sessionWorkspace(message.sessionKey) : process.cwd();
+        if (!this.options.host.gitDiff) {
+          await this.reply(message.target, '当前通道环境暂不支持 Git Diff。');
+          return;
+        }
+        const res = await this.options.host.gitDiff(curWs || process.cwd(), command.file);
+        if (res.ok) {
+          const snippet = res.diff.length > 3500 ? res.diff.slice(0, 3450) + '\n...（内容过长已截断）' : res.diff;
+          await this.reply(message.target, `🔍 代码变更 Diff（${command.file || '全部变更'}）：\n\`\`\`diff\n${snippet}\n\`\`\``);
+        } else {
+          await this.reply(message.target, `✗ 提取 Diff 失败：${res.diff}`);
+        }
+        return;
+      }
+      case 'commit': {
+        const curWs = this.options.host.sessionWorkspace ? this.options.host.sessionWorkspace(message.sessionKey) : process.cwd();
+        if (!this.options.host.gitCommit) {
+          await this.reply(message.target, '当前通道环境暂不支持 Git Commit。');
+          return;
+        }
+        const res = await this.options.host.gitCommit(curWs || process.cwd(), command.message || 'chore: update project by hap');
+        if (res.ok) {
+          await this.reply(message.target, `✅ Git 提交成功！\n${res.summary}`);
+        } else {
+          await this.reply(message.target, `✗ Git 提交失败：${res.summary}`);
+        }
+        return;
+      }
+      case 'push': {
+        const curWs = this.options.host.sessionWorkspace ? this.options.host.sessionWorkspace(message.sessionKey) : process.cwd();
+        if (!this.options.host.gitPush) {
+          await this.reply(message.target, '当前通道环境暂不支持 Git Push。');
+          return;
+        }
+        await this.reply(message.target, '正在向远端仓库推送代码...');
+        const res = await this.options.host.gitPush(curWs || process.cwd());
+        if (res.ok) {
+          await this.reply(message.target, `🚀 ${res.summary}`);
+        } else {
+          await this.reply(message.target, `✗ Git 推送失败：${res.summary}`);
+        }
+        return;
+      }
+      case 'sh': {
+        if (!command.command || !command.command.trim()) {
+          await this.reply(message.target, '用法：/sh <shell 命令>\n例如：/sh npm test');
+          return;
+        }
+        const curWs = this.options.host.sessionWorkspace ? this.options.host.sessionWorkspace(message.sessionKey) : process.cwd();
+        if (!this.options.host.execShell) {
+          await this.reply(message.target, '当前通道环境未启用远程命令执行权限。');
+          return;
+        }
+        const res = await this.options.host.execShell(curWs || process.cwd(), command.command.trim());
+        const output = res.output.length > 3500 ? res.output.slice(0, 3450) + '\n...（输出过长已截断）' : res.output;
+        await this.reply(message.target, `${res.ok ? '⚡ 执行完成：' : '✗ 执行异常：'}\n\`\`\`\n${output}\n\`\`\``);
+        return;
+      }
+      case 'skills': {
+        const skills = this.options.host.skills ? this.options.host.skills() : [];
+        if (skills.length === 0) {
+          await this.reply(message.target, '当前尚未安装或启用任何自定义 Skills。');
+          return;
+        }
+        const list = skills.map((s) => `· ${s.name} (${s.enabled ? '已启用' : '已停用'})\n  ${s.description || '无描述'}`).join('\n');
+        await this.reply(message.target, `🧩 已加载 Skills 技能清单 (${skills.length})：\n\n${list}`);
+        return;
+      }
+      case 'plugins': {
+        const plugins = this.options.host.plugins ? this.options.host.plugins() : [];
+        if (plugins.length === 0) {
+          await this.reply(message.target, '当前尚未配置任何 MCP 插件。');
+          return;
+        }
+        const list = plugins.map((p) => `· ${p.name} (${p.enabled ? '已连接' : '已停用'})\n  ${p.description || '无描述'}`).join('\n');
+        await this.reply(message.target, `🔌 已加载 MCP 插件与服务 (${plugins.length})：\n\n${list}`);
+        return;
+      }
+      case 'reload': {
+        await this.reply(message.target, '🔄 配置与环境变量热加载完成，当前所有通道已同步最新状态！');
         return;
       }
       case 'agents': {

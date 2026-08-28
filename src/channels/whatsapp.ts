@@ -1,5 +1,5 @@
 /**
- * WhatsApp 通道（FR-CHAN-002 / §9 后续阶段项）。
+ * WhatsApp 通道（FR-CHAN-002）。
  *
  * 复用 @whiskeysockets/baileys 官方生态库连接 WhatsApp Web 多设备协议，
  * 不自建 WebSocket 协议栈。与 Telegram 通道的差异集中在平台细节：
@@ -81,7 +81,7 @@ function silentLogger(): PinoLikeLogger {
 /** 待下载附件规格。kind 直接对齐 domain 的 AttachmentKind。 */
 interface WaAttachmentSpec {
   kind: AttachmentKind;
-  message: proto.Message['imageMessage'] | proto.Message['documentMessage'] | proto.Message['audioMessage'];
+  message: NonNullable<proto.Message['imageMessage'] | proto.Message['documentMessage'] | proto.Message['audioMessage']>;
   mediaType: 'image' | 'document' | 'audio';
   name: string;
 }
@@ -324,9 +324,11 @@ export class WhatsAppChannel implements Channel {
     return '';
   }
 
-  /**
-   */
+  /** 从一条 WhatsApp 消息中提取全部可下载附件并落盘到 inbox 目录。 */
   private async downloadAttachments(msg: WAMessage, jid: string, msgId: string): Promise<ChannelAttachments> {
+    // #region debug-point B:attachment-entry
+    fetch('http://127.0.0.1:7777/event', { method: 'POST', body: JSON.stringify({ sessionId: 'startup-error', runId: 'pre-fix', hypothesisId: 'B', location: 'src/channels/whatsapp.ts:329', msg: '[DEBUG] Attachment download path entered', data: { hasMessage: msg.message !== undefined && msg.message !== null } }) }).catch(() => {});
+    // #endregion
     const content = msg.message;
     if (content === undefined || content === null) {
       return [];
@@ -344,7 +346,7 @@ export class WhatsAppChannel implements Channel {
     const items: ChannelAttachments = [];
     for (const spec of specs) {
       try {
-        const stream = await downloadContentFromMessage(spec.message as NonNullable<typeof spec.message>, spec.mediaType);
+        const stream = await downloadContentFromMessage(spec.message as proto.Message.IImageMessage & proto.Message.IDocumentMessage & proto.Message.IAudioMessage, spec.mediaType);
         const chunks: Buffer[] = [];
         for await (const chunk of stream as unknown as AsyncIterable<Buffer>) {
           chunks.push(Buffer.from(chunk));

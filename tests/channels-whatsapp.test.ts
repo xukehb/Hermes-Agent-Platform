@@ -39,6 +39,7 @@ function channelsOf(patch: Partial<ResolvedChannels['whatsapp']> = {}): Resolved
       qrLog: false,
       ...patch,
     },
+    wechat: BUILTIN_CHANNELS.wechat,
     http: { enabled: false, bind: '127.0.0.1:8798', defaultAgent: undefined },
     cli: { enabled: false, defaultAgent: undefined },
   };

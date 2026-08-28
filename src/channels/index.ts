@@ -32,6 +32,12 @@ export {
   type SocketFactory,
   type WhatsAppChannelOptions,
 } from './whatsapp.js';
+export {
+  WeChatChannel,
+  type WeChatPersonalDriver,
+  type PersonalDriverFactory,
+  type WeChatChannelOptions,
+} from './wechat.js';
 export { HttpChannel, type HttpChannelOptions } from './http.js';
 export { CliChannel, type CliChannelOptions } from './cli.js';
 export { ChannelManager, createChannelHost, type ChannelManagerOptions } from './manager.js';

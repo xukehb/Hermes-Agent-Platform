@@ -19,7 +19,7 @@ import type {
 } from '../agent/index.js';
 
 /** 已实现的通道种类。 */
-export type ChannelName = 'telegram' | 'whatsapp' | 'http' | 'cli';
+export type ChannelName = 'telegram' | 'whatsapp' | 'wechat' | 'http' | 'cli';
 
 /** 附件沿用消息层定义，通道不自造格式。 */
 export type ChannelAttachments = NonNullable<AgentMessage['attachments']>;
@@ -48,11 +48,11 @@ export interface InboundMessage {
   text: string;
   receivedAt: string;
   target: OutboundTarget;
-  attachments?: ChannelAttachments;
+  attachments?: ChannelAttachments | undefined;
   /** @mention 命中的智能体，路由第一优先级 */
-  agentId?: string;
+  agentId?: string | undefined;
   /** 通道绑定的默认智能体，路由第二优先级 */
-  defaultAgent?: string;
+  defaultAgent?: string | undefined;
 }
 
 /**
@@ -67,6 +67,41 @@ export interface ChannelHost {
   status(sessionKey: string, channelDefaultAgent?: string): SessionStatus;
   trace(taskId: string): TraceSummary | undefined;
   agentIds(): string[];
+  /** 列出所有可用模型目录 */
+  models?(): Array<{ fullName: string; alias: string; providerId: string; description?: string }>;
+  /** 获取当前会话生效的模型 */
+  sessionModel?(sessionKey: string): string | undefined;
+  /** 切换当前会话生效的模型 */
+  setSessionModel?(sessionKey: string, model: string): void;
+  /** 列出已导入的工作区项目列表 */
+  projects?(): Array<{ id: string; name: string; path: string }>;
+  /** 获取当前会话生效的项目工作区 */
+  sessionWorkspace?(sessionKey: string): string | undefined;
+  /** 切换当前会话生效的项目工作区 */
+  setSessionWorkspace?(sessionKey: string, workspace: string): void;
+  /** 获取 Git 状态 */
+  gitStatus?(projectPath: string): Promise<{
+    isRepo: boolean;
+    branch: string;
+    remoteUrl?: string | undefined;
+    changedFiles: Array<{ status: string; file: string; additions: number; deletions: number }>;
+    uncommittedCount: number;
+    totalAdditions: number;
+    totalDeletions: number;
+    recentCommits: Array<{ hash: string; message: string }>;
+  }>;
+  /** 获取 Git Diff */
+  gitDiff?(projectPath: string, file?: string): Promise<{ ok: boolean; diff: string }>;
+  /** Git 提交 */
+  gitCommit?(projectPath: string, message: string): Promise<{ ok: boolean; summary: string }>;
+  /** Git 推送 */
+  gitPush?(projectPath: string): Promise<{ ok: boolean; summary: string }>;
+  /** 在工作区执行 Shell 命令 */
+  execShell?(projectPath: string, command: string): Promise<{ ok: boolean; output: string }>;
+  /** 获取技能列表 */
+  skills?(): Array<{ id: string; name: string; description: string; enabled: boolean }>;
+  /** 获取 MCP 插件列表 */
+  plugins?(): Array<{ id: string; name: string; description: string; enabled: boolean }>;
   /** 清空会话历史（/new） */
   clearSession(sessionKey: string, channelDefaultAgent?: string): void;
   usageSince(since: string): UsageAggregate[];

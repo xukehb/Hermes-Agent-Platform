@@ -12,6 +12,18 @@ export type ChannelCommand =
   | { kind: 'prompt'; text: string }
   | { kind: 'stop' }
   | { kind: 'status' }
+  | { kind: 'model'; modelName?: string }
+  | { kind: 'models' }
+  | { kind: 'projects' }
+  | { kind: 'project'; target?: string }
+  | { kind: 'git' }
+  | { kind: 'diff'; file?: string }
+  | { kind: 'commit'; message?: string }
+  | { kind: 'push' }
+  | { kind: 'sh'; command: string }
+  | { kind: 'skills' }
+  | { kind: 'plugins' }
+  | { kind: 'reload' }
   | { kind: 'trace'; taskId?: string }
   | { kind: 'agent'; agentId?: string }
   | { kind: 'agents' }
@@ -69,6 +81,44 @@ export function parseCommand(raw: string): ChannelCommand {
       return { kind: 'stop' };
     case 'status':
       return { kind: 'status' };
+    case 'model': {
+      const modelName = args[0];
+      return modelName === undefined ? { kind: 'model' } : { kind: 'model', modelName };
+    }
+    case 'models':
+      return { kind: 'models' };
+    case 'projects':
+      return { kind: 'projects' };
+    case 'project': {
+      const target = args.join(' ').trim();
+      return target === '' ? { kind: 'project' } : { kind: 'project', target };
+    }
+    case 'git':
+      return { kind: 'git' };
+    case 'diff': {
+      const file = args[0];
+      return file === undefined ? { kind: 'diff' } : { kind: 'diff', file };
+    }
+    case 'commit': {
+      const message = args.join(' ').trim();
+      return message === '' ? { kind: 'commit' } : { kind: 'commit', message };
+    }
+    case 'push':
+      return { kind: 'push' };
+    case 'sh':
+    case 'run':
+    case 'exec':
+      return { kind: 'sh', command: args.join(' ') };
+    case 'skills':
+    case 'skill':
+      return { kind: 'skills' };
+    case 'plugins':
+    case 'plugin':
+    case 'mcp':
+      return { kind: 'plugins' };
+    case 'reload':
+    case 'restart':
+      return { kind: 'reload' };
     case 'trace': {
       const taskId = args[0];
       return taskId === undefined ? { kind: 'trace' } : { kind: 'trace', taskId };

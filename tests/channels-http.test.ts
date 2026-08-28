@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { HttpChannel, type ChannelHost } from '../src/channels/index.js';
+import { HttpChannel, HELP_TEXT, type ChannelHost } from '../src/channels/index.js';
 import { BUILTIN_CHANNELS, BUILTIN_LIMITS, type ResolvedChannels, type ResolvedLimits, type ResolvedPaths } from '../src/config/index.js';
 import type {
   RunTaskRequest,
@@ -77,6 +77,7 @@ function channelsOf(defaultAgent?: string): ResolvedChannels {
       reconnectMaxMs: 30000,
       qrLog: false,
     },
+    wechat: BUILTIN_CHANNELS.wechat,
     http: { enabled: true, bind: '127.0.0.1:8799', defaultAgent },
     cli: { enabled: true, defaultAgent: undefined },
   };
@@ -371,7 +372,7 @@ describe('HttpChannel /message 命令语义', () => {
   it('空文本回帮助文案', async () => {
     const res = await post(channel, '/message', { input: '' });
     const payload = (await res.json()) as { text: string };
-    expect(payload.text.includes('可用指令：')).toBe(true);
+    expect(payload.text).toBe(HELP_TEXT);
   });
 
   it('agent 字段作为显式路由传入', async () => {
