@@ -287,7 +287,8 @@ export class RemoteClientManager {
       nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo 2>/dev/null || echo "1"
       cat /proc/meminfo 2>/dev/null || free -b
     `;
-    const res = await execSshCommand(config, cmd);
+    // 系统信息是监控页面的轻量探测，不能沿用命令执行的 120 秒默认超时。
+    const res = await execSshCommand(config, cmd, 15000);
     const lines = res.stdout.split('\n').map(l => l.trim()).filter(Boolean);
 
     const hostname = lines[0] || config.host;

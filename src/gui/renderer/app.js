@@ -4897,7 +4897,12 @@ function fmtHostUptime(seconds) {
   return parts.join(' ');
 }
 
+// 防止进入监控页、切换节点和手动刷新同时发起多个 IPC/SSH 请求。
+let hostRefreshInFlight = false;
+
 window.refreshHostView = async () => {
+  if (hostRefreshInFlight) return;
+  hostRefreshInFlight = true;
   try {
     const info = await window.hap.getHostSysInfo();
     if (!info || !info.cpu || !info.memory) return;
@@ -5038,6 +5043,8 @@ window.refreshHostView = async () => {
     loadHostIpGeo().catch(() => {});
   } catch (err) {
     console.error('刷新宿主机监控失败:', err);
+  } finally {
+    hostRefreshInFlight = false;
   }
 };
 
@@ -7218,6 +7225,8 @@ $('panoramaNodeSelect')?.addEventListener('change', (e) => {
 
 // 重构 refreshHostView 支持监控任意节点
 window.refreshHostView = async () => {
+  if (hostRefreshInFlight) return;
+  hostRefreshInFlight = true;
   const targetId = activePanoramaTarget || 'local';
   const isLocal = targetId === 'local';
 
@@ -7350,13 +7359,13 @@ window.refreshHostView = async () => {
 
       if ($('hostPlatformBadge')) $('hostPlatformBadge').textContent = `${info.os.platform} ${info.os.arch}`;
       if ($('hostHostname')) $('hostHostname').textContent = info.network.hostname;
-      if ($('hostUsername')) $('hostUsername').textContent = info.os.username;
+      if ($('hostUsername')) $('hostUsername').textContent = info.os.user || '-';
       if ($('hostOsFull')) $('hostOsFull').textContent = `${info.os.type} ${info.os.release}`;
       if ($('hostArch')) $('hostArch').textContent = `${info.os.arch} (${info.os.endianness})`;
       if ($('hostNodeVersion')) $('hostNodeVersion').textContent = info.os.nodeVersion;
-      if ($('hostV8Version')) $('hostV8Version').textContent = info.os.v8Version;
-      if ($('hostUvVersion')) $('hostUvVersion').textContent = info.os.uvVersion;
-      if ($('hostCwd')) $('hostCwd').textContent = info.process.cwd;
+      if ($('hostV8Version')) $('hostV8Version').textContent = info.os.versions?.v8 || '-';
+      if ($('hostUvVersion')) $('hostUvVersion').textContent = info.os.versions?.uv || '-';
+      if ($('hostCwd')) $('hostCwd').textContent = info.os.cwd || '-';
     } else {
       // 远端服务器节点全景
       const s = cachedServers.find(item => item.id === targetId);
@@ -7435,7 +7444,9 @@ window.refreshHostView = async () => {
       if ($('hostCwd')) $('hostCwd').textContent = `/root/.hap/`;
     }
   } catch (error) {
-    // ignore
+    console.error('刷新节点监控失败:', error);
+  } finally {
+    hostRefreshInFlight = false;
   }
 };
 
