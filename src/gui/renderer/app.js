@@ -519,9 +519,10 @@ function renderProjectsTree() {
     const genericSessions = sessions.map((s) => {
       const isActive = s.id === currentSessionId;
       const timeStr = getRelativeTimeStr(s.updatedAt || s.createdAt);
+      const loadingDotHtml = s.isGenerating ? `<span class="thinking-pulse-dot" style="margin-left:4px;width:5px;height:5px;flex-shrink:0;" title="正在深度思考与执行中..."></span>` : '';
       return `
         <div class="session-tree-item ${isActive ? 'active' : ''}" onclick="window.switchSession('${esc(s.id)}')">
-          <span class="session-title-wrap" title="${esc(s.title || '新对话')}">${esc(s.title || '新对话')}</span>
+          <span class="session-title-wrap" title="${esc(s.title || '新对话')}">${esc(s.title || '新对话')}${loadingDotHtml}</span>
           <span class="session-time-badge">${timeStr}</span>
           <div class="session-actions-hover">
             <div class="tree-action-btn delete-btn" title="删除会话" onclick="window.deleteSession('${esc(s.id)}', event)">
@@ -563,9 +564,10 @@ function renderProjectsTree() {
       const isActive = s.id === currentSessionId;
       const timeStr = getRelativeTimeStr(s.updatedAt || s.createdAt);
 
+      const loadingDotHtml = s.isGenerating ? `<span class="thinking-pulse-dot" style="margin-left:4px;width:5px;height:5px;flex-shrink:0;" title="正在深度思考与执行中..."></span>` : '';
       return `
         <div class="session-tree-item ${isActive ? 'active' : ''}" onclick="window.switchSession('${esc(s.id)}')">
-          <span class="session-title-wrap" title="${esc(s.title || '新对话')}">${esc(s.title || '新对话')}</span>
+          <span class="session-title-wrap" title="${esc(s.title || '新对话')}">${esc(s.title || '新对话')}${loadingDotHtml}</span>
           <span class="session-time-badge">${timeStr}</span>
           <div class="session-actions-hover">
             <div class="tree-action-btn" title="更多" onclick="window.openSessionMenu('${esc(s.id)}', event)">•••</div>
@@ -971,7 +973,7 @@ function renderCurrentSessionMessages() {
     return;
   }
 
-  container.innerHTML = session.messages.map((m, idx) => {
+  let messagesHtml = session.messages.map((m, idx) => {
     const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
 
     if (m.role === 'user') {
@@ -1083,6 +1085,28 @@ function renderCurrentSessionMessages() {
       </div>
     `;
   }).join('');
+
+  if (session.isGenerating) {
+    messagesHtml += `
+      <div class="msg-row assistant waiting-row">
+        <div class="assistant-container">
+          <div class="assistant-avatar">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          <div class="assistant-content">
+            <div class="thinking-loading-pill">
+              <span class="thinking-pulse-dot"></span>
+              <span>正在深度思考与执行中...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  container.innerHTML = messagesHtml;
 
   const threadContainer = $('chatThreadContainer');
   if (threadContainer) {
@@ -3494,6 +3518,8 @@ $('chatForm')?.addEventListener('submit', async (event) => {
   updateComposerState();
 
   const session = currentSession();
+  const targetSessionId = session.id;
+  session.isGenerating = true;
   if (session.messages.length === 0) {
     session.title = text ? text.slice(0, 22) : (attachmentsToSend[0]?.fileName || '图片分析');
   }
@@ -3509,31 +3535,6 @@ $('chatForm')?.addEventListener('submit', async (event) => {
   renderCurrentSessionMessages();
   renderProjectsTree();
 
-  const container = $('messagesInner');
-  container.insertAdjacentHTML(
-    'beforeend',
-    `
-      <div class="msg-row assistant waiting-row">
-        <div class="assistant-container">
-          <div class="assistant-avatar">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-            </svg>
-          </div>
-          <div class="assistant-content">
-            <div class="thinking-loading-pill">
-              <span class="thinking-pulse-dot"></span>
-              <span>正在深度思考与执行中...</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    `
-  );
-
-  const threadContainer = $('chatThreadContainer');
-  if (threadContainer) threadContainer.scrollTop = threadContainer.scrollHeight;
-
   try {
     const selectedModel = $('chatModelPickerSelect')?.value || undefined;
     const result = await window.hap.chat({
@@ -3542,6 +3543,7 @@ $('chatForm')?.addEventListener('submit', async (event) => {
       model: selectedModel,
       projectPath: currentActiveProject || undefined,
       attachments: attachmentsToSend.length > 0 ? attachmentsToSend : undefined,
+      sessionKey: 'gui:' + targetSessionId,
     });
 
     let reply = '';
@@ -3594,20 +3596,32 @@ $('chatForm')?.addEventListener('submit', async (event) => {
       reply = `智能体已完成指令编排。\n\n> **温馨提示**：若需获取模型生成的完整回复正文，请在左侧 **【模型服务商】** 确保填入了正确的 API Key 并通过连通性测试，然后在 **【模型目录】** 选择对应模型即可。`;
     }
 
+    session.isGenerating = false;
     session.messages.push({
       role: 'assistant',
       content: reply,
       reasoning: reasoningText || undefined,
+      timestamp: new Date().toISOString(),
     });
     session.updatedAt = new Date().toISOString();
     saveSessionsToStorage();
   } catch (error) {
-    session.messages.push({ role: 'assistant', content: `**执行失败：** ${error.message}` });
+    session.isGenerating = false;
+    session.messages.push({
+      role: 'assistant',
+      content: `**执行失败：** ${error.message}`,
+      timestamp: new Date().toISOString(),
+    });
+    session.updatedAt = new Date().toISOString();
     saveSessionsToStorage();
     showToast('对话执行失败：' + error.message, 'error');
   }
 
-  renderCurrentSessionMessages();
+  if (currentSessionId === targetSessionId) {
+    renderCurrentSessionMessages();
+  } else {
+    showToast(`会话 [${session.title || '新对话'}] 已完成思考并回复`, 'success');
+  }
   renderProjectsTree();
   updateGitStatus(currentActiveProject);
   await refresh();

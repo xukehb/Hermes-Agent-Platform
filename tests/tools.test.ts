@@ -275,6 +275,7 @@ describe('工具注册表', () => {
       'host_sysinfo',
       'disk_cleanup',
       'ip_lookup',
+      'generate_image',
     ]);
   });
 
