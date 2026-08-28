@@ -12,7 +12,7 @@
  * 日期：2026-08-24  执行者：Codex
  */
 
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import Database from 'better-sqlite3';
 import type { AgentMessage, ToolCall, ToolResult, TokenUsage } from '../domain/index.js';
@@ -174,37 +174,45 @@ export function usageDay(at: string): string {
 
 export class SqliteSessionStore implements SessionStore {
   readonly path: string;
-  private readonly db: Database.Database;
+  private readonly db?: Database.Database;
+  private readonly fallback?: MemorySessionStore;
 
   constructor(path: string) {
     this.path = path;
-    mkdirSync(dirname(path), { recursive: true });
-    this.db = new Database(path);
-    for (const statement of SCHEMA) this.db.exec(statement);
+    try {
+      mkdirSync(dirname(path), { recursive: true });
+      this.db = new Database(path);
+      for (const statement of SCHEMA) this.db.exec(statement);
+    } catch {
+      this.fallback = new MemorySessionStore(path);
+    }
   }
 
   history(sessionKey: string, limit?: number): AgentMessage[] {
+    if (this.fallback) return this.fallback.history(sessionKey, limit);
     // 按 id 倒序取最近 limit 条再翻回正序：正序 LIMIT 会取到最早的消息
     const sql = limit === undefined
       ? 'SELECT role, content, reasoning, tool_calls, tool_result, attachments, created_at FROM messages WHERE session_key = ? ORDER BY id'
       : 'SELECT role, content, reasoning, tool_calls, tool_result, attachments, created_at FROM messages WHERE session_key = ? ORDER BY id DESC LIMIT ?';
     const params: unknown[] = limit === undefined ? [sessionKey] : [sessionKey, limit];
-    const rows = this.db.prepare(sql).all(...params) as MessageRecord[];
+    const rows = this.db!.prepare(sql).all(...params) as MessageRecord[];
     const ordered = limit === undefined ? rows : rows.reverse();
     return ordered.map(toMessage);
   }
 
   appendMessages(sessionKey: string, agentId: string, messages: readonly AgentMessage[]): void {
+    if (this.fallback) return this.fallback.appendMessages(sessionKey, agentId, messages);
     if (messages.length === 0) return;
-    const run = this.db.transaction((items: readonly AgentMessage[]) => {
+    const run = this.db!.transaction((items: readonly AgentMessage[]) => {
       this.insertRows(sessionKey, agentId, items);
     });
     run(messages);
   }
 
   replaceHistory(sessionKey: string, agentId: string, messages: readonly AgentMessage[]): void {
-    const wipe = this.db.prepare('DELETE FROM messages WHERE session_key = ?');
-    const run = this.db.transaction((items: readonly AgentMessage[]) => {
+    if (this.fallback) return this.fallback.replaceHistory(sessionKey, agentId, messages);
+    const wipe = this.db!.prepare('DELETE FROM messages WHERE session_key = ?');
+    const run = this.db!.transaction((items: readonly AgentMessage[]) => {
       wipe.run(sessionKey);
       if (items.length > 0) this.insertRows(sessionKey, agentId, items);
     });
@@ -220,11 +228,11 @@ export class SqliteSessionStore implements SessionStore {
    */
   private insertRows(sessionKey: string, agentId: string, messages: readonly AgentMessage[]): void {
     const now = new Date().toISOString();
-    this.db.prepare(
+    this.db!.prepare(
       `INSERT INTO sessions (session_key, agent_id, created_at, updated_at) VALUES (?, ?, ?, ?)
        ON CONFLICT(session_key) DO UPDATE SET updated_at = excluded.updated_at, agent_id = excluded.agent_id`,
     ).run(sessionKey, agentId, now, now);
-    const insert = this.db.prepare(
+    const insert = this.db!.prepare(
       `INSERT INTO messages (session_key, agent_id, role, content, reasoning, tool_calls, tool_result, attachments, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
@@ -244,15 +252,17 @@ export class SqliteSessionStore implements SessionStore {
   }
 
   clearSession(sessionKey: string): void {
-    const run = this.db.transaction(() => {
-      this.db.prepare('DELETE FROM messages WHERE session_key = ?').run(sessionKey);
-      this.db.prepare('DELETE FROM sessions WHERE session_key = ?').run(sessionKey);
+    if (this.fallback) return this.fallback.clearSession(sessionKey);
+    const run = this.db!.transaction(() => {
+      this.db!.prepare('DELETE FROM messages WHERE session_key = ?').run(sessionKey);
+      this.db!.prepare('DELETE FROM sessions WHERE session_key = ?').run(sessionKey);
     });
     run();
   }
 
   beginTask(row: TaskRow): void {
-    this.db.prepare(
+    if (this.fallback) return this.fallback.beginTask(row);
+    this.db!.prepare(
       `INSERT INTO tasks (task_id, agent_id, session_key, status, started_at, finished_at, iterations,
         prompt_tokens, completion_tokens, total_tokens, model, title, error, trace_path)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -276,6 +286,7 @@ export class SqliteSessionStore implements SessionStore {
   }
 
   updateTask(taskId: string, patch: Partial<TaskRow>): void {
+    if (this.fallback) return this.fallback.updateTask(taskId, patch);
     const sets: string[] = [];
     const values: unknown[] = [];
     const put = (column: string, value: unknown): void => {
@@ -296,30 +307,34 @@ export class SqliteSessionStore implements SessionStore {
     if (patch.tracePath !== undefined) put('trace_path', patch.tracePath);
     if (sets.length === 0) return;
     values.push(taskId);
-    this.db.prepare('UPDATE tasks SET ' + sets.join(', ') + ' WHERE task_id = ?').run(...values);
+    this.db!.prepare('UPDATE tasks SET ' + sets.join(', ') + ' WHERE task_id = ?').run(...values);
   }
 
   task(taskId: string): TaskRow | undefined {
-    const record = this.db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as TaskRecord | undefined;
+    if (this.fallback) return this.fallback.task(taskId);
+    const record = this.db!.prepare('SELECT * FROM tasks WHERE task_id = ?').get(taskId) as TaskRecord | undefined;
     return record === undefined ? undefined : toTaskRow(record);
   }
 
   tasksBySession(sessionKey: string, status?: TaskStatus): TaskRow[] {
+    if (this.fallback) return this.fallback.tasksBySession(sessionKey, status);
     const sql = status === undefined
       ? 'SELECT * FROM tasks WHERE session_key = ? ORDER BY started_at DESC'
       : 'SELECT * FROM tasks WHERE session_key = ? AND status = ? ORDER BY started_at DESC';
     const params: unknown[] = status === undefined ? [sessionKey] : [sessionKey, status];
-    const rows = this.db.prepare(sql).all(...params) as TaskRecord[];
+    const rows = this.db!.prepare(sql).all(...params) as TaskRecord[];
     return rows.map(toTaskRow);
   }
 
   runningTasks(): TaskRow[] {
-    const rows = this.db.prepare("SELECT * FROM tasks WHERE status = 'running' ORDER BY started_at").all() as TaskRecord[];
+    if (this.fallback) return this.fallback.runningTasks();
+    const rows = this.db!.prepare("SELECT * FROM tasks WHERE status = 'running' ORDER BY started_at").all() as TaskRecord[];
     return rows.map(toTaskRow);
   }
 
   recordUsage(row: UsageRow): void {
-    this.db.prepare(
+    if (this.fallback) return this.fallback.recordUsage(row);
+    this.db!.prepare(
       `INSERT INTO usage (at, day, agent_id, provider_id, model, prompt_tokens, completion_tokens, total_tokens)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
@@ -335,7 +350,8 @@ export class SqliteSessionStore implements SessionStore {
   }
 
   usageSince(since: string): UsageAggregate[] {
-    const rows = this.db.prepare(
+    if (this.fallback) return this.fallback.usageSince(since);
+    const rows = this.db!.prepare(
       `SELECT agent_id, provider_id, model,
          SUM(prompt_tokens) AS prompt_tokens,
          SUM(completion_tokens) AS completion_tokens,
@@ -357,27 +373,30 @@ export class SqliteSessionStore implements SessionStore {
   }
 
   dailyTokens(agentId: string, day: string): number {
-    const record = this.db.prepare(
+    if (this.fallback) return this.fallback.dailyTokens(agentId, day);
+    const record = this.db!.prepare(
       'SELECT COALESCE(SUM(total_tokens), 0) AS total FROM usage WHERE agent_id = ? AND day = ?',
     ).get(agentId, day) as { total: number } | undefined;
     return record?.total ?? 0;
   }
 
   prune(retentionDays: number): number {
+    if (this.fallback) return this.fallback.prune(retentionDays);
     if (retentionDays <= 0) return 0;
     const cutoff = new Date(Date.now() - retentionDays * 86400000).toISOString();
-    const run = this.db.transaction(() => {
-      const messages = this.db.prepare('DELETE FROM messages WHERE created_at < ?').run(cutoff);
-      this.db.prepare('DELETE FROM sessions WHERE updated_at < ?').run(cutoff);
-      this.db.prepare("DELETE FROM tasks WHERE started_at < ? AND status != 'running'").run(cutoff);
-      this.db.prepare('DELETE FROM usage WHERE at < ?').run(cutoff);
+    const run = this.db!.transaction(() => {
+      const messages = this.db!.prepare('DELETE FROM messages WHERE created_at < ?').run(cutoff);
+      this.db!.prepare('DELETE FROM sessions WHERE updated_at < ?').run(cutoff);
+      this.db!.prepare("DELETE FROM tasks WHERE started_at < ? AND status != 'running'").run(cutoff);
+      this.db!.prepare('DELETE FROM usage WHERE at < ?').run(cutoff);
       return messages.changes;
     });
     return run();
   }
 
   close(): void {
-    this.db.close();
+    if (this.fallback) return this.fallback.close();
+    this.db?.close();
   }
 }
 
@@ -460,11 +479,59 @@ export class SessionStoreRegistry {
   }
 }
 
-/** 内存存储，供测试与 --no-persist 模式使用。行为与 SQLite 版一致。 */
+/** 内存与文件回退存储，供测试与 --no-persist 模式或 ABI 回退使用。行为与 SQLite 版一致。 */
 export class MemorySessionStore implements SessionStore {
+  private readonly filePath: string | undefined;
   private readonly messages = new Map<string, AgentMessage[]>();
   private readonly tasks = new Map<string, TaskRow>();
   private readonly usageRows: UsageRow[] = [];
+
+  constructor(filePath?: string) {
+    this.filePath = filePath;
+    if (filePath) {
+      try {
+        mkdirSync(dirname(filePath), { recursive: true });
+        if (!existsSync(filePath)) {
+          writeFileSync(filePath, JSON.stringify({ messages: {}, tasks: {}, usageRows: [] }), 'utf8');
+        } else {
+          const raw = readFileSync(filePath, 'utf8');
+          if (raw.trim()) {
+            const parsed = JSON.parse(raw);
+            if (parsed.messages) {
+              for (const [k, v] of Object.entries(parsed.messages)) {
+                this.messages.set(k, v as AgentMessage[]);
+              }
+            }
+            if (parsed.tasks) {
+              for (const [k, v] of Object.entries(parsed.tasks)) {
+                this.tasks.set(k, v as TaskRow);
+              }
+            }
+            if (parsed.usageRows && Array.isArray(parsed.usageRows)) {
+              this.usageRows.push(...(parsed.usageRows as UsageRow[]));
+            }
+          }
+        }
+      } catch {
+        // 忽略文件错误，保持内存操作
+      }
+    }
+  }
+
+  private save(): void {
+    if (!this.filePath) return;
+    try {
+      mkdirSync(dirname(this.filePath), { recursive: true });
+      const data = {
+        messages: Object.fromEntries(this.messages),
+        tasks: Object.fromEntries(this.tasks),
+        usageRows: this.usageRows,
+      };
+      writeFileSync(this.filePath, JSON.stringify(data), 'utf8');
+    } catch {
+      // 忽略落盘异常
+    }
+  }
 
   history(sessionKey: string, limit?: number): AgentMessage[] {
     const all = this.messages.get(sessionKey) ?? [];
@@ -475,24 +542,29 @@ export class MemorySessionStore implements SessionStore {
     const all = this.messages.get(sessionKey) ?? [];
     all.push(...messages.map((message) => ({ ...message })));
     this.messages.set(sessionKey, all);
+    this.save();
   }
 
   replaceHistory(sessionKey: string, _agentId: string, messages: readonly AgentMessage[]): void {
     this.messages.set(sessionKey, messages.map((message) => ({ ...message })));
+    this.save();
   }
 
   clearSession(sessionKey: string): void {
     this.messages.delete(sessionKey);
+    this.save();
   }
 
   beginTask(row: TaskRow): void {
     this.tasks.set(row.taskId, { ...row, usage: { ...row.usage } });
+    this.save();
   }
 
   updateTask(taskId: string, patch: Partial<TaskRow>): void {
     const existing = this.tasks.get(taskId);
     if (existing === undefined) return;
     this.tasks.set(taskId, { ...existing, ...patch });
+    this.save();
   }
 
   task(taskId: string): TaskRow | undefined {
@@ -513,6 +585,7 @@ export class MemorySessionStore implements SessionStore {
 
   recordUsage(row: UsageRow): void {
     this.usageRows.push({ ...row, usage: { ...row.usage } });
+    this.save();
   }
 
   usageSince(since: string): UsageAggregate[] {
@@ -559,10 +632,12 @@ export class MemorySessionStore implements SessionStore {
       if (kept.length === 0) this.messages.delete(key);
       else this.messages.set(key, kept);
     }
+    this.save();
     return removed;
   }
 
   close(): void {
+    this.save();
     this.messages.clear();
     this.tasks.clear();
     this.usageRows.length = 0;
@@ -573,3 +648,4 @@ export class MemorySessionStore implements SessionStore {
 export function zeroUsage(): TokenUsage {
   return emptyUsage();
 }
+

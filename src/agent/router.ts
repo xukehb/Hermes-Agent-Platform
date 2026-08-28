@@ -11,7 +11,7 @@
 
 import type { ProtocolName, RouteLayer } from '../domain/index.js';
 import { ConfigError } from '../domain/index.js';
-import type { ConfigResolver, ResolvedAgent, ResolvedModel, ResolvedProvider } from '../config/index.js';
+import { type ConfigResolver, type ResolvedAgent, type ResolvedModel, type ResolvedProvider, sanitizeModelRef } from '../config/index.js';
 import { detectProtocol } from '../protocol/index.js';
 
 /** 路由结果。 */
@@ -214,8 +214,9 @@ export function planModel(
   agent: ResolvedAgent,
   ref: string,
 ): ModelPlan {
-  const entry = resolver.findModel(ref);
-  const fullName = entry?.fullName ?? resolver.normalizeModelRef(ref);
+  const cleanRef = sanitizeModelRef(ref);
+  const entry = resolver.findModel(cleanRef);
+  const fullName = entry?.fullName ?? resolver.normalizeModelRef(cleanRef);
   const slash = fullName.indexOf('/');
   if (slash <= 0 || slash === fullName.length - 1) {
     throw new ConfigError('MODEL_NOT_FOUND', '模型引用 ' + ref + ' 无法解析为 provider/model 形式', { ref });

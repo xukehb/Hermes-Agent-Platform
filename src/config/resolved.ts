@@ -168,6 +168,39 @@ export interface ResolvedWhatsAppChannel {
   qrLog: boolean;
 }
 
+export interface ResolvedWeChatWeCom {
+  corpId: string | undefined;
+  corpSecretEnv: string;
+  agentId: number | undefined;
+  token: string | undefined;
+  encodingAesKey: string | undefined;
+  webhookUrlEnv: string;
+  bind: string;
+  path: string;
+}
+
+export interface ResolvedWeChatOfficialAccount {
+  appId: string | undefined;
+  appSecretEnv: string;
+  token: string | undefined;
+  encodingAesKey: string | undefined;
+  bind: string;
+  path: string;
+}
+
+/** 解析后的微信通道配置。 */
+export interface ResolvedWeChatChannel {
+  enabled: boolean;
+  mode: 'personal' | 'wecom' | 'official_account';
+  defaultAgent: string | undefined;
+  mentionPatterns: string[];
+  messageCharLimit: number;
+  authDir: string;
+  qrLog: boolean;
+  wecom: ResolvedWeChatWeCom | undefined;
+  officialAccount: ResolvedWeChatOfficialAccount | undefined;
+}
+
 export interface ResolvedHttpChannel {
   enabled: boolean;
   bind: string;
@@ -187,6 +220,7 @@ export interface ResolvedChannels {
   asyncThresholdMs: number;
   telegram: ResolvedTelegramChannel;
   whatsapp: ResolvedWhatsAppChannel;
+  wechat: ResolvedWeChatChannel;
   http: ResolvedHttpChannel;
   cli: ResolvedCliChannel;
 }

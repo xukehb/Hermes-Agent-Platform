@@ -330,7 +330,21 @@ export class AgentOrchestrator {
     };
     this.running.set(taskId, handle);
 
-    const chain = planModelChain(this.resolver, agent);
+    const effectiveAgent: ResolvedAgent = { ...agent };
+    if (request.model !== undefined && request.model !== '') {
+      effectiveAgent.model = {
+        primary: request.model,
+        fallbacks: [],
+      };
+    }
+    if (request.workspace !== undefined && request.workspace !== '') {
+      effectiveAgent.workspace = request.workspace;
+    }
+    if (request.tools !== undefined) {
+      effectiveAgent.tools = request.tools;
+    }
+
+    const chain = planModelChain(this.resolver, effectiveAgent);
     const primary = chain[0];
     const primaryName = primary === undefined ? '' : primary.fullName;
 
@@ -367,9 +381,9 @@ export class AgentOrchestrator {
       if (history.length === 0) history.push(userMessage);
 
       const loopRequest: LoopRequest = {
-        agent,
+        agent: effectiveAgent,
         history,
-        systemPrompt: this.systemPromptFor(agent),
+        systemPrompt: this.systemPromptFor(effectiveAgent),
         taskId,
         signal: controller.signal,
         depth: request.depth ?? 0,
@@ -384,7 +398,7 @@ export class AgentOrchestrator {
       const finishedAt = new Date().toISOString();
 
       store.appendMessages(sessionKey, agent.id, result.messages);
-      this.recordUsage(store, agent, result.model, result.usage, finishedAt);
+      this.recordUsage(store, effectiveAgent, result.model, result.usage, finishedAt);
       const tracePath = this.writeTrace(taskId, agent.id, sessionKey, startedAt, finishedAt, 'done', events);
       store.updateTask(taskId, {
         status: 'done',

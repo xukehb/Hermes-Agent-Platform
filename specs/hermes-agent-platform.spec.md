@@ -817,7 +817,7 @@ Then 编辑间隔均不小于 `edit_interval_ms`；内容未变化的编辑被�
 
 ---
 
-## 8. 实施清单（TODO）
+## 8. 实施清单
 
 ### 阶段一：内核（无网络依赖即可验证）
 - [x] 建立 TypeScript 工程骨架（`tsconfig.json`、包管理、格式化与静态检查配置）
@@ -891,13 +891,13 @@ Then 编辑间隔均不小于 `edit_interval_ms`；内容未变化的编辑被�
 
 已决策（v1.1.0 落实）：
 
-- [x] **Q1 优先通道** → **Telegram**。首发且唯一的手机端通道实现，WhatsApp 后置为后续阶段（FR-CHAN-002）。落实位置：§2.7 FR-CHAN-015/016、§4 通道配置、§8 阶段三。
+ - [x] **Q1 优先通道** → **Telegram**（首发）与 **WhatsApp**（2026-08-25 补齐，见 §8 阶段三）。两个手机端通道共用 ChannelPlugin 接口、唤起词门禁与 @agentId 路由语义。落实位置：§2.7 FR-CHAN-015/016、§4 通道配置。
 - [x] **Q2 默认主力模型** → **云端多厂商并列**：DeepSeek、OpenAI、Anthropic Claude、智谱 GLM、Google Gemini 五家，`active_profile = "cloud"`，本地 Ollama 降为离线备用 profile。落实位置：§2.2 FR-PROV-008/009、§2.5 FR-LOOP-011/011A/012/015、§4 全部配置、§5 AC-019~AC-021。
 
 已落实的后续决策：
 
 - [x] **Q3 智能体阵容**：默认采用 `coder`(Claude) / `researcher`(DeepSeek) / `reviewer`(OpenAI) / `writer`(GLM) / `ops`(Gemini) 五个一岗一厂商智能体；运行期可通过 `hap agent create/update/remove` 自由增删或改换模型绑定。
-- [x] **Q4 实现范围**：已进入并完成阶段一至阶段四的首发范围编码；WhatsApp 仍按 §9 作为范围外后续通道。
+ - [x] **Q4 实现范围**：已进入并完成阶段一至阶段四的全部编码；WhatsApp 已于 2026-08-25 完成并纳入测试覆盖，不再列为范围外。
 
 ---
 

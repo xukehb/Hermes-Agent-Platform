@@ -86,18 +86,24 @@ export interface LoopRequest {
 /** 任务运行请求（编排层入口）。 */
 export interface RunTaskRequest {
   /** 目标智能体；缺省走四级路由（FR-ROUTE-003） */
-  agentId?: string;
+  agentId?: string | undefined;
+  /** 显式指定使用的模型（如 "openrouter/anthropic/claude-3.5-sonnet" 或别名） */
+  model?: string | undefined;
+  /** 本次任务的工具工作目录覆盖；GUI 用它绑定当前导入项目。 */
+  workspace?: string | undefined;
+  /** 本次任务的工具权限覆盖；未传时沿用智能体配置。 */
+  tools?: ResolvedAgent['tools'] | undefined;
   /** 用户指令原文 */
   input: string;
   /** 会话键：Telegram 用 chat:<id>，CLI 用 cli:<agent>，子智能体用 sub:<父任务> */
-  sessionKey?: string;
-  attachments?: AgentMessage['attachments'];
+  sessionKey?: string | undefined;
+  attachments?: AgentMessage['attachments'] | undefined;
   /** 通道绑定的默认智能体，路由第二优先级 */
-  channelDefaultAgent?: string;
-  depth?: number;
+  channelDefaultAgent?: string | undefined;
+  depth?: number | undefined;
   /** 外部取消信号，与内部任务信号联动（FR-TASK-003） */
-  signal?: AbortSignal;
-  onEvent?: TaskEventSink;
+  signal?: AbortSignal | undefined;
+  onEvent?: TaskEventSink | undefined;
 }
 
 /** 任务结果。 */

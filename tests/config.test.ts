@@ -21,6 +21,7 @@ import {
   type LoadedConfig,
   expandToolSelection,
   parseConfigText,
+  sanitizeModelRef,
   validateCrossReferences,
 } from '../src/config/index.js';
 import { ConfigError } from '../src/domain/index.js';
@@ -551,3 +552,26 @@ describe('配置写回（FR-CFG-007 / FR-PROV-005 / FR-MOD-002 / FR-AGT-004）',
     expect(second.changed).toBe(false);
   });
 });
+
+describe('模型引用清洗与容错 (sanitizeModelRef & findModel)', () => {
+  it('正确剥离列表符号、中文括号与状态标签', () => {
+    expect(sanitizeModelRef('gpt-5.5（xk/gpt-5.5）')).toBe('xk/gpt-5.5');
+    expect(sanitizeModelRef('gpt-5.5 (xk/gpt-5.5)')).toBe('xk/gpt-5.5');
+    expect(sanitizeModelRef('👉 gpt-5.5（xk/gpt-5.5） [当前生效]')).toBe('xk/gpt-5.5');
+    expect(sanitizeModelRef('· gpt-5.5')).toBe('gpt-5.5');
+    expect(sanitizeModelRef('（xk/gpt-5.5）')).toBe('xk/gpt-5.5');
+    expect(sanitizeModelRef('xk/gpt-5.5')).toBe('xk/gpt-5.5');
+  });
+
+  it('在 findModel 和 normalizeModelRef 中正确容错包含中文括号的模型引用', () => {
+    const resolver = new ConfigResolver(loadedFrom(CONFIG_TEXT));
+    const found = resolver.findModel('deepseek-chat（deepseek/deepseek-chat）');
+    expect(found).toBeDefined();
+    expect(found?.providerId).toBe('deepseek');
+    expect(found?.model).toBe('deepseek-chat');
+
+    const normalized = resolver.normalizeModelRef('👉 deepseek-chat（deepseek/deepseek-chat） [当前生效]');
+    expect(normalized).toBe('deepseek/deepseek-chat');
+  });
+});
+

@@ -172,6 +172,41 @@ export const whatsappChannelSchema = z.strictObject({
   qr_log: z.boolean().optional(),
 });
 
+/** 微信企业号/企业微信（WeCom）配置项 */
+export const wechatWeComSchema = z.strictObject({
+  corp_id: z.string().min(1).optional(),
+  corp_secret_env: z.string().min(1).optional(),
+  agent_id: z.number().int().positive().optional(),
+  token: z.string().min(1).optional(),
+  encoding_aes_key: z.string().min(1).optional(),
+  webhook_url_env: z.string().min(1).optional(),
+  bind: z.string().min(1).optional(),
+  path: z.string().min(1).optional(),
+});
+
+/** 微信公众号（Official Account）配置项 */
+export const wechatOfficialAccountSchema = z.strictObject({
+  app_id: z.string().min(1).optional(),
+  app_secret_env: z.string().min(1).optional(),
+  token: z.string().min(1).optional(),
+  encoding_aes_key: z.string().min(1).optional(),
+  bind: z.string().min(1).optional(),
+  path: z.string().min(1).optional(),
+});
+
+/** 微信通道（支持个人微信扫码登录、企业微信 WeCom 机器人/应用、微信公众号多模式） */
+export const wechatChannelSchema = z.strictObject({
+  enabled: z.boolean().optional(),
+  mode: z.enum(['personal', 'wecom', 'official_account']).optional(),
+  default_agent: z.string().min(1).optional(),
+  mention_patterns: z.array(z.string().min(1)).optional(),
+  message_char_limit: z.number().int().positive().optional(),
+  auth_dir: z.string().min(1).optional(),
+  qr_log: z.boolean().optional(),
+  wecom: wechatWeComSchema.optional(),
+  official_account: wechatOfficialAccountSchema.optional(),
+});
+
 export const httpChannelSchema = z.strictObject({
   enabled: z.boolean().optional(),
   bind: z.string().min(1).optional(),
@@ -188,6 +223,7 @@ export const channelsSchema = z.strictObject({
   async_threshold_ms: z.number().int().positive().optional(),
   telegram: telegramChannelSchema.optional(),
   whatsapp: whatsappChannelSchema.optional(),
+  wechat: wechatChannelSchema.optional(),
   http: httpChannelSchema.optional(),
   cli: cliChannelSchema.optional(),
 });
@@ -246,6 +282,7 @@ export type ProfileConfig = z.infer<typeof profileSchema>;
 export type ChannelsConfig = z.infer<typeof channelsSchema>;
 export type TelegramChannelConfig = z.infer<typeof telegramChannelSchema>;
 export type WhatsAppChannelConfig = z.infer<typeof whatsappChannelSchema>;
+export type WeChatChannelConfig = z.infer<typeof wechatChannelSchema>;
 export type McpServerConfig = z.infer<typeof mcpServerSchema>;
 export type ToolSelectionConfig = z.infer<typeof toolSelectionSchema>;
 export type ModelBindingConfig = z.infer<typeof modelBindingSchema>;

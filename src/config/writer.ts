@@ -148,10 +148,10 @@ export class ConfigWriter {
 
   removeProvider(id: string): WriteResult {
     const { config, exists, raw } = this.read();
-    if (config.model_providers?.[id] === undefined) {
+    if (config.model_providers?.[id] === undefined && BUILTIN_PROVIDERS[id] === undefined) {
       throw new ConfigError('PROVIDER_NOT_FOUND', '配置文件中没有提供商 "' + id + '"', { providerId: id });
     }
-    const providers = { ...config.model_providers };
+    const providers = { ...(config.model_providers ?? {}) };
     delete providers[id];
     const models = { ...(config.models ?? {}) };
     const dropped: string[] = [];
@@ -190,10 +190,10 @@ export class ConfigWriter {
 
   removeModel(alias: string): WriteResult {
     const { config, exists, raw } = this.read();
-    if (config.models?.[alias] === undefined) {
+    if (config.models?.[alias] === undefined && BUILTIN_MODELS[alias] === undefined) {
       throw new ConfigError('MODEL_NOT_FOUND', '配置文件中没有模型 "' + alias + '"', { alias });
     }
-    const models = { ...config.models };
+    const models = { ...(config.models ?? {}) };
     delete models[alias];
     return this.commit({ ...config, models }, exists, raw, '移除模型 ' + alias);
   }

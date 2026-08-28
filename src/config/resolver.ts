@@ -35,6 +35,48 @@ import type { AgentDefaultsConfig, AgentEntryConfig, HapConfig, ModelEntryConfig
 /** 优先级从高到低，即 FR-CFG-002 的层序。 */
 export const LAYER_ORDER: readonly ConfigLayer[] = ['cli', 'env', 'agent', 'profile', 'defaults', 'builtin'];
 
+/**
+ * 清洗并标准化用户输入的模型引用，容错各种来自 /models 列表复制或带括号、表情符号、状态标记的输入：
+ * 例如：
+ * - "gpt-5.5（xk/gpt-5.5）" -> "xk/gpt-5.5"
+ * - "gpt-5.5 (xk/gpt-5.5)" -> "xk/gpt-5.5"
+ * - "👉 gpt-5.5（xk/gpt-5.5） [当前生效]" -> "xk/gpt-5.5"
+ * - "· gpt-5.5" -> "gpt-5.5"
+ * - "（xk/gpt-5.5）" -> "xk/gpt-5.5"
+ */
+export function sanitizeModelRef(raw: string): string {
+  if (!raw) return '';
+  let ref = raw.trim();
+
+  // 1. 去除开头的列表符号，例如：👉, ·, *, •, -, > 等
+  ref = ref.replace(/^[👉·*•\->\s]+/, '').trim();
+
+  // 2. 去除末尾的状态标记，例如：[当前生效], (当前生效), [active], (默认) 等
+  ref = ref.replace(/[\(\[\{（【][^()（）\[\]]*?(生效|active|默认|当前|ready)[^()（）\[\]]*?[\)\]\}）】]/gi, '').trim();
+
+  // 3. 处理带有全名标注的格式，例如：alias（provider/model）或 alias (provider/model) 或 alias [provider/model]
+  const bracketMatch = ref.match(/^([^\(（\[【]+)[\(（\[【]([^\)）\]】]+)[\)）\]】]$/);
+  if (bracketMatch) {
+    const aliasPart = bracketMatch[1]?.trim() || '';
+    const innerPart = bracketMatch[2]?.trim() || '';
+    // 如果括号内本身是 provider/model 格式（含 /），优先取最精确的 fullName
+    if (innerPart.includes('/')) {
+      return innerPart;
+    }
+    if (aliasPart) {
+      return aliasPart;
+    }
+  }
+
+  // 4. 处理纯括号包裹的输入，例如：（xk/gpt-5.5）或 (xk/gpt-5.5) 或 [xk/gpt-5.5]
+  const pureBracketMatch = ref.match(/^[\(（\[【]([^\)）\]】]+)[\)）\]】]$/);
+  if (pureBracketMatch && pureBracketMatch[1]) {
+    return pureBracketMatch[1].trim();
+  }
+
+  return ref;
+}
+
 /** CLI 参数覆盖。字段与 commander 选项一一对应，构成优先级最高的一层。 */
 export interface CliOverrides {
   agent?: string;
@@ -279,10 +321,15 @@ const PROTOCOL_NAMES: readonly ProtocolName[] = ['hermes-native', 'openai-tools'
 const TOOL_PROFILE_NAMES: readonly ToolProfileName[] = ['minimal', 'standard', 'coding', 'research', 'full'];
 const RUNTIME_MODES: readonly RuntimeMode[] = ['oneshot', 'persistent'];
 const TELEGRAM_MODES: readonly ('polling' | 'webhook')[] = ['polling', 'webhook'];
+const WECHAT_MODES: readonly ('personal' | 'wecom' | 'official_account')[] = ['personal', 'wecom', 'official_account'];
 
 /** webhook 监听地址与路径的内置兜底值（FR-CHAN-016）。 */
 const TELEGRAM_WEBHOOK_BIND = '127.0.0.1:8788';
 const TELEGRAM_WEBHOOK_PATH = '/telegram';
+const WECHAT_WECOM_BIND = '127.0.0.1:8789';
+const WECHAT_WECOM_PATH = '/wecom';
+const WECHAT_OFFICIAL_ACCOUNT_BIND = '127.0.0.1:8790';
+const WECHAT_OFFICIAL_ACCOUNT_PATH = '/wechat-oa';
 
 /**
  * 解析采样参数的环境变量覆盖。两种写法都接受：
@@ -371,7 +418,16 @@ function agentSpecs(): KeySpec[] {
         extract: (ctx) => bindingPrimary(ctx.defaults?.model) ?? ctx.root.default_model,
         source: 'agents.defaults.model / default_model',
       },
-      builtin: { extract: () => BUILTIN.defaultModel, source: 'BUILTIN.defaultModel' },
+      builtin: {
+        extract: (ctx) => {
+          const userModels = Object.keys(ctx.root.models ?? {});
+          if (userModels.length > 0) {
+            return userModels[0];
+          }
+          return ctx.root.default_model ?? BUILTIN.defaultModel;
+        },
+        source: 'BUILTIN.defaultModel',
+      },
     }),
     makeSpec('model.fallbacks', 'agent', {
       cli: { extract: (ctx) => ctx.cli.fallbacks, source: '--fallback（可重复）' },
@@ -674,6 +730,41 @@ function channelSpecs(): KeySpec[] {
       defaults: { extract: (ctx) => ctx.root.channels?.whatsapp?.qr_log, source: 'channels.whatsapp.qr_log' },
       builtin: { extract: () => BUILTIN_CHANNELS.whatsapp.qrLog, source: 'BUILTIN_CHANNELS.whatsapp.qrLog' },
     }),
+    makeSpec('channels.wechat.enabled', 'global', {
+      env: { extract: (ctx) => envBoolean(ctx.env, 'HAP_WECHAT_ENABLED'), source: 'HAP_WECHAT_ENABLED' },
+      defaults: { extract: (ctx) => ctx.root.channels?.wechat?.enabled, source: 'channels.wechat.enabled' },
+      builtin: { extract: () => BUILTIN_CHANNELS.wechat.enabled, source: 'BUILTIN_CHANNELS.wechat.enabled' },
+    }),
+    makeSpec('channels.wechat.mode', 'global', {
+      env: { extract: (ctx) => envEnum(ctx.env, 'HAP_WECHAT_MODE', WECHAT_MODES), source: 'HAP_WECHAT_MODE' },
+      defaults: { extract: (ctx) => ctx.root.channels?.wechat?.mode, source: 'channels.wechat.mode' },
+      builtin: { extract: () => BUILTIN_CHANNELS.wechat.mode, source: 'BUILTIN_CHANNELS.wechat.mode' },
+    }),
+    makeSpec('channels.wechat.default_agent', 'global', {
+      env: { extract: (ctx) => envString(ctx.env, 'HAP_WECHAT_DEFAULT_AGENT'), source: 'HAP_WECHAT_DEFAULT_AGENT' },
+      defaults: { extract: (ctx) => ctx.root.channels?.wechat?.default_agent, source: 'channels.wechat.default_agent' },
+      builtin: { extract: () => undefined, source: '留空则回落到 default_agent' },
+    }),
+    makeSpec('channels.wechat.mention_patterns', 'global', {
+      env: { extract: (ctx) => envList(ctx.env, 'HAP_WECHAT_MENTIONS'), source: 'HAP_WECHAT_MENTIONS' },
+      defaults: { extract: (ctx) => ctx.root.channels?.wechat?.mention_patterns, source: 'channels.wechat.mention_patterns' },
+      builtin: { extract: () => [...BUILTIN_CHANNELS.wechat.mentionPatterns], source: 'BUILTIN_CHANNELS.wechat.mentionPatterns' },
+    }),
+    makeSpec('channels.wechat.message_char_limit', 'global', {
+      env: { extract: (ctx) => envNumber(ctx.env, 'HAP_WECHAT_MESSAGE_CHAR_LIMIT'), source: 'HAP_WECHAT_MESSAGE_CHAR_LIMIT' },
+      defaults: { extract: (ctx) => ctx.root.channels?.wechat?.message_char_limit, source: 'channels.wechat.message_char_limit' },
+      builtin: { extract: () => BUILTIN_CHANNELS.wechat.messageCharLimit, source: 'BUILTIN_CHANNELS.wechat.messageCharLimit' },
+    }),
+    makeSpec('channels.wechat.auth_dir', 'global', {
+      env: { extract: (ctx) => envString(ctx.env, 'HAP_WECHAT_AUTH_DIR'), source: 'HAP_WECHAT_AUTH_DIR' },
+      defaults: { extract: (ctx) => ctx.root.channels?.wechat?.auth_dir, source: 'channels.wechat.auth_dir' },
+      builtin: { extract: () => BUILTIN_CHANNELS.wechat.authDir, source: 'BUILTIN_CHANNELS.wechat.authDir' },
+    }),
+    makeSpec('channels.wechat.qr_log', 'global', {
+      env: { extract: (ctx) => envBoolean(ctx.env, 'HAP_WECHAT_QR_LOG'), source: 'HAP_WECHAT_QR_LOG' },
+      defaults: { extract: (ctx) => ctx.root.channels?.wechat?.qr_log, source: 'channels.wechat.qr_log' },
+      builtin: { extract: () => BUILTIN_CHANNELS.wechat.qrLog, source: 'BUILTIN_CHANNELS.wechat.qrLog' },
+    }),
     makeSpec('channels.http.enabled', 'global', {
       env: { extract: (ctx) => envBoolean(ctx.env, 'HAP_HTTP_ENABLED'), source: 'HAP_HTTP_ENABLED' },
       defaults: { extract: (ctx) => ctx.root.channels?.http?.enabled, source: 'channels.http.enabled' },
@@ -717,6 +808,8 @@ export const KEY_ALIASES: Record<string, string> = {
   data_dir: 'paths.data_dir',
   telegram_mode: 'channels.telegram.mode',
   whatsapp: 'channels.whatsapp.enabled',
+  wechat: 'channels.wechat.enabled',
+  wechat_mode: 'channels.wechat.mode',
 };
 // ─────────── 取值通路：resolve 与 explain 的唯一入口 ───────────
 
@@ -998,6 +1091,37 @@ export class ConfigResolver {
         reconnectMaxMs: asNumber(this.read('channels.whatsapp.reconnect_max_ms', ctx)) ?? BUILTIN_CHANNELS.whatsapp.reconnectMaxMs,
         qrLog: asBoolean(this.read('channels.whatsapp.qr_log', ctx)) ?? BUILTIN_CHANNELS.whatsapp.qrLog,
       },
+      wechat: {
+        enabled: asBoolean(this.read('channels.wechat.enabled', ctx)) ?? BUILTIN_CHANNELS.wechat.enabled,
+        mode: asEnum(this.read('channels.wechat.mode', ctx), WECHAT_MODES) ?? BUILTIN_CHANNELS.wechat.mode,
+        defaultAgent: asString(this.read('channels.wechat.default_agent', ctx)),
+        mentionPatterns: asStringArray(this.read('channels.wechat.mention_patterns', ctx)) ?? [...BUILTIN_CHANNELS.wechat.mentionPatterns],
+        messageCharLimit: asNumber(this.read('channels.wechat.message_char_limit', ctx)) ?? BUILTIN_CHANNELS.wechat.messageCharLimit,
+        authDir: expandHome(asString(this.read('channels.wechat.auth_dir', ctx)) ?? BUILTIN_CHANNELS.wechat.authDir),
+        qrLog: asBoolean(this.read('channels.wechat.qr_log', ctx)) ?? BUILTIN_CHANNELS.wechat.qrLog,
+        wecom: ctx.root.channels?.wechat?.wecom
+          ? {
+              corpId: ctx.root.channels.wechat.wecom.corp_id,
+              corpSecretEnv: ctx.root.channels.wechat.wecom.corp_secret_env ?? 'WECHAT_WECOM_CORP_SECRET',
+              agentId: ctx.root.channels.wechat.wecom.agent_id,
+              token: ctx.root.channels.wechat.wecom.token,
+              encodingAesKey: ctx.root.channels.wechat.wecom.encoding_aes_key,
+              webhookUrlEnv: ctx.root.channels.wechat.wecom.webhook_url_env ?? 'WECHAT_WECOM_WEBHOOK_URL',
+              bind: ctx.root.channels.wechat.wecom.bind ?? WECHAT_WECOM_BIND,
+              path: ctx.root.channels.wechat.wecom.path ?? WECHAT_WECOM_PATH,
+            }
+          : undefined,
+        officialAccount: ctx.root.channels?.wechat?.official_account
+          ? {
+              appId: ctx.root.channels.wechat.official_account.app_id,
+              appSecretEnv: ctx.root.channels.wechat.official_account.app_secret_env ?? 'WECHAT_OA_APP_SECRET',
+              token: ctx.root.channels.wechat.official_account.token,
+              encodingAesKey: ctx.root.channels.wechat.official_account.encoding_aes_key,
+              bind: ctx.root.channels.wechat.official_account.bind ?? WECHAT_OFFICIAL_ACCOUNT_BIND,
+              path: ctx.root.channels.wechat.official_account.path ?? WECHAT_OFFICIAL_ACCOUNT_PATH,
+            }
+          : undefined,
+      },
       http: {
         enabled: asBoolean(this.read('channels.http.enabled', ctx)) ?? BUILTIN_CHANNELS.http.enabled,
         bind: asString(this.read('channels.http.bind', ctx)) ?? BUILTIN_CHANNELS.http.bind,
@@ -1099,20 +1223,42 @@ export class ConfigResolver {
 
   /** 把目录别名归一为 provider/model 全名；已是全名或未登记则原样返回（FR-ROUTE-001）。 */
   normalizeModelRef(ref: string): string {
-    return this.resolveModels().get(ref)?.fullName ?? ref;
+    const clean = sanitizeModelRef(ref);
+    return this.findModel(clean)?.fullName ?? (clean.includes('/') ? clean : (this.resolveModels().get(clean)?.fullName ?? clean));
   }
 
   /** 按别名或全名查目录条目。未登记的模型允许直接引用，只是拿不到 context_window 等元数据。 */
   findModel(ref: string): ResolvedModel | undefined {
-    const byAlias = this.resolveModels().get(ref);
-    if (byAlias !== undefined) {
-      return byAlias;
+    const clean = sanitizeModelRef(ref);
+    const models = this.resolveModels();
+
+    // 1. 精确别名
+    const byAlias = models.get(clean);
+    if (byAlias !== undefined) return byAlias;
+
+    // 2. 精确全名
+    for (const entry of models.values()) {
+      if (entry.fullName === clean) return entry;
     }
-    for (const entry of this.resolveModels().values()) {
-      if (entry.fullName === ref) {
+
+    // 3. 大小写不敏感别名
+    const cleanLower = clean.toLowerCase();
+    for (const entry of models.values()) {
+      if (entry.alias.toLowerCase() === cleanLower) return entry;
+    }
+
+    // 4. 大小写不敏感全名
+    for (const entry of models.values()) {
+      if (entry.fullName.toLowerCase() === cleanLower) return entry;
+    }
+
+    // 5. 模型名后缀匹配 (例如输入 gpt-4o 匹配 openrouter/gpt-4o 或 openai/gpt-4o)
+    for (const entry of models.values()) {
+      if (entry.model === clean || entry.model.toLowerCase() === cleanLower || entry.fullName.endsWith('/' + clean)) {
         return entry;
       }
     }
+
     return undefined;
   }
 

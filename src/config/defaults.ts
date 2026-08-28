@@ -20,6 +20,7 @@ import type { AgentDefaultsConfig, AgentEntryConfig, HapConfig, ModelEntryConfig
 /** 内置工具名清单（FR-TOOL-001）。顺序即 <tools> 段的展示顺序。 */
 export const BUILTIN_TOOL_NAMES = [
   'shell',
+  'open_external',
   'read_file',
   'write_file',
   'apply_patch',
@@ -37,9 +38,9 @@ export type BuiltinToolName = (typeof BUILTIN_TOOL_NAMES)[number];
  */
 export const TOOL_PROFILES: Record<ToolProfileName, readonly BuiltinToolName[]> = {
   minimal: ['read_file', 'list_dir'],
-  standard: ['read_file', 'write_file', 'list_dir', 'search', 'http_fetch'],
-  coding: ['read_file', 'write_file', 'list_dir', 'search', 'shell', 'apply_patch', 'spawn_subagent'],
-  research: ['read_file', 'write_file', 'list_dir', 'search', 'http_fetch', 'spawn_subagent'],
+  standard: ['read_file', 'write_file', 'list_dir', 'search', 'http_fetch', 'open_external'],
+  coding: ['read_file', 'write_file', 'list_dir', 'search', 'shell', 'open_external', 'apply_patch', 'spawn_subagent'],
+  research: ['read_file', 'write_file', 'list_dir', 'search', 'http_fetch', 'open_external', 'spawn_subagent'],
   full: [...BUILTIN_TOOL_NAMES],
 };
 
@@ -83,6 +84,17 @@ export const BUILTIN_CHANNELS: ResolvedChannels = {
     reconnectInitialMs: 1_000,
     reconnectMaxMs: 60_000,
     qrLog: true,
+  },
+  wechat: {
+    enabled: false,
+    mode: 'personal',
+    defaultAgent: undefined,
+    mentionPatterns: ['@hap'],
+    messageCharLimit: 2_048,
+    authDir: '~/.hap/wechat-auth',
+    qrLog: true,
+    wecom: undefined,
+    officialAccount: undefined,
   },
   http: { enabled: false, bind: '127.0.0.1:8787', defaultAgent: undefined },
   cli: { enabled: true, defaultAgent: undefined },
