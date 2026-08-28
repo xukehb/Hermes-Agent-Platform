@@ -7,6 +7,7 @@
   "engines": {
     "node": ">=22"
   },
+  "main": "dist/src/gui/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.json && tsx src/gui/copy-assets.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -15,7 +16,36 @@
     "hap": "tsx src/cli/bin.ts",
     "rebuild": "npx -y @electron/rebuild -f -w better-sqlite3",
     "gui": "npm run build && electron dist/src/gui/main.js",
-    "gui:dev": "npm run build && electron dist/src/gui/main.js"
+    "gui:dev": "npm run build && electron dist/src/gui/main.js",
+    "dist": "npm run build && npx electron-builder --win",
+    "dist:dir": "npm run build && npx electron-builder --win --dir"
+  },
+  "build": {
+    "appId": "com.hermes.agent.platform",
+    "productName": "CodexConnect",
+    "copyright": "Copyright © 2026 CodexConnect Team",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "**/node_modules/better-sqlite3/**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
