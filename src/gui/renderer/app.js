@@ -417,8 +417,8 @@ function renderMarkdownContent(rawText) {
   safe = safe.replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>');
 
   // 任务复选框 (Checklists)
-  safe = safe.replace(/^[\*\-] \[ \] (.*$)/gim, '<div class="md-list-item"><span style="color:#94a3b8;font-size:14px;">☐</span><span>$1</span></div>');
-  safe = safe.replace(/^[\*\-] \[x\] (.*$)/gim, '<div class="md-list-item"><span style="color:#16a34a;font-weight:700;font-size:14px;">☑</span><span style="text-decoration:line-through;color:var(--text-muted);">$1</span></div>');
+  safe = safe.replace(/^[\*\-] \[ \] (.*$)/gim, '<div class="md-list-item"><span style="color:#94a3b8;font-size:14px;"></span><span>$1</span></div>');
+  safe = safe.replace(/^[\*\-] \[x\] (.*$)/gim, '<div class="md-list-item"><span style="color:#16a34a;font-weight:700;font-size:14px;"></span><span style="text-decoration:line-through;color:var(--text-muted);">$1</span></div>');
 
   // 无序列表与有序列表
   safe = safe.replace(/^[*-] (.*$)/gim, '<div class="md-list-item"><span class="md-bullet">•</span><span>$1</span></div>');
@@ -426,7 +426,7 @@ function renderMarkdownContent(rawText) {
 
   // 图片解析 (![alt](url))
   safe = safe.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, src) => {
-    return `<div class="user-img-card" style="margin:10px 0;max-width:320px;" onclick="window.openImageLightbox('${src}', '${alt || '图片'}')"><img src="${src}" alt="${alt || '图片'}" /><div class="img-zoom-hint">🔍 查看大图</div></div>`;
+    return `<div class="user-img-card" style="margin:10px 0;max-width:320px;" onclick="window.openImageLightbox('${src}', '${alt || '图片'}')"><img src="${src}" alt="${alt || '图片'}" /><div class="img-zoom-hint">查看大图</div></div>`;
   });
 
   // 加粗与行内代码
@@ -926,22 +926,22 @@ function renderCurrentSessionMessages() {
         <p class="hero-subtitle">${heroSubtitle}</p>
         <div class="hero-grid">
           <div class="hero-card" onclick="triggerHeroPrompt('分析当前绑定的项目工程结构并列出关键模块与潜在风险')">
-            <div class="hero-card-icon">🚀</div>
+            <div class="hero-card-icon"></div>
             <div class="hero-card-title">分析工程架构</div>
             <div class="hero-card-sub">梳理模块依赖、调用拓扑与架构建议</div>
           </div>
           <div class="hero-card" onclick="triggerHeroPrompt('对当前项目进行全面的代码质量、安全漏洞与潜在 Bug 审查')">
-            <div class="hero-card-icon">🔍</div>
+            <div class="hero-card-icon"></div>
             <div class="hero-card-title">代码安全审查</div>
             <div class="hero-card-sub">自动化排查潜在代码缺陷与性能瓶颈</div>
           </div>
           <div class="hero-card" onclick="triggerHeroPrompt('为当前核心功能模块设计并编写高覆盖率的单元测试用例')">
-            <div class="hero-card-icon">🧪</div>
+            <div class="hero-card-icon"></div>
             <div class="hero-card-title">编写测试套件</div>
             <div class="hero-card-sub">生成高覆盖率的自动化测试用例并执行</div>
           </div>
           <div class="hero-card" onclick="triggerHeroPrompt('审查 Git 变更并协助生成规范的 Commit 提交和推送代码')">
-            <div class="hero-card-icon">🌿</div>
+            <div class="hero-card-icon"></div>
             <div class="hero-card-title">Git 协同与推送</div>
             <div class="hero-card-sub">一键审查 Diff 差异并自动提交代码</div>
           </div>
@@ -1481,7 +1481,7 @@ function renderSkills(searchQuery = '') {
           <span class="card-title">${esc(s.name)}</span>
           <span class="card-subtitle">GitHub: ${esc(s.repo)}</span>
         </div>
-        <span class="skill-stars-badge">★ ${s.stars || 100}</span>
+        <span class="skill-stars-badge"> ${s.stars || 100}</span>
       </div>
       <div class="card-body">
         <div style="font-size:12.5px;color:var(--text-secondary);line-height:1.5;">${esc(s.description)}</div>
@@ -1986,7 +1986,7 @@ function renderAgents() {
       <div class="card-header">
         <div style="display:flex;align-items:center;gap:10px;">
           <div style="width:38px;height:38px;border-radius:8px;background:#f1f5f9;display:grid;place-items:center;font-size:20px;flex-shrink:0;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
-            ${esc(agent.emoji || '🤖')}
+            ${esc(agent.emoji || '')}
           </div>
           <div class="card-title-wrap">
             <span class="card-title">${esc(agent.displayName || agent.name || agent.id)}</span>
@@ -1994,7 +1994,7 @@ function renderAgents() {
           </div>
         </div>
         <span class="badge ${agent.toolTier === 'full' ? 'danger' : 'neutral'}">
-          🛠️ ${esc(agent.toolTier || 'standard')}
+          ${esc(agent.toolTier || 'standard')}
         </span>
       </div>
       <div class="card-body">
@@ -2003,10 +2003,10 @@ function renderAgents() {
         </div>
         <div class="card-props">
           <span class="prop-chip" style="background:#eff6ff;color:#2563eb;font-weight:600;">
-            🤖 模型：${esc(agent.model || '全局默认')}
+            模型：${esc(agent.model || '全局默认')}
           </span>
           <span class="prop-chip" title="${esc(agent.workspace || '继承全局')}">
-            📁 工作区：${esc(agent.workspace ? agent.workspace.split(/[/\\]/).pop() || agent.workspace : '继承全局')}
+            工作区：${esc(agent.workspace ? agent.workspace.split(/[/\\]/).pop() || agent.workspace : '继承全局')}
           </span>
         </div>
       </div>
@@ -2026,8 +2026,8 @@ window.openAgentDialog = (agentId) => {
 
   $('agentInputId').value = agent.id;
   $('agentInputDisplayName').value = agent.displayName || agent.name || agent.id;
-  $('agentInputEmoji').value = agent.emoji || '🤖';
-  $('agentModalEmoji').textContent = agent.emoji || '🤖';
+  $('agentInputEmoji').value = agent.emoji || '';
+  $('agentModalEmoji').textContent = agent.emoji || '';
   $('agentModalTitle').textContent = `配置智能体: ${agent.id}`;
   $('agentInputWorkspace').value = agent.workspace || '';
   $('agentInputDescription').value = agent.description || '';
@@ -2062,7 +2062,7 @@ $('agentForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const id = $('agentInputId').value.trim();
   const displayName = $('agentInputDisplayName').value.trim();
-  const emoji = $('agentInputEmoji').value.trim() || '🤖';
+  const emoji = $('agentInputEmoji').value.trim() || '';
   const model = $('agentInputModel').value.trim();
   const workspace = $('agentInputWorkspace').value.trim();
   const description = $('agentInputDescription').value.trim();
@@ -2324,7 +2324,7 @@ async function renderTelegramView() {
     if (tgConfig.running) {
       if (badge) {
         badge.className = 'badge success';
-        badge.textContent = '🟢 监听运行中';
+        badge.textContent = '监听运行中';
       }
       if (toggleBtn) {
         toggleBtn.className = 'btn danger';
@@ -2339,7 +2339,7 @@ async function renderTelegramView() {
     } else {
       if (badge) {
         badge.className = 'badge neutral';
-        badge.textContent = '⚪ 未运行';
+        badge.textContent = '未运行';
       }
       if (toggleBtn) {
         toggleBtn.className = 'btn primary';
@@ -2507,7 +2507,7 @@ async function renderWeChatView() {
     if (wxConfig.running) {
       if (badge) {
         badge.className = wxConfig.status === 'connected' ? 'badge success' : 'badge warning';
-        badge.textContent = wxConfig.status === 'connected' ? '🟢 微信已连接' : '🟡 等待手机扫码确认';
+        badge.textContent = wxConfig.status === 'connected' ? '微信已连接' : '等待手机扫码确认';
       }
       if (toggleBtn) {
         toggleBtn.className = 'btn danger';
@@ -2529,7 +2529,7 @@ async function renderWeChatView() {
         if (wxConfig.status === 'connected') {
           qrBox.innerHTML = `
             <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:24px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;text-align:center;width:100%;max-width:280px;box-shadow:0 4px 12px rgba(34,197,94,0.08);">
-              <div style="width:44px;height:44px;border-radius:50%;background:#22c55e;color:#fff;display:grid;place-items:center;font-size:22px;box-shadow:0 2px 8px rgba(34,197,94,0.3);">✓</div>
+              <div style="width:44px;height:44px;border-radius:50%;background:#22c55e;color:#fff;display:grid;place-items:center;font-size:22px;box-shadow:0 2px 8px rgba(34,197,94,0.3);"></div>
               <div style="font-weight:700;color:#15803d;font-size:15px;">微信已成功连接就绪</div>
               <div style="font-size:12.5px;color:#166534;font-weight:500;">当前账号：${esc(wxConfig.loginUser || 'WeChat User')}</div>
               <div style="font-size:11.5px;color:#15803d;line-height:1.4;">现在拿起手机在微信中发送需求，AI 将实时自动响应并处理任务！</div>
@@ -2548,10 +2548,10 @@ async function renderWeChatView() {
               <div style="padding:6px;background:#ffffff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:1px solid #e2e8f0;display:inline-block;">
                 ${qrSvgHtml}
               </div>
-              <div style="font-size:11.5px;color:#64748b;margin-top:2px;">📱 请使用手机微信扫码并点击【确认登录】</div>
+              <div style="font-size:11.5px;color:#64748b;margin-top:2px;">请使用手机微信扫码并点击【确认登录】</div>
               <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
                 <button type="button" class="btn text-btn" style="font-size:11.5px;padding:3px 8px;color:#2563eb;" onclick="copyText('${esc(wxConfig.qrCodeText)}', '登录链接')">
-                  📋 复制登录链接
+                  复制登录链接
                 </button>
               </div>
             </div>
@@ -2561,7 +2561,7 @@ async function renderWeChatView() {
     } else {
       if (badge) {
         badge.className = 'badge neutral';
-        badge.textContent = '⚪ 未运行';
+        badge.textContent = '未运行';
       }
       if (toggleBtn) {
         toggleBtn.className = 'btn primary';
@@ -2589,7 +2589,7 @@ $('confirmWxLoginBtn')?.addEventListener('click', async () => {
     showToast('正在确认并同步手机微信登录态...', 'info');
     const res = await window.hap.confirmWeChatLogin();
     if (res && res.status === 'connected') {
-      showToast('🎉 微信通道已成功连接就绪！', 'success');
+      showToast('微信通道已成功连接就绪！', 'success');
       await renderWeChatView();
     } else {
       showToast('尚未检测到手机端确认，请在微信中点击【确认登录】', 'warning');
@@ -2685,7 +2685,7 @@ setInterval(async () => {
         const isAlreadyConnected = badge && badge.classList.contains('success');
         if (cfg.status === 'connected' && !isAlreadyConnected) {
           await renderWeChatView();
-          showToast('🎉 微信通道已成功连接就绪！', 'success');
+          showToast('微信通道已成功连接就绪！', 'success');
         }
       }
     } catch {}
@@ -2717,7 +2717,7 @@ function renderWeChatFeed() {
       return `
         <div style="display:flex;flex-direction:column;align-items:flex-start;max-width:85%;">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
-            <span class="badge neutral" style="background:#dcfce7;color:#15803d;font-size:11px;font-weight:600;">📥 微信端用户</span>
+            <span class="badge neutral" style="background:#dcfce7;color:#15803d;font-size:11px;font-weight:600;">微信端用户</span>
             <span style="font-size:11px;color:var(--text-muted);">${esc(timeStr)}</span>
           </div>
           <div style="background:#ffffff;border:1px solid #cbd5e1;padding:10px 14px;border-radius:12px 12px 12px 2px;font-size:13.5px;color:#0f172a;line-height:1.55;box-shadow:0 1px 3px rgba(0,0,0,0.02);word-break:break-word;">
@@ -2730,7 +2730,7 @@ function renderWeChatFeed() {
         <div style="display:flex;flex-direction:column;align-items:flex-end;margin-left:auto;max-width:85%;">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
             <span style="font-size:11px;color:var(--text-muted);">${esc(timeStr)}</span>
-            <span class="badge" style="background:#eff6ff;color:#2563eb;font-size:11px;font-weight:600;">🤖 AI 智能体 (${esc(item.agent || 'coder')}) 回复</span>
+            <span class="badge" style="background:#eff6ff;color:#2563eb;font-size:11px;font-weight:600;">AI 智能体 (${esc(item.agent || 'coder')}) 回复</span>
           </div>
           <div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:12px 16px;border-radius:12px 12px 2px 12px;font-size:13.5px;color:#166534;line-height:1.65;box-shadow:0 1px 3px rgba(0,0,0,0.03);word-break:break-word;">
             ${renderMarkdownContent(item.text)}
@@ -2799,7 +2799,7 @@ $('sendWxTestMsgBtn')?.addEventListener('click', async () => {
 
     wechatMessageFeed.push({
       type: 'outgoing',
-      text: `❌ 执行遇到错误：${err.message}`,
+      text: `执行遇到错误：${err.message}`,
       agent: '系统',
       time: new Date().toLocaleTimeString(),
     });
@@ -3232,7 +3232,7 @@ function renderComposerAttachments() {
           <span class="attachment-name" title="${esc(item.fileName)}">${esc(item.fileName)}</span>
           <span class="attachment-size">${formatFileSize(item.bytes)}</span>
         </div>
-        <button type="button" class="attachment-remove-btn" onclick="window.removeComposerAttachment(${index})" title="移除附件">✕</button>
+        <button type="button" class="attachment-remove-btn" onclick="window.removeComposerAttachment(${index})" title="移除附件"></button>
       </div>
     `;
   }).join('');
@@ -3281,7 +3281,7 @@ async function handleAddFiles(files) {
   }
 }
 
-// 1. 📎 上传按钮点选
+// 1. 上传按钮点选
 $('chatAttachBtn')?.addEventListener('click', () => {
   $('chatFileInput')?.click();
 });
@@ -3509,11 +3509,11 @@ $('chatForm')?.addEventListener('submit', async (event) => {
       }
 
       if (!reply && outcome.iterations > 0) {
-        reply = `✅ 智能体已顺利执行 ${outcome.iterations} 轮工具编排并完成任务。`;
+        reply = `智能体已顺利执行 ${outcome.iterations} 轮工具编排并完成任务。`;
       }
 
       if (!reply && outcome.error) {
-        reply = `⚠️ 任务执行提示：${outcome.error}`;
+        reply = `任务执行提示：${outcome.error}`;
       }
     }
 
@@ -3528,7 +3528,7 @@ $('chatForm')?.addEventListener('submit', async (event) => {
     }
 
     if (!reply) {
-      reply = `智能体已完成指令编排。\n\n> 💡 **温馨提示**：若需获取模型生成的完整回复正文，请在左侧 **【模型服务商】** 确保填入了正确的 API Key 并通过连通性测试，然后在 **【模型目录】** 选择对应模型即可。`;
+      reply = `智能体已完成指令编排。\n\n> **温馨提示**：若需获取模型生成的完整回复正文，请在左侧 **【模型服务商】** 确保填入了正确的 API Key 并通过连通性测试，然后在 **【模型目录】** 选择对应模型即可。`;
     }
 
     session.messages.push({
@@ -3609,7 +3609,7 @@ async function renderServers() {
   if (cachedServers.length === 0) {
     grid.innerHTML = `
       <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 42px 20px; color: var(--text-secondary);">
-        <div style="font-size: 32px; margin-bottom: 12px;">🖥️</div>
+        <div style="font-size: 32px; margin-bottom: 12px;">️</div>
         <div style="font-weight: 700; font-size: 15px; color: var(--text-main); margin-bottom: 6px;">尚未添加任何远程服务器</div>
         <div style="font-size: 13px; max-width: 440px; margin: 0 auto 18px auto; line-height: 1.5;">
           输入服务器 IP (公网或局域网) 与 SSH 凭据，即可一键自动化部署 HAP 守护进程，实现跨机器算力协同与实时操控。
@@ -3627,7 +3627,7 @@ async function renderServers() {
       online: { text: '● 在线 (Daemon 已就绪)', cls: 'badge', color: '#16a34a' },
       offline: { text: '○ 离线', cls: 'badge neutral', color: '#64748b' },
       installing: { text: '⏳ 正在部署...', cls: 'badge warn', color: '#d97706' },
-      error: { text: '⚠ 异常', cls: 'badge danger', color: '#dc2626' },
+      error: { text: ' 异常', cls: 'badge danger', color: '#dc2626' },
       uninstalled: { text: '未部署 Daemon', cls: 'badge neutral', color: '#475569' },
     };
     const st = statusMap[s.status] || statusMap.uninstalled;
@@ -3693,24 +3693,24 @@ async function renderServers() {
         <div class="card-footer" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:space-between;">
           <div style="display:flex;gap:6px;">
             <button type="button" class="btn secondary" onclick="window.testServerNode('${esc(s.id)}')" style="padding:3px 8px;font-size:11.5px;" title="测试 SSH 与通信连通性">
-              ⚡ 连通测试
+              连通测试
             </button>
             <button type="button" class="btn secondary" onclick="window.fetchServerInfoNode('${esc(s.id)}')" style="padding:3px 8px;font-size:11.5px;" title="拉取实时系统监控">
-              📊 状态
+              状态
             </button>
             <button type="button" class="btn ${s.status === 'online' ? 'secondary' : 'primary'}" onclick="window.openInstallServerModal('${esc(s.id)}')" style="padding:3px 8px;font-size:11.5px;" title="一键远程部署或重启守护服务">
-              🚀 ${s.status === 'online' ? '重新部署' : '一键安装'}
+              ${s.status === 'online' ? '重新部署' : '一键安装'}
             </button>
           </div>
           <div style="display:flex;gap:4px;">
             <button type="button" class="btn text-btn" onclick="window.selectTerminalServer('${esc(s.id)}')" style="padding:3px 6px;font-size:12px;" title="在终端中选中此机器">
-              💻
+              
             </button>
             <button type="button" class="btn text-btn" onclick="window.openServerDialog('${esc(s.id)}')" style="padding:3px 6px;font-size:12px;" title="编辑配置">
-              ✏️
+              ️
             </button>
             <button type="button" class="btn text-btn danger" onclick="window.deleteServerNode('${esc(s.id)}')" style="padding:3px 6px;font-size:12px;" title="移除节点">
-              🗑️
+              ️
             </button>
           </div>
         </div>
@@ -3795,9 +3795,9 @@ window.testServerNode = async (id) => {
   try {
     const res = await window.hap.testServer(id);
     if (res.ok) {
-      showToast(`✓ 连接成功 [${res.mode.toUpperCase()}] 延迟: ${res.latencyMs}ms - ${res.message}`, 'success');
+      showToast(` 连接成功 [${res.mode.toUpperCase()}] 延迟: ${res.latencyMs}ms - ${res.message}`, 'success');
     } else {
-      showToast(`✗ 连接失败：${res.message}`, 'error');
+      showToast(` 连接失败：${res.message}`, 'error');
     }
     await renderServers();
   } catch (err) {
@@ -3809,7 +3809,7 @@ window.fetchServerInfoNode = async (id) => {
   showToast('正在获取实时系统资源数据...', 'info');
   try {
     const info = await window.hap.getServerInfo(id);
-    showToast(`✓ 已同步系统状态: CPU ${info.cpuUsagePercent}%, 内存 ${info.usedMemPercent}%`, 'success');
+    showToast(` 已同步系统状态: CPU ${info.cpuUsagePercent}%, 内存 ${info.usedMemPercent}%`, 'success');
     await renderServers();
   } catch (err) {
     showToast(`获取失败：${err.message}`, 'error');
@@ -3847,7 +3847,7 @@ window.openInstallServerModal = async (id) => {
   if (!server) return;
 
   const dialog = $('installServerDialog');
-  $('installServerTitle').textContent = `🚀 正在一键部署 HAP 守护进程`;
+  $('installServerTitle').textContent = `正在一键部署 HAP 守护进程`;
   $('installServerSubtitle').textContent = `目标主机：${server.name} (${server.host}:${server.port}) - 守护端口: ${server.daemonPort || 9527}`;
   $('installLogsConsole').textContent = `[System] 启动部署向导，准备连接 ${server.host}:${server.port} ...\n`;
   $('installProgressBar').style.width = '10%';
@@ -3871,10 +3871,10 @@ window.openInstallServerModal = async (id) => {
       let iconText = (idx + 1).toString();
       if (idx < currentStepIdx) {
         iconClass = 'success';
-        iconText = '✓';
+        iconText = '';
       } else if (idx === currentStepIdx) {
         iconClass = failed ? 'failed' : 'running';
-        iconText = failed ? '✗' : '⏳';
+        iconText = failed ? '' : '⏳';
       }
       return `
         <div class="step-item">
@@ -3906,7 +3906,7 @@ window.openInstallServerModal = async (id) => {
     
     renderStepsUI(event.stepIndex - 1, event.status === 'failed');
 
-    const icon = event.status === 'success' ? '✓' : event.status === 'failed' ? '✗' : '⏳';
+    const icon = event.status === 'success' ? '' : event.status === 'failed' ? '' : '⏳';
     appendLog(`[${event.stepIndex}/${event.totalSteps}] ${icon} ${event.message}`);
     if (event.details) {
       appendLog(`    ↳ ${event.details}`);
@@ -3921,7 +3921,7 @@ window.openInstallServerModal = async (id) => {
       $('installPercentText').textContent = '100%';
       $('installStepText').textContent = '部署完成！HAP Agent 守护服务已在线。';
       renderStepsUI(steps.length);
-      appendLog(`\n🎉 [Success] 部署成功！通信端口: ${res.daemonPort}, Token: ${res.token}`);
+      appendLog(`\n[Success] 部署成功！通信端口: ${res.daemonPort}, Token: ${res.token}`);
       showToast('远端 Agent 守护进程部署成功！', 'success');
       $('finishInstallBtn').disabled = false;
       await renderServers();
@@ -3930,13 +3930,13 @@ window.openInstallServerModal = async (id) => {
       $('installProgressBar').style.background = '#ef4444';
       $('installPercentText').textContent = '失败';
       $('installStepText').textContent = `部署终止：${res.error || '未知异常'}`;
-      appendLog(`\n❌ [Error] 部署失败：${res.error}`);
+      appendLog(`\n[Error] 部署失败：${res.error}`);
       showToast(`部署失败：${res.error}`, 'error');
       $('finishInstallBtn').disabled = false;
       await renderServers();
     }
   } catch (err) {
-    appendLog(`\n❌ [Exception] ${err.message}`);
+    appendLog(`\n[Exception] ${err.message}`);
     showToast(`部署异常：${err.message}`, 'error');
     $('finishInstallBtn').disabled = false;
     await renderServers();
@@ -4209,7 +4209,7 @@ window.handleScanDisk = async () => {
     const res = await window.hap.scanDiskCleanable();
     if (resultEl) {
       resultEl.innerHTML = `
-        <div style="color:#16a34a;font-weight:600;margin-bottom:4px;">✓ 扫描完成！共发现可清理项：<strong>${fmtHostBytes(res.totalCleanableBytes)}</strong></div>
+        <div style="color:#16a34a;font-weight:600;margin-bottom:4px;"> 扫描完成！共发现可清理项：<strong>${fmtHostBytes(res.totalCleanableBytes)}</strong></div>
         <div style="font-size:11.5px;color:#64748b;">包含 npm/yarn/pnpm 缓存、临时编译产物与运行日志。</div>
       `;
     }
@@ -4226,7 +4226,7 @@ window.handleCleanDisk = async () => {
   try {
     const res = await window.hap.executeDiskCleanup();
     if (resultEl) {
-      resultEl.innerHTML = `<div style="color:#16a34a;font-weight:600;">✓ 清理成功！已释放 <strong>${fmtHostBytes(res.cleanedBytes)}</strong> 磁盘空间。</div>`;
+      resultEl.innerHTML = `<div style="color:#16a34a;font-weight:600;"> 清理成功！已释放 <strong>${fmtHostBytes(res.cleanedBytes)}</strong> 磁盘空间。</div>`;
     }
     if (cleanBtn) cleanBtn.style.display = 'none';
     showToast('磁盘清理完成！', 'success');
@@ -4264,13 +4264,13 @@ function renderServerOpsAttachments() {
     const isImg = item.kind === 'image' || (item.mimeType && item.mimeType.startsWith('image/'));
     const previewHtml = isImg
       ? `<img src="${esc(item.dataUrl || item.path)}" style="width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid #cbd5e1;flex-shrink:0;" />`
-      : `<div style="width:32px;height:32px;border-radius:6px;background:#eff6ff;color:#2563eb;display:grid;place-items:center;flex-shrink:0;">📄</div>`;
+      : `<div style="width:32px;height:32px;border-radius:6px;background:#eff6ff;color:#2563eb;display:grid;place-items:center;flex-shrink:0;"></div>`;
     return `<div style="position:relative;display:inline-flex;align-items:center;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:4px 8px;gap:8px;max-width:220px;flex-shrink:0;">
       ${previewHtml}
       <div style="display:flex;flex-direction:column;overflow:hidden;font-size:11.5px;line-height:1.3;">
         <span style="font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(item.fileName)}</span>
       </div>
-      <button type="button" onclick="window.removeServerOpsAttachment(${index})" style="width:18px;height:18px;border-radius:50%;background:rgba(15,23,42,0.6);color:#fff;border:none;font-size:10px;cursor:pointer;margin-left:auto;">✕</button>
+      <button type="button" onclick="window.removeServerOpsAttachment(${index})" style="width:18px;height:18px;border-radius:50%;background:rgba(15,23,42,0.6);color:#fff;border:none;font-size:10px;cursor:pointer;margin-left:auto;"></button>
     </div>`;
   }).join('');
 }
@@ -4335,7 +4335,7 @@ window.startServerAgentChat = (serverId) => {
   if ($('chatAgentSelect')) {
     $('chatAgentSelect').value = agentId;
   }
-  const sessionTitle = `🖥️ ${server.name} 运维`;
+  const sessionTitle = `${server.name} 运维`;
   const sess = state.sessions.find(s => s.title === sessionTitle);
   if (sess) {
     state.activeSessionId = sess.id;
@@ -4453,7 +4453,7 @@ window.executeServerOpsPrompt = async (server, prompt, agentId, attachments = []
 
     contentEl.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <span style="font-weight:700;color:#16a34a;">✓ 智能体 [${esc(agentId)}] 执行完成</span>
+        <span style="font-weight:700;color:#16a34a;"> 智能体 [${esc(agentId)}] 执行完成</span>
         <span style="font-size:11px;color:var(--text-muted);">目标：${esc(server.name)}</span>
       </div>
       ${reasoning ? `

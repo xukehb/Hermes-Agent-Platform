@@ -240,22 +240,22 @@
               <p class="hero-subtitle" id="heroSubtitleText">选择或导入工作区项目，开启高效智能编排与自动化修复</p>
               <div class="hero-grid">
                 <div class="hero-card" data-hero-prompt="分析当前绑定的项目工程结构并列出关键模块与潜在风险" onclick="triggerHeroPrompt('分析当前绑定的项目工程结构并列出关键模块与潜在风险')">
-                  <div class="hero-card-icon">🚀</div>
+                  <div class="hero-card-icon"></div>
                   <div class="hero-card-title">分析工程架构</div>
                   <div class="hero-card-sub">梳理模块依赖、调用拓扑与架构建议</div>
                 </div>
                 <div class="hero-card" data-hero-prompt="对当前项目进行全面的代码质量、安全漏洞与潜在 Bug 审查" onclick="triggerHeroPrompt('对当前项目进行全面的代码质量、安全漏洞与潜在 Bug 审查')">
-                  <div class="hero-card-icon">🔍</div>
+                  <div class="hero-card-icon"></div>
                   <div class="hero-card-title">代码安全审查</div>
                   <div class="hero-card-sub">自动化排查潜在代码缺陷与性能瓶颈</div>
                 </div>
                 <div class="hero-card" data-hero-prompt="为当前核心功能模块设计并编写高覆盖率的单元测试用例" onclick="triggerHeroPrompt('为当前核心功能模块设计并编写高覆盖率的单元测试用例')">
-                  <div class="hero-card-icon">🧪</div>
+                  <div class="hero-card-icon"></div>
                   <div class="hero-card-title">编写测试套件</div>
                   <div class="hero-card-sub">生成高覆盖率的自动化测试用例并执行</div>
                 </div>
                 <div class="hero-card" data-hero-prompt="审查 Git 变更并协助生成规范的 Commit 提交和推送代码" onclick="triggerHeroPrompt('审查 Git 变更并协助生成规范的 Commit 提交和推送代码')">
-                  <div class="hero-card-icon">🌿</div>
+                  <div class="hero-card-icon"></div>
                   <div class="hero-card-title">Git 协同与推送</div>
                   <div class="hero-card-sub">一键审查 Diff 差异并自动提交代码</div>
                 </div>
@@ -350,7 +350,7 @@
           </div>
 
           <div class="page-actions-bar">
-            <input type="text" id="skillSearchInput" placeholder="🔍 搜索开源技能 (如 Security, Git, Testing, React)..." style="max-width:360px;" />
+            <input type="text" id="skillSearchInput" placeholder=" 搜索开源技能 (如 Security, Git, Testing, React)..." style="max-width:360px;" />
             <span style="font-size:12px;color:var(--text-muted);margin-left:auto;">支持 GitHub 开源仓库地址直连安装</span>
           </div>
 
@@ -393,7 +393,7 @@
           <div class="permission-mode-grid">
             <div class="permission-mode-card full-access" id="modeCardFullAccess" onclick="selectPermissionMode('full-access')">
               <div class="mode-icon-title">
-                <span style="font-size:18px;">🟢</span>
+                <span style="font-size:18px;"></span>
                 <span>完完全全放开权限</span>
               </div>
               <div class="mode-desc">
@@ -404,7 +404,7 @@
 
             <div class="permission-mode-card" id="modeCardConfirmWrites" onclick="selectPermissionMode('confirm-writes')">
               <div class="mode-icon-title">
-                <span style="font-size:18px;">🟡</span>
+                <span style="font-size:18px;"></span>
                 <span>敏感写操作确认</span>
               </div>
               <div class="mode-desc">
@@ -415,7 +415,7 @@
 
             <div class="permission-mode-card" id="modeCardStrict" onclick="selectPermissionMode('strict')">
               <div class="mode-icon-title">
-                <span style="font-size:18px;">🔴</span>
+                <span style="font-size:18px;"></span>
                 <span>严格单步确认</span>
               </div>
               <div class="mode-desc">
@@ -706,13 +706,13 @@
           <div class="card">
             <div class="card-header">
               <div class="card-title-wrap">
-                <span class="card-title">💡 Telegram 远程修复指令指南</span>
+                <span class="card-title"> Telegram 远程修复指令指南</span>
                 <span class="card-subtitle">启动机器人后，可在 Telegram 中发送以下指令与智能体协同</span>
               </div>
             </div>
             <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
               <div style="padding:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-main);">
-                <div style="font-weight:700;font-size:13px;margin-bottom:4px;">🔍 审查与修复工程</div>
+                <div style="font-weight:700;font-size:13px;margin-bottom:4px;"> 审查与修复工程</div>
                 <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">
                   向 Bot 发送：<br/>
                   <code>“分析当前工程中的报错并直接修改修复”</code><br/>
@@ -721,7 +721,7 @@
               </div>
 
               <div style="padding:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-main);">
-                <div style="font-weight:700;font-size:13px;margin-bottom:4px;">⚙️ 控制与状态指令</div>
+                <div style="font-weight:700;font-size:13px;margin-bottom:4px;"> 控制与状态指令</div>
                 <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">
                   <code>/status</code>：查看当前模型与 Token 用量<br/>
                   <code>/stop</code>：紧急中止当前正在执行的任务<br/>
@@ -741,9 +741,9 @@
           <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;">
             <div style="display:flex;align-items:center;gap:8px;">
               <div class="channel-tabs" style="display:flex;gap:6px;">
-                <button type="button" class="channel-tab-btn active" id="tabBtnWeChat" onclick="window.switchChannelTab('wechat')" style="padding:4px 12px;font-size:12.5px;font-weight:600;border-radius:6px;border:1px solid #d1d5db;background:#0d0d0d;color:#fff;cursor:pointer;">💬 微信 / 企微</button>
-                <button type="button" class="channel-tab-btn" id="tabBtnFeishu" onclick="window.switchChannelTab('feishu')" style="padding:4px 12px;font-size:12.5px;font-weight:600;border-radius:6px;border:1px solid #d1d5db;background:#fff;color:#374151;cursor:pointer;">🦅 飞书机器人</button>
-                <button type="button" class="channel-tab-btn" id="tabBtnQQ" onclick="window.switchChannelTab('qq')" style="padding:4px 12px;font-size:12.5px;font-weight:600;border-radius:6px;border:1px solid #d1d5db;background:#fff;color:#374151;cursor:pointer;">🐧 QQ / OneBot</button>
+                <button type="button" class="channel-tab-btn active" id="tabBtnWeChat" onclick="window.switchChannelTab('wechat')" style="padding:4px 12px;font-size:12.5px;font-weight:600;border-radius:6px;border:1px solid #d1d5db;background:#0d0d0d;color:#fff;cursor:pointer;">微信 / 企微</button>
+                <button type="button" class="channel-tab-btn" id="tabBtnFeishu" onclick="window.switchChannelTab('feishu')" style="padding:4px 12px;font-size:12.5px;font-weight:600;border-radius:6px;border:1px solid #d1d5db;background:#fff;color:#374151;cursor:pointer;">飞书机器人</button>
+                <button type="button" class="channel-tab-btn" id="tabBtnQQ" onclick="window.switchChannelTab('qq')" style="padding:4px 12px;font-size:12.5px;font-weight:600;border-radius:6px;border:1px solid #d1d5db;background:#fff;color:#374151;cursor:pointer;">QQ / OneBot</button>
               </div>
             </div>
             <div id="channelStatusBadge" style="font-size:11.5px;color:#64748b;">通道协同中心</div>
@@ -895,34 +895,34 @@
             <div style="display:flex;align-items:center;gap:8px;">
               <span id="hostProcessUptime" class="badge secondary" style="font-size:11px;">HAP 运行中</span>
               <button type="button" class="btn secondary" onclick="window.refreshHostView()" style="padding:3px 10px;font-size:12px;">
-                🔄 刷新监控
+                刷新监控
               </button>
             </div>
           </div>
           <div class="card-body" style="padding:16px;">
             <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
               <div class="stat-card" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
-                <div style="font-size:11.5px;color:#64748b;margin-bottom:4px;">💻 操作系统 / 内核</div>
+                <div style="font-size:11.5px;color:#64748b;margin-bottom:4px;">操作系统 / 内核</div>
                 <div id="hostOsText" style="font-size:13.5px;font-weight:600;color:#0f172a;">探测中...</div>
                 <div id="hostArchText" style="font-size:11px;color:#94a3b8;margin-top:2px;">--</div>
               </div>
               <div class="stat-card" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
-                <div style="font-size:11.5px;color:#64748b;margin-bottom:4px;">⚡ 处理器与核心</div>
+                <div style="font-size:11.5px;color:#64748b;margin-bottom:4px;">处理器与核心</div>
                 <div id="hostCpuText" style="font-size:13.5px;font-weight:600;color:#0f172a;">探测中...</div>
                 <div id="hostCpuCoresText" style="font-size:11px;color:#94a3b8;margin-top:2px;">--</div>
               </div>
               <div class="stat-card" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
-                <div style="font-size:11.5px;color:#64748b;margin-bottom:4px;">🧠 物理内存使用</div>
+                <div style="font-size:11.5px;color:#64748b;margin-bottom:4px;">物理内存使用</div>
                 <div id="hostMemText" style="font-size:13.5px;font-weight:600;color:#0f172a;">探测中...</div>
                 <div id="hostMemFreeText" style="font-size:11px;color:#94a3b8;margin-top:2px;">--</div>
               </div>
               <div class="stat-card" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
-                <div style="font-size:11.5px;color:#64748b;margin-bottom:4px;">💾 磁盘存储空间</div>
+                <div style="font-size:11.5px;color:#64748b;margin-bottom:4px;">磁盘存储空间</div>
                 <div id="hostDiskText" style="font-size:13.5px;font-weight:600;color:#0f172a;">探测中...</div>
                 <div id="hostDiskFreeText" style="font-size:11px;color:#94a3b8;margin-top:2px;">--</div>
               </div>
               <div class="stat-card" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
-                <div style="font-size:11.5px;color:#64748b;margin-bottom:4px;">🌐 网络与出口 IP</div>
+                <div style="font-size:11.5px;color:#64748b;margin-bottom:4px;">网络与出口 IP</div>
                 <div id="hostIpText" style="font-size:13.5px;font-weight:600;color:#0f172a;">探测中...</div>
                 <div id="hostIpGeoBadge" style="font-size:11px;color:#94a3b8;margin-top:2px;">--</div>
               </div>
@@ -932,12 +932,12 @@
             <div class="card" style="border:1px dashed #cbd5e1;background:#fafafa;border-radius:10px;padding:14px;">
               <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
                 <div>
-                  <div style="font-weight:700;font-size:13px;color:#1e293b;">🧹 AI 智能磁盘分析与垃圾清理</div>
+                  <div style="font-weight:700;font-size:13px;color:#1e293b;">智能磁盘分析与垃圾清理</div>
                   <div style="font-size:11px;color:#64748b;">扫描系统 npm/yarn/pnpm 缓存、临时构建残余与多余日志，安全释放磁盘</div>
                 </div>
                 <div style="display:flex;gap:8px;">
-                  <button type="button" class="btn secondary" id="scanDiskBtn" onclick="window.handleScanDisk()" style="font-size:11.5px;padding:3px 10px;">🔍 扫描可清理项</button>
-                  <button type="button" class="btn primary" id="cleanDiskBtn" onclick="window.handleCleanDisk()" style="font-size:11.5px;padding:3px 12px;background:#ef4444;display:none;">🚀 一键安全清理</button>
+                  <button type="button" class="btn secondary" id="scanDiskBtn" onclick="window.handleScanDisk()" style="font-size:11.5px;padding:3px 10px;">扫描可清理项</button>
+                  <button type="button" class="btn primary" id="cleanDiskBtn" onclick="window.handleCleanDisk()" style="font-size:11.5px;padding:3px 12px;background:#ef4444;display:none;">一键安全清理</button>
                 </div>
               </div>
               <div id="diskScanResult" style="font-size:12px;color:#64748b;line-height:1.6;padding:8px 0;">点击上方「扫描可清理项」开始安全探测。</div>
@@ -997,11 +997,11 @@
               <!-- 快捷智能动作胶囊 -->
               <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
                 <span style="font-size:11.5px;color:var(--text-secondary);align-self:center;">智能动作:</span>
-                <button type="button" class="quick-ops-chip" onclick="window.triggerServerOpsQuickAction('inspect')">🔍 全盘硬件与负载巡检</button>
-                <button type="button" class="quick-ops-chip" onclick="window.triggerServerOpsQuickAction('upgrade_daemon')">🚀 智能升级与重启 HAP 守护进程</button>
-                <button type="button" class="quick-ops-chip" onclick="window.triggerServerOpsQuickAction('check_services')">📦 排查 Docker 与后台服务</button>
-                <button type="button" class="quick-ops-chip" onclick="window.triggerServerOpsQuickAction('clean_disk')">🧹 清理临时垃圾与释放磁盘</button>
-                <button type="button" class="quick-ops-chip" onclick="window.triggerServerOpsQuickAction('diagnose_logs')">📜 拉取并排查近 50 行运行日志</button>
+                <button type="button" class="quick-ops-chip" onclick="window.triggerServerOpsQuickAction('inspect')">全盘硬件与负载巡检</button>
+                <button type="button" class="quick-ops-chip" onclick="window.triggerServerOpsQuickAction('upgrade_daemon')">升级与重启守护进程</button>
+                <button type="button" class="quick-ops-chip" onclick="window.triggerServerOpsQuickAction('check_services')">排查 Docker 与后台服务</button>
+                <button type="button" class="quick-ops-chip" onclick="window.triggerServerOpsQuickAction('clean_disk')">清理临时垃圾与释放磁盘</button>
+                <button type="button" class="quick-ops-chip" onclick="window.triggerServerOpsQuickAction('diagnose_logs')">排查近 50 行运行日志</button>
               </div>
 
               <!-- 智能运维对话交互框 -->
@@ -1170,7 +1170,7 @@
       <form id="installSkillForm" class="modal-form-wrap">
         <div class="modal-header-row">
           <h2>从 GitHub 安装 Skill</h2>
-          <button type="button" class="btn-close" id="closeInstallSkillModalBtn">✕</button>
+          <button type="button" class="btn-close" id="closeInstallSkillModalBtn"></button>
         </div>
         <div class="form-group">
           <label>GitHub 仓库名或完整 URL *</label>
@@ -1191,7 +1191,7 @@
       <form id="addPluginForm" class="modal-form-wrap">
         <div class="modal-header-row">
           <h2>添加自定义 MCP 插件</h2>
-          <button type="button" class="btn-close" id="closeAddPluginModalBtn">✕</button>
+          <button type="button" class="btn-close" id="closeAddPluginModalBtn"></button>
         </div>
         <div class="form-grid">
           <div class="form-group">
@@ -1227,7 +1227,7 @@
       <form id="providerForm" class="modal-form-wrap">
         <div class="modal-header-row">
           <h2 id="providerDialogTitle">新增服务商</h2>
-          <button type="button" class="btn-close" id="closeProviderDialogBtn">✕</button>
+          <button type="button" class="btn-close" id="closeProviderDialogBtn"></button>
         </div>
 
         <div class="form-group" id="providerPresetRow">
@@ -1302,7 +1302,7 @@
       <form id="modelForm" class="modal-form-wrap">
         <div class="modal-header-row">
           <h2 id="modelDialogTitle">新增模型</h2>
-          <button type="button" class="btn-close" id="closeModelDialogBtn">✕</button>
+          <button type="button" class="btn-close" id="closeModelDialogBtn"></button>
         </div>
 
         <div class="form-group">
@@ -1370,10 +1370,10 @@
       <form id="agentForm" class="modal-form-wrap">
         <div class="modal-header-row">
           <div style="display:flex;align-items:center;gap:8px;">
-            <span id="agentModalEmoji" style="font-size:20px;">🤖</span>
+            <span id="agentModalEmoji" style="font-size:20px;"></span>
             <h2 id="agentModalTitle">编辑智能体配置</h2>
           </div>
-          <button type="button" class="btn-close" id="closeAgentModalBtn">✕</button>
+          <button type="button" class="btn-close" id="closeAgentModalBtn"></button>
         </div>
 
         <input type="hidden" id="agentInputId" name="id" />
@@ -1385,7 +1385,7 @@
           </div>
           <div class="form-group">
             <label>图标 (Emoji)</label>
-            <input id="agentInputEmoji" name="emoji" placeholder="如：💻" style="max-width:80px;" />
+            <input id="agentInputEmoji" name="emoji" placeholder="如：" style="max-width:80px;" />
           </div>
           <div class="form-group full-width">
             <label>主要绑定模型 (Primary Model)</label>
@@ -1423,7 +1423,7 @@
       <form id="projectForm" class="modal-form-wrap">
         <div class="modal-header-row">
           <h2 id="projectDialogTitle">添加项目工程</h2>
-          <button type="button" class="btn-close" id="closeProjectDialogBtn">✕</button>
+          <button type="button" class="btn-close" id="closeProjectDialogBtn"></button>
         </div>
 
         <div class="form-group">
@@ -1451,7 +1451,7 @@
           <div style="display:flex;gap:8px;align-items:center;">
             <button type="button" class="codeblock-btn" id="codeViewerCopyBtn">复制代码</button>
             <button type="button" class="codeblock-btn" id="codeViewerOpenVsCodeBtn">VS Code 打开</button>
-            <button type="button" class="codeblock-btn" id="closeCodeViewerBtn" style="font-size:14px;">✕</button>
+            <button type="button" class="codeblock-btn" id="closeCodeViewerBtn" style="font-size:14px;"></button>
           </div>
         </div>
         <div class="code-viewer-body">
@@ -1473,8 +1473,8 @@
             <h2 id="gitModalTitle">Git 版本协同与变更审查</h2>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
-            <button type="button" class="btn text-btn" id="refreshGitStatusBtn" style="font-size:12px;">🔄 刷新状态</button>
-            <button type="button" class="btn-close" id="closeGitModalBtn">✕</button>
+            <button type="button" class="btn text-btn" id="refreshGitStatusBtn" style="font-size:12px;"> 刷新状态</button>
+            <button type="button" class="btn-close" id="closeGitModalBtn"></button>
           </div>
         </div>
 
@@ -1520,7 +1520,7 @@
                 </div>
               </div>
               <div id="gitInlineDiffContent" class="git-diff-content" style="flex:1;overflow:auto;padding:12px 14px;color:#d4d4d4;font-size:12px;line-height:1.55;">
-                <div class="git-diff-line normal" style="color:#858585;">👈 点击左侧文件，实时审查具体修改的代码差异</div>
+                <div class="git-diff-line normal" style="color:#858585;"> 点击左侧文件，实时审查具体修改的代码差异</div>
               </div>
             </div>
           </div>
@@ -1530,7 +1530,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
               <label style="font-size:12px;font-weight:600;">提交信息 (Commit Message)</label>
               <button type="button" class="btn text-btn" id="aiGenerateCommitBtn" style="font-size:11.5px;padding:2px 6px;color:var(--accent);">
-                ✨ AI 智能生成 Commit 说明
+                 AI 智能生成 Commit 说明
               </button>
             </div>
             <textarea id="gitCommitMessageInput" rows="2" placeholder="输入提交说明，例如: feat: 完善项目树形导航与 Git 提交协同" style="width:100%;padding:6px 10px;border:1px solid var(--border-default);border-radius:var(--radius-sm);font-size:12px;font-family:var(--font-sans);resize:none;"></textarea>
@@ -1563,7 +1563,7 @@
           <div style="display:flex;gap:8px;align-items:center;">
             <button type="button" class="codeblock-btn" id="gitDiffCopyBtn">复制 Diff</button>
             <button type="button" class="codeblock-btn" id="gitDiffOpenVsCodeBtn">VS Code 打开对比</button>
-            <button type="button" class="codeblock-btn" id="closeGitDiffModalBtn" style="font-size:14px;">✕</button>
+            <button type="button" class="codeblock-btn" id="closeGitDiffModalBtn" style="font-size:14px;"></button>
           </div>
         </div>
         <div class="code-viewer-body" style="background:#1e1e1e;">
@@ -1587,7 +1587,7 @@
           <div class="lightbox-tools">
             <button type="button" class="codeblock-btn" id="lightboxCopyBtn">复制图片</button>
             <button type="button" class="codeblock-btn" id="lightboxDownloadBtn">下载原图</button>
-            <button type="button" class="codeblock-btn" id="closeLightboxBtn" style="font-size:14px;">✕</button>
+            <button type="button" class="codeblock-btn" id="closeLightboxBtn" style="font-size:14px;"></button>
           </div>
         </div>
         <div class="lightbox-body">
@@ -1601,7 +1601,7 @@
       <form id="serverForm" class="modal-form-wrap">
         <div class="modal-header-row">
           <h2 id="serverDialogTitle">添加远程服务器</h2>
-          <button type="button" class="btn-close" id="closeServerDialogBtn">✕</button>
+          <button type="button" class="btn-close" id="closeServerDialogBtn"></button>
         </div>
 
         <div class="form-grid">
@@ -1674,10 +1674,10 @@
       <div class="modal-form-wrap" style="max-height:85vh;display:flex;flex-direction:column;">
         <div class="modal-header-row">
           <div>
-            <h2 id="installServerTitle">🚀 正在远程一键部署 HAP Agent 守护进程</h2>
+            <h2 id="installServerTitle"> 正在远程一键部署 HAP Agent 守护进程</h2>
             <p id="installServerSubtitle" style="font-size:12px;color:var(--text-secondary);margin:4px 0 0 0;">目标节点：127.0.0.1</p>
           </div>
-          <button type="button" class="btn-close" id="closeInstallDialogBtn">✕</button>
+          <button type="button" class="btn-close" id="closeInstallDialogBtn"></button>
         </div>
 
         <!-- 进度条 -->
