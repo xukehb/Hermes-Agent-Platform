@@ -126,6 +126,15 @@
             </svg>
             <span>微信 / 企微连接</span>
           </div>
+          
+          <div class="nav" data-view="host" id="navHostBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+              <line x1="8" y1="21" x2="16" y2="21"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+            <span>本机环境与系统桌面</span>
+          </div>
           <div class="nav" data-view="servers" id="navServersBtn">
             <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
@@ -134,6 +143,21 @@
               <line x1="6" y1="18" x2="6.01" y2="18"/>
             </svg>
             <span>远程服务器 & 节点</span>
+          </div>
+          
+          <div class="nav" data-view="schedules" id="navSchedulesBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span>自动化定时任务</span>
+          </div>
+          
+          <div class="nav" data-view="memory" id="navMemoryBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"/>
+              <line x1="9" y1="21" x2="15" y2="21"/>
+            </svg>
+            <span>智能体记忆库</span>
           </div>
           <div class="nav" data-view="logs" id="navLogsBtn">
             <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -710,182 +734,144 @@
       </section>
 
       <!-- 独立视图: 微信 / 企业微信连接 (WeChat / WeCom) -->
+      
+      <!-- 独立视图: 多通道机器人与消息中心 (微信 / 企微 / 飞书 / QQ) -->
       <section id="wechat" class="view">
-        <div class="page-container">
-          <div class="page-header-row">
-            <div>
-              <h1 class="page-title">微信与企业微信远程协同</h1>
-              <p class="page-subtitle">支持个人微信扫码登录、企业微信（WeCom）机器人与自建应用双向对话，随时远程操控智能体</p>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="channel-tabs" style="display:flex;gap:6px;">
+                <button type="button" class="channel-tab-btn active" id="tabBtnWeChat" onclick="window.switchChannelTab('wechat')" style="padding:4px 12px;font-size:12.5px;font-weight:600;border-radius:6px;border:1px solid #d1d5db;background:#0d0d0d;color:#fff;cursor:pointer;">💬 微信 / 企微</button>
+                <button type="button" class="channel-tab-btn" id="tabBtnFeishu" onclick="window.switchChannelTab('feishu')" style="padding:4px 12px;font-size:12.5px;font-weight:600;border-radius:6px;border:1px solid #d1d5db;background:#fff;color:#374151;cursor:pointer;">🦅 飞书机器人</button>
+                <button type="button" class="channel-tab-btn" id="tabBtnQQ" onclick="window.switchChannelTab('qq')" style="padding:4px 12px;font-size:12.5px;font-weight:600;border-radius:6px;border:1px solid #d1d5db;background:#fff;color:#374151;cursor:pointer;">🐧 QQ / OneBot</button>
+              </div>
             </div>
-            <div style="display:flex;gap:8px;">
-              <button class="btn secondary" id="refreshWxQrBtn">同步联系人和群聊</button>
-              <button class="btn primary" id="toggleWxServiceBtn">启动微信服务</button>
-            </div>
+            <div id="channelStatusBadge" style="font-size:11.5px;color:#64748b;">通道协同中心</div>
           </div>
 
-          <!-- 状态横幅卡片 -->
-          <div class="card" style="margin-bottom:20px;background:linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);border-color:#bbf7d0;">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
-              <div style="display:flex;align-items:center;gap:14px;">
-                <div style="width:42px;height:42px;border-radius:50%;background:#07c160;color:#ffffff;display:grid;place-items:center;flex-shrink:0;">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm7 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
-                    <path d="M12 2C6.48 2 2 6.03 2 11c0 2.87 1.5 5.42 3.84 7.04L5 22l4.22-1.41C10.12 20.84 11.04 21 12 21c5.52 0 10-4.03 10-9s-4.48-10-10-10z"/>
-                  </svg>
-                </div>
-                <div>
-                  <div style="display:flex;align-items:center;gap:8px;">
-                    <strong id="wxDisplayName" style="font-size:15px;">微信未连接</strong>
-                    <span id="wxStatusBadge" class="badge neutral">未运行</span>
-                  </div>
-                  <div id="wxStatusDescription" style="font-size:12.5px;color:var(--text-secondary);margin-top:2px;">
-                    启动服务后，可在手机微信中直接给智能体发送需求与指令
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div style="display:grid;grid-template-columns:320px 1fr;gap:16px;margin-bottom:20px;">
-            <!-- 扫码登录卡片 -->
-            <div class="card" style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:20px;">
-              <div class="card-title" style="margin-bottom:4px;">个人微信扫码登录</div>
-              <div class="card-subtitle" style="margin-bottom:8px;">使用手机微信扫描下方二维码完成授权绑定</div>
-              <div id="wxQrContainer" style="min-height:220px;width:100%;max-width:230px;background:#ffffff;border:1px dashed #cbd5e1;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:10px 0;padding:12px;box-sizing:border-box;transition:all 0.2s ease;">
-                <div id="wxQrPlaceholder" style="font-size:12.5px;color:var(--text-muted);padding:16px;line-height:1.5;">
-                  启动微信服务后<br/>将在此生成扫码二维码
-                </div>
-                <div id="wxQrBox" style="display:none;width:100%;text-align:center;"></div>
-              </div>
-              <div id="wxConfirmActionBox" style="margin-top:6px;margin-bottom:6px;display:none;">
-                <button type="button" class="btn secondary" id="confirmWxLoginBtn" style="font-size:12px;padding:6px 14px;color:#15803d;border-color:#86efac;background:#f0fdf4;font-weight:600;">
-                  ✓ 检查真实微信登录状态
-                </button>
-              </div>
-              <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">
-                登录凭据将自动保存至本地，下次启动无需重复扫码
-              </div>
-            </div>
-
-            <!-- 配置表单 -->
-            <div class="card">
-              <div class="card-header">
-                <div class="card-title-wrap">
-                  <span class="card-title">微信通道参数配置</span>
-                  <span class="card-subtitle">支持切换个人微信、企业微信或公众号模式</span>
-                </div>
-              </div>
-              <form id="wxConfigForm" class="card-body" style="display:flex;flex-direction:column;gap:14px;">
-                <div class="form-grid">
+          <!-- 子通道 1: 微信/企微 -->
+          <div id="channelPaneWeChat" class="channel-pane" style="padding:16px;">
+            <div class="wechat-hub-layout" style="display:grid;grid-template-columns:320px 1fr;gap:16px;min-height:480px;">
+              <!-- 微信配置与状态面板 -->
+              <div class="channel-sidebar" style="display:flex;flex-direction:column;gap:12px;">
+                <form id="wxConfigForm" style="display:flex;flex-direction:column;gap:10px;">
                   <div class="form-group">
-                    <label style="font-weight:600;font-size:12.5px;">接入模式 (Mode)</label>
-                    <select id="wxModeSelect" name="mode">
-                      <option value="personal">个人微信扫码模式 (免服务器 · 手机直扫)</option>
-                      <option value="wecom">企业微信 WeCom 模式 (官方推荐 · 0封号)</option>
-                      <option value="official_account">微信公众号模式 (服务号/订阅号)</option>
+                    <label style="font-size:12px;font-weight:600;">运行模式</label>
+                    <select id="wxModeSelect" style="padding:6px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;">
+                      <option value="padlocal">PadLocal (稳定协议)</option>
+                      <option value="web">Web 网页协议 (扫码免 Key)</option>
+                      <option value="mock">开发模拟模式</option>
                     </select>
                   </div>
+                  <div class="form-group" id="wxTokenGroup">
+                    <label style="font-size:12px;font-weight:600;">PadLocal Token / Key</label>
+                    <input type="password" id="wxTokenInput" placeholder="输入 Token" style="padding:6px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" />
+                  </div>
+                  <div style="display:flex;gap:8px;">
+                    <button type="submit" class="btn secondary" style="flex:1;font-size:12px;">保存配置</button>
+                    <button type="button" class="btn primary" id="toggleWxServiceBtn" style="flex:1;font-size:12px;">启动微信服务</button>
+                  </div>
+                </form>
+                <!-- 二维码展示区 -->
+                <div id="wxQrContainer" style="text-align:center;padding:12px;border:1px dashed #cbd5e1;border-radius:8px;background:#f8fafc;display:none;">
+                  <div style="font-size:12px;font-weight:600;margin-bottom:6px;">请使用微信扫码登录</div>
+                  <img id="wxQrImg" src="" style="width:160px;height:160px;margin:0 auto;display:block;" />
+                  <div style="display:flex;gap:6px;justify-content:center;margin-top:8px;">
+                    <button type="button" class="btn secondary" id="refreshWxQrBtn" style="font-size:11px;padding:2px 8px;">刷新二维码</button>
+                    <button type="button" class="btn primary" id="confirmWxLoginBtn" style="font-size:11px;padding:2px 8px;">我已在手机确认</button>
+                  </div>
+                </div>
+              </div>
+              <!-- 微信联系人与消息流 -->
+              <div class="channel-main" style="display:flex;flex-direction:column;gap:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <span style="font-weight:600;font-size:13px;">微信联系人与消息路由</span>
+                  <button type="button" class="btn secondary" id="openAddWxContactDialogBtn" style="font-size:11.5px;padding:2px 8px;">+ 添加白名单规则</button>
+                </div>
+                <div id="wxContactsList" style="max-height:160px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:6px;font-size:12px;"></div>
+                <div style="font-weight:600;font-size:13px;margin-top:4px;">实时消息交互流</div>
+                <div id="wxMsgFeed" style="flex:1;min-height:180px;max-height:220px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px;background:#fafafa;font-size:12px;"></div>
+                <div style="display:flex;gap:8px;">
+                  <input id="wxTestMessageInput" placeholder="向选中联系人发送测试消息..." style="flex:1;padding:6px 10px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" />
+                  <button type="button" class="btn primary" id="sendWxTestMsgBtn" style="font-size:12px;">发送</button>
+                </div>
+              </div>
+            </div>
+          </div>
 
+          <!-- 子通道 2: 飞书机器人 -->
+          <div id="channelPaneFeishu" class="channel-pane" style="display:none;padding:16px;">
+            <div class="wechat-hub-layout" style="display:grid;grid-template-columns:320px 1fr;gap:16px;min-height:480px;">
+              <div class="channel-sidebar" style="display:flex;flex-direction:column;gap:12px;">
+                <form id="feishuConfigForm" style="display:flex;flex-direction:column;gap:10px;">
                   <div class="form-group">
-                    <label style="font-weight:600;font-size:12.5px;">默认处理智能体 (Default Agent)</label>
-                    <select id="wxAgentSelect" name="defaultAgent">
-                      <option value="coder">coder (核心代码编程与修复专家)</option>
-                      <option value="researcher">researcher (调研与检索智能体)</option>
-                      <option value="reviewer">reviewer (代码审查与质量控制)</option>
-                      <option value="ops">ops (运维与部署专家)</option>
-                    </select>
+                    <label style="font-size:12px;font-weight:600;">飞书 App ID (cli_xxx)</label>
+                    <input id="feishuAppIdInput" placeholder="cli_a1b2c3..." style="padding:6px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" required />
                   </div>
-
-                  <div class="form-group full-width">
-                    <label style="font-weight:600;font-size:12.5px;">默认绑定的工作区工程 (Workspace)</label>
-                    <div style="display:flex;gap:8px;">
-                      <input id="wxWorkspaceInput" name="workspace" placeholder="选择或填入智能体默认操作的项目根目录绝对路径" style="flex:1;" />
-                      <select id="wxWorkspacePickerSelect" class="workspace-quick-select" style="max-width:210px;">
-                        <option value="">-- 从项目库快捷点选 --</option>
-                      </select>
-                    </div>
+                  <div class="form-group">
+                    <label style="font-size:12px;font-weight:600;">飞书 App Secret</label>
+                    <input type="password" id="feishuAppSecretInput" placeholder="输入密钥" style="padding:6px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" required />
                   </div>
-                </div>
-
-                <!-- 企微专用字段段落 -->
-                <div id="wxWeComFields" style="display:none;flex-direction:column;gap:12px;padding:12px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;">
-                  <div style="font-size:12px;font-weight:700;color:var(--text-main);">企业微信 WeCom 参数设置</div>
-                  <div class="form-grid">
-                    <div class="form-group">
-                      <label style="font-size:12px;">企业 CorpID</label>
-                      <input id="wxCorpIdInput" name="wecomCorpId" placeholder="例如：ww1234567890abcdef" />
-                    </div>
-                    <div class="form-group">
-                      <label style="font-size:12px;">应用 AgentID</label>
-                      <input type="number" id="wxAgentIdInput" name="wecomAgentId" placeholder="例如：1000002" />
-                    </div>
+                  <div class="form-group">
+                    <label style="font-size:12px;font-weight:600;">Encrypt Key (可选加密密钥)</label>
+                    <input type="password" id="feishuEncryptKeyInput" placeholder="留空则不加密" style="padding:6px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" />
                   </div>
-                  <div class="form-group full-width">
-                    <label style="font-size:12px;">应用 Secret / 机器人 Webhook</label>
-                    <input id="wxSecretInput" name="wecomSecret" placeholder="填写企业微信应用 Secret 或群机器人 Webhook 地址" />
+                  <div class="form-group">
+                    <label style="font-size:12px;font-weight:600;">Verification Token (事件校验码)</label>
+                    <input id="feishuVerificationTokenInput" placeholder="输入 Verification Token" style="padding:6px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" />
                   </div>
-                </div>
-
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
-                  <button type="submit" class="btn primary" id="saveWxConfigBtn">保存配置</button>
-                </div>
-              </form>
-            </div>
-          </div>
-
-          <!-- 微信实时交互与消息监控面板 (WeChat Live Message & Control Panel) -->
-          <div class="card" style="margin-bottom:20px;">
-            <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
-              <div class="card-title-wrap">
-                <span class="card-title">📡 微信消息实时监控与交互测试面板</span>
-                <span class="card-subtitle">实时显示微信端进出的用户消息、智能体分析思考过程，并支持在界面中直接下发测试</span>
+                  <div style="display:flex;gap:8px;">
+                    <button type="submit" class="btn secondary" style="flex:1;font-size:12px;">保存配置</button>
+                    <button type="button" class="btn primary" id="toggleFeishuServiceBtn" style="flex:1;font-size:12px;">启动飞书服务</button>
+                  </div>
+                </form>
               </div>
-              <div style="display:flex;gap:8px;">
-                <button type="button" class="btn text-btn" id="clearWxMsgFeedBtn" style="font-size:12px;">清空面板</button>
-              </div>
-            </div>
-            <div class="card-body" style="padding:0;">
-              <!-- 消息流容器 -->
-              <div id="wxMessageFeed" style="min-height:220px;max-height:380px;overflow-y:auto;padding:16px;background:#f8fafc;display:flex;flex-direction:column;gap:12px;">
-                <div class="empty-feed" id="wxEmptyFeedHint" style="text-align:center;color:var(--text-muted);padding:32px 0;font-size:12.5px;">
-                  暂无微信消息。启动微信服务后，在微信中发送指令，或在下方输入模拟指令即可在此实时呈现。
+              <div class="channel-main" style="display:flex;flex-direction:column;gap:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <span style="font-weight:600;font-size:13px;">飞书联系人与群组路由</span>
+                  <button type="button" class="btn secondary" id="openAddFeishuContactDialogBtn" style="font-size:11.5px;padding:2px 8px;">+ 添加飞书规则</button>
                 </div>
-              </div>
-
-              <!-- 快捷模拟测试输入条 -->
-              <div style="display:flex;gap:8px;padding:12px 16px;background:#ffffff;border-top:1px solid var(--border-default);align-items:center;">
-                <div style="font-size:12px;font-weight:600;color:var(--text-secondary);white-space:nowrap;">模拟微信发送：</div>
-                <input id="wxTestMessageInput" placeholder="输入测试指令（例如：帮我审查当前代码工程的潜在缺陷）..." style="flex:1;font-size:13px;padding:8px 12px;border:1px solid var(--border-default);border-radius:6px;outline:none;" />
-                <button type="button" class="btn primary" id="sendWxTestMsgBtn" style="font-size:12.5px;padding:8px 16px;white-space:nowrap;">
-                  🚀 模拟下发
-                </button>
+                <div id="feishuContactsList" style="max-height:160px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:6px;font-size:12px;"></div>
+                <div style="font-weight:600;font-size:13px;margin-top:4px;">飞书实时消息流</div>
+                <div id="feishuMsgFeed" style="flex:1;min-height:180px;max-height:220px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px;background:#fafafa;font-size:12px;"></div>
+                <div style="display:flex;gap:8px;">
+                  <input id="feishuTestMessageInput" placeholder="向选中的飞书群或用户发送测试消息..." style="flex:1;padding:6px 10px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" />
+                  <button type="button" class="btn primary" id="sendFeishuTestMsgBtn" style="font-size:12px;">发送</button>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- 快速指令指南 -->
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title-wrap">
-                <span class="card-title">💡 微信端协同指令指南</span>
-                <span class="card-subtitle">通过微信向智能体直接发送指令完成开发与代码审计</span>
+          <!-- 子通道 3: QQ 机器人 (OneBot) -->
+          <div id="channelPaneQQ" class="channel-pane" style="display:none;padding:16px;">
+            <div class="wechat-hub-layout" style="display:grid;grid-template-columns:320px 1fr;gap:16px;min-height:480px;">
+              <div class="channel-sidebar" style="display:flex;flex-direction:column;gap:12px;">
+                <form id="qqConfigForm" style="display:flex;flex-direction:column;gap:10px;">
+                  <div class="form-group">
+                    <label style="font-size:12px;font-weight:600;">OneBot / NapCat 终结点 (HTTP/WS)</label>
+                    <input id="qqEndpointInput" placeholder="http://127.0.0.1:3000 或 ws://..." value="http://127.0.0.1:3000" style="padding:6px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" required />
+                  </div>
+                  <div class="form-group">
+                    <label style="font-size:12px;font-weight:600;">Access Token (访问令牌)</label>
+                    <input type="password" id="qqTokenInput" placeholder="OneBot 鉴权 Token" style="padding:6px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" />
+                  </div>
+                  <div style="display:flex;gap:8px;">
+                    <button type="submit" class="btn secondary" style="flex:1;font-size:12px;">保存配置</button>
+                    <button type="button" class="btn primary" id="toggleQQServiceBtn" style="flex:1;font-size:12px;">启动 QQ 服务</button>
+                  </div>
+                </form>
               </div>
-            </div>
-            <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-              <div style="padding:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-main);">
-                <div style="font-weight:700;font-size:13px;margin-bottom:4px;">💬 群聊与私聊派发</div>
-                <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">
-                  私聊：直接发送 <code>“帮我写一个快速排序算法并输出单测”</code><br/>
-                  群聊：<code>@hap @coder 请审查今天提交的 PR 并定位性能瓶颈</code>
+              <div class="channel-main" style="display:flex;flex-direction:column;gap:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <span style="font-weight:600;font-size:13px;">QQ 好友与群组路由</span>
+                  <button type="button" class="btn secondary" id="openAddQQContactDialogBtn" style="font-size:11.5px;padding:2px 8px;">+ 添加 QQ 规则</button>
                 </div>
-              </div>
-
-              <div style="padding:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-main);">
-                <div style="font-weight:700;font-size:13px;margin-bottom:4px;">📱 手机端状态控制</div>
-                <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">
-                  <code>/status</code>：查看当前会话与 Token 消耗<br/>
-                  <code>/stop</code>：紧急中止在跑任务<br/>
-                  <code>/new</code>：新建并清空当前上下文
+                <div id="qqContactsList" style="max-height:160px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:6px;font-size:12px;"></div>
+                <div style="font-weight:600;font-size:13px;margin-top:4px;">QQ 实时消息流</div>
+                <div id="qqMsgFeed" style="flex:1;min-height:180px;max-height:220px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px;background:#fafafa;font-size:12px;"></div>
+                <div style="display:flex;gap:8px;">
+                  <input id="qqTestMessageInput" placeholder="向选中的 QQ 好友或群发送测试消息..." style="flex:1;padding:6px 10px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;" />
+                  <button type="button" class="btn primary" id="sendQQTestMsgBtn" style="font-size:12px;">发送</button>
                 </div>
               </div>
             </div>
@@ -894,6 +880,67 @@
       </section>
 
       <!-- 独立视图: 远程服务器与节点管理 (Remote Servers) -->
+      
+      <!-- 独立视图: 本机环境与系统桌面 (Host Desktop & Status) -->
+      <section id="host" class="view">
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="agent-avatar-badge" style="width:28px;height:28px;border-radius:50%;background:#0d0d0d;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;">HOST</div>
+              <div>
+                <div style="font-weight:700;font-size:14px;color:var(--text-main);">本机智能系统监控与运维桌面</div>
+                <div style="font-size:11.5px;color:var(--text-muted);">实时掌控当前宿主机硬件负载、公网 IP 地理定位、安全磁盘清理与后台服务健康</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span id="hostProcessUptime" class="badge secondary" style="font-size:11px;">HAP 运行中</span>
+              <button type="button" class="btn secondary" onclick="window.refreshHostView()" style="padding:3px 10px;font-size:12px;">
+                🔄 刷新监控
+              </button>
+            </div>
+          </div>
+          <div class="card-body" style="padding:16px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
+              <div class="stat-card" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
+                <div style="font-size:11.5px;color:#64748b;margin-bottom:4px;">💻 操作系统 / 内核</div>
+                <div id="hostOsText" style="font-size:13.5px;font-weight:600;color:#0f172a;">探测中...</div>
+                <div id="hostArchText" style="font-size:11px;color:#94a3b8;margin-top:2px;">--</div>
+              </div>
+              <div class="stat-card" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
+                <div style="font-size:11.5px;color:#64748b;margin-bottom:4px;">⚡ 处理器与核心</div>
+                <div id="hostCpuText" style="font-size:13.5px;font-weight:600;color:#0f172a;">探测中...</div>
+                <div id="hostCpuCoresText" style="font-size:11px;color:#94a3b8;margin-top:2px;">--</div>
+              </div>
+              <div class="stat-card" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
+                <div style="font-size:11.5px;color:#64748b;margin-bottom:4px;">🧠 物理内存使用</div>
+                <div id="hostMemText" style="font-size:13.5px;font-weight:600;color:#0f172a;">探测中...</div>
+                <div id="hostMemFreeText" style="font-size:11px;color:#94a3b8;margin-top:2px;">--</div>
+              </div>
+              <div class="stat-card" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
+                <div style="font-size:11.5px;color:#64748b;margin-bottom:4px;">🌐 网络与出口 IP</div>
+                <div id="hostIpText" style="font-size:13.5px;font-weight:600;color:#0f172a;">探测中...</div>
+                <div id="hostIpGeoBadge" style="font-size:11px;color:#94a3b8;margin-top:2px;">--</div>
+              </div>
+            </div>
+
+            <!-- AI 智能磁盘分析与安全清理 -->
+            <div class="card" style="border:1px dashed #cbd5e1;background:#fafafa;border-radius:10px;padding:14px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                <div>
+                  <div style="font-weight:700;font-size:13px;color:#1e293b;">🧹 AI 智能磁盘分析与垃圾清理</div>
+                  <div style="font-size:11px;color:#64748b;">扫描系统 npm/yarn/pnpm 缓存、临时构建残余与多余日志，安全释放磁盘</div>
+                </div>
+                <div style="display:flex;gap:8px;">
+                  <button type="button" class="btn secondary" id="scanDiskBtn" onclick="window.handleScanDisk()" style="font-size:11.5px;padding:3px 10px;">🔍 扫描可清理项</button>
+                  <button type="button" class="btn primary" id="cleanDiskBtn" onclick="window.handleCleanDisk()" style="font-size:11.5px;padding:3px 12px;background:#ef4444;display:none;">🚀 一键安全清理</button>
+                </div>
+              </div>
+              <div id="diskScanResult" style="font-size:12px;color:#64748b;line-height:1.6;padding:8px 0;">点击上方「扫描可清理项」开始安全探测。</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="servers" class="view">
         <div class="page-container">
           <div class="page-header-row">
@@ -1035,6 +1082,61 @@
       </section>
 
       <!-- 独立视图 10: 运行日志 (Logs) -->
+      
+      <!-- 独立视图: 自动化定时任务 (Schedules) -->
+      <section id="schedules" class="view">
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <div>
+              <div style="font-weight:700;font-size:14px;">自动化定时任务与 Cron 编排</div>
+              <div style="font-size:11.5px;color:var(--text-muted);">设定周期性任务，由智能体自动拉取代码、生成每日复盘、健康巡检或发送多渠道通知</div>
+            </div>
+            <button type="button" class="btn primary" onclick="window.openAddScheduleDialog()">+ 新建定时任务</button>
+          </div>
+          <div class="card-body" style="padding:16px;">
+            <div id="schedulesGrid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:12px;margin-bottom:16px;">
+              <!-- 动态渲染定时任务列表 -->
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span style="font-weight:700;font-size:13.5px;">最近定时任务执行记录</span>
+          </div>
+          <div class="card-body" style="padding:14px;">
+            <div id="scheduleHistoryList" style="font-size:12.5px;color:var(--text-secondary);max-height:240px;overflow-y:auto;">
+              暂无执行记录
+            </div>
+          </div>
+        </div>
+      </section>
+
+      
+      <!-- 独立视图: 智能体记忆库 (Memory) -->
+      <section id="memory" class="view">
+        <div class="card">
+          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <div>
+              <div style="font-weight:700;font-size:14px;">智能体持久化多层记忆库</div>
+              <div style="font-size:11.5px;color:var(--text-muted);">跨会话沉淀用户开发习惯、架构约束、工程规范与重要偏好</div>
+            </div>
+            <button type="button" class="btn primary" onclick="window.openAddMemoryDialog()">+ 添加记忆条目</button>
+          </div>
+          <div class="card-body" style="padding:16px;">
+            <div style="margin-bottom:12px;display:flex;gap:8px;">
+              <input id="memorySearchInput" placeholder="按关键字搜索记忆条目..." style="flex:1;padding:6px 12px;font-size:12.5px;border:1px solid var(--border-default);border-radius:var(--radius-sm);" />
+              <select id="memoryAgentFilter" style="padding:6px 10px;font-size:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);">
+                <option value="">全部智能体</option>
+              </select>
+            </div>
+            <div id="memoryList" style="display:flex;flex-direction:column;gap:8px;">
+              <!-- 动态渲染记忆卡片 -->
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="logs" class="view">
         <div class="page-container">
           <div class="page-header-row">

@@ -4002,3 +4002,204 @@ $('refreshServersBtn')?.addEventListener('click', async () => {
 
 // 初始化加载
 refresh().catch((error) => showToast('初始化加载失败：' + error.message, 'error'));
+
+
+// ============================================================================
+// 1. 多通道通信中心切换 (微信 / 飞书 / QQ)
+// ============================================================================
+window.switchChannelTab = (tab) => {
+  ['WeChat', 'Feishu', 'QQ'].forEach(t => {
+    const pane = document.getElementById('channelPane' + t);
+    const btn = document.getElementById('tabBtn' + t);
+    if (pane) pane.style.display = t.toLowerCase() === tab.toLowerCase() ? 'block' : 'none';
+    if (btn) {
+      if (t.toLowerCase() === tab.toLowerCase()) {
+        btn.style.background = '#0d0d0d';
+        btn.style.color = '#ffffff';
+      } else {
+        btn.style.background = '#ffffff';
+        btn.style.color = '#374151';
+      }
+    }
+  });
+  if (tab === 'feishu') renderFeishuView();
+  else if (tab === 'qq') renderQQView();
+  else renderWeChatView();
+};
+
+// ============================================================================
+// 2. 飞书机器人通道逻辑 (Feishu Channel)
+// ============================================================================
+async function renderFeishuView() {
+  try {
+    const cfg = await window.hap.getFeishuConfig();
+    if ($('feishuAppIdInput')) $('feishuAppIdInput').value = cfg.appId || '';
+    if ($('feishuAppSecretInput')) $('feishuAppSecretInput').value = cfg.appSecret || '';
+    if ($('feishuEncryptKeyInput')) $('feishuEncryptKeyInput').value = cfg.encryptKey || '';
+    if ($('feishuVerificationTokenInput')) $('feishuVerificationTokenInput').value = cfg.verificationToken || '';
+    const btn = $('toggleFeishuServiceBtn');
+    if (btn) {
+      btn.textContent = cfg.running ? '停止飞书服务' : '启动飞书服务';
+      btn.className = cfg.running ? 'btn danger' : 'btn primary';
+    }
+  } catch (err) {
+    console.error('获取飞书配置异常:', err);
+  }
+}
+
+$('feishuConfigForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    await window.hap.saveFeishuConfig({
+      appId: $('feishuAppIdInput')?.value.trim() || '',
+      appSecret: $('feishuAppSecretInput')?.value.trim() || '',
+      encryptKey: $('feishuEncryptKeyInput')?.value.trim() || '',
+      verificationToken: $('feishuVerificationTokenInput')?.value.trim() || '',
+    });
+    showToast('飞书配置已成功保存！', 'success');
+  } catch (err) {
+    showToast('保存飞书配置失败: ' + err.message, 'error');
+  }
+});
+
+$('toggleFeishuServiceBtn')?.addEventListener('click', async () => {
+  const btn = $('toggleFeishuServiceBtn');
+  const isRunning = btn && btn.textContent.includes('停止');
+  try {
+    if (isRunning) {
+      await window.hap.stopFeishuService();
+      showToast('飞书服务已停止', 'info');
+    } else {
+      await window.hap.startFeishuService();
+      showToast('飞书服务已成功启动！', 'success');
+    }
+    await renderFeishuView();
+  } catch (err) {
+    showToast('切换飞书服务状态失败: ' + err.message, 'error');
+  }
+});
+
+// ============================================================================
+// 3. QQ / OneBot 机器人通道逻辑 (QQ Channel)
+// ============================================================================
+async function renderQQView() {
+  try {
+    const cfg = await window.hap.getQQConfig();
+    if ($('qqEndpointInput')) $('qqEndpointInput').value = cfg.endpoint || 'http://127.0.0.1:3000';
+    if ($('qqTokenInput')) $('qqTokenInput').value = cfg.token || '';
+    const btn = $('toggleQQServiceBtn');
+    if (btn) {
+      btn.textContent = cfg.running ? '停止 QQ 服务' : '启动 QQ 服务';
+      btn.className = cfg.running ? 'btn danger' : 'btn primary';
+    }
+  } catch (err) {
+    console.error('获取 QQ 配置异常:', err);
+  }
+}
+
+$('qqConfigForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    await window.hap.saveQQConfig({
+      endpoint: $('qqEndpointInput')?.value.trim() || 'http://127.0.0.1:3000',
+      token: $('qqTokenInput')?.value.trim() || '',
+    });
+    showToast('QQ / OneBot 配置已成功保存！', 'success');
+  } catch (err) {
+    showToast('保存 QQ 配置失败: ' + err.message, 'error');
+  }
+});
+
+$('toggleQQServiceBtn')?.addEventListener('click', async () => {
+  const btn = $('toggleQQServiceBtn');
+  const isRunning = btn && btn.textContent.includes('停止');
+  try {
+    if (isRunning) {
+      await window.hap.stopQQService();
+      showToast('QQ 服务已停止', 'info');
+    } else {
+      await window.hap.startQQService();
+      showToast('QQ 服务已成功启动！', 'success');
+    }
+    await renderQQView();
+  } catch (err) {
+    showToast('切换 QQ 服务状态失败: ' + err.message, 'error');
+  }
+});
+
+// ============================================================================
+// 4. 本机系统监控与智能桌面 (Host Desktop & Status)
+// ============================================================================
+function fmtHostBytes(bytes) {
+  if (!bytes || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+window.refreshHostView = async () => {
+  try {
+    const info = await window.hap.getServerInfo();
+    if ($('hostOsText')) $('hostOsText').textContent = `${info.os.platform} (${info.os.release})`;
+    if ($('hostArchText')) $('hostArchText').textContent = `架构: ${info.os.arch} / 主机: ${info.os.hostname}`;
+    if ($('hostCpuText')) $('hostCpuText').textContent = info.cpu.model || 'CPU 核心';
+    if ($('hostCpuCoresText')) $('hostCpuCoresText').textContent = `核心数: ${info.cpu.cores} 核`;
+    if ($('hostMemText')) $('hostMemText').textContent = `${fmtHostBytes(info.memory.used)} / ${fmtHostBytes(info.memory.total)}`;
+    if ($('hostMemFreeText')) $('hostMemFreeText').textContent = `空闲: ${fmtHostBytes(info.memory.free)} (${info.memory.usagePercent}% 已用)`;
+    if ($('hostProcessUptime')) $('hostProcessUptime').textContent = `运行时间: ${Math.floor(info.uptime / 60)} 分钟`;
+
+    try {
+      const geo = await window.hap.getIpGeoInfo();
+      if ($('hostIpText')) $('hostIpText').textContent = geo.ip || '127.0.0.1';
+      if ($('hostIpGeoBadge')) $('hostIpGeoBadge').textContent = `${geo.city || ''} ${geo.country || ''} (${geo.isp || '本地网络'})`;
+    } catch(e) {}
+  } catch (err) {
+    console.error('刷新宿主机监控失败:', err);
+  }
+};
+
+window.handleScanDisk = async () => {
+  const resultEl = $('diskScanResult');
+  const cleanBtn = $('cleanDiskBtn');
+  if (resultEl) resultEl.innerHTML = '⏳ 正在扫描系统临时构建残余与缓存...';
+  try {
+    const res = await window.hap.scanDiskCleanable();
+    if (resultEl) {
+      resultEl.innerHTML = `
+        <div style="color:#16a34a;font-weight:600;margin-bottom:4px;">✓ 扫描完成！共发现可清理项：<strong>${fmtHostBytes(res.totalCleanableBytes)}</strong></div>
+        <div style="font-size:11.5px;color:#64748b;">包含 npm/yarn/pnpm 缓存、临时编译产物与运行日志。</div>
+      `;
+    }
+    if (cleanBtn && res.totalCleanableBytes > 0) cleanBtn.style.display = 'inline-block';
+  } catch (err) {
+    if (resultEl) resultEl.textContent = '扫描异常: ' + err.message;
+  }
+};
+
+window.handleCleanDisk = async () => {
+  const resultEl = $('diskScanResult');
+  const cleanBtn = $('cleanDiskBtn');
+  if (resultEl) resultEl.innerHTML = '⏳ 正在执行安全磁盘清理...';
+  try {
+    const res = await window.hap.executeDiskCleanup();
+    if (resultEl) {
+      resultEl.innerHTML = `<div style="color:#16a34a;font-weight:600;">✓ 清理成功！已释放 <strong>${fmtHostBytes(res.cleanedBytes)}</strong> 磁盘空间。</div>`;
+    }
+    if (cleanBtn) cleanBtn.style.display = 'none';
+    showToast('磁盘清理完成！', 'success');
+  } catch (err) {
+    if (resultEl) resultEl.textContent = '清理异常: ' + err.message;
+  }
+};
+
+// ============================================================================
+// 5. 导航切换监听补充 (Host / Schedules / Memory)
+// ============================================================================
+document.addEventListener('click', (e) => {
+  const navItem = e.target.closest('.nav');
+  if (!navItem) return;
+  const view = navItem.getAttribute('data-view');
+  if (view === 'host') window.refreshHostView();
+  else if (view === 'wechat') window.switchChannelTab('wechat');
+});
