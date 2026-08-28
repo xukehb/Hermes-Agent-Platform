@@ -5025,10 +5025,64 @@ window.removeModelFromDialog = (index) => {
 };
 
 window.fetchAndSyncModelsForProvider = async (providerId) => {
-  openProviderDialog(providerId);
-  setTimeout(() => $('fetchRemoteModelsInDialogBtn')?.click(), 100);
-};
+  showToast(`正在从服务商 [${providerId}] 获取模型列表...`, 'info');
+  try {
+    const res = await window.hap.fetchProviderModels(providerId);
+    if (!res.ok || !res.models || res.models.length === 0) {
+      showToast(`获取失败：${res.error || '未获取到模型，请检查服务商 API Key 与 Base URL'}`, 'error');
+      return;
+    }
 
+    const dialog = $('quickModelSyncModal');
+    if (!dialog) return;
+
+    $('quickModelSyncTitle').textContent = `从 [${providerId}] 获取到 ${res.models.length} 个模型`;
+    const listEl = $('quickModelSyncList');
+    listEl.innerHTML = res.models.map((name) => `
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;font-size:12.5px;cursor:pointer;transition:background 0.1s;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input type="checkbox" class="quick-model-cb" data-model="${esc(name)}" checked style="width:15px;height:15px;" />
+          <strong style="color:#0f172a;">${esc(name)}</strong>
+        </div>
+        <span class="prop-chip" style="font-size:11px;color:#0284c7;background:#f0f9ff;">${esc(name.split('/').pop())}</span>
+      </label>
+    `).join('');
+
+    $('quickModelSelectAll').checked = true;
+    $('quickModelSelectAll').onchange = (e) => {
+      listEl.querySelectorAll('.quick-model-cb').forEach(cb => cb.checked = e.target.checked);
+    };
+
+    $('confirmQuickModelSyncBtn').onclick = async () => {
+      const selectedCbs = [...listEl.querySelectorAll('.quick-model-cb:checked')];
+      if (selectedCbs.length === 0) {
+        showToast('请至少勾选一个要导入的模型', 'warning');
+        return;
+      }
+      dialog.close();
+      showToast(`正在导入 ${selectedCbs.length} 个模型...`, 'info');
+      for (const cb of selectedCbs) {
+        const modelName = cb.dataset.model;
+        const alias = modelName.split('/').pop() || modelName;
+        await window.hap.upsertModel({
+          alias,
+          provider: providerId,
+          model: modelName,
+          contextWindow: 64000,
+        }).catch(() => {});
+      }
+      showToast(`🎉 成功从 ${providerId} 导入并生效 ${selectedCbs.length} 个模型！`, 'success');
+      await refresh();
+    };
+
+    $('closeQuickModelSyncBtn').onclick = () => dialog.close();
+    $('cancelQuickModelSyncBtn').onclick = () => dialog.close();
+
+    dialog.showModal();
+  } catch (err) {
+    showToast(`获取模型异常：${err.message}`, 'error');
+  }
+};
 // 弹窗内部拉取模型
 $('fetchRemoteModelsInDialogBtn')?.addEventListener('click', async () => {
   const id = $('providerInputId')?.value.trim();
