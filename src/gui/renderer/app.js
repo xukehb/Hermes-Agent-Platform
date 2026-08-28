@@ -1693,46 +1693,61 @@ function renderPermissions() {
     autoApproveTools: ['*'],
   };
 
+  // 1. 渲染独立视图中的卡片
+  window.selectPermissionMode?.(perm.mode || 'full-access', false);
+  if ($('permAllowShell')) $('permAllowShell').checked = !!perm.allowShell;
+  if ($('permAllowFsWrite')) $('permAllowFsWrite').checked = !!perm.allowFsWrite;
+  if ($('permAllowNetwork')) $('permAllowNetwork').checked = !!perm.allowNetwork;
+  if ($('permAllowSubagent')) $('permAllowSubagent').checked = !!perm.allowSpawnSubagent;
+
+  // 2. 渲染设置中心中的容器
   const container = $('permissionsContainer');
   if (container) {
     container.innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:14px;">
-        <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;">
-          <div id="setModeFullAccess" class="card ${perm.mode === 'full-access' ? 'active' : ''}" style="cursor:pointer;padding:12px;border:1.5px solid ${perm.mode === 'full-access' ? 'var(--primary)' : 'var(--border-default)'};border-radius:8px;background:${perm.mode === 'full-access' ? '#f0f9ff' : '#ffffff'};" onclick="window.selectPermissionModeInSettings('full-access')">
-            <div style="font-weight:600;font-size:13px;color:${perm.mode === 'full-access' ? 'var(--primary)' : 'var(--text-main)'};">🟢 完全信任模式 (全权限)</div>
-            <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">全自动执行终端命令与写操作，无弹窗阻断</div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:12px;">
+          <div id="setModeFullAccess" class="card ${perm.mode === 'full-access' ? 'active' : ''}" style="cursor:pointer;padding:14px;border:1.5px solid ${perm.mode === 'full-access' ? '#0284c7' : '#e2e8f0'};border-radius:10px;background:${perm.mode === 'full-access' ? '#f0f9ff' : '#ffffff'};transition:all 0.15s ease;" onclick="window.selectPermissionModeInSettings('full-access')">
+            <div style="font-weight:700;font-size:13.5px;color:${perm.mode === 'full-access' ? '#0369a1' : '#1e293b'};display:flex;align-items:center;gap:6px;">
+              <span>🟢 完全信任模式 (全权限)</span>
+            </div>
+            <div style="font-size:12px;color:#64748b;margin-top:6px;line-height:1.4;">完完全全放开全部权限，智能体全自动执行终端命令、本地代码写入与网络请求，无需手动弹窗确认。</div>
           </div>
-          <div id="setModeConfirm" class="card ${perm.mode === 'confirm-writes' ? 'active' : ''}" style="cursor:pointer;padding:12px;border:1.5px solid ${perm.mode === 'confirm-writes' ? 'var(--primary)' : 'var(--border-default)'};border-radius:8px;background:${perm.mode === 'confirm-writes' ? '#f0f9ff' : '#ffffff'};" onclick="window.selectPermissionModeInSettings('confirm-writes')">
-            <div style="font-weight:600;font-size:13px;">🟡 写入需确认模式</div>
-            <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">执行敏感写操作或终端命令时弹窗二次审批</div>
+          <div id="setModeConfirm" class="card ${perm.mode === 'confirm-writes' ? 'active' : ''}" style="cursor:pointer;padding:14px;border:1.5px solid ${perm.mode === 'confirm-writes' ? '#0284c7' : '#e2e8f0'};border-radius:10px;background:${perm.mode === 'confirm-writes' ? '#f0f9ff' : '#ffffff'};transition:all 0.15s ease;" onclick="window.selectPermissionModeInSettings('confirm-writes')">
+            <div style="font-weight:700;font-size:13.5px;color:${perm.mode === 'confirm-writes' ? '#0369a1' : '#1e293b'};display:flex;align-items:center;gap:6px;">
+              <span>🟡 写入需确认模式</span>
+            </div>
+            <div style="font-size:12px;color:#64748b;margin-top:6px;line-height:1.4;">允许自动读取与检索，遇到终端执行或文件修改时弹出确认框二次审批。</div>
           </div>
-          <div id="setModeStrict" class="card ${perm.mode === 'strict' ? 'active' : ''}" style="cursor:pointer;padding:12px;border:1.5px solid ${perm.mode === 'strict' ? 'var(--primary)' : 'var(--border-default)'};border-radius:8px;background:${perm.mode === 'strict' ? '#f0f9ff' : '#ffffff'};" onclick="window.selectPermissionModeInSettings('strict')">
-            <div style="font-weight:600;font-size:13px;">🔴 严格只读模式</div>
-            <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">只允许读取与搜索，禁止修改任何代码与终端操作</div>
+          <div id="setModeStrict" class="card ${perm.mode === 'strict' ? 'active' : ''}" style="cursor:pointer;padding:14px;border:1.5px solid ${perm.mode === 'strict' ? '#0284c7' : '#e2e8f0'};border-radius:10px;background:${perm.mode === 'strict' ? '#f0f9ff' : '#ffffff'};transition:all 0.15s ease;" onclick="window.selectPermissionModeInSettings('strict')">
+            <div style="font-weight:700;font-size:13.5px;color:${perm.mode === 'strict' ? '#0369a1' : '#1e293b'};display:flex;align-items:center;gap:6px;">
+              <span>🔴 严格只读模式</span>
+            </div>
+            <div style="font-size:12px;color:#64748b;margin-top:6px;line-height:1.4;">禁止一切写入、终端命令与外部网络访问，仅支持静态代码检索。</div>
           </div>
         </div>
 
-        <div style="background:#f8fafc;padding:14px;border-radius:8px;border:1px solid #e2e8f0;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;">
-            <input type="checkbox" id="setPermShell" ${perm.allowShell ? 'checked' : ''} />
+        <div style="background:#f8fafc;padding:16px;border-radius:10px;border:1px solid #e2e8f0;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <label style="display:flex;align-items:center;gap:10px;font-size:13px;color:#334155;cursor:pointer;">
+            <input type="checkbox" id="setPermShell" ${perm.allowShell ? 'checked' : ''} style="width:16px;height:16px;" />
             <span>允许智能体调用系统终端 (Shell / PowerShell / Bash)</span>
           </label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;">
-            <input type="checkbox" id="setPermFsWrite" ${perm.allowFsWrite ? 'checked' : ''} />
-            <span>允许智能体写入、覆盖与修补本地文件系统</span>
+          <label style="display:flex;align-items:center;gap:10px;font-size:13px;color:#334155;cursor:pointer;">
+            <input type="checkbox" id="setPermFsWrite" ${perm.allowFsWrite ? 'checked' : ''} style="width:16px;height:16px;" />
+            <span>允许智能体写入、覆盖与修补本地文件代码</span>
           </label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;">
-            <input type="checkbox" id="setPermNetwork" ${perm.allowNetwork ? 'checked' : ''} />
-            <span>允许智能体发起外部 HTTP/HTTPS 网络请求</span>
+          <label style="display:flex;align-items:center;gap:10px;font-size:13px;color:#334155;cursor:pointer;">
+            <input type="checkbox" id="setPermNetwork" ${perm.allowNetwork ? 'checked' : ''} style="width:16px;height:16px;" />
+            <span>允许智能体发起外部网络请求 (HTTP/HTTPS)</span>
           </label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;">
-            <input type="checkbox" id="setPermSubagent" ${perm.allowSpawnSubagent ? 'checked' : ''} />
+          <label style="display:flex;align-items:center;gap:10px;font-size:13px;color:#334155;cursor:pointer;">
+            <input type="checkbox" id="setPermSubagent" ${perm.allowSpawnSubagent ? 'checked' : ''} style="width:16px;height:16px;" />
             <span>允许智能体并发派发 Subagent 子智能体协作</span>
           </label>
         </div>
 
-        <div style="display:flex;justify-content:flex-end;">
-          <button type="button" class="btn primary" id="saveSettingsPermBtn" onclick="window.savePermissionsFromSettings()" style="padding:6px 16px;">保存权限策略</button>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:12px;color:#64748b;">策略已持久化到 ~/.hap/config.toml</span>
+          <button type="button" class="btn primary" id="saveSettingsPermBtn" onclick="window.savePermissionsFromSettings()" style="padding:7px 20px;font-weight:600;">保存权限安全策略</button>
         </div>
       </div>
     `;
@@ -2197,8 +2212,6 @@ function renderTargets() {
 
 function renderLogs(filter = 'all') {
   const containers = [$('logList'), $('logsViewer')].filter(Boolean);
-  if (containers.length === 0) return;
-
   const logs = state.logs || [];
   const filtered = logs.filter((log) => (filter === 'all' ? true : log.level === filter));
 
@@ -2208,13 +2221,19 @@ function renderLogs(filter = 'all') {
         <div style="padding:6px 10px;margin-bottom:4px;border-radius:4px;background:#ffffff;border:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;gap:8px;">
           <div style="display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11.5px;">
             <span class="badge ${log.level === 'error' ? 'danger' : 'neutral'}" style="padding:1px 4px;font-size:10px;">${esc(log.level)}</span>
-            <span style="word-break:break-all;">${esc(log.message)}</span>
+            <span style="word-break:break-all;color:#1e293b;">${esc(log.message)}</span>
           </div>
           <span style="font-size:10.5px;color:var(--text-muted);white-space:nowrap;">${new Date(log.at).toLocaleTimeString()}</span>
         </div>
       `).join('');
 
   containers.forEach(c => { c.innerHTML = html; });
+
+  const cliTerminal = $('remoteTerminalOutput');
+  if (cliTerminal && logs.length > 0) {
+    const recentLogs = logs.slice(-15).map(l => `[${new Date(l.at).toLocaleTimeString()}] [${l.level.toUpperCase()}] ${l.message}`).join('\n');
+    cliTerminal.textContent = recentLogs;
+  }
 }
 
 function fillSelects() {
@@ -3091,6 +3110,11 @@ $('projectForm')?.addEventListener('submit', async (e) => {
 // ==========================================================================
 // 视图切换与导航
 // ==========================================================================
+
+function switchView(view) {
+  show(view);
+}
+window.switchView = switchView;
 
 function show(view) {
   document.querySelectorAll('.view').forEach((item) => item.classList.toggle('active', item.id === view));
@@ -4764,3 +4788,19 @@ document.addEventListener('click', (e) => {
     window.switchSettingsTab('providers');
   }
 });
+
+// 开启后台实时日志心跳轮询
+setInterval(async () => {
+  try {
+    const activeView = document.querySelector('.view.active')?.id;
+    if (activeView === 'settings' || activeView === 'logs' || activeView === 'wechat' || activeView === 'targets') {
+      const snap = await window.hap.snapshot();
+      if (snap && snap.logs) {
+        state.logs = snap.logs;
+        renderLogs(currentLogFilter);
+      }
+    }
+  } catch (e) {
+    // 静默容错
+  }
+}, 2500);
