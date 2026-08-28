@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Hermes 多智能体平台",
   "engines": {
-    "node": ">=22"
+    "node": ">=20"
   },
   "main": "dist/src/gui/main.js",
   "scripts": {

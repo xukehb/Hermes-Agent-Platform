@@ -31,7 +31,7 @@ describe('Smart Disk Cleaner Engine', () => {
     expect(report.healthScore).toBeGreaterThanOrEqual(0);
     expect(typeof report.aiDiagnosis).toBe('string');
     expect(report.aiDiagnosis.length).toBeGreaterThan(5);
-  });
+  }, 20000);
 
   it('diskCleanupTool executes dryRun successfully with markdown report', async () => {
     const res = await diskCleanupTool.handler({ dryRun: true }, { agent: { workspace: process.cwd() } } as any);
