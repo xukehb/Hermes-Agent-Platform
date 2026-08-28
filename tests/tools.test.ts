@@ -257,6 +257,7 @@ describe('工具注册表', () => {
   it('内置工具齐备且顺序稳定', () => {
     expect(ToolRegistry.builtin().names()).toEqual([
       'shell',
+      'open_external',
       'read_file',
       'write_file',
       'apply_patch',

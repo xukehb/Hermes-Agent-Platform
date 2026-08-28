@@ -11,12 +11,14 @@ import type { ToolModule } from '../types.js';
 import { applyPatchTool } from './apply-patch.js';
 import { listDirTool, readFileTool, writeFileTool } from './files.js';
 import { httpFetchTool } from './http-fetch.js';
+import { openExternalTool } from './open-external.js';
 import { searchTool } from './search.js';
 import { shellTool } from './shell.js';
 import { spawnSubagentTool } from './spawn-subagent.js';
 
 export const BUILTIN_TOOL_MODULES: readonly ToolModule[] = [
   shellTool,
+  openExternalTool,
   readFileTool,
   writeFileTool,
   applyPatchTool,
@@ -31,6 +33,6 @@ export function builtinTools(): ToolModule[] {
   return [...BUILTIN_TOOL_MODULES];
 }
 
-export { applyPatchTool, listDirTool, readFileTool, writeFileTool, httpFetchTool, searchTool, shellTool, spawnSubagentTool };
+export { applyPatchTool, listDirTool, openExternalTool, readFileTool, writeFileTool, httpFetchTool, searchTool, shellTool, spawnSubagentTool };
 export { applyHunks, parsePatch } from './patch-envelope.js';
 export type { PatchHunk, PatchLine, PatchOperation } from './patch-envelope.js';
