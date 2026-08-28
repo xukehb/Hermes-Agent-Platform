@@ -52,7 +52,7 @@ export function getCountryFlag(countryCode?: string): string {
   }
 }
 
-/** 查询 IP 归属地与网络运营商 */
+/** 查询 IP 归属地与网络运营商（带中英文多源 Fallback 与超时兜底） */
 export async function lookupIpGeo(targetIp?: string): Promise<IpGeoInfo> {
   const cleanIp = targetIp ? targetIp.trim() : '';
 
@@ -67,23 +67,60 @@ export async function lookupIpGeo(targetIp?: string): Promise<IpGeoInfo> {
     };
   }
 
-  // 2. 发起公网 IP 定位查询（带多源 Fallback 与 3 秒超时）
-  const queryUrl = cleanIp
-    ? `https://ipapi.co/${encodeURIComponent(cleanIp)}/json/`
-    : `https://ipapi.co/json/`;
-
+  // 2. 主源: ip-api.com (支持中文国家与省市，极速响应)
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3500);
+    const ipApiUrl = cleanIp
+      ? `http://ip-api.com/json/${encodeURIComponent(cleanIp)}?lang=zh-CN`
+      : `http://ip-api.com/json/?lang=zh-CN`;
+    const res = await fetch(ipApiUrl, {
+      signal: AbortSignal.timeout(3000),
+      headers: { 'Accept': 'application/json' },
+    });
+    if (res.ok) {
+      const data = await res.json() as Record<string, any>;
+      if (data.status === 'success' || data.query) {
+        const ip = data.query || cleanIp || '127.0.0.1';
+        const country = data.country || '';
+        const countryCode = data.countryCode || '';
+        const region = data.regionName || data.region || '';
+        const city = data.city || '';
+        const isp = data.isp || data.org || '';
+        const asn = data.as || '';
+        const flag = getCountryFlag(countryCode);
+        const locParts = [country, region, city].filter(Boolean);
+        const locStr = [...new Set(locParts)].join(' · ') || '未知地区';
+        const ispStr = isp ? ` (${isp})` : '';
 
+        return {
+          ip,
+          isPrivate: isPrivateIp(ip),
+          country,
+          countryCode,
+          region,
+          city,
+          isp,
+          asn,
+          timezone: data.timezone || '',
+          latitude: typeof data.lat === 'number' ? data.lat : undefined,
+          longitude: typeof data.lon === 'number' ? data.lon : undefined,
+          formattedLocation: `${flag} ${locStr}${ispStr}`,
+        };
+      }
+    }
+  } catch {}
+
+  // 3. 次选源: ipapi.co
+  try {
+    const queryUrl = cleanIp
+      ? `https://ipapi.co/${encodeURIComponent(cleanIp)}/json/`
+      : `https://ipapi.co/json/`;
     const res = await fetch(queryUrl, {
-      signal: controller.signal,
+      signal: AbortSignal.timeout(3000),
       headers: {
         'User-Agent': 'CodexConnect-Diagnostics/1.0',
         'Accept': 'application/json',
       },
     });
-    clearTimeout(timeout);
 
     if (res.ok) {
       const data = await res.json() as Record<string, any>;
@@ -94,14 +131,10 @@ export async function lookupIpGeo(targetIp?: string): Promise<IpGeoInfo> {
       const city = data.city || '';
       const isp = data.org || data.isp || '';
       const asn = data.asn || '';
-      const timezone = data.timezone || '';
-      const lat = data.latitude;
-      const lon = data.longitude;
-
       const flag = getCountryFlag(countryCode);
       const locParts = [country, region, city].filter(Boolean);
-      const locStr = locParts.join(' · ') || '未知地区';
-      const ispStr = isp ? ` (${isp}${asn ? ' / ' + asn : ''})` : '';
+      const locStr = [...new Set(locParts)].join(' · ') || '未知地区';
+      const ispStr = isp ? ` (${isp})` : '';
 
       return {
         ip,
@@ -112,18 +145,18 @@ export async function lookupIpGeo(targetIp?: string): Promise<IpGeoInfo> {
         city,
         isp,
         asn,
-        timezone,
-        latitude: typeof lat === 'number' ? lat : undefined,
-        longitude: typeof lon === 'number' ? lon : undefined,
+        timezone: data.timezone || '',
+        latitude: typeof data.latitude === 'number' ? data.latitude : undefined,
+        longitude: typeof data.longitude === 'number' ? data.longitude : undefined,
         formattedLocation: `${flag} ${locStr}${ispStr}`,
       };
     }
   } catch {}
 
-  // 3. 备用源: ipify + 简易解析
+  // 4. 备用源: ipify + 简易解析
   try {
     const fallbackRes = await fetch('https://api.ipify.org?format=json', {
-      signal: AbortSignal.timeout(2000),
+      signal: AbortSignal.timeout(2500),
     });
     if (fallbackRes.ok) {
       const json = await fallbackRes.json() as { ip?: string };
@@ -137,7 +170,7 @@ export async function lookupIpGeo(targetIp?: string): Promise<IpGeoInfo> {
     }
   } catch {}
 
-  // 4. 离线/内网兜底
+  // 5. 离线/内网兜底
   const fallbackIp = cleanIp || '127.0.0.1';
   return {
     ip: fallbackIp,

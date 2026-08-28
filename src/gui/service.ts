@@ -2260,6 +2260,15 @@ export class GuiService {
           free: hostInfo.memory.freeBytes,
           usagePercent: hostInfo.memory.usedPercent,
         },
+        disk: {
+          total: hostInfo.disk.totalBytes,
+          used: hostInfo.disk.usedBytes,
+          free: hostInfo.disk.freeBytes,
+          usagePercent: hostInfo.disk.usedPercent,
+          mount: hostInfo.disk.mount,
+        },
+        diskFreeBytes: hostInfo.disk.freeBytes,
+        diskTotalBytes: hostInfo.disk.totalBytes,
         uptime: hostInfo.os.processUptimeSeconds,
       };
     }

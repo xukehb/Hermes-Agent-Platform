@@ -1,5 +1,6 @@
 import os from 'node:os';
 import process from 'node:process';
+import fs from 'node:fs';
 
 export interface HostCpuInfo {
   model: string;
@@ -35,10 +36,19 @@ export interface HostOsInfo {
   user: string;
 }
 
+export interface HostDiskInfo {
+  totalBytes: number;
+  freeBytes: number;
+  usedBytes: number;
+  usedPercent: number;
+  mount: string;
+}
+
 export interface HostSystemInfo {
   os: HostOsInfo;
   cpu: HostCpuInfo;
   memory: HostMemoryInfo;
+  disk: HostDiskInfo;
   network: HostNetworkInfo;
   loadAvg: number[];
   timestamp: number;
@@ -100,6 +110,24 @@ export function getHostSystemInfo(): HostSystemInfo {
     username = os.userInfo().username;
   } catch {}
 
+  let diskTotal = 0;
+  let diskFree = 0;
+  let diskUsed = 0;
+  let diskUsedPercent = 0;
+  let mountPoint = process.cwd();
+
+  try {
+    if (typeof fs.statfsSync === 'function') {
+      const rootPath = process.platform === 'win32' ? process.cwd().slice(0, 3) : '/';
+      const stat = fs.statfsSync(rootPath);
+      diskTotal = stat.bsize * stat.blocks;
+      diskFree = stat.bsize * stat.bfree;
+      diskUsed = diskTotal - diskFree;
+      diskUsedPercent = diskTotal > 0 ? Math.round((diskUsed / diskTotal) * 100) : 0;
+      mountPoint = rootPath;
+    }
+  } catch {}
+
   return {
     os: {
       platform: process.platform,
@@ -126,6 +154,13 @@ export function getHostSystemInfo(): HostSystemInfo {
       processRssBytes: procMem.rss,
       processHeapTotalBytes: procMem.heapTotal,
       processHeapUsedBytes: procMem.heapUsed,
+    },
+    disk: {
+      totalBytes: diskTotal,
+      freeBytes: diskFree,
+      usedBytes: diskUsed,
+      usedPercent: diskUsedPercent,
+      mount: mountPoint,
     },
     network: {
       hostname: os.hostname(),

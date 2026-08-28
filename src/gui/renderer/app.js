@@ -4144,16 +4144,44 @@ window.refreshHostView = async () => {
     if ($('hostOsText')) $('hostOsText').textContent = `${info.os.platform} (${info.os.release})`;
     if ($('hostArchText')) $('hostArchText').textContent = `架构: ${info.os.arch} / 主机: ${info.os.hostname}`;
     if ($('hostCpuText')) $('hostCpuText').textContent = info.cpu.model || 'CPU 核心';
-    if ($('hostCpuCoresText')) $('hostCpuCoresText').textContent = `核心数: ${info.cpu.cores} 核`;
+    if ($('hostCpuCoresText')) $('hostCpuCoresText').textContent = `核心数: ${info.cpu.cores} 核 (${info.cpuUsagePercent || 0}% 占用)`;
     if ($('hostMemText')) $('hostMemText').textContent = `${fmtHostBytes(info.memory.used)} / ${fmtHostBytes(info.memory.total)}`;
     if ($('hostMemFreeText')) $('hostMemFreeText').textContent = `空闲: ${fmtHostBytes(info.memory.free)} (${info.memory.usagePercent}% 已用)`;
+    
+    // 渲染磁盘存储指标
+    if (info.disk && info.disk.totalBytes > 0) {
+      if ($('hostDiskText')) $('hostDiskText').textContent = `${fmtHostBytes(info.disk.used)} / ${fmtHostBytes(info.disk.totalBytes)}`;
+      if ($('hostDiskFreeText')) $('hostDiskFreeText').textContent = `可用: ${fmtHostBytes(info.disk.freeBytes)} (${info.disk.usedPercent}% 已用 · 挂载: ${info.disk.mount || '/'})`;
+    } else if (info.diskTotalBytes) {
+      const free = info.diskFreeBytes || 0;
+      const total = info.diskTotalBytes;
+      const used = total - free;
+      const pct = Math.round((used / total) * 100);
+      if ($('hostDiskText')) $('hostDiskText').textContent = `${fmtHostBytes(used)} / ${fmtHostBytes(total)}`;
+      if ($('hostDiskFreeText')) $('hostDiskFreeText').textContent = `可用: ${fmtHostBytes(free)} (${pct}% 已用)`;
+    } else {
+      if ($('hostDiskText')) $('hostDiskText').textContent = '系统驱动器正常';
+      if ($('hostDiskFreeText')) $('hostDiskFreeText').textContent = '点击下方按钮可深度扫描';
+    }
+
     if ($('hostProcessUptime')) $('hostProcessUptime').textContent = `运行时间: ${Math.floor(info.uptime / 60)} 分钟`;
 
     try {
       const geo = await window.hap.getIpGeoInfo();
       if ($('hostIpText')) $('hostIpText').textContent = geo.ip || '127.0.0.1';
-      if ($('hostIpGeoBadge')) $('hostIpGeoBadge').textContent = `${geo.city || ''} ${geo.country || ''} (${geo.isp || '本地网络'})`;
-    } catch(e) {}
+      if ($('hostIpGeoBadge')) {
+        if (geo.formattedLocation) {
+          $('hostIpGeoBadge').textContent = geo.formattedLocation;
+        } else {
+          const loc = [geo.country, geo.region, geo.city].filter(Boolean).join(' · ') || '公网出口';
+          const isp = geo.isp ? ` (${geo.isp})` : '';
+          $('hostIpGeoBadge').textContent = `${loc}${isp}`;
+        }
+      }
+    } catch (e) {
+      console.warn('获取公网 IP 定位失败:', e);
+      if ($('hostIpGeoBadge')) $('hostIpGeoBadge').textContent = '局域网环境 / 本地网络';
+    }
   } catch (err) {
     console.error('刷新宿主机监控失败:', err);
   }
