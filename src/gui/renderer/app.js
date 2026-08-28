@@ -18,6 +18,16 @@ function esc(val) {
     .replace(/'/g, '&#39;');
 }
 
+function escJs(val) {
+  if (val === undefined || val === null) return '';
+  return String(val)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '&quot;')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r');
+}
+
 // 规范化文件系统路径（统一正斜杠与小写比较，彻底解决 Windows 反斜杠转义与大小写不匹配）
 function normPath(p) {
   if (!p) return '';
@@ -1502,7 +1512,7 @@ function renderSkills(searchQuery = '') {
         </div>
         <div style="display:flex;gap:6px;">
           <button class="btn secondary" onclick="window.open('https://github.com/${esc(s.repo)}', '_blank')">GitHub</button>
-          <button class="btn danger" onclick="uninstallSkill('${esc(s.id)}', '${esc(s.name)}')">卸载</button>
+          <button class="btn danger" onclick="uninstallSkill('${escJs(s.id)}', '${escJs(s.name)}')">卸载</button>
         </div>
       </div>
     </div>
@@ -1776,12 +1786,12 @@ function renderProjects() {
         </div>
       </div>
       <div class="card-footer">
-        <button class="btn text-btn" onclick="useProjectInChat('${esc(p.path)}')">在对话中使用</button>
+        <button class="btn text-btn" onclick="useProjectInChat('${escJs(p.path)}')">在对话中使用</button>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="btn secondary" onclick="openPathInExplorer('${esc(p.path)}')">文件夹</button>
-          <button class="btn secondary" onclick="openPathInTerminal('${esc(p.path)}')">终端</button>
-          <button class="btn secondary" onclick="openPathInVsCode('${esc(p.path)}')">VS Code</button>
-          <button class="btn danger" onclick="removeProject('${esc(p.id)}', '${esc(p.name)}')">移除</button>
+          <button class="btn secondary" onclick="openPathInExplorer('${escJs(p.path)}')">文件夹</button>
+          <button class="btn secondary" onclick="openPathInTerminal('${escJs(p.path)}')">终端</button>
+          <button class="btn secondary" onclick="openPathInVsCode('${escJs(p.path)}')">VS Code</button>
+          <button class="btn danger" onclick="removeProject('${escJs(p.id)}', '${escJs(p.name)}')">移除</button>
         </div>
       </div>
     </div>
