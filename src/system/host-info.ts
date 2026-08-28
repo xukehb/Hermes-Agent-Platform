@@ -153,14 +153,22 @@ function getNetworkIps(): HostNetworkInterfaceItem[] {
   return results;
 }
 
-/** 探测本机所有磁盘卷与分区挂载 */
+let cachedPartitions: HostDiskPartition[] = [];
+let lastPartitionsScanTime = 0;
+
+/** 探测本机所有磁盘卷与分区挂载 (带 15 秒轻量缓存) */
 function getDiskPartitions(): HostDiskPartition[] {
+  const now = Date.now();
+  if (cachedPartitions.length > 0 && now - lastPartitionsScanTime < 15000) {
+    return cachedPartitions;
+  }
+
   const partitions: HostDiskPartition[] = [];
   if (typeof fs.statfsSync !== 'function') return partitions;
 
   const candidateMounts: string[] = [];
   if (process.platform === 'win32') {
-    const letters = ['C:\\', 'D:\\', 'E:\\', 'F:\\', 'G:\\', 'H:\\', 'Z:\\'];
+    const letters = ['C:\\', 'D:\\', 'E:\\'];
     candidateMounts.push(...letters);
   } else {
     candidateMounts.push('/', '/home', '/var', '/tmp', '/Volumes');
@@ -190,15 +198,25 @@ function getDiskPartitions(): HostDiskPartition[] {
     } catch {}
   }
 
+  cachedPartitions = partitions;
+  lastPartitionsScanTime = now;
   return partitions;
 }
 
-/** 探测本机高内存消耗活跃进程 Top 榜单 (带超时限制) */
+let cachedTopProcesses: HostTopProcess[] = [];
+let lastTopProcessesScanTime = 0;
+
+/** 探测本机高内存消耗活跃进程 Top 榜单 (带 30 秒缓存，杜绝频繁 execSync 阻塞) */
 function getTopProcesses(limit = 6): HostTopProcess[] {
+  const now = Date.now();
+  if (cachedTopProcesses.length > 0 && now - lastTopProcessesScanTime < 30000) {
+    return cachedTopProcesses.slice(0, limit);
+  }
+
   const list: HostTopProcess[] = [];
   try {
     if (process.platform === 'win32') {
-      const output = execSync('tasklist /FO CSV /NH', { timeout: 800, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
+      const output = execSync('tasklist /FO CSV /NH', { timeout: 600, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
       const rows = output.trim().split('\n');
       for (const row of rows) {
         const parts = row.split('","').map(s => s.replace(/"/g, '').trim());
@@ -218,9 +236,11 @@ function getTopProcesses(limit = 6): HostTopProcess[] {
         }
       }
       list.sort((a, b) => b.memoryBytes - a.memoryBytes);
+      cachedTopProcesses = list;
+      lastTopProcessesScanTime = now;
       return list.slice(0, limit);
     } else {
-      const output = execSync('ps -eo pid,comm,rss --sort=-rss | head -n 8', { timeout: 800, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
+      const output = execSync('ps -eo pid,comm,rss --sort=-rss | head -n 8', { timeout: 600, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
       const rows = output.trim().split('\n').slice(1);
       for (const row of rows) {
         const parts = row.trim().split(/\s+/);
@@ -238,10 +258,12 @@ function getTopProcesses(limit = 6): HostTopProcess[] {
           }
         }
       }
+      cachedTopProcesses = list;
+      lastTopProcessesScanTime = now;
       return list.slice(0, limit);
     }
   } catch {}
-  return list;
+  return cachedTopProcesses.slice(0, limit);
 }
 
 /** 获取当前宿主主机的超详细实时系统与硬件指标 */
