@@ -4028,7 +4028,7 @@ window.switchChannelTab = (tab) => {
     if (pane) pane.style.display = t.toLowerCase() === tab.toLowerCase() ? 'block' : 'none';
     if (btn) {
       if (t.toLowerCase() === tab.toLowerCase()) {
-        btn.style.background = '#0d0d0d';
+        btn.style.background = '#0284c7';
         btn.style.color = '#ffffff';
       } else {
         btn.style.background = '#ffffff';
@@ -4348,7 +4348,7 @@ window.startServerAgentChat = (serverId) => {
       messages: [
         {
           role: 'assistant',
-          content: `您好！我是服务器 **${server.name}** (`${server.host}:${server.port}`) 的专属智能体 **[${agentId}]**。已为您打通双向通道，您可以随时发送指令让我执行运维巡检、诊断日志、排查 Docker 或自动修复故障。`,
+          content: `您好！我是服务器 **${server.name}** (${server.host}:${server.port}) 的专属智能体 **[${agentId}]**。已为您打通双向通道，您可以随时发送指令让我执行运维巡检、诊断日志、排查 Docker 或自动修复故障。`,
           timestamp: new Date().toISOString(),
         }
       ],

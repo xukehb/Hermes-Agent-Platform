@@ -741,7 +741,7 @@
           <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;">
             <div style="display:flex;align-items:center;gap:8px;">
               <div class="channel-tabs" style="display:flex;gap:6px;">
-                <button type="button" class="channel-tab-btn active" id="tabBtnWeChat" onclick="window.switchChannelTab('wechat')" style="padding:4px 12px;font-size:12.5px;font-weight:600;border-radius:6px;border:1px solid #d1d5db;background:#0d0d0d;color:#fff;cursor:pointer;">微信 / 企微</button>
+                <button type="button" class="channel-tab-btn active" id="tabBtnWeChat" onclick="window.switchChannelTab('wechat')" style="padding:4px 12px;font-size:12.5px;font-weight:600;border-radius:6px;border:1px solid #d1d5db;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;cursor:pointer;">微信 / 企微</button>
                 <button type="button" class="channel-tab-btn" id="tabBtnFeishu" onclick="window.switchChannelTab('feishu')" style="padding:4px 12px;font-size:12.5px;font-weight:600;border-radius:6px;border:1px solid #d1d5db;background:#fff;color:#374151;cursor:pointer;">飞书机器人</button>
                 <button type="button" class="channel-tab-btn" id="tabBtnQQ" onclick="window.switchChannelTab('qq')" style="padding:4px 12px;font-size:12.5px;font-weight:600;border-radius:6px;border:1px solid #d1d5db;background:#fff;color:#374151;cursor:pointer;">QQ / OneBot</button>
               </div>
@@ -886,7 +886,7 @@
         <div class="card" style="margin-bottom:16px;">
           <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
             <div style="display:flex;align-items:center;gap:10px;">
-              <div class="agent-avatar-badge" style="width:28px;height:28px;border-radius:50%;background:#0d0d0d;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;">HOST</div>
+              <div class="agent-avatar-badge" style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;">HOST</div>
               <div>
                 <div style="font-weight:700;font-size:14px;color:var(--text-main);">本机智能系统监控与运维桌面</div>
                 <div style="font-size:11.5px;color:var(--text-muted);">实时掌控当前宿主机硬件负载、公网 IP 地理定位、安全磁盘清理与后台服务健康</div>
@@ -974,7 +974,7 @@
           <div class="card server-ops-agent-card" style="margin-bottom:16px;">
             <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
               <div style="display:flex;align-items:center;gap:10px;">
-                <div class="agent-avatar-badge" style="width:28px;height:28px;border-radius:50%;background:#0d0d0d;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;">OPS</div>
+                <div class="agent-avatar-badge" style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;">OPS</div>
                 <div>
                   <div style="font-weight:700;font-size:13.5px;color:var(--text-main);">服务器智能运维与升级助理</div>
                   <div style="font-size:11.5px;color:var(--text-muted);">由智能体自主探测硬件、执行故障诊断、一键自愈修复与升级远端守护服务</div>
@@ -1013,11 +1013,11 @@
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                   </button>
                   <input type="file" id="serverOpsFileInput" multiple style="display:none;" />
-                  <input id="serverOpsChatInput" placeholder="输入自然语言运维指令 (如: 帮我分析为什么端口无法连接并修复)..." style="flex:1;padding:4px 0;font-size:13px;border:none;background:transparent;color:#0d0d0d;outline:none;" required />
+                  <input id="serverOpsChatInput" placeholder="输入自然语言运维指令 (如: 帮我分析为什么端口无法连接并修复)..." style="flex:1;padding:4px 0;font-size:13px;border:none;background:transparent;color:#0f172a;outline:none;" required />
                   <button type="button" class="btn secondary" onclick="window.jumpToServerMainChat()" title="在完整对话舞台中打开此服务器专属运维会话" style="padding:4px 8px;font-size:11.5px;height:26px;">
                     完整会话 ↗
                   </button>
-                  <button type="submit" id="sendServerOpsBtn" style="background:#0d0d0d;color:#fff;border:none;border-radius:6px;width:30px;height:30px;display:grid;place-items:center;cursor:pointer;transition:transform 0.1s ease;">
+                  <button type="submit" id="sendServerOpsBtn" style="background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;border:none;border-radius:6px;width:30px;height:30px;display:grid;place-items:center;cursor:pointer;transition:transform 0.1s ease;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                   </button>
                 </div>

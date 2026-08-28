@@ -42,7 +42,7 @@
   --font-mono: 'JetBrains Mono', "Cascadia Code", "Fira Code", Consolas, Monaco, monospace;
 
   /* 文本色阶 */
-  --text-main: #0f172a;
+  --text-main: #1e293b;
   --text-secondary: #334155;
   --text-muted: #64748b;
   --text-placeholder: #94a3b8;
@@ -756,7 +756,7 @@ body {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: #0d0d0d;
+  background: #0284c7;
   color: #ffffff;
   display: grid;
   place-items: center;
@@ -860,7 +860,7 @@ body {
 
 .user-bubble {
   background: #f0f7ff;
-  color: #0f172a;
+  color: #1e293b;
   padding: 12px 18px;
   border-radius: 20px 20px 4px 20px;
   border: 1px solid #e0f2fe;
@@ -1017,7 +1017,7 @@ body {
   margin: 16px 0 6px 0;
   padding-bottom: 4px;
   border-bottom: 1px solid #e2e8f0;
-  color: #0f172a;
+  color: #1e293b;
   line-height: 1.35;
 }
 
@@ -1025,7 +1025,7 @@ body {
   font-size: 15.5px;
   font-weight: 700;
   margin: 14px 0 6px 0;
-  color: #0f172a;
+  color: #1e293b;
   line-height: 1.35;
 }
 
@@ -1033,7 +1033,7 @@ body {
   font-size: 14.5px;
   font-weight: 700;
   margin: 10px 0 4px 0;
-  color: #0f172a;
+  color: #1e293b;
   line-height: 1.35;
 }
 
@@ -1041,14 +1041,14 @@ body {
   font-size: 13.5px;
   font-weight: 600;
   margin: 8px 0 4px 0;
-  color: #0f172a;
+  color: #1e293b;
   line-height: 1.35;
 }
 
 .md-inline-code,
 .assistant-content code:not(pre code) {
   background: #f1f5f9;
-  color: #0f172a;
+  color: #1e293b;
   border: 1px solid #e2e8f0;
   padding: 1.5px 5.5px;
   border-radius: 4px;
@@ -1140,7 +1140,7 @@ body {
   background: #f8fafc;
   padding: 7px 12px;
   font-weight: 600;
-  color: #0f172a;
+  color: #1e293b;
   border-bottom: 1px solid #e2e8f0;
   text-align: left;
 }
@@ -1245,7 +1245,7 @@ body {
 }
 
 .thinking-header:hover {
-  color: #0d0d0d;
+  color: #0284c7;
 }
 
 .thinking-title-row {
@@ -1695,7 +1695,7 @@ body {
   position: absolute;
   inset: -6px -10px;
   background: rgba(255, 255, 255, 0.95);
-  border: 2px dashed #0d0d0d;
+  border: 2px dashed #0284c7;
   border-radius: 16px;
   display: flex;
   align-items: center;
@@ -2261,7 +2261,7 @@ dialog.modal::backdrop {
   margin: 0;
   font-size: 16px;
   font-weight: 700;
-  color: #0f172a;
+  color: #1e293b;
   letter-spacing: -0.2px;
 }
 
@@ -2279,7 +2279,7 @@ dialog.modal::backdrop {
 }
 .btn-close:hover {
   background: #f1f5f9;
-  color: #0f172a;
+  color: #1e293b;
 }
 
 .form-group {
@@ -2416,7 +2416,7 @@ select optgroup {
   background-color: #f1f5f9 !important;
   border-color: #64748b !important;
   border-style: solid !important;
-  color: #0f172a !important;
+  color: #1e293b !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
 }
 
@@ -2641,7 +2641,7 @@ dialog .toast-container.in-dialog {
 .lightbox-wrap {
   display: flex;
   flex-direction: column;
-  background: #0f172a;
+  background: #1e293b;
   color: #ffffff;
   border-radius: 16px;
   overflow: hidden;
@@ -3063,7 +3063,7 @@ dialog .toast-container.in-dialog {
 }
 
 .ops-agent-output {
-  color: #0f172a;
+  color: #1e293b;
   font-size: 13px;
   line-height: 1.65;
 }
@@ -3081,3 +3081,92 @@ dialog .toast-container.in-dialog {
   font-family: 'Cascadia Code', Consolas, Menlo, Monaco, monospace;
 }
 
+
+
+/* ==========================================================================
+   渐变与现代高质感视觉体系 (Modern Gradient & Soft Blue Visual Polish)
+   ========================================================================== */
+.hero-logo {
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 50%, #0284c7 100%) !important;
+  box-shadow: 0 8px 20px -4px rgba(14, 165, 233, 0.45) !important;
+  color: #ffffff !important;
+}
+
+.hero-title {
+  background: linear-gradient(135deg, #0f172a 0%, #0369a1 60%, #0284c7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.new-conversation-btn {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3) !important;
+  border: none !important;
+}
+
+.new-conversation-btn:hover {
+  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%) !important;
+  box-shadow: 0 6px 18px rgba(2, 132, 199, 0.4) !important;
+  transform: translateY(-1px);
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 3px 10px rgba(2, 132, 199, 0.28) !important;
+}
+
+.btn.primary:hover {
+  background: linear-gradient(135deg, #38bdf8 0%, #0369a1 100%) !important;
+  box-shadow: 0 5px 15px rgba(2, 132, 199, 0.38) !important;
+  transform: translateY(-1px);
+}
+
+.nav.active {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%) !important;
+  color: #0369a1 !important;
+  border: 1px solid #7dd3fc !important;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.15) !important;
+}
+
+.stat-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%) !important;
+  border: 1px solid #e0f2fe !important;
+  box-shadow: 0 2px 10px rgba(14, 165, 233, 0.05) !important;
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  border-color: #7dd3fc !important;
+  box-shadow: 0 6px 18px rgba(14, 165, 233, 0.12) !important;
+  transform: translateY(-1px);
+}
+
+.card {
+  border: 1px solid #e0f2fe !important;
+  box-shadow: 0 2px 12px rgba(14, 165, 233, 0.04) !important;
+}
+
+.card:hover {
+  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.08) !important;
+}
+
+.user-bubble {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important;
+  border: 1px solid #bae6fd !important;
+  color: #0f172a !important;
+  box-shadow: 0 2px 10px rgba(14, 165, 233, 0.06) !important;
+}
+
+.composer-island-card {
+  background: #ffffff !important;
+  border: 1px solid #bae6fd !important;
+  box-shadow: 0 8px 30px rgba(14, 165, 233, 0.08), 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+}
+
+.composer-island-card:focus-within {
+  border-color: #0ea5e9 !important;
+  box-shadow: 0 10px 36px rgba(14, 165, 233, 0.15), 0 0 0 3px rgba(14, 165, 233, 0.18) !important;
+}
