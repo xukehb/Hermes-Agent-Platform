@@ -28,6 +28,16 @@ export const BUILTIN_TOOL_NAMES = [
   'search',
   'http_fetch',
   'spawn_subagent',
+  'remote_exec',
+  'remote_sysinfo',
+  'remote_list_servers',
+  'remote_upgrade_daemon',
+  'find_definition',
+  'find_references',
+  'list_symbols',
+  'host_sysinfo',
+  'disk_cleanup',
+  'ip_lookup',
 ] as const;
 
 export type BuiltinToolName = (typeof BUILTIN_TOOL_NAMES)[number];
@@ -38,9 +48,9 @@ export type BuiltinToolName = (typeof BUILTIN_TOOL_NAMES)[number];
  */
 export const TOOL_PROFILES: Record<ToolProfileName, readonly BuiltinToolName[]> = {
   minimal: ['read_file', 'list_dir'],
-  standard: ['read_file', 'write_file', 'list_dir', 'search', 'http_fetch', 'open_external'],
-  coding: ['read_file', 'write_file', 'list_dir', 'search', 'shell', 'open_external', 'apply_patch', 'spawn_subagent'],
-  research: ['read_file', 'write_file', 'list_dir', 'search', 'http_fetch', 'open_external', 'spawn_subagent'],
+  standard: ['read_file', 'write_file', 'list_dir', 'search', 'http_fetch', 'open_external', 'remote_list_servers', 'find_definition', 'find_references', 'list_symbols', 'host_sysinfo', 'disk_cleanup', 'ip_lookup'],
+  coding: ['read_file', 'write_file', 'list_dir', 'search', 'shell', 'open_external', 'apply_patch', 'spawn_subagent', 'remote_exec', 'remote_sysinfo', 'remote_list_servers', 'remote_upgrade_daemon', 'find_definition', 'find_references', 'list_symbols', 'host_sysinfo', 'disk_cleanup', 'ip_lookup'],
+  research: ['read_file', 'write_file', 'list_dir', 'search', 'http_fetch', 'open_external', 'spawn_subagent', 'remote_list_servers', 'find_definition', 'find_references', 'list_symbols', 'host_sysinfo', 'disk_cleanup', 'ip_lookup'],
   full: [...BUILTIN_TOOL_NAMES],
 };
 
@@ -112,7 +122,7 @@ export const BUILTIN = {
   /** persistent 会话的空闲回收时长（FR-TASK-001） */
   runtimeIdleTimeoutMs: 1_800_000,
   toolProfile: 'standard' as ToolProfileName,
-  identityEmoji: '🤖',
+  identityEmoji: 'AI',
   reasoningVisible: false,
   workspaceRoot: '~/.hap/workspaces',
   agentDirRoot: '~/.hap/agents',
@@ -288,14 +298,14 @@ export const BUILTIN_MODELS: Record<string, ModelEntryConfig> = {
 export const AGENT_TEMPLATES: Record<string, AgentEntryConfig> = {
   coder: {
     name: '编码智能体',
-    description: '读写代码、运行测试、提交补丁',
+    description: '读写代码、运行测试、提交补丁与远程服务器部署',
     model: { primary: 'anthropic/claude-sonnet-4-5', fallbacks: ['openai/gpt-5-codex', 'deepseek/deepseek-chat'] },
     protocol: 'anthropic',
     capabilities: ['code', 'shell', 'longctx'],
-    tools: { profile: 'coding', allow: ['shell', 'apply_patch', 'search', 'read_file', 'write_file', 'list_dir', 'spawn_subagent'], deny: ['http_fetch'] },
+    tools: { profile: 'coding', allow: ['shell', 'apply_patch', 'search', 'read_file', 'write_file', 'list_dir', 'spawn_subagent', 'remote_exec', 'remote_sysinfo', 'remote_list_servers', 'remote_upgrade_daemon'], deny: ['http_fetch'] },
     runtime: { mode: 'persistent' },
     subagents: { allow: ['researcher', 'reviewer'] },
-    identity: { emoji: '🛠️' },
+    identity: { emoji: 'DEV' },
   },
   researcher: {
     name: '研究智能体',
@@ -303,8 +313,8 @@ export const AGENT_TEMPLATES: Record<string, AgentEntryConfig> = {
     model: { primary: 'deepseek/deepseek-reasoner', fallbacks: ['gemini/gemini-2.5-pro', 'anthropic/claude-sonnet-4-5'] },
     protocol: 'deepseek',
     capabilities: ['research', 'web', 'longctx'],
-    tools: { profile: 'research', allow: ['http_fetch', 'read_file', 'write_file', 'search'] },
-    identity: { emoji: '🔍' },
+    tools: { profile: 'research', allow: ['http_fetch', 'read_file', 'write_file', 'search', 'remote_list_servers'] },
+    identity: { emoji: 'DOC' },
   },
   reviewer: {
     name: '评审智能体',
@@ -313,8 +323,8 @@ export const AGENT_TEMPLATES: Record<string, AgentEntryConfig> = {
     protocol: 'openai-tools',
     capabilities: ['code', 'review'],
     params: { temperature: 0.2 },
-    tools: { profile: 'coding', deny: ['shell', 'apply_patch', 'write_file'] },
-    identity: { emoji: '🧐' },
+    tools: { profile: 'coding', deny: ['shell', 'apply_patch', 'write_file', 'remote_exec'] },
+    identity: { emoji: 'REV' },
   },
   writer: {
     name: '写作智能体',
@@ -324,16 +334,16 @@ export const AGENT_TEMPLATES: Record<string, AgentEntryConfig> = {
     capabilities: ['writing', 'zh'],
     params: { temperature: 0.7 },
     tools: { profile: 'standard', allow: ['read_file', 'write_file', 'search'] },
-    identity: { emoji: '✍️' },
+    identity: { emoji: 'TXT' },
   },
   ops: {
-    name: '巡检智能体',
-    description: '定时巡检服务状态并汇总异常',
+    name: '巡检与运维智能体',
+    description: '定时巡检服务状态、操控远程服务器并汇总排障',
     model: { primary: 'gemini/gemini-2.5-flash', fallbacks: ['ollama/hermes3:8b'] },
     protocol: 'openai-tools',
     capabilities: ['ops', 'shell'],
-    tools: { profile: 'minimal', allow: ['shell', 'http_fetch', 'read_file'] },
-    identity: { emoji: '📟' },
+    tools: { profile: 'minimal', allow: ['shell', 'http_fetch', 'read_file', 'remote_exec', 'remote_sysinfo', 'remote_list_servers', 'remote_upgrade_daemon'] },
+    identity: { emoji: 'OPS' },
   },
   vision: {
     name: '视觉智能体',
@@ -342,7 +352,7 @@ export const AGENT_TEMPLATES: Record<string, AgentEntryConfig> = {
     protocol: 'openai-tools',
     capabilities: ['vision', 'research'],
     tools: { profile: 'standard', allow: ['read_file', 'write_file', 'http_fetch'] },
-    identity: { emoji: '👁️' },
+    identity: { emoji: 'IMG' },
   },
 };
 

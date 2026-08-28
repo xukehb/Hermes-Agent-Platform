@@ -207,6 +207,38 @@ export const wechatChannelSchema = z.strictObject({
   official_account: wechatOfficialAccountSchema.optional(),
 });
 
+/** 飞书 (Feishu / Lark) 通道配置项 */
+export const feishuChannelSchema = z.strictObject({
+  enabled: z.boolean().optional(),
+  app_id: z.string().min(1).optional(),
+  app_secret_env: z.string().min(1).optional(),
+  verification_token: z.string().min(1).optional(),
+  encrypt_key_env: z.string().min(1).optional(),
+  webhook_url_env: z.string().min(1).optional(),
+  bind: z.string().min(1).optional(),
+  path: z.string().min(1).optional(),
+  default_agent: z.string().min(1).optional(),
+  mention_patterns: z.array(z.string().min(1)).optional(),
+  message_char_limit: z.number().int().positive().optional(),
+});
+
+/** QQ 机器人通道配置项 (支持 OneBot v11/v12 与 QQ 官方开放平台) */
+export const qqChannelSchema = z.strictObject({
+  enabled: z.boolean().optional(),
+  mode: z.enum(['onebot', 'official']).optional(),
+  onebot_ws_url: z.string().min(1).optional(),
+  onebot_access_token_env: z.string().min(1).optional(),
+  onebot_http_url: z.string().min(1).optional(),
+  bind: z.string().min(1).optional(),
+  path: z.string().min(1).optional(),
+  official_app_id: z.string().min(1).optional(),
+  official_token_env: z.string().min(1).optional(),
+  official_secret_env: z.string().min(1).optional(),
+  default_agent: z.string().min(1).optional(),
+  mention_patterns: z.array(z.string().min(1)).optional(),
+  message_char_limit: z.number().int().positive().optional(),
+});
+
 export const httpChannelSchema = z.strictObject({
   enabled: z.boolean().optional(),
   bind: z.string().min(1).optional(),
@@ -224,6 +256,8 @@ export const channelsSchema = z.strictObject({
   telegram: telegramChannelSchema.optional(),
   whatsapp: whatsappChannelSchema.optional(),
   wechat: wechatChannelSchema.optional(),
+  feishu: feishuChannelSchema.optional(),
+  qq: qqChannelSchema.optional(),
   http: httpChannelSchema.optional(),
   cli: cliChannelSchema.optional(),
 });

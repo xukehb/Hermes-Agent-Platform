@@ -16,6 +16,12 @@ import { registerProviderCommands } from './provider-commands.js';
 import { registerModelCommands } from './model-commands.js';
 import { registerAgentCommands } from './agent-commands.js';
 import { registerServerCommands } from './server-commands.js';
+import { registerScheduleCommands } from './schedule-commands.js';
+import { registerMemoryCommands } from './memory-commands.js';
+import { registerWebCommands } from './web-commands.js';
+import { registerHostCommands } from './host-commands.js';
+import { registerCleanCommands } from './clean-commands.js';
+import { registerIpCommands } from './ip-commands.js';
 import { ChannelManager, CliChannel, createChannelHost, describeError, renderStatus, renderTrace, renderUsage } from '../channels/index.js';
 import { ProviderRegistry } from '../providers/index.js';
 import type { TaskEvent } from '../agent/index.js';
@@ -50,6 +56,12 @@ export function buildProgram(): Command {
   registerModelCommands(program, globals);
   registerAgentCommands(program, globals);
   registerServerCommands(program, globals);
+  registerScheduleCommands(program, globals);
+  registerMemoryCommands(program, globals);
+  registerWebCommands(program, globals);
+  registerHostCommands(program, globals);
+  registerCleanCommands(program, globals);
+  registerIpCommands(program, globals);
 
   return program;
 }

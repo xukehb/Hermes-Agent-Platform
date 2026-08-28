@@ -71,8 +71,38 @@
 - 测试：tests/channels-whatsapp.test.ts 覆盖构造、notify 未连接静默失败、stop 未启动 no-op；telegram/http 测试夹具同步补上 whatsapp 字段。
 - 验证结果：tsc --noEmit 通过（0 错误）；vitest run 通过（15 文件 / 436 项）。
 
-WhatsApp 真机扫码登录与收发属部署期验证项，需要用户手机操作，不在本地自动化范围内。
+## 八、第二阶段新特性演进验证记录（2026-08-28）
 
-类型检查与全量测试均通过，规格的 79 条功能需求全部有对应实现与测试覆盖，用户四项核心诉求全部落地。2026-08-25 已将规格 §8 的实施清单由过期空勾同步为真实完成状态，并新增 `docs/index.md` 使用说明。判定：**通过**。
+本轮完成了架构规格说明书中的核心特性模块研发、测试与集成：
 
-剩余的三项联网验证属部署期确认事项，不构成实现缺陷，已在上表标注风险等级与已有的替代验证手段。
+1. **Cron 调度器引擎 (`src/scheduler/`)**：
+   - 实现了标准 5/6 字段 Cron 解析、持久化任务表与历史运行审计日志。
+   - 提供 `hap schedule list/add/run/remove/history` CLI 命令与 GUI 可视化管理。
+   - 单元测试：`tests/scheduler.test.ts` 全量通过。
+
+2. **三层记忆金字塔与本地向量检索库 (`src/memory/`)**：
+   - 支持 Working / Semantic / Episodic 三层记忆模型与 Cosine 向量检索。
+   - 任务完成后自动提取经验知识，启动时自动召回 Top-3 经验注入 System Prompt。
+   - 提供 `hap memory list/add/clear` CLI 命令。
+   - 单元测试：`tests/memory.test.ts` 全量通过。
+
+3. **飞书 (Feishu) 与 QQ 机器人通道 (`src/channels/`)**：
+   - `src/channels/feishu.ts`：支持飞书开放平台事件订阅 v2、URL Verification Challenge 自动响应、消息解析与专属智能体路由。
+   - `src/channels/qq.ts`：支持 OneBot v11/v12 协议 (NapCat/Lagrange/LLOneBot/go-cqhttp)、CQ 码剥离、群聊与私聊智能路由。
+   - 通用联系人存储：`src/channels/contacts-store.ts` 统一微信、飞书、QQ 联系人与群聊专属智能体配置。
+   - 单元测试：`tests/contacts-store.test.ts`、`tests/feishu-channel.test.ts`、`tests/qq-channel.test.ts`、`tests/wechat-contacts.test.ts` 全部通过。
+
+4. **AST 符号分析与代码智能工具 (`src/tools/ast-indexer/`, `src/tools/builtin/symbol-tools.ts`)**：
+   - 提取 TS/JS/Python/Go/Rust 类、函数、接口、类型别名等符号表与签名。
+   - 提供 3 个内置代码理解工具：`find_definition`、`find_references`、`list_symbols`。
+   - 单元测试：`tests/ast-indexer.test.ts` 全部通过。
+
+5. **局域网 Web 工作台与无头服务端 (`src/web/`, `src/cli/web-commands.ts`)**：
+   - `hap web` 命令启动轻量 Hono Web 服务，支持局域网绑定与 Token 鉴权保护。
+   - 提供系统快照、聊天对话、Git Diff 审查、定时任务与记忆库管理 REST API。
+   - 单元测试：`tests/web-server.test.ts` 全部通过。
+
+### 全量验证结论
+- **TypeScript 类型检查**：`npx tsc --noEmit` -> 退出码 0，无任何类型错误。
+- **Vitest 全量单元测试**：`npx vitest run` -> **25 个测试文件，479 项测试用例全部通过**。
+

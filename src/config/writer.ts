@@ -329,4 +329,10 @@ export class ConfigWriter {
     }
     return this.commit(next, exists, raw, '设置 ' + notes.join('，'));
   }
+
+  /** 直接写入并持久化完整的 HapConfig */
+  writeConfig(config: HapConfig, summary = '更新配置'): WriteResult {
+    const { exists, raw } = this.read();
+    return this.commit(config, exists, raw, summary);
+  }
 }

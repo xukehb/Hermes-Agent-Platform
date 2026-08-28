@@ -201,6 +201,36 @@ export interface ResolvedWeChatChannel {
   officialAccount: ResolvedWeChatOfficialAccount | undefined;
 }
 
+export interface ResolvedFeishuChannel {
+  enabled: boolean;
+  appId: string | undefined;
+  appSecretEnv: string;
+  verificationToken: string | undefined;
+  encryptKeyEnv: string;
+  webhookUrlEnv: string;
+  bind: string;
+  path: string;
+  defaultAgent: string | undefined;
+  mentionPatterns: string[];
+  messageCharLimit: number;
+}
+
+export interface ResolvedQQChannel {
+  enabled: boolean;
+  mode: 'onebot' | 'official';
+  onebotWsUrl: string | undefined;
+  onebotAccessTokenEnv: string;
+  onebotHttpUrl: string | undefined;
+  bind: string;
+  path: string;
+  officialAppId: string | undefined;
+  officialTokenEnv: string;
+  officialSecretEnv: string;
+  defaultAgent: string | undefined;
+  mentionPatterns: string[];
+  messageCharLimit: number;
+}
+
 export interface ResolvedHttpChannel {
   enabled: boolean;
   bind: string;
@@ -221,6 +251,8 @@ export interface ResolvedChannels {
   telegram: ResolvedTelegramChannel;
   whatsapp: ResolvedWhatsAppChannel;
   wechat: ResolvedWeChatChannel;
+  feishu?: ResolvedFeishuChannel | undefined;
+  qq?: ResolvedQQChannel | undefined;
   http: ResolvedHttpChannel;
   cli: ResolvedCliChannel;
 }

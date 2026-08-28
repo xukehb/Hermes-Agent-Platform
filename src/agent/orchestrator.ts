@@ -36,6 +36,7 @@ import { AgentRegistry } from './registry.js';
 import { AgentRouter, planModelChain } from './router.js';
 import { composeSystemPrompt } from './system-prompt.js';
 import { createSubagentSpawner } from './subagent.js';
+import { recallRelevantMemories } from '../memory/index.js';
 import type {
   LoopRequest,
   RunTaskRequest,
@@ -380,10 +381,20 @@ export class AgentOrchestrator {
       // 内存实现同理。这里再兜一层：历史为空说明存储未回读成功，则手工补上。
       if (history.length === 0) history.push(userMessage);
 
+      let basePrompt = this.systemPromptFor(effectiveAgent);
+      try {
+        const memoryPrompt = await recallRelevantMemories(request.input, request.workspace);
+        if (memoryPrompt) {
+          basePrompt = `${memoryPrompt}\n${basePrompt}`;
+        }
+      } catch {
+        // 记忆检索失败不阻断主流程
+      }
+
       const loopRequest: LoopRequest = {
         agent: effectiveAgent,
         history,
-        systemPrompt: this.systemPromptFor(effectiveAgent),
+        systemPrompt: basePrompt,
         taskId,
         signal: controller.signal,
         depth: request.depth ?? 0,
