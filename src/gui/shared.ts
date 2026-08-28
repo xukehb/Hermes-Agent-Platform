@@ -154,3 +154,37 @@ export interface GuiWeChatConfig {
   wecomSecret?: string | undefined;
   wecomWebhookUrl?: string | undefined;
 }
+
+// 飞书机器人通道可视化配置
+export interface GuiFeishuConfig {
+  enabled: boolean;
+  appId?: string | undefined;
+  appSecret?: string | undefined;
+  verificationToken?: string | undefined;
+  encryptKey?: string | undefined;
+  webhookUrl?: string | undefined;
+  bind?: string | undefined;
+  path?: string | undefined;
+  defaultAgent: string;
+  workspace?: string | undefined;
+  running: boolean;
+  status: 'idle' | 'running' | 'error';
+}
+
+// QQ 机器人通道可视化配置
+export interface GuiQQConfig {
+  enabled: boolean;
+  mode: 'onebot' | 'official';
+  onebotWsUrl?: string | undefined;
+  onebotAccessToken?: string | undefined;
+  onebotHttpUrl?: string | undefined;
+  bind?: string | undefined;
+  path?: string | undefined;
+  officialAppId?: string | undefined;
+  officialToken?: string | undefined;
+  officialSecret?: string | undefined;
+  defaultAgent: string;
+  workspace?: string | undefined;
+  running: boolean;
+  status: 'idle' | 'running' | 'error';
+}

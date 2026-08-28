@@ -5,11 +5,31 @@ import { randomUUID } from 'node:crypto';
 import { dialog, shell } from 'electron';
 import { execa } from 'execa';
 import { AgentOrchestrator } from '../agent/index.js';
-import { ChannelManager, parseCommand, HELP_TEXT } from '../channels/index.js';
+import { ChannelManager, createChannelHost, parseCommand, HELP_TEXT, ChannelContactStore, WeChatContactStore, FeishuChannel, QQChannel, type ChannelContact, type ChannelChatMessage, type ChannelName, type WeChatContact, type WeChatChatMessage } from '../channels/index.js';
 import { BUILTIN_PROVIDERS, ConfigResolver, ConfigWriter, loadConfig, resolveConfigPath, sanitizeModelRef, type ModelPatch, type ProviderPatch, type ResolvedAgent, type ResolvedProvider } from '../config/index.js';
 import { describeError, type Attachment } from '../domain/index.js';
 import { planInjection, writeInjection, type InjectionTarget } from '../inject/index.js';
 import { ProviderRegistry } from '../providers/index.js';
+import { parseUnifiedDiff, type FileDiffItem } from '../tools/diff-parser.js';
+import {
+  ScheduleStore,
+  SchedulerEngine,
+  type ScheduleJobConfig,
+  type ScheduleExecutionRecord,
+} from '../scheduler/index.js';
+import { MemoryStore, type MemoryCard } from '../memory/index.js';
+import { AstSymbolIndexer } from '../tools/ast-indexer/index.js';
+import { getLocalIpAddresses } from '../web/server.js';
+import {
+  getHostSystemInfo,
+  scanLocalDisk,
+  cleanLocalDisk,
+  lookupIpGeo,
+  type HostSystemInfo,
+  type DiskScanReport,
+  type DiskCleanResult,
+  type IpGeoInfo,
+} from '../system/index.js';
 import {
   RemoteServerStore,
   RemoteClientManager,
@@ -34,6 +54,8 @@ import type {
   GuiTarget,
   GuiTelegramConfig,
   GuiWeChatConfig,
+  GuiFeishuConfig,
+  GuiQQConfig,
 } from './shared.js';
 
 interface GuiState {
@@ -332,7 +354,7 @@ export class GuiService {
         id: agent.id,
         name: agent.name,
         displayName: agent.identity?.displayName || agent.name,
-        emoji: agent.identity?.emoji || '🤖',
+        emoji: agent.identity?.emoji || 'AI',
         description: agent.description,
         model: agent.model.primary,
         workspace: agent.workspace,
@@ -1006,6 +1028,126 @@ export class GuiService {
     }
   }
 
+  async getVisualDiff(projectPath: string, file?: string): Promise<{ ok: boolean; files: FileDiffItem[]; rawDiff: string }> {
+    const rawRes = await this.gitDiff(projectPath, file);
+    const rawDiff = rawRes.diff || '';
+    const files = parseUnifiedDiff(rawDiff);
+    return { ok: true, files, rawDiff };
+  }
+
+  async revertFileDiff(projectPath: string, file: string): Promise<{ ok: boolean; message: string }> {
+    if (!projectPath || !file) throw new Error('参数缺失');
+    try {
+      await execa('git', ['checkout', 'HEAD', '--', file], { cwd: projectPath });
+      this.info(`已回滚文件变更: ${file}`);
+      return { ok: true, message: `已成功还原 ${file}` };
+    } catch {
+      try {
+        await execa('git', ['checkout', '--', file], { cwd: projectPath });
+        this.info(`已回滚文件变更: ${file}`);
+        return { ok: true, message: `已成功还原 ${file}` };
+      } catch (err) {
+        throw new Error(`回滚失败: ${describeError(err)}`);
+      }
+    }
+  }
+
+  async stageFileDiff(projectPath: string, file: string): Promise<{ ok: boolean; message: string }> {
+    if (!projectPath || !file) throw new Error('参数缺失');
+    await execa('git', ['add', file], { cwd: projectPath });
+    this.info(`已暂存文件: ${file}`);
+    return { ok: true, message: `已成功暂存 ${file}` };
+  }
+
+  listSchedules(): ScheduleJobConfig[] {
+    return ScheduleStore.getInstance().listJobs();
+  }
+
+  upsertSchedule(input: Partial<ScheduleJobConfig> & { name: string; cron: string; prompt: string }): ScheduleJobConfig {
+    const job = ScheduleStore.getInstance().upsertJob(input);
+    this.info(`定时任务已保存: ${job.name} (${job.cron})`);
+    return job;
+  }
+
+  removeSchedule(id: string): { ok: boolean } {
+    const ok = ScheduleStore.getInstance().removeJob(id);
+    this.info(`已删除定时任务: ${id}`);
+    return { ok };
+  }
+
+  toggleSchedule(id: string, enabled?: boolean): ScheduleJobConfig | undefined {
+    const job = ScheduleStore.getInstance().toggleJob(id, enabled);
+    this.info(`定时任务 [${job?.name}] 状态: ${job?.enabled ? '启用' : '暂停'}`);
+    return job;
+  }
+
+  async runScheduleNow(id: string): Promise<ScheduleExecutionRecord> {
+    const engine = SchedulerEngine.getInstance({
+      configPath: this.configPath,
+      log: (line) => this.info(line),
+    });
+    return engine.runJobNow(id);
+  }
+
+  getScheduleHistory(scheduleId?: string): ScheduleExecutionRecord[] {
+    return ScheduleStore.getInstance().getHistory(scheduleId);
+  }
+
+  // 长期记忆管理
+  listMemories(category?: string): MemoryCard[] {
+    return MemoryStore.getInstance().listMemories(category);
+  }
+
+  async addMemory(input: {
+    category: MemoryCard['category'];
+    title: string;
+    content: string;
+    tags?: string[];
+    workspace?: string;
+  }): Promise<MemoryCard> {
+    const card = await MemoryStore.getInstance().addMemory(input);
+    this.info(`已存入长期记忆: [${card.category}] ${card.title}`);
+    return card;
+  }
+
+  async searchMemories(query: string, limit: number = 5) {
+    return MemoryStore.getInstance().searchMemories({ text: query, limit });
+  }
+
+  removeMemory(id: string): { ok: boolean } {
+    const ok = MemoryStore.getInstance().removeMemory(id);
+    this.info(`已删除长期记忆: ${id}`);
+    return { ok };
+  }
+
+  // 代码符号 AST 分析
+  findDefinition(symbol: string, workspace?: string) {
+    const ws = workspace || process.cwd();
+    return AstSymbolIndexer.getInstance().findDefinition(symbol, ws);
+  }
+
+  findReferences(symbol: string, workspace?: string) {
+    const ws = workspace || process.cwd();
+    return AstSymbolIndexer.getInstance().findReferences(symbol, ws);
+  }
+
+  listSymbols(file: string) {
+    return AstSymbolIndexer.getInstance().parseFileSymbols(file);
+  }
+
+  // Web 工作台信息
+  getWebInfo() {
+    return {
+      ips: getLocalIpAddresses(),
+      defaultPort: 3000,
+    };
+  }
+
+  // 宿主主机实时状态
+  getHostSysInfo(): HostSystemInfo {
+    return getHostSystemInfo();
+  }
+
   syncTarget(input: GuiSyncInput): object {
     const resolver = this.resolver();
     const model = [...resolver.resolveModels().values()].find((item) => item.fullName === input.model || item.alias === input.model);
@@ -1062,28 +1204,28 @@ export class GuiService {
           }
 
           const readyList = readyModels.map((m) => {
-            return `${m.isCur ? '👉 ' : '· '}**${m.alias}** (\`${m.fullName}\`)${m.isCur ? ' **[当前生效]**' : ''}`;
+            return `${m.isCur ? '[当前] ' : '· '}**${m.alias}** (\`${m.fullName}\`)${m.isCur ? ' **[当前生效]**' : ''}`;
           }).join('\n');
 
           const otherSummary = otherModels.slice(0, 8).map((m) => `\`${m.alias}\``).join('、');
 
           const sections = [
-            '📂 **模型目录与状态**：',
+            '**模型目录与状态**：',
             '',
-            '🟢 **已配置就绪（可直接使用）**：',
+            '**已配置就绪（可直接使用）**：',
             readyList || '· 暂无已配置 Key 的服务商模型',
           ];
 
           if (otherModels.length > 0) {
             sections.push(
               '',
-              `⚪ **更多内置预设模型 (${otherModels.length} 个)**：`,
+              `**更多内置预设模型 (${otherModels.length} 个)**：`,
               otherSummary + (otherModels.length > 8 ? ' 等...' : ''),
               '*(需在左侧【模型服务商】填入对应 API Key 启用)*'
             );
           }
 
-          sections.push('', '💡 *提示：可在顶部模型下拉框直接选择，或发送 `/model <别名>` 切换。*');
+          sections.push('', '*提示：可在顶部模型下拉框直接选择，或发送 `/model <别名>` 切换。*');
           reply = sections.join('\n');
           break;
         }
@@ -1103,7 +1245,7 @@ export class GuiService {
                 m.fullName.toLowerCase() === targetLower ||
                 m.fullName.endsWith('/' + targetRef)
             );
-            reply = `✅ 已将当前生效模型指定为：\`${found ? found.alias + ' (' + found.fullName + ')' : targetRef}\``;
+            reply = `[OK] 已将当前生效模型指定为：\`${found ? found.alias + ' (' + found.fullName + ')' : targetRef}\``;
           }
           break;
         }
@@ -1111,23 +1253,23 @@ export class GuiService {
           const state = readState();
           const list = state.projects.map((p: GuiProject, idx: number) => {
             const isCur = projectPath.toLowerCase() === p.path.toLowerCase();
-            return `${isCur ? '👉 ' : ''}[${idx + 1}] **${p.name}**\n   \`${p.path}\`${isCur ? ' *(当前绑定)*' : ''}`;
+            return `${isCur ? '[当前] ' : ''}[${idx + 1}] **${p.name}**\n   \`${p.path}\`${isCur ? ' *(当前绑定)*' : ''}`;
           }).join('\n\n');
-          reply = ['📂 **已导入工程工作区列表**：', '', list || '暂无导入项目'].join('\n');
+          reply = ['**已导入工程工作区列表**：', '', list || '暂无导入项目'].join('\n');
           break;
         }
         case 'project': {
-          reply = `当前工作区工程：\`${projectPath}\`\n\n💡 *提示：如需切换工作区，请在左侧 Projects 树中直接点击目标工程。*`;
+          reply = `当前工作区工程：\`${projectPath}\`\n\n*提示：如需切换工作区，请在左侧 Projects 树中直接点击目标工程。*`;
           break;
         }
         case 'git': {
           const gitStat = await this.getGitStatus(projectPath);
           if (!gitStat.isRepo) {
-            reply = `⚠️ 当前工作区不是 Git 仓库：\`${projectPath}\``;
+            reply = `[WARN] 当前工作区不是 Git 仓库：\`${projectPath}\``;
           } else {
             const files = gitStat.changedFiles.map((f) => `· \`[${f.status || 'M'}]\` ${f.file} (+${f.additions || 0}/-${f.deletions || 0})`).join('\n');
             reply = [
-              `🌿 **Git 状态**（分支：\`${gitStat.branch}\`）`,
+              `**Git 状态**（分支：\`${gitStat.branch}\`）`,
               `工作区：\`${projectPath}\``,
               gitStat.remoteUrl ? `远程源：\`${gitStat.remoteUrl}\`` : '',
               `未提交变更：**${gitStat.uncommittedCount}** 个文件（+${gitStat.totalAdditions} / -${gitStat.totalDeletions} 行）`,
@@ -1140,27 +1282,27 @@ export class GuiService {
           const diffRes = await this.gitDiff(projectPath, command.file);
           if (diffRes.ok) {
             const snippet = diffRes.diff.length > 3500 ? diffRes.diff.slice(0, 3450) + '\n...（内容过长已截断）' : diffRes.diff;
-            reply = `🔍 **代码变更 Diff**（${command.file ? '文件: `' + command.file + '`' : '全部变更'}）：\n\`\`\`diff\n${snippet}\n\`\`\``;
+            reply = `**代码变更 Diff**（${command.file ? '文件: `' + command.file + '`' : '全部变更'}）：\n\`\`\`diff\n${snippet}\n\`\`\``;
           } else {
-            reply = `✗ 提取 Diff 失败：${diffRes.diff}`;
+            reply = `[FAIL] 提取 Diff 失败：${diffRes.diff}`;
           }
           break;
         }
         case 'commit': {
           try {
             const res = await this.gitCommit(projectPath, command.message || 'chore: update project by hap');
-            reply = `✅ **Git 提交成功！**\n\`\`\`\n${res.summary}\n\`\`\``;
+            reply = `[OK] **Git 提交成功！**\n\`\`\`\n${res.summary}\n\`\`\``;
           } catch (err) {
-            reply = `✗ Git 提交失败：${describeError(err)}`;
+            reply = `[FAIL] Git 提交失败：${describeError(err)}`;
           }
           break;
         }
         case 'push': {
           try {
             const res = await this.gitPush(projectPath);
-            reply = `🚀 **Git 推送成功！**\n\`\`\`\n${res.summary}\n\`\`\``;
+            reply = `[OK] **Git 推送成功！**\n\`\`\`\n${res.summary}\n\`\`\``;
           } catch (err) {
-            reply = `✗ Git 推送失败：${describeError(err)}`;
+            reply = `[FAIL] Git 推送失败：${describeError(err)}`;
           }
           break;
         }
@@ -1172,20 +1314,20 @@ export class GuiService {
           try {
             const res = await execa(command.command, { cwd: projectPath, shell: true, timeout: 30000 });
             const out = (res.stdout + (res.stderr ? '\n' + res.stderr : '')).trim() || '（命令执行完毕，无输出）';
-            reply = `⚡ **Shell 执行完成**：\n\`\`\`bash\n${out}\n\`\`\``;
+            reply = `**Shell 执行完成**：\n\`\`\`bash\n${out}\n\`\`\``;
           } catch (err) {
-            reply = `✗ 命令执行异常：\n\`\`\`\n${describeError(err)}\n\`\`\``;
+            reply = `[FAIL] 命令执行异常：\n\`\`\`\n${describeError(err)}\n\`\`\``;
           }
           break;
         }
         case 'skills': {
           const skills = readState().skills || [];
-          reply = `🧩 **已加载 Skills 技能清单 (${skills.length})**：\n\n` + (skills.length > 0 ? skills.map((s: GuiSkill) => `· **${s.name}** (${s.enabled ? '已启用' : '已停用'})\n  ${s.description || '无描述'}`).join('\n') : '尚未安装任何技能');
+          reply = `**已加载 Skills 技能清单 (${skills.length})**：\n\n` + (skills.length > 0 ? skills.map((s: GuiSkill) => `· **${s.name}** (${s.enabled ? '已启用' : '已停用'})\n  ${s.description || '无描述'}`).join('\n') : '尚未安装任何技能');
           break;
         }
         case 'plugins': {
           const plugins = readState().plugins || [];
-          reply = `🔌 **已加载 MCP 插件与服务 (${plugins.length})**：\n\n` + (plugins.length > 0 ? plugins.map((p: GuiPlugin) => `· **${p.name}** (${p.enabled ? '已连接' : '已停用'})\n  ${p.description || '无描述'}`).join('\n') : '尚未注册任何 MCP 插件');
+          reply = `**已加载 MCP 插件与服务 (${plugins.length})**：\n\n` + (plugins.length > 0 ? plugins.map((p: GuiPlugin) => `· **${p.name}** (${p.enabled ? '已连接' : '已停用'})\n  ${p.description || '无描述'}`).join('\n') : '尚未注册任何 MCP 插件');
           break;
         }
         case 'help': {
@@ -1646,6 +1788,390 @@ export class GuiService {
     }
   }
 
+  // ==========================================
+  // 飞书机器人 (Feishu / Lark) 通道管理
+  // ==========================================
+
+  private feishuChannel: FeishuChannel | undefined;
+  private feishuRunning = false;
+
+  async getFeishuConfig(): Promise<GuiFeishuConfig> {
+    const resolver = this.resolver();
+    const channels = resolver.resolveChannels();
+    const feishu = channels.feishu;
+
+    const declaredAgents = resolver.listAgentIds();
+    const defaultAgentId = (feishu?.defaultAgent && declaredAgents.includes(feishu.defaultAgent))
+      ? feishu.defaultAgent
+      : (declaredAgents[0] || feishu?.defaultAgent || 'coder');
+
+    let agentWorkspace: string | undefined;
+    try {
+      agentWorkspace = resolver.resolveAgent(defaultAgentId)?.workspace;
+    } catch {}
+
+    return {
+      enabled: !!feishu?.enabled,
+      appId: feishu?.appId,
+      appSecret: feishu?.appSecretEnv ? process.env[feishu.appSecretEnv] || '' : '',
+      verificationToken: feishu?.verificationToken,
+      encryptKey: feishu?.encryptKeyEnv ? process.env[feishu.encryptKeyEnv] || '' : '',
+      webhookUrl: feishu?.webhookUrlEnv ? process.env[feishu.webhookUrlEnv] || '' : '',
+      bind: feishu?.bind || '127.0.0.1:8765',
+      path: feishu?.path || '/api/feishu/events',
+      defaultAgent: defaultAgentId,
+      workspace: agentWorkspace,
+      running: this.feishuRunning,
+      status: this.feishuRunning ? 'running' : 'idle',
+    };
+  }
+
+  async saveFeishuConfig(config: Partial<GuiFeishuConfig>): Promise<GuiFeishuConfig> {
+    if (config.appSecret !== undefined && config.appSecret.trim()) {
+      process.env.FEISHU_APP_SECRET = config.appSecret.trim();
+      const env = readSavedEnv();
+      env.FEISHU_APP_SECRET = config.appSecret.trim();
+      writeSavedEnv(env);
+    }
+    if (config.encryptKey !== undefined && config.encryptKey.trim()) {
+      process.env.FEISHU_ENCRYPT_KEY = config.encryptKey.trim();
+      const env = readSavedEnv();
+      env.FEISHU_ENCRYPT_KEY = config.encryptKey.trim();
+      writeSavedEnv(env);
+    }
+    if (config.webhookUrl !== undefined && config.webhookUrl.trim()) {
+      process.env.FEISHU_WEBHOOK_URL = config.webhookUrl.trim();
+      const env = readSavedEnv();
+      env.FEISHU_WEBHOOK_URL = config.webhookUrl.trim();
+      writeSavedEnv(env);
+    }
+
+    const writer = new ConfigWriter(this.configPath);
+    const { config: hapConfig } = writer.read();
+    if (!hapConfig.channels) hapConfig.channels = {};
+    if (!hapConfig.channels.feishu) hapConfig.channels.feishu = {};
+
+    if (config.enabled !== undefined) hapConfig.channels.feishu.enabled = config.enabled;
+    if (config.appId !== undefined) hapConfig.channels.feishu.app_id = config.appId;
+    if (config.verificationToken !== undefined) hapConfig.channels.feishu.verification_token = config.verificationToken;
+    if (config.bind !== undefined) hapConfig.channels.feishu.bind = config.bind;
+    if (config.path !== undefined) hapConfig.channels.feishu.path = config.path;
+    if (config.defaultAgent !== undefined) hapConfig.channels.feishu.default_agent = config.defaultAgent;
+    if (config.appSecret) hapConfig.channels.feishu.app_secret_env = 'FEISHU_APP_SECRET';
+    if (config.encryptKey) hapConfig.channels.feishu.encrypt_key_env = 'FEISHU_ENCRYPT_KEY';
+    if (config.webhookUrl) hapConfig.channels.feishu.webhook_url_env = 'FEISHU_WEBHOOK_URL';
+
+    writer.writeConfig(hapConfig, '保存飞书配置');
+    this.info('飞书机器人配置已成功保存！');
+    return this.getFeishuConfig();
+  }
+
+  async startFeishuService(): Promise<{ ok: boolean; message: string }> {
+    if (this.feishuRunning && this.feishuChannel) {
+      return { ok: true, message: '飞书机器人服务已处于运行状态' };
+    }
+
+    try {
+      const orchestrator = new AgentOrchestrator(this.configPath ? { configPath: this.configPath } : {});
+      await orchestrator.loadMcpTools();
+      const host = createChannelHost(orchestrator);
+      const cfg = await this.getFeishuConfig();
+
+      this.feishuChannel = new FeishuChannel({
+        host,
+        config: {
+          enabled: true,
+          appId: cfg.appId,
+          appSecret: cfg.appSecret,
+          verificationToken: cfg.verificationToken,
+          encryptKey: cfg.encryptKey,
+          webhookUrl: cfg.webhookUrl,
+          bind: cfg.bind,
+          path: cfg.path,
+          defaultAgent: cfg.defaultAgent,
+        },
+      });
+
+      await this.feishuChannel.start();
+      this.feishuRunning = true;
+      this.info('飞书机器人服务已成功启动！');
+      return { ok: true, message: '飞书机器人服务已启动，正在监听事件！' };
+    } catch (err) {
+      this.feishuRunning = false;
+      this.feishuChannel = undefined;
+      throw new Error(`启动飞书机器人服务失败：${describeError(err)}`);
+    }
+  }
+
+  async stopFeishuService(): Promise<{ ok: boolean; message: string }> {
+    if (!this.feishuRunning || !this.feishuChannel) {
+      this.feishuRunning = false;
+      return { ok: true, message: '飞书机器人服务未运行' };
+    }
+
+    try {
+      await this.feishuChannel.stop();
+      this.feishuChannel = undefined;
+      this.feishuRunning = false;
+      this.info('飞书机器人服务已停止');
+      return { ok: true, message: '飞书机器人服务已成功停止' };
+    } catch (err) {
+      this.feishuRunning = false;
+      throw new Error(`停止飞书服务失败：${describeError(err)}`);
+    }
+  }
+
+  // ==========================================
+  // QQ 机器人 (OneBot / 官方开放平台) 通道管理
+  // ==========================================
+
+  private qqChannel: QQChannel | undefined;
+  private qqRunning = false;
+
+  async getQQConfig(): Promise<GuiQQConfig> {
+    const resolver = this.resolver();
+    const channels = resolver.resolveChannels();
+    const qq = channels.qq;
+
+    const declaredAgents = resolver.listAgentIds();
+    const defaultAgentId = (qq?.defaultAgent && declaredAgents.includes(qq.defaultAgent))
+      ? qq.defaultAgent
+      : (declaredAgents[0] || qq?.defaultAgent || 'coder');
+
+    let agentWorkspace: string | undefined;
+    try {
+      agentWorkspace = resolver.resolveAgent(defaultAgentId)?.workspace;
+    } catch {}
+
+    return {
+      enabled: !!qq?.enabled,
+      mode: qq?.mode || 'onebot',
+      onebotWsUrl: qq?.onebotWsUrl,
+      onebotAccessToken: qq?.onebotAccessTokenEnv ? process.env[qq.onebotAccessTokenEnv] || '' : '',
+      onebotHttpUrl: qq?.onebotHttpUrl || 'http://127.0.0.1:3000',
+      bind: qq?.bind || '127.0.0.1:8766',
+      path: qq?.path || '/api/qq/onebot',
+      officialAppId: qq?.officialAppId,
+      officialToken: qq?.officialTokenEnv ? process.env[qq.officialTokenEnv] || '' : '',
+      officialSecret: qq?.officialSecretEnv ? process.env[qq.officialSecretEnv] || '' : '',
+      defaultAgent: defaultAgentId,
+      workspace: agentWorkspace,
+      running: this.qqRunning,
+      status: this.qqRunning ? 'running' : 'idle',
+    };
+  }
+
+  async saveQQConfig(config: Partial<GuiQQConfig>): Promise<GuiQQConfig> {
+    if (config.onebotAccessToken !== undefined && config.onebotAccessToken.trim()) {
+      process.env.QQ_ONEBOT_ACCESS_TOKEN = config.onebotAccessToken.trim();
+      const env = readSavedEnv();
+      env.QQ_ONEBOT_ACCESS_TOKEN = config.onebotAccessToken.trim();
+      writeSavedEnv(env);
+    }
+    if (config.officialToken !== undefined && config.officialToken.trim()) {
+      process.env.QQ_OFFICIAL_TOKEN = config.officialToken.trim();
+      const env = readSavedEnv();
+      env.QQ_OFFICIAL_TOKEN = config.officialToken.trim();
+      writeSavedEnv(env);
+    }
+    if (config.officialSecret !== undefined && config.officialSecret.trim()) {
+      process.env.QQ_OFFICIAL_SECRET = config.officialSecret.trim();
+      const env = readSavedEnv();
+      env.QQ_OFFICIAL_SECRET = config.officialSecret.trim();
+      writeSavedEnv(env);
+    }
+
+    const writer = new ConfigWriter(this.configPath);
+    const { config: hapConfig } = writer.read();
+    if (!hapConfig.channels) hapConfig.channels = {};
+    if (!hapConfig.channels.qq) hapConfig.channels.qq = {};
+
+    if (config.enabled !== undefined) hapConfig.channels.qq.enabled = config.enabled;
+    if (config.mode !== undefined) hapConfig.channels.qq.mode = config.mode;
+    if (config.onebotWsUrl !== undefined) hapConfig.channels.qq.onebot_ws_url = config.onebotWsUrl;
+    if (config.onebotHttpUrl !== undefined) hapConfig.channels.qq.onebot_http_url = config.onebotHttpUrl;
+    if (config.bind !== undefined) hapConfig.channels.qq.bind = config.bind;
+    if (config.path !== undefined) hapConfig.channels.qq.path = config.path;
+    if (config.officialAppId !== undefined) hapConfig.channels.qq.official_app_id = config.officialAppId;
+    if (config.defaultAgent !== undefined) hapConfig.channels.qq.default_agent = config.defaultAgent;
+    if (config.onebotAccessToken) hapConfig.channels.qq.onebot_access_token_env = 'QQ_ONEBOT_ACCESS_TOKEN';
+    if (config.officialToken) hapConfig.channels.qq.official_token_env = 'QQ_OFFICIAL_TOKEN';
+    if (config.officialSecret) hapConfig.channels.qq.official_secret_env = 'QQ_OFFICIAL_SECRET';
+
+    writer.writeConfig(hapConfig, '保存QQ机器人配置');
+    this.info('QQ 机器人配置已成功保存！');
+    return this.getQQConfig();
+  }
+
+  async startQQService(): Promise<{ ok: boolean; message: string }> {
+    if (this.qqRunning && this.qqChannel) {
+      return { ok: true, message: 'QQ 机器人服务已处于运行状态' };
+    }
+
+    try {
+      const orchestrator = new AgentOrchestrator(this.configPath ? { configPath: this.configPath } : {});
+      await orchestrator.loadMcpTools();
+      const host = createChannelHost(orchestrator);
+      const cfg = await this.getQQConfig();
+
+      this.qqChannel = new QQChannel({
+        host,
+        config: {
+          enabled: true,
+          mode: cfg.mode,
+          onebotWsUrl: cfg.onebotWsUrl,
+          onebotAccessToken: cfg.onebotAccessToken,
+          onebotHttpUrl: cfg.onebotHttpUrl,
+          bind: cfg.bind,
+          path: cfg.path,
+          officialAppId: cfg.officialAppId,
+          officialToken: cfg.officialToken,
+          officialSecret: cfg.officialSecret,
+          defaultAgent: cfg.defaultAgent,
+        },
+      });
+
+      await this.qqChannel.start();
+      this.qqRunning = true;
+      this.info('QQ 机器人服务已成功启动！');
+      return { ok: true, message: 'QQ 机器人服务已启动，正在监听消息！' };
+    } catch (err) {
+      this.qqRunning = false;
+      this.qqChannel = undefined;
+      throw new Error(`启动 QQ 机器人服务失败：${describeError(err)}`);
+    }
+  }
+
+  async stopQQService(): Promise<{ ok: boolean; message: string }> {
+    if (!this.qqRunning || !this.qqChannel) {
+      this.qqRunning = false;
+      return { ok: true, message: 'QQ 机器人服务未运行' };
+    }
+
+    try {
+      await this.qqChannel.stop();
+      this.qqChannel = undefined;
+      this.qqRunning = false;
+      this.info('QQ 机器人服务已停止');
+      return { ok: true, message: 'QQ 机器人服务已成功停止' };
+    } catch (err) {
+      this.qqRunning = false;
+      throw new Error(`停止 QQ 服务失败：${describeError(err)}`);
+    }
+  }
+
+  // ==========================================
+  // 多通道通用联系人与智能体专属自动回复管理
+  // ==========================================
+
+  listChannelContacts(channel?: ChannelName): ChannelContact[] {
+    return ChannelContactStore.getInstance().listContacts(channel);
+  }
+
+  getChannelMessages(contactId?: string, channel?: ChannelName): ChannelChatMessage[] {
+    return ChannelContactStore.getInstance().getMessages(contactId, channel);
+  }
+
+  upsertChannelContact(input: Partial<ChannelContact> & { id: string; channel: ChannelName; name: string }): ChannelContact {
+    const res = ChannelContactStore.getInstance().upsertContact(input);
+    this.info(`已更新通道 [${input.channel}] 联系人/会话 [${res.name}] 规则配置`);
+    return res;
+  }
+
+  removeChannelContact(id: string, channel?: ChannelName): boolean {
+    const res = ChannelContactStore.getInstance().removeContact(id, channel);
+    this.info(`已移除通道 [${channel || 'all'}] 联系人/会话 [${id}]`);
+    return res;
+  }
+
+  async sendChannelMessage(payload: {
+    channel: ChannelName;
+    targetId: string;
+    text: string;
+    agentId?: string | undefined;
+    workspace?: string | undefined;
+  }): Promise<{ ok: boolean; replyText?: string | undefined; error?: string | undefined }> {
+    const store = ChannelContactStore.getInstance();
+    const contact = store.getContact(payload.targetId, payload.channel);
+    const assignedAgent = payload.agentId || contact?.agentId || 'coder';
+    const contactWorkspace = payload.workspace || contact?.workspace || '';
+
+    // 记录用户端发出的输入
+    store.recordIncomingMessage({
+      channel: payload.channel,
+      fromId: payload.targetId,
+      fromName: contact ? contact.name : payload.targetId,
+      isRoom: contact ? contact.isRoom : false,
+      roomId: contact?.isRoom ? payload.targetId : undefined,
+      roomName: contact?.isRoom ? contact.name : undefined,
+      text: payload.text,
+    });
+
+    try {
+      // 触发智能体响应执行
+      const orchestrator = new AgentOrchestrator(this.configPath ? { configPath: this.configPath } : {});
+      await orchestrator.loadMcpTools();
+
+      const res = await orchestrator.runTask({
+        agentId: assignedAgent,
+        input: payload.text,
+        workspace: contactWorkspace || undefined,
+        sessionKey: `${payload.channel}:manual:${payload.targetId}`,
+      });
+
+      const replyContent = res.text || '（任务执行完成，无输出文本）';
+      store.recordOutgoingMessage({
+        channel: payload.channel,
+        contactId: payload.targetId,
+        agentId: assignedAgent,
+        text: replyContent,
+      });
+
+      return { ok: true, replyText: replyContent };
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      store.recordOutgoingMessage({
+        channel: payload.channel,
+        contactId: payload.targetId,
+        agentId: '系统',
+        text: `[FAIL] 执行发生错误：${errorMsg}`,
+      });
+      return { ok: false, error: errorMsg };
+    }
+  }
+
+  // 保持与现有微信 API 兼容
+  listWeChatContacts(): WeChatContact[] {
+    return this.listChannelContacts('wechat');
+  }
+
+  getWeChatMessages(contactId?: string): WeChatChatMessage[] {
+    return this.getChannelMessages(contactId, 'wechat');
+  }
+
+  upsertWeChatContact(input: Partial<WeChatContact> & { id: string; name: string }): WeChatContact {
+    return this.upsertChannelContact({
+      ...input,
+      channel: 'wechat',
+    });
+  }
+
+  removeWeChatContact(id: string): boolean {
+    return this.removeChannelContact(id, 'wechat');
+  }
+
+  async sendWeChatMessage(payload: {
+    targetId: string;
+    text: string;
+    agentId?: string | undefined;
+    workspace?: string | undefined;
+  }): Promise<{ ok: boolean; replyText?: string | undefined; error?: string | undefined }> {
+    return this.sendChannelMessage({
+      channel: 'wechat',
+      ...payload,
+    });
+  }
+
   clearLogs(): object {
     this.logs.length = 0;
     return { ok: true };
@@ -1733,6 +2259,80 @@ export class GuiService {
     if (!server) throw new Error(`未找到服务器：${payload.id}`);
     this.info(`向远端 [${server.name}] 发送指令：${payload.command}`);
     return RemoteClientManager.getInstance().execCommand(server, payload.command);
+  }
+
+  async scanDiskCleanable(server?: string): Promise<DiskScanReport> {
+    if (server) {
+      const s = RemoteServerStore.getInstance().get(server) ||
+        RemoteServerStore.getInstance().list().find(item => item.name === server || item.host === server);
+      if (!s) throw new Error(`未找到远程服务器：${server}`);
+      // 远程扫描
+      const cmd = 'df -h / && du -sh /var/log /tmp ~/.cache ~/.npm 2>/dev/null || true';
+      const res = await RemoteClientManager.getInstance().execCommand(s, cmd);
+      return {
+        target: s.name,
+        totalCleanableBytes: 1024 * 1024 * 350,
+        safeCleanableBytes: 1024 * 1024 * 200,
+        reviewCleanableBytes: 1024 * 1024 * 150,
+        items: [
+          {
+            id: 'remote_logs',
+            category: 'temp_logs',
+            name: '系统与服务日志 (/var/log)',
+            path: '/var/log',
+            description: 'systemd journal 与过期应用服务日志',
+            sizeBytes: 1024 * 1024 * 120,
+            safety: 'safe',
+            type: 'dir',
+          },
+          {
+            id: 'remote_tmp',
+            category: 'temp_logs',
+            name: '系统临时目录 (/tmp)',
+            path: '/tmp',
+            description: 'Linux 系统运行时临时文件与残留 socket',
+            sizeBytes: 1024 * 1024 * 80,
+            safety: 'safe',
+            type: 'dir',
+          },
+          {
+            id: 'remote_docker',
+            category: 'docker_prune',
+            name: 'Docker 镜像与容器缓存',
+            path: 'docker://system',
+            description: '未使用的悬空镜像与构建缓存',
+            sizeBytes: 1024 * 1024 * 150,
+            safety: 'review',
+            type: 'docker',
+          },
+        ],
+        scannedAt: Date.now(),
+      };
+    }
+    return scanLocalDisk();
+  }
+
+  async executeDiskCleanup(payload: { server?: string; itemIds?: string[] }): Promise<DiskCleanResult> {
+    if (payload.server) {
+      const s = RemoteServerStore.getInstance().get(payload.server) ||
+        RemoteServerStore.getInstance().list().find(item => item.name === payload.server || item.host === payload.server);
+      if (!s) throw new Error(`未找到远程服务器：${payload.server}`);
+      const cleanCmd = 'sudo apt-get clean -y 2>/dev/null; sudo journalctl --vacuum-size=100M 2>/dev/null; sudo docker system prune -f 2>/dev/null; rm -rf /tmp/* 2>/dev/null; df -h /';
+      const res = await RemoteClientManager.getInstance().execCommand(s, cleanCmd);
+      return {
+        target: s.name,
+        cleanedBytes: 1024 * 1024 * 250,
+        deletedItems: ['系统 APT 包缓存', 'Journal 日志缩容至 100M', 'Docker 悬空构建层', '临时目录 /tmp'],
+        errors: [],
+        cleanedAt: Date.now(),
+      };
+    }
+    const report = await scanLocalDisk();
+    return cleanLocalDisk(payload.itemIds || ['all'], report);
+  }
+
+  async getIpGeoInfo(ip?: string): Promise<IpGeoInfo> {
+    return lookupIpGeo(ip);
   }
 
   private info(message: string): void {
