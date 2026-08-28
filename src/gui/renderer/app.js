@@ -1693,12 +1693,50 @@ function renderPermissions() {
     autoApproveTools: ['*'],
   };
 
-  window.selectPermissionMode(perm.mode || 'full-access', false);
+  const container = $('permissionsContainer');
+  if (container) {
+    container.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;">
+          <div id="setModeFullAccess" class="card ${perm.mode === 'full-access' ? 'active' : ''}" style="cursor:pointer;padding:12px;border:1.5px solid ${perm.mode === 'full-access' ? 'var(--primary)' : 'var(--border-default)'};border-radius:8px;background:${perm.mode === 'full-access' ? '#f0f9ff' : '#ffffff'};" onclick="window.selectPermissionModeInSettings('full-access')">
+            <div style="font-weight:600;font-size:13px;color:${perm.mode === 'full-access' ? 'var(--primary)' : 'var(--text-main)'};">🟢 完全信任模式 (全权限)</div>
+            <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">全自动执行终端命令与写操作，无弹窗阻断</div>
+          </div>
+          <div id="setModeConfirm" class="card ${perm.mode === 'confirm-writes' ? 'active' : ''}" style="cursor:pointer;padding:12px;border:1.5px solid ${perm.mode === 'confirm-writes' ? 'var(--primary)' : 'var(--border-default)'};border-radius:8px;background:${perm.mode === 'confirm-writes' ? '#f0f9ff' : '#ffffff'};" onclick="window.selectPermissionModeInSettings('confirm-writes')">
+            <div style="font-weight:600;font-size:13px;">🟡 写入需确认模式</div>
+            <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">执行敏感写操作或终端命令时弹窗二次审批</div>
+          </div>
+          <div id="setModeStrict" class="card ${perm.mode === 'strict' ? 'active' : ''}" style="cursor:pointer;padding:12px;border:1.5px solid ${perm.mode === 'strict' ? 'var(--primary)' : 'var(--border-default)'};border-radius:8px;background:${perm.mode === 'strict' ? '#f0f9ff' : '#ffffff'};" onclick="window.selectPermissionModeInSettings('strict')">
+            <div style="font-weight:600;font-size:13px;">🔴 严格只读模式</div>
+            <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">只允许读取与搜索，禁止修改任何代码与终端操作</div>
+          </div>
+        </div>
 
-  if ($('permAllowShell')) $('permAllowShell').checked = !!perm.allowShell;
-  if ($('permAllowFsWrite')) $('permAllowFsWrite').checked = !!perm.allowFsWrite;
-  if ($('permAllowNetwork')) $('permAllowNetwork').checked = !!perm.allowNetwork;
-  if ($('permAllowSubagent')) $('permAllowSubagent').checked = !!perm.allowSpawnSubagent;
+        <div style="background:#f8fafc;padding:14px;border-radius:8px;border:1px solid #e2e8f0;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;">
+            <input type="checkbox" id="setPermShell" ${perm.allowShell ? 'checked' : ''} />
+            <span>允许智能体调用系统终端 (Shell / PowerShell / Bash)</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;">
+            <input type="checkbox" id="setPermFsWrite" ${perm.allowFsWrite ? 'checked' : ''} />
+            <span>允许智能体写入、覆盖与修补本地文件系统</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;">
+            <input type="checkbox" id="setPermNetwork" ${perm.allowNetwork ? 'checked' : ''} />
+            <span>允许智能体发起外部 HTTP/HTTPS 网络请求</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;">
+            <input type="checkbox" id="setPermSubagent" ${perm.allowSpawnSubagent ? 'checked' : ''} />
+            <span>允许智能体并发派发 Subagent 子智能体协作</span>
+          </label>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;">
+          <button type="button" class="btn primary" id="saveSettingsPermBtn" onclick="window.savePermissionsFromSettings()" style="padding:6px 16px;">保存权限策略</button>
+        </div>
+      </div>
+    `;
+  }
 }
 
 window.selectPermissionMode = (mode, isUserClick = true) => {
@@ -1772,49 +1810,33 @@ function updateBatchBars() {
 }
 
 function renderProjects() {
-  const list = $('projectList');
-  if (!list) return;
+  const containers = [$('projectList'), $('projectsTable')].filter(Boolean);
+  if (containers.length === 0) return;
 
-  if (state.projects.length === 0) {
-    list.innerHTML = `
-      <div class="empty-card" style="grid-column:1/-1;padding:32px;text-align:center;color:var(--text-muted);">
-        暂未导入任何工作区工程，点击上方“导入本地目录”开始。
-      </div>
-    `;
-    return;
-  }
-
-  list.innerHTML = state.projects.map((p) => `
-    <div class="card project-card">
-      <div class="card-header">
-        <div class="card-header-left">
-          <input type="checkbox" class="item-checkbox" data-type="project" data-id="${esc(p.id)}" ${selectedProjectIds.has(p.id) ? 'checked' : ''} />
-          <div class="card-title-wrap">
-            <span class="card-title">${esc(p.name)}</span>
-            <span class="card-subtitle" title="${esc(p.path)}">${esc(p.path)}</span>
+  const html = state.projects.length === 0
+    ? `<div class="empty-card" style="padding:24px;text-align:center;color:var(--text-muted);font-size:12.5px;">暂未导入任何工作区工程，点击上方“导入已有项目”开始。</div>`
+    : state.projects.map((p) => `
+        <div class="card project-card" style="margin-bottom:10px;padding:12px;background:#ffffff;border:1px solid var(--border-default);border-radius:8px;">
+          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <strong style="font-size:13.5px;color:var(--text-main);">${esc(p.name)}</strong>
+              <span class="prop-chip" style="font-size:11px;">${esc(p.id)}</span>
+            </div>
+          </div>
+          <div style="font-size:11.5px;color:var(--text-secondary);margin-bottom:8px;font-family:var(--font-mono);word-break:break-all;">
+            ${esc(p.path)}
+          </div>
+          <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
+            <button type="button" class="btn text-btn" style="font-size:11.5px;padding:3px 8px;" onclick="useProjectInChat('${escJs(p.path)}')">在对话中使用</button>
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="openPathInExplorer('${escJs(p.path)}')">文件夹</button>
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="openPathInTerminal('${escJs(p.path)}')">终端</button>
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="openPathInVsCode('${escJs(p.path)}')">VS Code</button>
+            <button type="button" class="btn danger" style="font-size:11.5px;padding:3px 8px;" onclick="removeProject('${escJs(p.id)}', '${escJs(p.name)}')">移除</button>
           </div>
         </div>
-      </div>
-      <div class="card-footer">
-        <button class="btn text-btn" onclick="useProjectInChat('${escJs(p.path)}')">在对话中使用</button>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="btn secondary" onclick="openPathInExplorer('${escJs(p.path)}')">文件夹</button>
-          <button class="btn secondary" onclick="openPathInTerminal('${escJs(p.path)}')">终端</button>
-          <button class="btn secondary" onclick="openPathInVsCode('${escJs(p.path)}')">VS Code</button>
-          <button class="btn danger" onclick="removeProject('${escJs(p.id)}', '${escJs(p.name)}')">移除</button>
-        </div>
-      </div>
-    </div>
-  `).join('');
+      `).join('');
 
-  list.querySelectorAll('input[data-type="project"]').forEach((cb) => {
-    cb.addEventListener('change', (e) => {
-      const id = e.target.dataset.id;
-      if (e.target.checked) selectedProjectIds.add(id);
-      else selectedProjectIds.delete(id);
-      updateBatchBars();
-    });
-  });
+  containers.forEach(c => { c.innerHTML = html; });
 }
 
 $('selectAllProjectsBtn')?.addEventListener('click', () => {
@@ -1898,58 +1920,35 @@ window.removeProject = async (id, name) => {
 // ==========================================================================
 
 function renderProviders() {
-  const list = $('providerList');
-  if (!list) return;
+  const containers = [$('providerList'), $('providersTable')].filter(Boolean);
+  if (containers.length === 0) return;
 
-  if (state.providers.length === 0) {
-    list.innerHTML = `
-      <div class="empty-card" style="grid-column:1/-1;padding:32px;text-align:center;color:var(--text-muted);">
-        暂无配置的服务商，点击右上角“新增服务商”开始配置。
-      </div>
-    `;
-    return;
-  }
-
-  list.innerHTML = state.providers.map((p) => `
-    <div class="card provider-card">
-      <div class="card-header">
-        <div class="card-header-left">
-          <input type="checkbox" class="item-checkbox" data-type="provider" data-id="${esc(p.id)}" ${selectedProviderIds.has(p.id) ? 'checked' : ''} />
-          <div class="card-title-wrap">
-            <span class="card-title">${esc(p.name || p.id)}</span>
-            <span class="card-subtitle">${esc(p.id)}</span>
+  const html = state.providers.length === 0
+    ? `<div class="empty-card" style="padding:24px;text-align:center;color:var(--text-muted);font-size:12.5px;">暂无配置的服务商，点击右上角“+ 添加服务商”开始。</div>`
+    : state.providers.map((p) => `
+        <div class="card provider-card" style="margin-bottom:10px;padding:12px;background:#ffffff;border:1px solid var(--border-default);border-radius:8px;">
+          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-weight:600;font-size:13.5px;color:var(--text-main);">${esc(p.name || p.id)}</span>
+              <span class="prop-chip" style="font-size:11px;">${esc(p.id)}</span>
+            </div>
+            <span class="badge ${p.hasCredential ? 'success' : 'warn'}" style="font-size:11px;">
+              ${p.hasCredential ? '凭据就绪' : '缺凭据'}
+            </span>
+          </div>
+          <div style="font-size:11.5px;color:var(--text-secondary);margin-bottom:8px;word-break:break-all;">
+            URL：${esc(p.baseUrl)} | 线制：${esc(p.wireApi)} | 协议：${esc(p.defaultProtocol || p.protocol || '默认')}
+          </div>
+          <div style="display:flex;gap:6px;justify-content:flex-end;">
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="openModelDialogWithProvider('${escJs(p.id)}')">添加模型</button>
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="openProviderDialog('${escJs(p.id)}')">编辑</button>
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="testProvider('${escJs(p.id)}')">测试</button>
+            <button type="button" class="btn danger" style="font-size:11.5px;padding:3px 8px;" onclick="deleteProvider('${escJs(p.id)}')">删除</button>
           </div>
         </div>
-        <span class="badge ${p.hasCredential ? '' : 'warn'}">
-          ${p.hasCredential ? '凭据就绪' : '缺凭据'}
-        </span>
-      </div>
-      <div class="card-body">
-        <div class="card-subtitle" title="${esc(p.baseUrl)}">URL：${esc(p.baseUrl)}</div>
-        <div class="card-props">
-          <span class="prop-chip">线制：${esc(p.wireApi)}</span>
-          <span class="prop-chip">协议：${esc(p.defaultProtocol || p.protocol || '默认')}</span>
-        </div>
-      </div>
-      <div class="card-footer">
-        <div style="display:flex;gap:6px;margin-left:auto;">
-          <button class="btn secondary" onclick="openModelDialogWithProvider('${esc(p.id)}')">添加模型</button>
-          <button class="btn secondary" onclick="openProviderDialog('${esc(p.id)}')">编辑</button>
-          <button class="btn secondary" onclick="testProvider('${esc(p.id)}')">测试</button>
-          <button class="btn danger" onclick="deleteProvider('${esc(p.id)}')">删除</button>
-        </div>
-      </div>
-    </div>
-  `).join('');
+      `).join('');
 
-  list.querySelectorAll('input[data-type="provider"]').forEach((cb) => {
-    cb.addEventListener('change', (e) => {
-      const id = e.target.dataset.id;
-      if (e.target.checked) selectedProviderIds.add(id);
-      else selectedProviderIds.delete(id);
-      updateBatchBars();
-    });
-  });
+  containers.forEach(c => { c.innerHTML = html; });
 }
 
 $('selectAllProvidersBtn')?.addEventListener('click', () => {
@@ -2111,53 +2110,31 @@ $('agentForm')?.addEventListener('submit', async (e) => {
 // ==========================================================================
 
 function renderModels() {
-  const list = $('modelList');
-  if (!list) return;
+  const containers = [$('modelList'), $('modelsTable')].filter(Boolean);
+  if (containers.length === 0) return;
 
-  if (state.models.length === 0) {
-    list.innerHTML = `
-      <div class="empty-card" style="grid-column:1/-1;padding:32px;text-align:center;color:var(--text-muted);">
-        模型目录为空，点击右上角“新增模型”在线拉取或手动添加。
-      </div>
-    `;
-    return;
-  }
-
-  list.innerHTML = state.models.map((m) => `
-    <div class="card model-card">
-      <div class="card-header">
-        <div class="card-header-left">
-          <input type="checkbox" class="item-checkbox" data-type="model" data-id="${esc(m.alias)}" ${selectedModelAliases.has(m.alias) ? 'checked' : ''} />
-          <div class="card-title-wrap">
-            <span class="card-title">${esc(m.alias)}</span>
-            <span class="card-subtitle">${esc(m.fullName)}</span>
+  const html = state.models.length === 0
+    ? `<div class="empty-card" style="padding:24px;text-align:center;color:var(--text-muted);font-size:12.5px;">暂无声明的模型，点击右上角“+ 添加模型”开始。</div>`
+    : state.models.map((m) => `
+        <div class="card model-card" style="margin-bottom:10px;padding:12px;background:#ffffff;border:1px solid var(--border-default);border-radius:8px;">
+          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <strong style="font-size:13.5px;color:var(--text-main);">${esc(m.alias)}</strong>
+              <span class="prop-chip" style="font-size:11px;">${esc(m.providerId || m.provider || 'default')}</span>
+            </div>
+            <span class="badge neutral" style="font-size:11px;">${esc(m.model || m.fullName || m.alias)}</span>
+          </div>
+          <div style="font-size:11.5px;color:var(--text-secondary);margin-bottom:8px;">
+            全名：${esc(m.fullName || m.alias)} | 上下文：${m.contextWindow ? m.contextWindow + ' tokens' : '自动'}
+          </div>
+          <div style="display:flex;gap:6px;justify-content:flex-end;">
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="openModelDialog('${escJs(m.alias)}')">编辑</button>
+            <button type="button" class="btn danger" style="font-size:11.5px;padding:3px 8px;" onclick="deleteModel('${escJs(m.alias)}')">删除</button>
           </div>
         </div>
-        <span class="badge neutral">${esc(m.providerId || m.provider || 'default')}</span>
-      </div>
-      <div class="card-body">
-        <div class="card-props">
-          <span class="prop-chip">上下文：${esc(m.contextWindow ? m.contextWindow + ' tokens' : '未设定')}</span>
-          <span class="prop-chip">输出上限：${esc(m.maxOutputTokens ? m.maxOutputTokens + ' tokens' : '未设定')}</span>
-        </div>
-      </div>
-      <div class="card-footer">
-        <div style="display:flex;gap:6px;margin-left:auto;">
-          <button class="btn secondary" onclick="openModelDialog('${esc(m.alias)}')">编辑</button>
-          <button class="btn danger" onclick="deleteModel('${esc(m.alias)}')">删除</button>
-        </div>
-      </div>
-    </div>
-  `).join('');
+      `).join('');
 
-  list.querySelectorAll('input[data-type="model"]').forEach((cb) => {
-    cb.addEventListener('change', (e) => {
-      const alias = e.target.dataset.id;
-      if (e.target.checked) selectedModelAliases.add(alias);
-      else selectedModelAliases.delete(alias);
-      updateBatchBars();
-    });
-  });
+  containers.forEach(c => { c.innerHTML = html; });
 }
 
 $('selectAllModelsBtn')?.addEventListener('click', () => {
@@ -2197,57 +2174,47 @@ $('batchDeleteModelsBtn')?.addEventListener('click', async () => {
 // ==========================================================================
 
 function renderTargets() {
-  const list = $('targetList');
-  if (!list) return;
+  const containers = [$('targetList'), $('targetsContainer')].filter(Boolean);
+  if (containers.length === 0) return;
 
-  list.innerHTML = state.targets.map((t) => `
-    <div class="card target-card">
-      <div class="card-header">
-        <div class="card-title-wrap">
-          <span class="card-title" style="text-transform:capitalize;">${esc(t.target)}</span>
-          <span class="card-subtitle">${esc(t.path)}</span>
+  const html = state.targets.length === 0
+    ? `<div class="empty-card" style="padding:24px;text-align:center;color:var(--text-muted);font-size:12.5px;">未检测到已安装的 CLI 工具环境</div>`
+    : state.targets.map((t) => `
+        <div class="card target-card" style="margin-bottom:10px;padding:12px;background:#ffffff;border:1px solid var(--border-default);border-radius:8px;">
+          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <strong style="font-size:13.5px;color:var(--text-main);text-transform:capitalize;">${esc(t.target)}</strong>
+            <span class="badge ${t.exists ? 'success' : 'neutral'}" style="font-size:11px;">${t.exists ? '已检测到' : '未检测到'}</span>
+          </div>
+          <div style="font-size:11.5px;color:var(--text-secondary);margin-bottom:6px;">当前注入：<strong>${esc(t.configuredModel || '未配置 / 默认')}</strong></div>
+          <div style="display:flex;justify-content:flex-end;">
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="quickSyncTarget('${escJs(t.target)}')">一键注入当前模型</button>
+          </div>
         </div>
-        <span class="badge ${t.exists ? '' : 'neutral'}">${t.exists ? '已检测到' : '未检测到'}</span>
-      </div>
-      <div class="card-body">
-        <div style="font-size:12px;color:var(--text-secondary);">
-          当前注入：<strong>${esc(t.configuredModel || '未配置 / 默认')}</strong>
-        </div>
-      </div>
-      <div class="card-footer">
-        <button class="btn secondary" onclick="quickSyncTarget('${esc(t.target)}')">一键注入当前模型</button>
-      </div>
-    </div>
-  `).join('');
+      `).join('');
+
+  containers.forEach(c => { c.innerHTML = html; });
 }
 
-window.quickSyncTarget = (targetName) => {
-  const select = document.querySelector('#switchForm select[name="target"]');
-  if (select) select.value = targetName;
-  show('switcher');
-};
-
 function renderLogs(filter = 'all') {
-  const list = $('logList');
-  if (!list) return;
+  const containers = [$('logList'), $('logsViewer')].filter(Boolean);
+  if (containers.length === 0) return;
 
   const logs = state.logs || [];
   const filtered = logs.filter((log) => (filter === 'all' ? true : log.level === filter));
 
-  if (filtered.length === 0) {
-    list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">暂无日志记录</div>';
-    return;
-  }
+  const html = filtered.length === 0
+    ? '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:12px;">暂无运行日志</div>'
+    : filtered.slice().reverse().map((log) => `
+        <div style="padding:6px 10px;margin-bottom:4px;border-radius:4px;background:#ffffff;border:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <div style="display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11.5px;">
+            <span class="badge ${log.level === 'error' ? 'danger' : 'neutral'}" style="padding:1px 4px;font-size:10px;">${esc(log.level)}</span>
+            <span style="word-break:break-all;">${esc(log.message)}</span>
+          </div>
+          <span style="font-size:10.5px;color:var(--text-muted);white-space:nowrap;">${new Date(log.at).toLocaleTimeString()}</span>
+        </div>
+      `).join('');
 
-  list.innerHTML = filtered.slice().reverse().map((log) => `
-    <div style="padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-default);background:#ffffff;display:flex;justify-content:space-between;align-items:center;gap:12px;">
-      <div style="display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:12.5px;">
-        <span class="badge ${log.level === 'error' ? 'danger' : 'neutral'}">${esc(log.level)}</span>
-        <span>${esc(log.message)}</span>
-      </div>
-      <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${new Date(log.at).toLocaleTimeString()}</span>
-    </div>
-  `).join('');
+  containers.forEach(c => { c.innerHTML = html; });
 }
 
 function fillSelects() {
@@ -4166,100 +4133,301 @@ $('toggleQQServiceBtn')?.addEventListener('click', async () => {
 });
 
 // ============================================================================
-// 4. 本机系统监控与智能桌面 (Host Desktop & Status)
+// 4. 本机系统监控与全景桌面 (Host Diagnostics & Dashboard Controller)
 // ============================================================================
 function fmtHostBytes(bytes) {
-  if (!bytes || bytes === 0) return '0 B';
+  if (!bytes || bytes <= 0) return '0 B';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function fmtHostUptime(seconds) {
+  if (!seconds || seconds <= 0) return '0秒';
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  const parts = [];
+  if (d > 0) parts.push(`${d}天`);
+  if (h > 0 || d > 0) parts.push(`${h}小时`);
+  if (m > 0 || h > 0 || d > 0) parts.push(`${m}分`);
+  parts.push(`${s}秒`);
+  return parts.join(' ');
 }
 
 window.refreshHostView = async () => {
   try {
-    const info = await window.hap.getServerInfo();
-    if ($('hostOsText')) $('hostOsText').textContent = `${info.os.platform} (${info.os.release})`;
-    if ($('hostArchText')) $('hostArchText').textContent = `架构: ${info.os.arch} / 主机: ${info.os.hostname}`;
-    if ($('hostCpuText')) $('hostCpuText').textContent = info.cpu.model || 'CPU 核心';
-    if ($('hostCpuCoresText')) $('hostCpuCoresText').textContent = `核心数: ${info.cpu.cores} 核 (${info.cpuUsagePercent || 0}% 占用)`;
-    if ($('hostMemText')) $('hostMemText').textContent = `${fmtHostBytes(info.memory.used)} / ${fmtHostBytes(info.memory.total)}`;
-    if ($('hostMemFreeText')) $('hostMemFreeText').textContent = `空闲: ${fmtHostBytes(info.memory.free)} (${info.memory.usagePercent}% 已用)`;
-    
-    // 渲染磁盘存储指标
-    if (info.disk && info.disk.totalBytes > 0) {
-      if ($('hostDiskText')) $('hostDiskText').textContent = `${fmtHostBytes(info.disk.used)} / ${fmtHostBytes(info.disk.totalBytes)}`;
-      if ($('hostDiskFreeText')) $('hostDiskFreeText').textContent = `可用: ${fmtHostBytes(info.disk.freeBytes)} (${info.disk.usedPercent}% 已用 · 挂载: ${info.disk.mount || '/'})`;
-    } else if (info.diskTotalBytes) {
-      const free = info.diskFreeBytes || 0;
-      const total = info.diskTotalBytes;
-      const used = total - free;
-      const pct = Math.round((used / total) * 100);
-      if ($('hostDiskText')) $('hostDiskText').textContent = `${fmtHostBytes(used)} / ${fmtHostBytes(total)}`;
-      if ($('hostDiskFreeText')) $('hostDiskFreeText').textContent = `可用: ${fmtHostBytes(free)} (${pct}% 已用)`;
-    } else {
-      if ($('hostDiskText')) $('hostDiskText').textContent = '系统驱动器正常';
-      if ($('hostDiskFreeText')) $('hostDiskFreeText').textContent = '点击下方按钮可深度扫描';
+    const info = await window.hap.getHostSysInfo();
+    if (!info || !info.cpu || !info.memory) return;
+
+    // 1. CPU 指标与负载
+    const cpuPct = info.cpu.usagePercent || 0;
+    if ($('hostCpuPercent')) $('hostCpuPercent').textContent = `${cpuPct}%`;
+    if ($('hostCpuSpeed')) $('hostCpuSpeed').textContent = `${info.cpu.speedMHz || 0} MHz`;
+    if ($('hostCpuCoresBadge')) $('hostCpuCoresBadge').textContent = `${info.cpu.cores} 核心`;
+    if ($('hostCpuCoreCountBadge')) $('hostCpuCoreCountBadge').textContent = `${info.cpu.cores} 逻辑核心`;
+    if ($('hostCpuModel')) $('hostCpuModel').textContent = info.cpu.model || 'CPU';
+    if ($('hostCpuBar')) {
+      $('hostCpuBar').style.width = `${cpuPct}%`;
+      $('hostCpuBar').style.background = cpuPct > 85 ? '#ef4444' : cpuPct > 60 ? '#f59e0b' : '#3b82f6';
     }
 
-    if ($('hostProcessUptime')) $('hostProcessUptime').textContent = `运行时间: ${Math.floor(info.uptime / 60)} 分钟`;
+    // CPU 多核拓扑分布
+    const coreGrid = $('hostCoreGrid');
+    if (coreGrid && info.cpu.perCore) {
+      coreGrid.innerHTML = info.cpu.perCore.map(c => `
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:6px 8px; display:flex; flex-direction:column; gap:2px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; font-weight:600; color:var(--text-main);">
+            <span>Core #${c.coreIndex}</span>
+            <span style="color:#3b82f6; font-family:var(--font-mono);">${c.speedMHz}MHz</span>
+          </div>
+          <div style="font-size:10px; color:#64748b; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+            ${esc(c.model.replace(/CPU @.*$/, '').trim())}
+          </div>
+        </div>
+      `).join('');
+    }
 
-    try {
-      const geo = await window.hap.getIpGeoInfo();
-      if ($('hostIpText')) $('hostIpText').textContent = geo.ip || '127.0.0.1';
-      if ($('hostIpGeoBadge')) {
-        if (geo.formattedLocation) {
-          $('hostIpGeoBadge').textContent = geo.formattedLocation;
-        } else {
-          const loc = [geo.country, geo.region, geo.city].filter(Boolean).join(' · ') || '公网出口';
-          const isp = geo.isp ? ` (${geo.isp})` : '';
-          $('hostIpGeoBadge').textContent = `${loc}${isp}`;
-        }
+    // 2. 物理内存 (RAM)
+    const memPct = info.memory.usedPercent || 0;
+    if ($('hostMemUsed')) $('hostMemUsed').textContent = fmtHostBytes(info.memory.usedBytes);
+    if ($('hostMemTotalBrief')) $('hostMemTotalBrief').textContent = `/ ${fmtHostBytes(info.memory.totalBytes)}`;
+    if ($('hostMemTotal')) $('hostMemTotal').textContent = `空闲: ${fmtHostBytes(info.memory.freeBytes)}`;
+    if ($('hostMemPercentBadge')) {
+      $('hostMemPercentBadge').textContent = `${memPct}%`;
+      $('hostMemPercentBadge').className = `badge ${memPct > 85 ? 'danger' : memPct > 60 ? 'warn' : 'success'}`;
+    }
+    if ($('hostMemBar')) {
+      $('hostMemBar').style.width = `${memPct}%`;
+      $('hostMemBar').style.background = memPct > 85 ? '#ef4444' : memPct > 60 ? '#f59e0b' : '#10b981';
+    }
+
+    // 3. Node.js 虚拟机内存 (RSS & Heap)
+    if ($('hostProcessRss')) $('hostProcessRss').textContent = fmtHostBytes(info.memory.processRssBytes);
+    if ($('hostProcessPidBadge')) $('hostProcessPidBadge').textContent = `PID: ${info.os.pid}`;
+    if ($('hostProcessHeap')) {
+      $('hostProcessHeap').textContent = `堆使用: ${fmtHostBytes(info.memory.processHeapUsedBytes)} / ${fmtHostBytes(info.memory.processHeapTotalBytes)}`;
+    }
+    if ($('hostHeapBar')) {
+      const heapPct = info.memory.processHeapTotalBytes > 0
+        ? Math.round((info.memory.processHeapUsedBytes / info.memory.processHeapTotalBytes) * 100)
+        : 0;
+      $('hostHeapBar').style.width = `${heapPct}%`;
+    }
+
+    // 4. 运行时间与负载
+    if ($('hostSystemUptime')) $('hostSystemUptime').textContent = fmtHostUptime(info.os.uptimeSeconds);
+    if ($('hostProcessUptime')) $('hostProcessUptime').textContent = `Codex 服务运行: ${fmtHostUptime(info.os.processUptimeSeconds)}`;
+    if ($('hostTimestamp')) $('hostTimestamp').textContent = `更新于: ${new Date(info.timestamp).toLocaleTimeString()}`;
+    if ($('hostLoadAvgBadge')) {
+      const loads = (info.loadAvg || []).map(l => l.toFixed(2)).join(' / ');
+      $('hostLoadAvgBadge').textContent = loads ? `负载: ${loads}` : '运行正常';
+    }
+
+    // 5. 磁盘多卷分区存储
+    const partList = $('hostPartitionList');
+    if (partList && info.disk.partitions) {
+      if ($('hostDiskPartCountBadge')) $('hostDiskPartCountBadge').textContent = `${info.disk.partitions.length} 个驱动器`;
+      partList.innerHTML = info.disk.partitions.map(p => `
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; display:flex; flex-direction:column; gap:4px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:600; color:var(--text-main);">
+            <span>📁 驱动卷 <code>${esc(p.mount)}</code></span>
+            <span style="color:#0f172a; font-family:var(--font-mono);">${p.usedPercent}% (${fmtHostBytes(p.usedBytes)} / ${fmtHostBytes(p.totalBytes)})</span>
+          </div>
+          <div style="width: 100%; height: 5px; background: #e2e8f0; border-radius: 3px; overflow:hidden;">
+            <div style="width: ${p.usedPercent}%; height: 100%; background: ${p.usedPercent > 85 ? '#ef4444' : p.usedPercent > 70 ? '#f59e0b' : '#3b82f6'};"></div>
+          </div>
+          <div style="font-size:11px; color:#64748b; display:flex; justify-content:space-between;">
+            <span>可用空间: ${fmtHostBytes(p.freeBytes)}</span>
+            <span>总容量: ${fmtHostBytes(p.totalBytes)}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 6. 活跃高消耗进程 Top 榜
+    const procList = $('hostTopProcessList');
+    if (procList) {
+      if (!info.topProcesses || info.topProcesses.length === 0) {
+        procList.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:8px 0; text-align:center;">暂无活跃进程列表</div>';
+      } else {
+        procList.innerHTML = info.topProcesses.map((p, idx) => `
+          <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:6px 10px; border-radius:6px; border:1px solid #e2e8f0; font-size:12px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:11px; font-weight:700; color:#3b82f6; width:18px; text-align:center;">#${idx + 1}</span>
+              <strong style="color:var(--text-main); font-size:12.5px;">${esc(p.name)}</strong>
+              <span style="color:#94a3b8; font-size:11px; font-family:var(--font-mono);">(PID: ${p.pid})</span>
+            </div>
+            <div style="font-weight:700; font-family:var(--font-mono); color:#0f172a; background:#e2e8f0; padding:2px 8px; border-radius:4px; font-size:11.5px;">
+              ${esc(p.memoryFormatted)}
+            </div>
+          </div>
+        `).join('');
       }
-    } catch (e) {
-      console.warn('获取公网 IP 定位失败:', e);
-      if ($('hostIpGeoBadge')) $('hostIpGeoBadge').textContent = '局域网环境 / 本地网络';
     }
+
+    // 7. 操作系统与 Node.js 规格
+    if ($('hostPlatformBadge')) $('hostPlatformBadge').textContent = `${info.os.platform} / ${info.os.arch}`;
+    if ($('hostHostname')) $('hostHostname').textContent = info.network.hostname;
+    if ($('hostUsername')) $('hostUsername').textContent = info.os.user;
+    if ($('hostOsFull')) $('hostOsFull').textContent = `${info.os.type} ${info.os.release}`;
+    if ($('hostArch')) $('hostArch').textContent = `${info.os.arch} (字节序: ${info.os.endianness || 'LE'})`;
+    if ($('hostNodeVersion')) $('hostNodeVersion').textContent = info.os.nodeVersion;
+    if ($('hostV8Version')) $('hostV8Version').textContent = info.os.versions?.v8 || 'V8';
+    if ($('hostUvVersion')) $('hostUvVersion').textContent = `uv: ${info.os.versions?.uv || '-'} | OpenSSL: ${info.os.versions?.openssl || '-'}`;
+    if ($('hostCwd')) $('hostCwd').textContent = info.os.cwd || '-';
+
+    // 8. 本地网络网卡列表
+    const netList = $('hostNetworkList');
+    if (netList) {
+      if (!info.network.ips || info.network.ips.length === 0) {
+        netList.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:4px 0;">无活跃网络接口</div>';
+      } else {
+        netList.innerHTML = info.network.ips.map(n => `
+          <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:6px 10px; border-radius:6px; border:1px solid #e2e8f0; font-size:12px;">
+            <span style="font-weight:600; color:var(--text-main); font-size:12px;">${esc(n.interface)}</span>
+            <span style="font-family:monospace; background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-weight:600; font-size:11.5px;">${esc(n.address)}</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    // 9. 公网出口与 IP 地理位置
+    loadHostIpGeo().catch(() => {});
   } catch (err) {
     console.error('刷新宿主机监控失败:', err);
   }
 };
 
-window.handleScanDisk = async () => {
-  const resultEl = $('diskScanResult');
-  const cleanBtn = $('cleanDiskBtn');
-  if (resultEl) resultEl.innerHTML = '⏳ 正在扫描系统临时构建残余与缓存...';
+let lastHostIpGeo = null;
+async function loadHostIpGeo() {
   try {
-    const res = await window.hap.scanDiskCleanable();
-    if (resultEl) {
-      resultEl.innerHTML = `
-        <div style="color:#16a34a;font-weight:600;margin-bottom:4px;"> 扫描完成！共发现可清理项：<strong>${fmtHostBytes(res.totalCleanableBytes)}</strong></div>
-        <div style="font-size:11.5px;color:#64748b;">包含 npm/yarn/pnpm 缓存、临时编译产物与运行日志。</div>
-      `;
+    const geo = await window.hap.getIpGeoInfo();
+    lastHostIpGeo = geo;
+    if ($('hostIpGeoBadge')) {
+      $('hostIpGeoBadge').textContent = geo.isPrivate ? '局域网环境' : '公网在线';
+      $('hostIpGeoBadge').className = `badge ${geo.isPrivate ? 'neutral' : 'success'}`;
     }
-    if (cleanBtn && res.totalCleanableBytes > 0) cleanBtn.style.display = 'inline-block';
+    if ($('hostIpGeoDetails')) {
+      const parts = [];
+      parts.push(`<div><strong>出口 IP 地址:</strong> <code class="md-inline-code">${esc(geo.ip)}</code> ${geo.isPrivate ? '(局域网私网)' : '(公网出口)'}</div>`);
+      parts.push(`<div><strong>地理归属地:</strong> ${esc(geo.formattedLocation)}</div>`);
+      if (geo.isp) parts.push(`<div><strong>网络运营商:</strong> ${esc(geo.isp)} ${geo.asn ? '(' + esc(geo.asn) + ')' : ''}</div>`);
+      if (geo.timezone) parts.push(`<div><strong>时区标识:</strong> ${esc(geo.timezone)}</div>`);
+      $('hostIpGeoDetails').innerHTML = parts.join('');
+    }
   } catch (err) {
-    if (resultEl) resultEl.textContent = '扫描异常: ' + err.message;
+    if ($('hostIpGeoBadge')) $('hostIpGeoBadge').textContent = '探测失败';
   }
-};
+}
 
-window.handleCleanDisk = async () => {
-  const resultEl = $('diskScanResult');
-  const cleanBtn = $('cleanDiskBtn');
-  if (resultEl) resultEl.innerHTML = '⏳ 正在执行安全磁盘清理...';
+// AI 智能磁盘分析与安全清理
+let currentDiskScanReport = null;
+
+async function handleScanDisk(server) {
   try {
-    const res = await window.hap.executeDiskCleanup();
-    if (resultEl) {
-      resultEl.innerHTML = `<div style="color:#16a34a;font-weight:600;"> 清理成功！已释放 <strong>${fmtHostBytes(res.cleanedBytes)}</strong> 磁盘空间。</div>`;
-    }
-    if (cleanBtn) cleanBtn.style.display = 'none';
-    showToast('磁盘清理完成！', 'success');
+    showToast('正在扫描分析磁盘冗余垃圾与缓存...', 'info');
+    if ($('scanDiskBtn')) $('scanDiskBtn').disabled = true;
+    const report = await window.hap.scanDiskCleanable(server);
+    currentDiskScanReport = report;
+    renderDiskScanResult(report);
+    showToast(`扫描完成！发现 ${fmtHostBytes(report.totalCleanableBytes)} 可释放空间`, 'success');
   } catch (err) {
-    if (resultEl) resultEl.textContent = '清理异常: ' + err.message;
+    showToast('磁盘扫描失败: ' + err.message, 'error');
+  } finally {
+    if ($('scanDiskBtn')) $('scanDiskBtn').disabled = false;
   }
-};
+}
 
-// ============================================================================
+function renderDiskScanResult(report) {
+  if (!report) return;
+  if ($('diskEmptyState')) $('diskEmptyState').style.display = 'none';
+  if ($('diskScanResultContainer')) $('diskScanResultContainer').style.display = 'block';
+
+  if ($('diskCleanableTotalBadge')) {
+    $('diskCleanableTotalBadge').style.display = 'inline-flex';
+    $('diskCleanableTotalBadge').textContent = `可释放: ${fmtHostBytes(report.totalCleanableBytes)}`;
+  }
+  if ($('diskSafeSize')) $('diskSafeSize').textContent = fmtHostBytes(report.safeCleanableBytes);
+  if ($('diskReviewSize')) $('diskReviewSize').textContent = fmtHostBytes(report.reviewCleanableBytes);
+
+  const listEl = $('diskItemsList');
+  if (!listEl) return;
+
+  if (!report.items || report.items.length === 0) {
+    listEl.innerHTML = '<div style="color:#16a34a; font-weight:600; text-align:center; padding:16px;">🎉 磁盘非常干净，未发现冗余缓存垃圾！</div>';
+    return;
+  }
+
+  listEl.innerHTML = report.items.map(item => `
+    <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px 14px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="badge ${item.safety === 'safe' ? 'success' : 'warn'}">${item.safety === 'safe' ? '🟢 安全' : '🟡 确认'}</span>
+        <div>
+          <div style="font-weight:600; font-size:13.5px; color:var(--text-main);">${esc(item.name)}</div>
+          <div style="font-size:12px; color:var(--text-muted);">${esc(item.description)} <code style="font-size:11px;">(${esc(item.path)})</code></div>
+        </div>
+      </div>
+      <div style="font-size:14px; font-weight:700; color:var(--text-main); font-family:var(--font-mono);">
+        ${fmtHostBytes(item.sizeBytes)}
+      </div>
+    </div>
+  `).join('');
+}
+
+async function handleCleanDisk(type) {
+  if (!currentDiskScanReport) {
+    await handleScanDisk();
+  }
+  if (!currentDiskScanReport || currentDiskScanReport.items.length === 0) {
+    showToast('当前没有需要清理的垃圾项', 'info');
+    return;
+  }
+
+  const targetIds = type === 'all'
+    ? ['all']
+    : currentDiskScanReport.items.filter(i => i.safety === 'safe').map(i => i.id);
+
+  if (targetIds.length === 0) {
+    showToast('未发现属于该级别的垃圾文件', 'info');
+    return;
+  }
+
+  const confirmMsg = type === 'all'
+    ? `确定全量清理全部可回收项 (含构建产物 dist/target，预计释放 ${fmtHostBytes(currentDiskScanReport.totalCleanableBytes)}) 吗？`
+    : `确定执行安全清理 (仅清理安全缓存与临时日志，预计释放 ${fmtHostBytes(currentDiskScanReport.safeCleanableBytes)}) 吗？`;
+
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    showToast('正在执行磁盘安全清理...', 'info');
+    const result = await window.hap.executeDiskCleanup({
+      server: currentDiskScanReport.target === 'local' ? undefined : currentDiskScanReport.target,
+      itemIds: targetIds,
+    });
+    showToast(`清理成功！释放了 ${fmtHostBytes(result.cleanedBytes)} 空间！`, 'success');
+    await handleScanDisk();
+    await window.refreshHostView();
+  } catch (err) {
+    showToast('清理失败: ' + err.message, 'error');
+  }
+}
+
+// 绑定全局事件
+window.handleScanDisk = handleScanDisk;
+window.handleCleanDisk = handleCleanDisk;
+document.addEventListener('DOMContentLoaded', () => {
+  $('scanDiskBtn')?.addEventListener('click', () => handleScanDisk());
+  $('safeCleanDiskBtn')?.addEventListener('click', () => handleCleanDisk('safe'));
+  $('allCleanDiskBtn')?.addEventListener('click', () => handleCleanDisk('all'));
+  $('refreshHostBtn')?.addEventListener('click', async () => {
+    await window.refreshHostView();
+    showToast('本机系统全景状态已刷新！', 'info');
+  });
+});
+
 // 5. 导航切换监听补充 (Host / Schedules / Memory)
 // ============================================================================
 document.addEventListener('click', (e) => {
