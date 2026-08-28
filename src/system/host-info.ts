@@ -1,12 +1,22 @@
 import os from 'node:os';
 import process from 'node:process';
 import fs from 'node:fs';
+import { execSync } from 'node:child_process';
+
+export interface HostCpuCore {
+  coreIndex: number;
+  model: string;
+  speedMHz: number;
+  times: { user: number; nice: number; sys: number; idle: number; irq: number };
+}
 
 export interface HostCpuInfo {
   model: string;
   cores: number;
   speedMHz: number;
   usagePercent: number;
+  loadAvg: number[];
+  perCore: HostCpuCore[];
 }
 
 export interface HostMemoryInfo {
@@ -17,23 +27,16 @@ export interface HostMemoryInfo {
   processRssBytes: number;
   processHeapTotalBytes: number;
   processHeapUsedBytes: number;
+  processExternalBytes: number;
+  processArrayBuffersBytes: number;
 }
 
-export interface HostNetworkInfo {
-  hostname: string;
-  ips: Array<{ interface: string; address: string; family: string }>;
-}
-
-export interface HostOsInfo {
-  platform: string; // win32, darwin, linux
-  type: string; // Windows_NT, Darwin, Linux
-  release: string;
-  arch: string;
-  uptimeSeconds: number;
-  processUptimeSeconds: number;
-  nodeVersion: string;
-  pid: number;
-  user: string;
+export interface HostDiskPartition {
+  mount: string;
+  totalBytes: number;
+  freeBytes: number;
+  usedBytes: number;
+  usedPercent: number;
 }
 
 export interface HostDiskInfo {
@@ -42,6 +45,55 @@ export interface HostDiskInfo {
   usedBytes: number;
   usedPercent: number;
   mount: string;
+  partitions: HostDiskPartition[];
+}
+
+export interface HostNetworkInterfaceItem {
+  interface: string;
+  address: string;
+  family: string;
+  mac: string;
+  netmask: string;
+  internal: boolean;
+}
+
+export interface HostNetworkInfo {
+  hostname: string;
+  ips: HostNetworkInterfaceItem[];
+}
+
+export interface HostProcessVersions {
+  node: string;
+  v8: string;
+  uv: string;
+  zlib: string;
+  openssl: string;
+}
+
+export interface HostOsInfo {
+  platform: string; // win32, darwin, linux
+  type: string; // Windows_NT, Darwin, Linux
+  release: string;
+  arch: string;
+  endianness: string;
+  uptimeSeconds: number;
+  processUptimeSeconds: number;
+  nodeVersion: string;
+  pid: number;
+  ppid: number;
+  user: string;
+  homedir: string;
+  tmpdir: string;
+  execPath: string;
+  cwd: string;
+  versions: HostProcessVersions;
+}
+
+export interface HostTopProcess {
+  pid: number;
+  name: string;
+  memoryBytes: number;
+  memoryFormatted: string;
 }
 
 export interface HostSystemInfo {
@@ -50,6 +102,7 @@ export interface HostSystemInfo {
   memory: HostMemoryInfo;
   disk: HostDiskInfo;
   network: HostNetworkInfo;
+  topProcesses: HostTopProcess[];
   loadAvg: number[];
   timestamp: number;
 }
@@ -75,20 +128,23 @@ function calculateCpuUsage(): number {
   return Math.min(100, Math.max(0, Math.round(usage * 100)));
 }
 
-/** 获取局域网与物理网卡 IPv4 列表 */
-function getNetworkIps(): Array<{ interface: string; address: string; family: string }> {
+/** 获取局域网与物理网卡详细列表 */
+function getNetworkIps(): HostNetworkInterfaceItem[] {
   const interfaces = os.networkInterfaces();
-  const results: Array<{ interface: string; address: string; family: string }> = [];
+  const results: HostNetworkInterfaceItem[] = [];
 
   for (const name of Object.keys(interfaces)) {
     const netList = interfaces[name];
     if (!netList) continue;
     for (const net of netList) {
-      if (net.family === 'IPv4' && !net.internal) {
+      if (net.family === 'IPv4') {
         results.push({
           interface: name,
           address: net.address,
           family: net.family,
+          mac: net.mac || 'N/A',
+          netmask: net.netmask || '',
+          internal: net.internal,
         });
       }
     }
@@ -97,7 +153,98 @@ function getNetworkIps(): Array<{ interface: string; address: string; family: st
   return results;
 }
 
-/** 获取当前宿主主机的实时系统与硬件指标 */
+/** 探测本机所有磁盘卷与分区挂载 */
+function getDiskPartitions(): HostDiskPartition[] {
+  const partitions: HostDiskPartition[] = [];
+  if (typeof fs.statfsSync !== 'function') return partitions;
+
+  const candidateMounts: string[] = [];
+  if (process.platform === 'win32') {
+    const letters = ['C:\\', 'D:\\', 'E:\\', 'F:\\', 'G:\\', 'H:\\', 'Z:\\'];
+    candidateMounts.push(...letters);
+  } else {
+    candidateMounts.push('/', '/home', '/var', '/tmp', '/Volumes');
+  }
+
+  const seen = new Set<string>();
+
+  for (const mount of candidateMounts) {
+    try {
+      if (!fs.existsSync(mount)) continue;
+      const stat = fs.statfsSync(mount);
+      if (stat.blocks <= 0) continue;
+      const total = stat.bsize * stat.blocks;
+      const free = stat.bsize * stat.bfree;
+      const used = total - free;
+      const key = `${total}_${free}`;
+      if (seen.has(key)) continue; // 去重相同物理挂载
+      seen.add(key);
+
+      partitions.push({
+        mount,
+        totalBytes: total,
+        freeBytes: free,
+        usedBytes: used,
+        usedPercent: total > 0 ? Math.round((used / total) * 100) : 0,
+      });
+    } catch {}
+  }
+
+  return partitions;
+}
+
+/** 探测本机高内存消耗活跃进程 Top 榜单 (带超时限制) */
+function getTopProcesses(limit = 6): HostTopProcess[] {
+  const list: HostTopProcess[] = [];
+  try {
+    if (process.platform === 'win32') {
+      const output = execSync('tasklist /FO CSV /NH', { timeout: 800, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
+      const rows = output.trim().split('\n');
+      for (const row of rows) {
+        const parts = row.split('","').map(s => s.replace(/"/g, '').trim());
+        if (parts.length >= 5) {
+          const name = parts[0] || 'Unknown';
+          const pid = parseInt(parts[1] || '0', 10);
+          const rawMem = parts[4] || '0';
+          const memKb = parseInt(rawMem.replace(/[^0-9]/g, ''), 10) || 0;
+          if (!isNaN(pid) && pid > 0 && memKb > 0) {
+            list.push({
+              pid,
+              name,
+              memoryBytes: memKb * 1024,
+              memoryFormatted: formatBytes(memKb * 1024),
+            });
+          }
+        }
+      }
+      list.sort((a, b) => b.memoryBytes - a.memoryBytes);
+      return list.slice(0, limit);
+    } else {
+      const output = execSync('ps -eo pid,comm,rss --sort=-rss | head -n 8', { timeout: 800, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
+      const rows = output.trim().split('\n').slice(1);
+      for (const row of rows) {
+        const parts = row.trim().split(/\s+/);
+        if (parts.length >= 3) {
+          const pid = parseInt(parts[0] || '0', 10);
+          const name = parts[1] || 'Unknown';
+          const rssKb = parseInt(parts[2] || '0', 10) || 0;
+          if (!isNaN(pid) && pid > 0) {
+            list.push({
+              pid,
+              name,
+              memoryBytes: rssKb * 1024,
+              memoryFormatted: formatBytes(rssKb * 1024),
+            });
+          }
+        }
+      }
+      return list.slice(0, limit);
+    }
+  } catch {}
+  return list;
+}
+
+/** 获取当前宿主主机的超详细实时系统与硬件指标 */
 export function getHostSystemInfo(): HostSystemInfo {
   const cpus = os.cpus();
   const totalMem = os.totalmem();
@@ -110,23 +257,36 @@ export function getHostSystemInfo(): HostSystemInfo {
     username = os.userInfo().username;
   } catch {}
 
+  const partitions = getDiskPartitions();
   let diskTotal = 0;
   let diskFree = 0;
   let diskUsed = 0;
   let diskUsedPercent = 0;
   let mountPoint = process.cwd();
 
-  try {
-    if (typeof fs.statfsSync === 'function') {
-      const rootPath = process.platform === 'win32' ? process.cwd().slice(0, 3) : '/';
-      const stat = fs.statfsSync(rootPath);
-      diskTotal = stat.bsize * stat.blocks;
-      diskFree = stat.bsize * stat.bfree;
-      diskUsed = diskTotal - diskFree;
-      diskUsedPercent = diskTotal > 0 ? Math.round((diskUsed / diskTotal) * 100) : 0;
-      mountPoint = rootPath;
-    }
-  } catch {}
+  if (partitions.length > 0) {
+    const mainDisk = partitions[0]!;
+    diskTotal = mainDisk.totalBytes;
+    diskFree = mainDisk.freeBytes;
+    diskUsed = mainDisk.usedBytes;
+    diskUsedPercent = mainDisk.usedPercent;
+    mountPoint = mainDisk.mount;
+  }
+
+  const perCoreCpus: HostCpuCore[] = (cpus || []).map((c, i) => ({
+    coreIndex: i,
+    model: c.model,
+    speedMHz: c.speed,
+    times: c.times,
+  }));
+
+  const versions: HostProcessVersions = {
+    node: process.versions.node || '',
+    v8: process.versions.v8 || '',
+    uv: process.versions.uv || '',
+    zlib: process.versions.zlib || '',
+    openssl: process.versions.openssl || '',
+  };
 
   return {
     os: {
@@ -134,17 +294,26 @@ export function getHostSystemInfo(): HostSystemInfo {
       type: os.type(),
       release: os.release(),
       arch: process.arch,
+      endianness: os.endianness(),
       uptimeSeconds: Math.floor(os.uptime()),
       processUptimeSeconds: Math.floor(process.uptime()),
       nodeVersion: process.version,
       pid: process.pid,
+      ppid: process.ppid || 0,
       user: username,
+      homedir: os.homedir(),
+      tmpdir: os.tmpdir(),
+      execPath: process.execPath,
+      cwd: process.cwd(),
+      versions,
     },
     cpu: {
       model: cpus[0]?.model || 'Generic CPU',
       cores: cpus.length,
       speedMHz: cpus[0]?.speed || 0,
       usagePercent: calculateCpuUsage(),
+      loadAvg: os.loadavg(),
+      perCore: perCoreCpus,
     },
     memory: {
       totalBytes: totalMem,
@@ -154,6 +323,8 @@ export function getHostSystemInfo(): HostSystemInfo {
       processRssBytes: procMem.rss,
       processHeapTotalBytes: procMem.heapTotal,
       processHeapUsedBytes: procMem.heapUsed,
+      processExternalBytes: procMem.external || 0,
+      processArrayBuffersBytes: procMem.arrayBuffers || 0,
     },
     disk: {
       totalBytes: diskTotal,
@@ -161,17 +332,19 @@ export function getHostSystemInfo(): HostSystemInfo {
       usedBytes: diskUsed,
       usedPercent: diskUsedPercent,
       mount: mountPoint,
+      partitions,
     },
     network: {
       hostname: os.hostname(),
       ips: getNetworkIps(),
     },
+    topProcesses: getTopProcesses(6),
     loadAvg: os.loadavg(),
     timestamp: Date.now(),
   };
 }
 
-/** 格式化字节为易读的人类可读字符串 (KB, MB, GB) */
+/** 格式化字节为易读的人类可读字符串 (KB, MB, GB, TB) */
 export function formatBytes(bytes: number, decimals = 1): string {
   if (!bytes || bytes <= 0) return '0 B';
   const k = 1024;

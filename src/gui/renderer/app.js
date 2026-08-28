@@ -26,6 +26,112 @@ function escJs(val) {
     .replace(/"/g, '&quot;')
     .replace(/\n/g, '\\n')
     .replace(/\r/g, '\\r');
+}
+
+// 规范化文件系统路径（统一正斜杠与小写比较，彻底解决 Windows 反斜杠转义与大小写不匹配）
+function normPath(p) {
+  if (!p) return '';
+  return String(p).replace(/\\/g, '/').toLowerCase().replace(/\/+$/, '');
+}
+
+function formatFileSize(bytes) {
+  if (!bytes || isNaN(bytes)) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function showToast(message, type = 'info') {
+  // 智能查找当前处于开启状态的顶层模态框
+  const openDialogs = document.querySelectorAll('dialog[open]');
+  const activeDialog = openDialogs.length > 0 ? openDialogs[openDialogs.length - 1] : null;
+
+  let container = $('toastContainer');
+  if (activeDialog) {
+    let dialogContainer = activeDialog.querySelector('.toast-container');
+    if (!dialogContainer) {
+      dialogContainer = document.createElement('div');
+      dialogContainer.className = 'toast-container in-dialog';
+      activeDialog.appendChild(dialogContainer);
+    }
+    container = dialogContainer;
+  }
+
+  if (!container) return;
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.innerHTML = `<span>${esc(message)}</span>`;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('toast-out');
+    setTimeout(() => el.remove(), 200);
+  }, 2600);
+}
+
+function copyText(text, label = '内容') {
+  navigator.clipboard.writeText(text).then(
+    () => showToast(`已复制${label}到剪贴板`, 'success'),
+    (err) => showToast('复制失败：' + err.message, 'error')
+  );
+}
+
+async function showConfirm({ title = '确认操作', message = '确定要继续吗？', okText = '确认', cancelText = '取消', isDanger = false } = {}) {
+  const dialog = $('confirmDialog');
+  if (!dialog) return window.confirm(message);
+
+  $('confirmTitle').textContent = title;
+  $('confirmMessage').innerHTML = message;
+  const okBtn = $('confirmOkBtn');
+  const cancelBtn = $('confirmCancelBtn');
+  const iconWrap = $('confirmIconWrap');
+
+  okBtn.textContent = okText;
+  cancelBtn.textContent = cancelText;
+
+  if (isDanger) {
+    okBtn.className = 'btn danger';
+    if (iconWrap) {
+      iconWrap.style.background = '#fef2f2';
+      iconWrap.style.color = '#ef4444';
+      iconWrap.style.boxShadow = '0 4px 12px rgba(239,68,68,0.15)';
+    }
+  } else {
+    okBtn.className = 'btn primary';
+    if (iconWrap) {
+      iconWrap.style.background = '#eff6ff';
+      iconWrap.style.color = '#0284c7';
+      iconWrap.style.boxShadow = '0 4px 12px rgba(14,165,233,0.15)';
+    }
+  }
+
+  return new Promise((resolve) => {
+    const cleanup = () => {
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      dialog.removeEventListener('close', onClose);
+    };
+    const onOk = () => {
+      cleanup();
+      dialog.close();
+      resolve(true);
+    };
+    const onCancel = () => {
+      cleanup();
+      dialog.close();
+      resolve(false);
+    };
+    const onClose = () => {
+      cleanup();
+      resolve(false);
+    };
+
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    dialog.addEventListener('close', onClose);
+    dialog.showModal();
+  });
+}
+
 function getRelativeTimeStr(isoString) {
   if (!isoString) return '刚刚';
   const diffMs = Date.now() - new Date(isoString).getTime();
@@ -3726,10 +3832,19 @@ window.fetchServerInfoNode = async (id) => {
 };
 
 window.deleteServerNode = async (id) => {
-  if (!confirm(`确定要移除服务器节点 [${id}] 吗？`)) return;
+  const s = (cachedServers || []).find((item) => item.id === id);
+  const serverName = s ? `${s.name} (${s.host})` : id;
+  const ok = await showConfirm({
+    title: '移除服务器节点',
+    message: `确定要移除服务器节点 <strong>${esc(serverName)}</strong> 吗？<br/><span style="font-size:12px;color:var(--text-muted);">移除后将停止该远端节点的连接与监控，该操作不影响远端主机上已部署的数据。</span>`,
+    okText: '确认移除',
+    isDanger: true,
+  });
+  if (!ok) return;
   try {
     await window.hap.removeServer(id);
-    showToast(`已移除服务器节点 [${id}]`, 'info');
+    if (activeTerminalServerId === id) activeTerminalServerId = '';
+    showToast(`已成功移除服务器节点 [${serverName}]`, 'info');
     await renderServers();
   } catch (err) {
     showToast(`移除失败：${err.message}`, 'error');
@@ -4183,6 +4298,34 @@ function renderServerOpsAttachments() {
     </div>`;
   }).join('');
 }
+
+window.switchSettingsTab = (tabId) => {
+  if (tabId === 'providers') {
+    renderProviders();
+    renderModels();
+  } else if (tabId === 'channels') {
+    renderWeChatView();
+    renderTelegramView();
+  } else if (tabId === 'projects') {
+    renderProjects();
+  } else if (tabId === 'permissions') {
+    renderPermissions();
+  } else if (tabId === 'system') {
+    renderTargets();
+    renderLogs();
+  }
+};
+
+window.switchSettingsSubTab = (subTab) => {
+  if (subTab === 'tg' || subTab === 'telegram') {
+    switchView('telegram');
+  } else if (subTab === 'wechat' || subTab === 'feishu' || subTab === 'qq') {
+    switchView('wechat');
+    window.switchChannelTab?.(subTab);
+  } else {
+    window.switchSettingsTab?.(subTab);
+  }
+};
 
 window.removeServerOpsAttachment = (index) => {
   currentServerOpsAttachments.splice(index, 1);

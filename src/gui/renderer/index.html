@@ -831,66 +831,214 @@
 
       <!-- 独立视图: 远程服务器与节点管理 (Remote Servers) -->
       
-      <!-- 独立视图: 本机环境与系统桌面 (Host Desktop & Status) -->
+      <!-- 独立视图: 本机系统全景监控中心 (Host System Diagnostics & Monitor) -->
       <section id="host" class="view">
-        <div class="card" style="margin-bottom:16px;">
-          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-            <div style="display:flex;align-items:center;gap:10px;">
-              <div class="agent-avatar-badge" style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;">HOST</div>
-              <div>
-                <div style="font-weight:700;font-size:14px;color:var(--text-main);">本机智能系统监控与运维桌面</div>
-                <div style="font-size:11.5px;color:var(--text-muted);">实时掌控当前宿主机硬件负载、公网 IP 地理定位、安全磁盘清理与后台服务健康</div>
+        <div class="page-container">
+          <!-- 顶部标题与操作栏 -->
+          <div class="page-header-row" style="margin-bottom:16px;">
+            <div>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div class="agent-avatar-badge" style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:700;">🖥️</div>
+                <div>
+                  <h2 class="page-title" style="font-size:18px;margin:0;">本机系统全景监控中心 (Host System Dashboard)</h2>
+                  <p class="page-subtitle" style="margin:2px 0 0 0;font-size:12.5px;">全景监测宿主物理硬件、多核 CPU 拓扑、内存结构、全盘卷分区、活跃进程 Top 榜与 IP 归属</p>
+                </div>
               </div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span id="hostProcessUptime" class="badge secondary" style="font-size:11px;">HAP 运行中</span>
-              <button type="button" class="btn secondary" onclick="window.refreshHostView()" style="padding:3px 10px;font-size:12px;">
-                刷新监控
+            <div style="display:flex;gap:10px;align-items:center;">
+              <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-secondary);cursor:pointer;background:#f8fafc;padding:4px 10px;border-radius:6px;border:1px solid #e2e8f0;">
+                <input type="checkbox" id="hostAutoRefreshToggle" checked />
+                <span>自动轮询 (3s)</span>
+              </label>
+              <button id="refreshHostBtn" class="btn primary" style="font-size:12.5px;padding:6px 14px;">
+                🔄 立即刷新
               </button>
             </div>
           </div>
-          <div class="card-body" style="padding:16px;">
-            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
-              <div class="stat-card" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
-                <div style="font-size:11.5px;color:#64748b;margin-bottom:4px;">操作系统 / 内核</div>
-                <div id="hostOsText" style="font-size:13.5px;font-weight:600;color:#0f172a;">探测中...</div>
-                <div id="hostArchText" style="font-size:11px;color:#94a3b8;margin-top:2px;">--</div>
+
+          <!-- 4 大核心 KPI 指标卡片 -->
+          <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 18px;">
+            <!-- CPU 指标卡 -->
+            <div class="card" style="padding: 16px; display:flex; flex-direction:column; gap:8px;">
+              <div style="font-size: 12px; color: var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
+                <span>⚡ CPU 整体负载</span>
+                <span id="hostCpuCoresBadge" class="badge info">-- 核心</span>
               </div>
-              <div class="stat-card" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
-                <div style="font-size:11.5px;color:#64748b;margin-bottom:4px;">处理器与核心</div>
-                <div id="hostCpuText" style="font-size:13.5px;font-weight:600;color:#0f172a;">探测中...</div>
-                <div id="hostCpuCoresText" style="font-size:11px;color:#94a3b8;margin-top:2px;">--</div>
+              <div style="display:flex;align-items:baseline;gap:8px;">
+                <div style="font-size: 28px; font-weight: 700; color: var(--text-main); font-family:var(--font-mono);" id="hostCpuPercent">--%</div>
+                <div style="font-size: 11.5px; color: var(--text-muted);" id="hostCpuSpeed">-- MHz</div>
               </div>
-              <div class="stat-card" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
-                <div style="font-size:11.5px;color:#64748b;margin-bottom:4px;">物理内存使用</div>
-                <div id="hostMemText" style="font-size:13.5px;font-weight:600;color:#0f172a;">探测中...</div>
-                <div id="hostMemFreeText" style="font-size:11px;color:#94a3b8;margin-top:2px;">--</div>
+              <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow:hidden;">
+                <div id="hostCpuBar" style="width: 0%; height: 100%; background: #3b82f6; transition: width 0.3s;"></div>
               </div>
-              <div class="stat-card" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
-                <div style="font-size:11.5px;color:#64748b;margin-bottom:4px;">磁盘存储空间</div>
-                <div id="hostDiskText" style="font-size:13.5px;font-weight:600;color:#0f172a;">探测中...</div>
-                <div id="hostDiskFreeText" style="font-size:11px;color:#94a3b8;margin-top:2px;">--</div>
+              <div style="font-size: 11px; color: var(--text-muted); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" id="hostCpuModel">--</div>
+            </div>
+
+            <!-- 物理内存指标卡 -->
+            <div class="card" style="padding: 16px; display:flex; flex-direction:column; gap:8px;">
+              <div style="font-size: 12px; color: var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
+                <span>💾 物理内存 (RAM)</span>
+                <span id="hostMemPercentBadge" class="badge">--%</span>
               </div>
-              <div class="stat-card" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
-                <div style="font-size:11.5px;color:#64748b;margin-bottom:4px;">网络与出口 IP</div>
-                <div id="hostIpText" style="font-size:13.5px;font-weight:600;color:#0f172a;">探测中...</div>
-                <div id="hostIpGeoBadge" style="font-size:11px;color:#94a3b8;margin-top:2px;">--</div>
+              <div style="display:flex;align-items:baseline;gap:8px;">
+                <div style="font-size: 28px; font-weight: 700; color: var(--text-main); font-family:var(--font-mono);" id="hostMemUsed">-- GB</div>
+                <div style="font-size: 11.5px; color: var(--text-muted);" id="hostMemTotalBrief">/ -- GB</div>
+              </div>
+              <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow:hidden;">
+                <div id="hostMemBar" style="width: 0%; height: 100%; background: #10b981; transition: width 0.3s;"></div>
+              </div>
+              <div style="font-size: 11px; color: var(--text-muted);" id="hostMemTotal">空闲: -- GB</div>
+            </div>
+
+            <!-- 进程与虚拟机内存指标卡 -->
+            <div class="card" style="padding: 16px; display:flex; flex-direction:column; gap:8px;">
+              <div style="font-size: 12px; color: var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
+                <span>🚀 Node.js 进程 RSS 内存</span>
+                <span id="hostProcessPidBadge" class="badge neutral">PID: --</span>
+              </div>
+              <div style="font-size: 28px; font-weight: 700; color: var(--text-main); font-family:var(--font-mono);" id="hostProcessRss">-- MB</div>
+              <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow:hidden;">
+                <div id="hostHeapBar" style="width: 0%; height: 100%; background: #8b5cf6; transition: width 0.3s;"></div>
+              </div>
+              <div style="font-size: 11px; color: var(--text-muted);" id="hostProcessHeap">堆使用: -- MB / -- MB</div>
+            </div>
+
+            <!-- 系统运行时间指标卡 -->
+            <div class="card" style="padding: 16px; display:flex; flex-direction:column; gap:8px;">
+              <div style="font-size: 12px; color: var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
+                <span>⏱️ 系统连续运行</span>
+                <span id="hostLoadAvgBadge" class="badge neutral">负载: --</span>
+              </div>
+              <div style="font-size: 20px; font-weight: 700; color: var(--text-main); margin-top:2px;" id="hostSystemUptime">--</div>
+              <div style="font-size: 12px; color: var(--text-secondary); margin-top:auto;" id="hostProcessUptime">Codex 服务运行: --</div>
+              <div style="font-size: 11px; color: var(--text-muted);" id="hostTimestamp">更新于: --</div>
+            </div>
+          </div>
+
+          <!-- 第二行: CPU 多核拓扑分布 + 磁盘卷分区 -->
+          <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+            <!-- CPU 多核分布 -->
+            <div class="card" style="padding: 18px; display:flex; flex-direction:column; gap:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-default); padding-bottom: 8px;">
+                <div style="font-weight: 700; font-size: 14px; color: var(--text-main); display:flex; align-items:center; gap:6px;">
+                  <span>⚡ CPU 多核负载图谱</span>
+                </div>
+                <span id="hostCpuCoreCountBadge" class="badge info">-- 逻辑核心</span>
+              </div>
+              <div id="hostCoreGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap:8px; max-height:220px; overflow-y:auto; padding:2px;">
+                <!-- 动态渲染多核状态 -->
               </div>
             </div>
 
-            <!-- AI 智能磁盘分析与安全清理 -->
-            <div class="card" style="border:1px dashed #cbd5e1;background:#fafafa;border-radius:10px;padding:14px;">
-              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-                <div>
-                  <div style="font-weight:700;font-size:13px;color:#1e293b;">智能磁盘分析与垃圾清理</div>
-                  <div style="font-size:11px;color:#64748b;">扫描系统 npm/yarn/pnpm 缓存、临时构建残余与多余日志，安全释放磁盘</div>
+            <!-- 磁盘多分区存储 -->
+            <div class="card" style="padding: 18px; display:flex; flex-direction:column; gap:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-default); padding-bottom: 8px;">
+                <div style="font-weight: 700; font-size: 14px; color: var(--text-main); display:flex; align-items:center; gap:6px;">
+                  <span>💾 磁盘驱动器与分区卷</span>
                 </div>
-                <div style="display:flex;gap:8px;">
-                  <button type="button" class="btn secondary" id="scanDiskBtn" onclick="window.handleScanDisk()" style="font-size:11.5px;padding:3px 10px;">扫描可清理项</button>
-                  <button type="button" class="btn primary" id="cleanDiskBtn" onclick="window.handleCleanDisk()" style="font-size:11.5px;padding:3px 12px;background:#ef4444;display:none;">一键安全清理</button>
+                <span id="hostDiskPartCountBadge" class="badge neutral">-- 个卷</span>
+              </div>
+              <div id="hostPartitionList" style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto; padding:2px;">
+                <!-- 动态渲染分区列表 -->
+              </div>
+            </div>
+          </div>
+
+          <!-- 第三行: 活跃进程 Top 榜 + 公网 IP / 地理位置与网卡 -->
+          <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+            <!-- 活跃高消耗进程 Top 榜 -->
+            <div class="card" style="padding: 18px; display:flex; flex-direction:column; gap:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-default); padding-bottom: 8px;">
+                <div style="font-weight: 700; font-size: 14px; color: var(--text-main); display:flex; align-items:center; gap:6px;">
+                  <span>🚀 本机内存占用 Top 活跃进程</span>
+                </div>
+                <span class="badge info">实时抓取</span>
+              </div>
+              <div id="hostTopProcessList" style="display:flex; flex-direction:column; gap:6px; max-height:240px; overflow-y:auto;">
+                <!-- 动态渲染进程列表 -->
+              </div>
+            </div>
+
+            <!-- 公网 IP 归属地与网络接口 -->
+            <div class="card" style="padding: 18px; display:flex; flex-direction:column; gap:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-default); padding-bottom: 8px;">
+                <div style="font-weight: 700; font-size: 14px; color: var(--text-main); display:flex; align-items:center; gap:6px;">
+                  <span>🌐 公网出口与 IP 地理位置</span>
+                </div>
+                <span id="hostIpGeoBadge" class="badge success">探测中...</span>
+              </div>
+              <div id="hostIpGeoDetails" style="font-size: 13px; color: var(--text-main); line-height: 1.6; background:#f8fafc; padding:10px 12px; border-radius:6px; border:1px solid #e2e8f0;">
+                正在探测公网出口与运营商归属...
+              </div>
+              <div style="font-weight: 600; font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">
+                本地与虚拟网络接口 (IPs):
+              </div>
+              <div id="hostNetworkList" style="display:flex; flex-direction:column; gap:5px; max-height:120px; overflow-y:auto;">
+                <!-- 动态渲染网卡列表 -->
+              </div>
+            </div>
+          </div>
+
+          <!-- 第四行: 操作系统与 Node.js 底层规格 -->
+          <div class="card" style="padding: 18px; display:flex; flex-direction:column; gap:12px; margin-bottom: 18px;">
+            <div style="font-weight: 700; font-size: 14px; color: var(--text-main); border-bottom: 1px solid var(--border-default); padding-bottom: 8px; display:flex; justify-content:space-between; align-items:center;">
+              <span>⚙️ 操作系统与运行时底层环境规格 (System & Runtime Specs)</span>
+              <span id="hostPlatformBadge" class="badge neutral">--</span>
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; font-size: 12.5px;">
+              <div style="background:#f8fafc; padding:10px 14px; border-radius:6px; border:1px solid #e2e8f0; display:flex; flex-direction:column; gap:6px;">
+                <div><span style="color:#64748b;">主机名:</span> <strong id="hostHostname" style="color:#0f172a;">--</strong></div>
+                <div><span style="color:#64748b;">当前运行用户:</span> <span id="hostUsername">--</span></div>
+                <div><span style="color:#64748b;">操作系统版本:</span> <span id="hostOsFull">--</span></div>
+                <div><span style="color:#64748b;">架构与字节序:</span> <span id="hostArch">--</span></div>
+              </div>
+              <div style="background:#f8fafc; padding:10px 14px; border-radius:6px; border:1px solid #e2e8f0; display:flex; flex-direction:column; gap:6px;">
+                <div><span style="color:#64748b;">Node.js 运行时:</span> <strong id="hostNodeVersion" style="color:#0f172a;">--</strong></div>
+                <div><span style="color:#64748b;">V8 引擎版本:</span> <span id="hostV8Version">--</span></div>
+                <div><span style="color:#64748b;">libuv / OpenSSL:</span> <span id="hostUvVersion">--</span></div>
+                <div><span style="color:#64748b;">工作根目录:</span> <code id="hostCwd" style="font-size:11px;">--</code></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 第五行: AI 智能磁盘分析与安全清理面板 -->
+          <div class="card" style="padding: 20px; display:flex; flex-direction:column; gap:14px; margin-bottom: 24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-bottom: 1px solid var(--border-default); padding-bottom: 10px;">
+              <div>
+                <div style="font-size: 15.5px; font-weight: 700; color: var(--text-main); display:flex; align-items:center; gap:8px;">
+                  <span>🧹 AI 智能磁盘分析与安全清理 (Smart Disk Cleaner)</span>
+                  <span id="diskCleanableTotalBadge" class="badge warning" style="display:none;">可释放: --</span>
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                  扫描包管理器缓存 (npm/pip/pnpm)、工程构建垃圾 (dist/target)、系统临时文件及 Docker 冗余镜像
                 </div>
               </div>
-              <div id="diskScanResult" style="font-size:12px;color:#64748b;line-height:1.6;padding:8px 0;">点击上方「扫描可清理项」开始安全探测。</div>
+              <div style="display:flex; gap:8px;">
+                <button id="scanDiskBtn" class="btn secondary" style="font-size:12px;">🔍 磁盘体检</button>
+                <button id="safeCleanDiskBtn" class="btn primary" style="background:#16a34a; border-color:#16a34a; font-size:12px;">🟢 安全清理 (Safe)</button>
+                <button id="allCleanDiskBtn" class="btn danger" style="font-size:12px;">🧹 全量清理 (All)</button>
+              </div>
+            </div>
+
+            <!-- 扫描状态或结果列表 -->
+            <div id="diskScanResultContainer" style="display:none;">
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px 14px;">
+                  <div style="font-size:12px; color:#64748b;">🟢 安全可清 (零副作用):</div>
+                  <div style="font-size:18px; font-weight:700; color:#16a34a;" id="diskSafeSize">0 MB</div>
+                </div>
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px 14px;">
+                  <div style="font-size:12px; color:#64748b;">🟡 建议确认 (构建产物/Docker):</div>
+                  <div style="font-size:18px; font-weight:700; color:#d97706;" id="diskReviewSize">0 MB</div>
+                </div>
+              </div>
+              <div id="diskItemsList" style="display:flex; flex-direction:column; gap:8px;">
+                <!-- 动态渲染扫描项 -->
+              </div>
+            </div>
+
+            <div id="diskEmptyState" style="text-align:center; padding: 20px; color:var(--text-muted); font-size:13px;">
+              点击「🔍 磁盘体检」分析本地可释放的冗余垃圾与缓存文件
             </div>
           </div>
         </div>
@@ -1183,9 +1331,9 @@
               </div>
               <div class="card-body" style="padding:16px;">
                 <div class="channel-tabs" style="display:flex;gap:8px;margin-bottom:16px;">
-                  <button type="button" class="btn secondary" onclick="window.switchChannelTab('wechat')" style="font-size:12px;">微信 / 企微配置</button>
-                  <button type="button" class="btn secondary" onclick="window.switchChannelTab('feishu')" style="font-size:12px;">飞书机器人配置</button>
-                  <button type="button" class="btn secondary" onclick="window.switchChannelTab('qq')" style="font-size:12px;">QQ / OneBot 配置</button>
+                  <button type="button" class="btn secondary" onclick="window.switchSettingsSubTab('wechat')" style="font-size:12px;">微信 / 企微配置</button>
+                  <button type="button" class="btn secondary" onclick="window.switchSettingsSubTab('feishu')" style="font-size:12px;">飞书机器人配置</button>
+                  <button type="button" class="btn secondary" onclick="window.switchSettingsSubTab('qq')" style="font-size:12px;">QQ / OneBot 配置</button>
                   <button type="button" class="btn secondary" onclick="window.switchSettingsSubTab('tg')" style="font-size:12px;">Telegram 机器人配置</button>
                 </div>
                 <div id="settingsChannelEmbed">
