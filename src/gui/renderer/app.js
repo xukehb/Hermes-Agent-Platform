@@ -2634,11 +2634,11 @@ $('wxConfigForm')?.addEventListener('submit', async (e) => {
 
 $('refreshWxQrBtn')?.addEventListener('click', async () => {
   try {
-    const res = await window.hap.refreshWeChatQr();
-    showToast('二维码已刷新，请扫码登录', 'info');
+    const res = await window.hap.syncWeChatContacts();
+    showToast(`已同步 ${res.contacts} 位联系人和 ${res.rooms} 个群聊`, 'success');
     await renderWeChatView();
   } catch (err) {
-    showToast('刷新二维码失败：' + err.message, 'error');
+    showToast('同步真实联系人失败：' + err.message, 'error');
   }
 });
 
@@ -4002,4 +4002,3 @@ $('refreshServersBtn')?.addEventListener('click', async () => {
 
 // 初始化加载
 refresh().catch((error) => showToast('初始化加载失败：' + error.message, 'error'));
-

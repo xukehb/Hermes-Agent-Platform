@@ -77,6 +77,7 @@ function registerIpc(): void {
   ipcMain.handle('gui:stopWeChatService', () => invoke(() => service.stopWeChatService()));
   ipcMain.handle('gui:refreshWeChatQr', () => invoke(() => service.refreshWeChatQr()));
   ipcMain.handle('gui:confirmWeChatLogin', () => invoke(() => service.confirmWeChatLogin()));
+  ipcMain.handle('gui:syncWeChatContacts', () => invoke(() => service.syncWeChatContacts()));
   ipcMain.handle('gui:listWeChatContacts', () => invoke(() => service.listWeChatContacts()));
   ipcMain.handle('gui:getWeChatMessages', (_event, contactId) => invoke(() => service.getWeChatMessages(contactId)));
   ipcMain.handle('gui:upsertWeChatContact', (_event, input) => invoke(() => service.upsertWeChatContact(input)));

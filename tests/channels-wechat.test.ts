@@ -45,6 +45,7 @@ function channelsOf(patch: Partial<ResolvedChannels['wechat']> = {}): ResolvedCh
       wecom: undefined,
       officialAccount: undefined,
       ...patch,
+      personal: { ...BUILTIN_CHANNELS.wechat.personal, ...(patch?.personal ?? {}) },
     },
     http: { enabled: false, bind: '127.0.0.1:8798', defaultAgent: undefined },
     cli: { enabled: false, defaultAgent: undefined },
@@ -136,19 +137,14 @@ describe('WeChatChannel 基础测试', () => {
     expect(channel.name).toBe('wechat');
   });
 
-  test('个人微信模式下启动生成二维码文件并支持扫码事件', async () => {
-    const authDir = join(root, 'test-qr-auth');
+  test('个人微信模式缺少 Puppet 凭据时明确失败', async () => {
     const channel = new WeChatChannel({
       host: new StubHost(),
-      channels: channelsOf({ authDir }),
+      channels: channelsOf(),
       limits,
       paths,
     });
-
-    await channel.start();
-    expect(channel.qrCodeText).toBeDefined();
-    expect(existsSync(join(authDir, 'qr.txt'))).toBe(true);
-    await channel.stop();
+    await expect(channel.start()).rejects.toThrow('WECHATY_PUPPET_SERVICE_TOKEN');
   });
 
   test('个人微信模式接收私聊消息并下发任务至编排层', async () => {
@@ -195,11 +191,13 @@ describe('WeChatChannel 基础测试', () => {
 
   test('个人微信群聊消息支持 @mention 路由与过滤', async () => {
     const host = new StubHost();
+    const driver: WeChatPersonalDriver = { start: async () => undefined, stop: async () => undefined, sendMessage: async () => undefined };
     const channel = new WeChatChannel({
       host,
       channels: channelsOf({ mentionPatterns: ['@hap'] }),
       limits,
       paths,
+      personalDriverFactory: () => driver,
     });
 
     await channel.start();

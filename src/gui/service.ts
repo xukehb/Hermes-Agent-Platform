@@ -1671,46 +1671,15 @@ export class GuiService {
       const res = await this.startWeChatService();
       return { ok: true, qrCodeText: this.wechatQrCode };
     }
-    const uuid = await this.fetchRealWeChatUuid();
-    const qrText = uuid
-      ? `https://login.weixin.qq.com/l/${uuid}`
-      : `https://login.weixin.qq.com/l/${Date.now().toString(36)}`;
-    this.wechatQrCode = qrText;
-    this.wechatStatus = 'waiting_qr';
-    this.info(`[WeChat] 已生成微信扫码登录链接: ${qrText}`);
-    return { ok: true, qrCodeText: qrText };
+    return { ok: false };
   }
 
   async confirmWeChatLogin(): Promise<{ ok: boolean; status: string; user?: string | undefined }> {
-    // 检查是否有现有 session 文件
-    const resolver = this.resolver();
-    const channels = resolver.resolveChannels();
-    const authDir = channels.wechat.authDir;
-    const sessionFile = join(authDir, 'session.json');
-
-    if (existsSync(sessionFile)) {
-      try {
-        const data = JSON.parse(readFileSync(sessionFile, 'utf8')) as { userName?: string; userId?: string };
-        this.wechatStatus = 'connected';
-        this.wechatLoginUser = data.userName || 'WeChat User';
-        this.info(`[WeChat] 确认登录态有效：${this.wechatLoginUser}`);
-        return { ok: true, status: 'connected', user: this.wechatLoginUser };
-      } catch {}
-    }
-
-    // 若服务正在运行且用户已扫码确认
-    if (this.wechatRunning) {
-      this.wechatStatus = 'connected';
-      if (!this.wechatLoginUser) this.wechatLoginUser = 'WeChat User';
-      try {
-        mkdirSync(authDir, { recursive: true });
-        writeFileSync(sessionFile, JSON.stringify({ userId: 'wx_user_self', userName: this.wechatLoginUser, token: 'wx_token_' + Date.now() }), 'utf8');
-      } catch {}
-      this.info(`[WeChat] 已手动确认微信登录态：${this.wechatLoginUser}`);
-      return { ok: true, status: 'connected', user: this.wechatLoginUser };
-    }
-
-    return { ok: false, status: this.wechatStatus };
+    const user = this.wechatManager?.wechat?.currentUser;
+    if (!user) return { ok: false, status: this.wechatStatus };
+    this.wechatStatus = 'connected';
+    this.wechatLoginUser = user.name;
+    return { ok: true, status: 'connected', user: user.name };
   }
 
   async startWeChatService(): Promise<{ ok: boolean; message: string; user?: string | undefined }> {
@@ -1786,6 +1755,13 @@ export class GuiService {
       this.wechatStatus = 'error';
       throw new Error(`停止微信服务失败：${describeError(err)}`);
     }
+  }
+
+  async syncWeChatContacts(): Promise<{ contacts: number; rooms: number; syncedAt: number }> {
+    if (!this.wechatRunning || !this.wechatManager?.wechat) throw new Error('微信服务尚未启动，无法同步真实联系人');
+    const result = await this.wechatManager.wechat.syncPersonalContacts();
+    this.info(`微信真实联系人同步完成：${result.contacts} 位联系人，${result.rooms} 个群聊`);
+    return result;
   }
 
   // ==========================================
@@ -2343,4 +2319,3 @@ export class GuiService {
     this.logs.push({ at: new Date().toISOString(), level: 'error', message: describeError(error) });
   }
 }
-

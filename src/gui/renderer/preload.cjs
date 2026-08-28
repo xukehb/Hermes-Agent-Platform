@@ -69,6 +69,7 @@ contextBridge.exposeInMainWorld('hap', {
   stopWeChatService: () => call('gui:stopWeChatService'),
   refreshWeChatQr: () => call('gui:refreshWeChatQr'),
   confirmWeChatLogin: () => call('gui:confirmWeChatLogin'),
+  syncWeChatContacts: () => call('gui:syncWeChatContacts'),
   listWeChatContacts: () => call('gui:listWeChatContacts'),
   getWeChatMessages: (contactId) => call('gui:getWeChatMessages', contactId),
   upsertWeChatContact: (input) => call('gui:upsertWeChatContact', input),

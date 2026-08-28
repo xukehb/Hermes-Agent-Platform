@@ -257,7 +257,17 @@ export class WeChatChannel implements Channel {
 
   /** 个人微信模式启动。 */
   private async startPersonalMode(): Promise<void> {
-    const factory = this.options.personalDriverFactory ?? ((_authDir, log) => new WechatyPersonalDriver({ tokenEnv: this.config.personal.puppetServiceTokenEnv, endpoint: this.config.personal.puppetServiceEndpoint, env: this.env, log }));
+    const factory = this.options.personalDriverFactory ?? ((_authDir, log) => {
+      const opts: { tokenEnv: string; endpoint?: string; env?: Record<string, string | undefined>; log: (line: string) => void } = {
+        tokenEnv: this.config.personal.puppetServiceTokenEnv,
+        env: this.env,
+        log,
+      };
+      if (this.config.personal.puppetServiceEndpoint) {
+        opts.endpoint = this.config.personal.puppetServiceEndpoint;
+      }
+      return new WechatyPersonalDriver(opts);
+    });
     const driver = factory(this.config.authDir, this.log);
     this.personalDriver = driver;
 
