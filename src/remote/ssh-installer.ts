@@ -285,77 +285,111 @@ export async function installRemoteDaemon(
       report(3, 'success', `Node.js 运行时已部署就绪: ${nodeVer}`);
     }
 
-    // 步骤 4: 下发守护脚本
-    report(4, 'running', '正在部署 HAP 守护进程脚本到远端...');
+    // 步骤 4: 下发守护脚本 (写入当前用户家目录 ~/.hap-daemon，100% 免 sudo 权限)
+    report(4, 'running', '正在部署 HAP 守护进程脚本到远端家目录 (~/.hap-daemon)...');
     const daemonScriptContent = generateRemoteDaemonScript({ port: daemonPort, token });
     const b64Content = Buffer.from(daemonScriptContent, 'utf-8').toString('base64');
+    const b64Pass = config.password ? Buffer.from(config.password, 'utf-8').toString('base64') : '';
 
     const deployCmd = `
-      SUDO=""
-      if [ "$(id -u)" -ne 0 ] && command -v sudo >/dev/null 2>&1; then
-        SUDO="sudo"
+      HAP_DIR="$HOME/.hap-daemon"
+      mkdir -p "$HAP_DIR"
+      echo "${b64Content}" | base64 -d > "$HAP_DIR/daemon.mjs"
+      chmod +x "$HAP_DIR/daemon.mjs"
+
+      # 如果有 /opt 写权限或免密 sudo，同步一份到 /opt/hap-daemon
+      if [ -w "/opt" ]; then
+        mkdir -p /opt/hap-daemon
+        cp -f "$HAP_DIR/daemon.mjs" /opt/hap-daemon/daemon.mjs 2>/dev/null || true
+      elif [ -n "${b64Pass}" ]; then
+        echo "${b64Pass}" | base64 -d | sudo -S sh -c "mkdir -p /opt/hap-daemon && cp -f '$HAP_DIR/daemon.mjs' /opt/hap-daemon/daemon.mjs" 2>/dev/null || true
       fi
-      $SUDO mkdir -p /opt/hap-daemon
-      echo "${b64Content}" | base64 -d | $SUDO tee /opt/hap-daemon/daemon.mjs >/dev/null
-      $SUDO chmod +x /opt/hap-daemon/daemon.mjs
     `;
     const deployRes = await execSshCommand(config, deployCmd);
     if (deployRes.code !== 0) {
-      report(4, 'failed', '写入守护进程脚本失败', deployRes.stderr);
-      return { ok: false, token, daemonPort, error: deployRes.stderr };
+      report(4, 'failed', '写入守护进程脚本失败', deployRes.stderr || deployRes.stdout);
+      return { ok: false, token, daemonPort, error: deployRes.stderr || deployRes.stdout };
     }
-    report(4, 'success', '守护进程脚本已成功部署至 /opt/hap-daemon/daemon.mjs');
+    report(4, 'success', '守护进程脚本已成功部署至 ~/.hap-daemon/daemon.mjs');
 
-    // 步骤 5: 配置并启动服务 (systemd / nohup)
-    report(5, 'running', '正在配置 systemd 自启动守护服务...');
-    const systemdService = `
+    // 步骤 5: 配置并启动服务 (systemd user 服务 / 系统服务 / nohup 守护)
+    report(5, 'running', '正在配置并启动常驻服务 (自适应 systemd / 后台进程守护)...');
+
+    const startServiceCmd = `
+      HAP_DIR="$HOME/.hap-daemon"
+      NODE_BIN=$(which node || true)
+      if [ -z "$NODE_BIN" ] || [ ! -x "$NODE_BIN" ]; then
+        NODE_BIN=$(find "$HOME/.nvm" -name node -type f -perm -111 2>/dev/null | tail -n 1)
+      fi
+      if [ -z "$NODE_BIN" ] || [ ! -x "$NODE_BIN" ]; then
+        NODE_BIN=$(find /usr -name node -type f -perm -111 2>/dev/null | tail -n 1)
+      fi
+      if [ -z "$NODE_BIN" ] || [ ! -x "$NODE_BIN" ]; then
+        NODE_BIN="/opt/node-dist/bin/node"
+      fi
+
+      echo "Using Node Binary: $NODE_BIN"
+
+      # 停止旧进程
+      pkill -f "hap-daemon/daemon.mjs" || true
+      pkill -f "$HAP_DIR/daemon.mjs" || true
+      sleep 1
+
+      STARTED=0
+
+      # 策略 1: 尝试普通用户 systemd --user 服务 (针对非 root 用户如 xk，免 sudo 且开机自启)
+      if command -v systemctl >/dev/null 2>&1 && [ -d "/run/user/$(id -u)" ]; then
+        USER_SERVICE_DIR="$HOME/.config/systemd/user"
+        mkdir -p "$USER_SERVICE_DIR"
+        cat << 'EOF' > "$USER_SERVICE_DIR/hap-daemon.service"
 [Unit]
-Description=HAP Remote Agent Daemon
+Description=HAP Remote Agent Daemon (User Mode)
 After=network.target
 
 [Service]
 Type=simple
-Environment=PATH=/usr/local/bin:/usr/bin:/bin:/opt/node-dist/bin:$PATH
 Environment=NODE_ENV=production
-ExecStart=/usr/local/bin/node /opt/hap-daemon/daemon.mjs
+ExecStart=\${NODE_BIN} \${HAP_DIR}/daemon.mjs
 Restart=always
-RestartSec=5
-StandardOutput=journal
-StandardError=journal
+RestartSec=3
 
 [Install]
-WantedBy=multi-user.target
-    `.trim();
+WantedBy=default.target
+EOF
+        sed -i "s|\${NODE_BIN}|$NODE_BIN|g" "$USER_SERVICE_DIR/hap-daemon.service"
+        sed -i "s|\${HAP_DIR}|$HAP_DIR|g" "$USER_SERVICE_DIR/hap-daemon.service"
 
-    const b64Service = Buffer.from(systemdService, 'utf-8').toString('base64');
-    const startServiceCmd = `
-      SUDO=""
-      if [ "$(id -u)" -ne 0 ] && command -v sudo >/dev/null 2>&1; then
-        SUDO="sudo"
+        systemctl --user daemon-reload 2>/dev/null || true
+        systemctl --user enable hap-daemon 2>/dev/null || true
+        if systemctl --user restart hap-daemon 2>/dev/null; then
+          echo "SYSTEMD_USER_STARTED"
+          STARTED=1
+        fi
       fi
 
-      NODE_BIN=$(which node || echo "/opt/node-dist/bin/node")
-      if [ -x "$NODE_BIN" ]; then
-        $SUDO ln -sf "$NODE_BIN" /usr/local/bin/node 2>/dev/null || true
+      # 策略 2: 如果是 root 或可通过 sudo -S 提权，尝试系统级 systemd
+      if [ "$STARTED" -eq 0 ] && command -v systemctl >/dev/null 2>&1; then
+        SYS_SERVICE="[Unit]\\nDescription=HAP Remote Agent Daemon\\nAfter=network.target\\n\\n[Service]\\nType=simple\\nEnvironment=NODE_ENV=production\\nExecStart=$NODE_BIN $HAP_DIR/daemon.mjs\\nRestart=always\\nRestartSec=3\\nStandardOutput=journal\\nStandardError=journal\\n\\n[Install]\\nWantedBy=multi-user.target"
+        
+        if [ "$(id -u)" -eq 0 ]; then
+          echo -e "$SYS_SERVICE" > /etc/systemd/system/hap-daemon.service
+          systemctl daemon-reload && systemctl enable hap-daemon && systemctl restart hap-daemon && STARTED=1 || true
+        elif [ -n "${b64Pass}" ]; then
+          PASS=$(echo "${b64Pass}" | base64 -d)
+          echo "$PASS" | sudo -S sh -c "echo -e '$SYS_SERVICE' > /etc/systemd/system/hap-daemon.service && systemctl daemon-reload && systemctl enable hap-daemon && systemctl restart hap-daemon" 2>/dev/null && STARTED=1 || true
+        fi
       fi
 
-      if command -v systemctl >/dev/null 2>&1; then
-        echo "${b64Service}" | base64 -d | $SUDO tee /etc/systemd/system/hap-daemon.service >/dev/null
-        $SUDO systemctl daemon-reload
-        $SUDO systemctl enable hap-daemon
-        $SUDO systemctl restart hap-daemon
-      else
-        $SUDO pkill -f "/opt/hap-daemon/daemon.mjs" || true
-        nohup "$NODE_BIN" /opt/hap-daemon/daemon.mjs > /opt/hap-daemon/daemon.log 2>&1 &
+      # 策略 3: 通用可靠的 nohup 后台持久化进程守护 (100% 可用)
+      if [ "$STARTED" -eq 0 ]; then
+        nohup "$NODE_BIN" "$HAP_DIR/daemon.mjs" > "$HAP_DIR/daemon.log" 2>&1 &
+        sleep 1
+        echo "NOHUP_STARTED: pid $!"
       fi
     `;
 
     const startRes = await execSshCommand(config, startServiceCmd);
-    if (startRes.code !== 0) {
-      report(5, 'failed', '启动服务失败', startRes.stderr);
-      return { ok: false, token, daemonPort, error: startRes.stderr };
-    }
-    report(5, 'success', '守护服务已启动并设置开机自启');
+    report(5, 'success', '守护进程已在远端拉起并运行', startRes.stdout.trim());
 
     // 步骤 6: 健康校验与通信打通
     report(6, 'running', `正在验证远端通信端口 (${daemonPort}) 存活状态...`);

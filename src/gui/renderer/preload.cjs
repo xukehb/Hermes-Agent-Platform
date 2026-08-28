@@ -48,6 +48,7 @@ contextBridge.exposeInMainWorld('hap', {
   startWeChatService: () => call('gui:startWeChatService'),
   stopWeChatService: () => call('gui:stopWeChatService'),
   refreshWeChatQr: () => call('gui:refreshWeChatQr'),
+  confirmWeChatLogin: () => call('gui:confirmWeChatLogin'),
   listServers: () => call('gui:listServers'),
   upsertServer: (input) => call('gui:upsertServer', input),
   removeServer: (id) => call('gui:removeServer', id),

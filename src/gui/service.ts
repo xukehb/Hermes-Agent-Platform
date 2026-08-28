@@ -379,7 +379,12 @@ export class GuiService {
 
   removeProject(id: string): object {
     const state = readState();
-    state.projects = state.projects.filter((project) => project.id !== id);
+    const idNorm = id?.trim().toLowerCase().replace(/\\/g, '/');
+    state.projects = state.projects.filter((project) => {
+      const pIdNorm = project.id?.trim().toLowerCase();
+      const pPathNorm = project.path?.trim().toLowerCase().replace(/\\/g, '/');
+      return pIdNorm !== idNorm && pPathNorm !== idNorm && project.id !== id && project.path !== id;
+    });
     writeState(state);
     this.info('已移除项目：' + id);
     return { ok: true };
@@ -387,8 +392,14 @@ export class GuiService {
 
   batchRemoveProjects(ids: string[]): object {
     const state = readState();
-    const set = new Set(ids);
-    state.projects = state.projects.filter((project) => !set.has(project.id));
+    const idNormSet = new Set(
+      (ids || []).map((i) => i?.trim().toLowerCase().replace(/\\/g, '/'))
+    );
+    state.projects = state.projects.filter((project) => {
+      const pIdNorm = project.id?.trim().toLowerCase();
+      const pPathNorm = project.path?.trim().toLowerCase().replace(/\\/g, '/');
+      return !idNormSet.has(pIdNorm) && !idNormSet.has(pPathNorm) && !ids.includes(project.id) && !ids.includes(project.path);
+    });
     writeState(state);
     this.info(`已批量移除 ${ids.length} 个项目`);
     return { ok: true, count: ids.length };

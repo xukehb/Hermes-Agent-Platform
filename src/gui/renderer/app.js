@@ -667,9 +667,10 @@ window.deleteProjectById = async (projectId) => {
   if (!ok) return;
   try {
     await window.hap.removeProject(projectId);
+    selectedProjectIds.delete(projectId);
     showToast(`项目 "${p.name}" 已从工作区移除`, 'success');
-    if (currentActiveProject === p.path) {
-      const remaining = (state.projects || []).filter((item) => item.id !== projectId);
+    if (currentActiveProject && (normPath(currentActiveProject) === normPath(p.path) || currentActiveProject === p.path)) {
+      const remaining = (state.projects || []).filter((item) => item.id !== projectId && normPath(item.path) !== normPath(p.path));
       currentActiveProject = remaining[0]?.path || '';
     }
     await refresh();
@@ -1407,8 +1408,14 @@ async function refresh() {
 
     if ($('configPathText')) $('configPathText').textContent = state.configPath || '未找到配置';
 
-    if (!currentActiveProject && state.projects.length > 0) {
-      currentActiveProject = state.projects[0].path;
+    const projects = state.projects || [];
+    if (currentActiveProject) {
+      const stillExists = projects.some((p) => normPath(p.path) === normPath(currentActiveProject));
+      if (!stillExists) {
+        currentActiveProject = projects[0]?.path || '';
+      }
+    } else if (projects.length > 0) {
+      currentActiveProject = projects[0].path;
     }
 
     renderProjects();
@@ -1806,7 +1813,7 @@ $('batchDeleteProjectsBtn')?.addEventListener('click', async () => {
 
   const ok = await showConfirm({
     title: '批量移除项目',
-    message: `确定要从工作区列表中批量移除选中的 <strong>${ids.length}</strong> 个项目吗？`,
+    message: `确定要从工作区列表中批量移除选中的 <strong>${ids.length}</strong> 个项目吗？<br/><br/>此操作仅从工作台移除管理，不会删除磁盘上的真实代码。`,
     okText: '确认移除',
     isDanger: true,
   });
@@ -1814,7 +1821,15 @@ $('batchDeleteProjectsBtn')?.addEventListener('click', async () => {
 
   try {
     await window.hap.batchRemoveProjects(ids);
+    const removedSet = new Set(ids);
     selectedProjectIds.clear();
+    if (currentActiveProject) {
+      const remaining = (state.projects || []).filter((p) => !removedSet.has(p.id) && !removedSet.has(p.path));
+      const stillActive = remaining.some((p) => normPath(p.path) === normPath(currentActiveProject));
+      if (!stillActive) {
+        currentActiveProject = remaining[0]?.path || '';
+      }
+    }
     showToast(`已成功移除 ${ids.length} 个项目`, 'success');
     await refresh();
   } catch (error) {
@@ -1832,10 +1847,14 @@ window.useProjectInChat = (path) => {
 };
 
 window.removeProject = async (id, name) => {
+  const p = (state.projects || []).find((item) => item.id === id);
+  const projName = name || p?.name || '项目';
+  const projPath = p?.path || '';
+
   const ok = await showConfirm({
     title: '移除项目',
-    message: `确定要移除项目 <strong>${esc(name)}</strong> 吗？`,
-    okText: '移除',
+    message: `确定要从工作区移除项目 <strong>${esc(projName)}</strong> 吗？<br/><br/>此操作仅从工作台移除管理，不会删除磁盘上的真实代码。`,
+    okText: '确认移除',
     isDanger: true,
   });
   if (!ok) return;
@@ -1843,11 +1862,11 @@ window.removeProject = async (id, name) => {
   try {
     await window.hap.removeProject(id);
     selectedProjectIds.delete(id);
-    if (currentActiveProject) {
-      const remaining = state.projects.filter((p) => p.id !== id);
+    if (currentActiveProject && (normPath(currentActiveProject) === normPath(projPath) || (p && currentActiveProject === p.path))) {
+      const remaining = (state.projects || []).filter((item) => item.id !== id && normPath(item.path) !== normPath(projPath));
       currentActiveProject = remaining[0]?.path || '';
     }
-    showToast(`项目 ${name} 已移除`, 'success');
+    showToast(`项目 "${projName}" 已从工作区移除`, 'success');
     await refresh();
   } catch (error) {
     showToast('移除失败：' + error.message, 'error');
@@ -2555,11 +2574,29 @@ async function renderWeChatView() {
         qrPlaceholder.style.display = 'block';
         qrBox.style.display = 'none';
       }
+    const confirmBox = $('wxConfirmActionBox');
+    if (confirmBox) {
+      confirmBox.style.display = (wxConfig.running && wxConfig.status !== 'connected') ? 'block' : 'none';
     }
   } catch (err) {
     console.error('加载微信配置失败:', err);
   }
 }
+
+$('confirmWxLoginBtn')?.addEventListener('click', async () => {
+  try {
+    showToast('正在确认并同步手机微信登录态...', 'info');
+    const res = await window.hap.confirmWeChatLogin();
+    if (res && res.status === 'connected') {
+      showToast('🎉 微信通道已成功连接就绪！', 'success');
+      await renderWeChatView();
+    } else {
+      showToast('尚未检测到手机端确认，请在微信中点击【确认登录】', 'warning');
+    }
+  } catch (err) {
+    showToast('同步微信状态失败：' + err.message, 'error');
+  }
+});
 
 $('wxModeSelect')?.addEventListener('change', (e) => {
   const isWeCom = e.target.value === 'wecom';
@@ -2636,7 +2673,7 @@ $('toggleWxServiceBtn')?.addEventListener('click', async () => {
   }
 });
 
-// 微信/企微状态自动同步监听 (每 2 秒)
+// 微信/企微状态自动同步监听 (每 1.2 秒快速响应)
 setInterval(async () => {
   const wxView = $('wechat');
   if (wxView && wxView.classList.contains('active')) {
@@ -2652,7 +2689,7 @@ setInterval(async () => {
       }
     } catch {}
   }
-}, 2000);
+}, 1200);
 
 // ==========================================================================
 // 微信实时交互与消息监控面板

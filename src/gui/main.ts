@@ -60,6 +60,7 @@ function registerIpc(): void {
   ipcMain.handle('gui:startWeChatService', () => invoke(() => service.startWeChatService()));
   ipcMain.handle('gui:stopWeChatService', () => invoke(() => service.stopWeChatService()));
   ipcMain.handle('gui:refreshWeChatQr', () => invoke(() => service.refreshWeChatQr()));
+  ipcMain.handle('gui:confirmWeChatLogin', () => invoke(() => service.confirmWeChatLogin()));
   ipcMain.handle('gui:listServers', () => invoke(() => service.listServers()));
   ipcMain.handle('gui:upsertServer', (_event, input) => invoke(() => service.upsertServer(input)));
   ipcMain.handle('gui:removeServer', (_event, id) => invoke(() => service.removeServer(id)));
