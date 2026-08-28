@@ -1167,11 +1167,24 @@ export class GuiService {
     const providers = resolver.resolveProviders();
 
     let targetModel = input.model?.trim();
-    if (!targetModel) {
+    if (targetModel) {
+      if (!targetModel.includes('/')) {
+        const found = availableModels.find(
+          (m) => m.alias === targetModel || m.model === targetModel || m.fullName.endsWith('/' + targetModel)
+        );
+        if (found) {
+          targetModel = found.fullName;
+        } else {
+          const readyProvider = [...providers.values()].find((p) => p.envKey !== undefined && Boolean(process.env[p.envKey])) || [...providers.values()][0];
+          const providerId = readyProvider ? readyProvider.id : 'openai';
+          targetModel = `${providerId}/${targetModel}`;
+        }
+      }
+    } else {
       if (availableModels.length > 0) {
         const configuredModel = availableModels.find((m) => {
           const p = providers.get(m.providerId);
-          return p !== undefined && p.envKey !== undefined && process.env[p.envKey] !== undefined && process.env[p.envKey] !== '';
+          return p !== undefined && p.envKey !== undefined && Boolean(process.env[p.envKey]);
         });
         targetModel = configuredModel !== undefined ? configuredModel.fullName : availableModels[0]?.fullName;
       }
@@ -1420,8 +1433,20 @@ export class GuiService {
       if (projectPath !== undefined && projectPath !== '') {
         request.workspace = projectPath;
       }
-      const outcome = await orchestrator.runTask(request);
-      this.info('聊天完成：' + outcome.taskId);
+      let outcome: any;
+      try {
+        outcome = await orchestrator.runTask(request);
+        this.info('聊天完成：' + outcome.taskId);
+      } catch (taskErr) {
+        const errMsg = describeError(taskErr);
+        this.error('智能体对话执行异常：' + errMsg);
+        outcome = {
+          taskId: 'err_' + Date.now(),
+          text: `⚠️ **智能体回复提示：**\n\n\`${errMsg}\`\n\n> 💡 **解决建议：**\n> 1. 请前往左侧导航 **【AI 服务商与模型】**，检查对应服务商的 **API 基础地址 (Base URL)** 与 **API Key** 是否填写正确；\n> 2. 点击服务商卡片上的 **【连通测试】** 验证连通性；\n> 3. 您也可以点击顶部模型下拉框，切换到其它已就绪的模型直接对话。\n> 4. 若需生图，点击左下角 **🎨 AI 生图** 即可。\n`,
+          iterations: 0,
+          model: targetModel || 'default',
+        };
+      }
       return { outcome, events };
     } finally {
       await orchestrator.close();
@@ -2299,6 +2324,7 @@ export class GuiService {
         reviewCleanableBytes: 1024 * 1024 * 150,
         healthScore: 88,
         aiDiagnosis: '远程 Linux 宿主运行良好，建议清理过期系统日志与临时缓存文件',
+        scannedRoots: ['/var/log', '/tmp'],
         items: [
           {
             id: 'remote_logs',

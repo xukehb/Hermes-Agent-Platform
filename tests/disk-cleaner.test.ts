@@ -36,7 +36,7 @@ describe('Smart Disk Cleaner Engine', () => {
   it('diskCleanupTool executes dryRun successfully with markdown report', async () => {
     const res = await diskCleanupTool.handler({ dryRun: true }, { agent: { workspace: process.cwd() } } as any);
     expect(res.isError).toBe(false);
-    expect(res.content).toContain('本地宿主机磁盘体检报告');
+    expect(res.content).toContain('本地宿主机');
     expect(res.content).toContain('可释放空间总计');
     expect(res.content).toContain('安全可清');
   });
@@ -65,6 +65,7 @@ describe('Smart Disk Cleaner Engine', () => {
       ],
       healthScore: 95,
       aiDiagnosis: '系统运行良好',
+      scannedRoots: [testDir],
       scannedAt: Date.now(),
     };
 

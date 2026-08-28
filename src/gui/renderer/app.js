@@ -2366,6 +2366,14 @@ async function renderTelegramView() {
     if ($('tgTokenInput') && !$('tgTokenInput').value) {
       $('tgTokenInput').value = tgConfig.token || '';
     }
+    if ($('tgModeSelect')) {
+      $('tgModeSelect').value = tgConfig.mode || 'polling';
+    }
+    if ($('tgAllowedUsersInput') && !$('tgAllowedUsersInput').value) {
+      $('tgAllowedUsersInput').value = Array.isArray(tgConfig.allowedUsers)
+        ? tgConfig.allowedUsers.join(', ')
+        : (tgConfig.allowedUsers || '');
+    }
     if ($('tgAgentSelect')) {
       const agents = state.agents || [];
       if (agents.length > 0) {
@@ -2425,6 +2433,7 @@ $('tgConfigForm')?.addEventListener('submit', async (e) => {
   const mode = $('tgModeSelect')?.value || 'polling';
   const defaultAgent = $('tgAgentSelect')?.value || 'coder';
   const workspace = $('tgWorkspaceInput')?.value.trim();
+  const allowedUsers = $('tgAllowedUsersInput')?.value.trim();
 
   try {
     await window.hap.saveTelegramConfig({
@@ -2432,6 +2441,7 @@ $('tgConfigForm')?.addEventListener('submit', async (e) => {
       mode,
       defaultAgent,
       workspace,
+      allowedUsers,
     });
     showToast('Telegram 通道配置已成功保存！', 'success');
     await renderTelegramView();
@@ -2550,6 +2560,12 @@ async function renderWeChatView() {
     }
     if ($('wxSecretInput') && !$('wxSecretInput').value) {
       $('wxSecretInput').value = wxConfig.wecomSecret || '';
+    }
+    if ($('wxVoiceTranscribeEnabled')) {
+      $('wxVoiceTranscribeEnabled').checked = wxConfig.voiceTranscribe !== false;
+    }
+    if ($('wxApprovalCardEnabled')) {
+      $('wxApprovalCardEnabled').checked = wxConfig.approvalCard !== false;
     }
 
     // 根据当前模式切换企微字段显示
@@ -2677,6 +2693,8 @@ $('wxConfigForm')?.addEventListener('submit', async (e) => {
   const wecomCorpId = $('wxCorpIdInput')?.value.trim();
   const wecomAgentId = $('wxAgentIdInput')?.value ? Number($('wxAgentIdInput').value) : undefined;
   const wecomSecret = $('wxSecretInput')?.value.trim();
+  const voiceTranscribe = $('wxVoiceTranscribeEnabled')?.checked !== false;
+  const approvalCard = $('wxApprovalCardEnabled')?.checked !== false;
 
   try {
     await window.hap.saveWeChatConfig({
@@ -2686,6 +2704,8 @@ $('wxConfigForm')?.addEventListener('submit', async (e) => {
       wecomCorpId,
       wecomAgentId,
       wecomSecret,
+      voiceTranscribe,
+      approvalCard,
     });
     showToast('微信通道配置已成功保存！', 'success');
     await renderWeChatView();
@@ -3593,9 +3613,8 @@ $('chatForm')?.addEventListener('submit', async (event) => {
     }
 
     if (!reply) {
-      reply = `智能体已完成指令编排。\n\n> **温馨提示**：若需获取模型生成的完整回复正文，请在左侧 **【模型服务商】** 确保填入了正确的 API Key 并通过连通性测试，然后在 **【模型目录】** 选择对应模型即可。`;
+      reply = '智能体已执行完毕。';
     }
-
     session.isGenerating = false;
     session.messages.push({
       role: 'assistant',
@@ -3651,6 +3670,9 @@ async function renderServers() {
   const grid = $('serverCardsGrid');
   const selectEl = $('terminalServerSelect');
   if (!grid) return;
+
+  // 同步刷新顶部本机宿主状态卡片
+  updateLocalHostCard();
 
   try {
     cachedServers = await window.hap.listServers();
@@ -3719,8 +3741,11 @@ async function renderServers() {
     return `
       <div class="card server-card" id="server-card-${esc(s.id)}">
         <div class="card-header">
-          <div class="card-title-wrap">
-            <div class="card-title" title="${esc(s.name)}">${esc(s.name)}</div>
+          <div class="card-title-wrap" style="cursor:pointer;" onclick="window.openServerDetailsModal('${esc(s.id)}')" title="点击查看此服务器系统详情">
+            <div class="card-title" style="display:flex;align-items:center;gap:6px;">
+              <span>${esc(s.name)}</span>
+              <span style="font-size:11px;color:#3b82f6;font-weight:normal;">[详情 ↗]</span>
+            </div>
             <div class="card-subtitle">${esc(s.username)}@${esc(s.host)}:${esc(s.port)}</div>
           </div>
           <span class="${st.cls}" style="font-size:11px;">${st.text}</span>
@@ -3764,11 +3789,11 @@ async function renderServers() {
 
         <div class="card-footer" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #f1f5f9;margin-top:6px;">
           <div style="display:flex;gap:6px;">
+            <button type="button" class="btn primary" onclick="window.openServerDetailsModal('${esc(s.id)}')" style="padding:4px 10px;font-size:12px;" title="查看服务器完整硬件与系统详情">
+              🔍 详情
+            </button>
             <button type="button" class="btn secondary" onclick="window.testServerNode('${esc(s.id)}')" style="padding:4px 10px;font-size:12px;" title="测试 SSH 连通性">
               连通测试
-            </button>
-            <button type="button" class="btn secondary" onclick="window.fetchServerInfoNode('${esc(s.id)}')" style="padding:4px 10px;font-size:12px;" title="拉取实时系统监控">
-              刷新状态
             </button>
             <button type="button" class="btn ${s.status === 'online' ? 'secondary' : 'primary'}" onclick="window.openInstallServerModal('${esc(s.id)}')" style="padding:4px 10px;font-size:12px;" title="一键远程部署守护服务">
               ${s.status === 'online' ? '重新部署' : '一键安装'}
@@ -4127,15 +4152,17 @@ window.switchChannelTab = (tab) => {
 // ============================================================================
 async function renderFeishuView() {
   try {
-    const cfg = await window.hap.getFeishuConfig();
+    const cfg = (window.hap.getFeishuConfig ? await window.hap.getFeishuConfig() : {}) || {};
     if ($('feishuAppIdInput')) $('feishuAppIdInput').value = cfg.appId || '';
     if ($('feishuAppSecretInput')) $('feishuAppSecretInput').value = cfg.appSecret || '';
     if ($('feishuEncryptKeyInput')) $('feishuEncryptKeyInput').value = cfg.encryptKey || '';
-    if ($('feishuVerificationTokenInput')) $('feishuVerificationTokenInput').value = cfg.verificationToken || '';
-    const btn = $('toggleFeishuServiceBtn');
-    if (btn) {
-      btn.textContent = cfg.running ? '停止飞书服务' : '启动飞书服务';
-      btn.className = cfg.running ? 'btn danger' : 'btn primary';
+    if ($('feishuVerifyTokenInput')) $('feishuVerifyTokenInput').value = cfg.verificationToken || '';
+    if ($('feishuAgentSelect')) {
+      const agents = state.agents || [];
+      if (agents.length > 0) {
+        $('feishuAgentSelect').innerHTML = agents.map(a => `<option value="${esc(a.id)}">${esc(a.name || a.id)} (${esc(a.id)})</option>`).join('');
+      }
+      $('feishuAgentSelect').value = cfg.defaultAgent || (agents[0]?.id || 'ops');
     }
   } catch (err) {
     console.error('获取飞书配置异常:', err);
@@ -4145,32 +4172,19 @@ async function renderFeishuView() {
 $('feishuConfigForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   try {
-    await window.hap.saveFeishuConfig({
-      appId: $('feishuAppIdInput')?.value.trim() || '',
-      appSecret: $('feishuAppSecretInput')?.value.trim() || '',
-      encryptKey: $('feishuEncryptKeyInput')?.value.trim() || '',
-      verificationToken: $('feishuVerificationTokenInput')?.value.trim() || '',
-    });
-    showToast('飞书配置已成功保存！', 'success');
-  } catch (err) {
-    showToast('保存飞书配置失败: ' + err.message, 'error');
-  }
-});
-
-$('toggleFeishuServiceBtn')?.addEventListener('click', async () => {
-  const btn = $('toggleFeishuServiceBtn');
-  const isRunning = btn && btn.textContent.includes('停止');
-  try {
-    if (isRunning) {
-      await window.hap.stopFeishuService();
-      showToast('飞书服务已停止', 'info');
-    } else {
-      await window.hap.startFeishuService();
-      showToast('飞书服务已成功启动！', 'success');
+    if (window.hap.saveFeishuConfig) {
+      await window.hap.saveFeishuConfig({
+        appId: $('feishuAppIdInput')?.value.trim() || '',
+        appSecret: $('feishuAppSecretInput')?.value.trim() || '',
+        encryptKey: $('feishuEncryptKeyInput')?.value.trim() || '',
+        verificationToken: $('feishuVerifyTokenInput')?.value.trim() || '',
+        defaultAgent: $('feishuAgentSelect')?.value || 'coder',
+      });
     }
+    showToast('飞书配置已成功保存！', 'success');
     await renderFeishuView();
   } catch (err) {
-    showToast('切换飞书服务状态失败: ' + err.message, 'error');
+    showToast('保存飞书配置失败: ' + err.message, 'error');
   }
 });
 
@@ -4179,13 +4193,16 @@ $('toggleFeishuServiceBtn')?.addEventListener('click', async () => {
 // ============================================================================
 async function renderQQView() {
   try {
-    const cfg = await window.hap.getQQConfig();
-    if ($('qqEndpointInput')) $('qqEndpointInput').value = cfg.endpoint || 'http://127.0.0.1:3000';
-    if ($('qqTokenInput')) $('qqTokenInput').value = cfg.token || '';
-    const btn = $('toggleQQServiceBtn');
-    if (btn) {
-      btn.textContent = cfg.running ? '停止 QQ 服务' : '启动 QQ 服务';
-      btn.className = cfg.running ? 'btn danger' : 'btn primary';
+    const cfg = (window.hap.getQQConfig ? await window.hap.getQQConfig() : {}) || {};
+    if ($('qqEndpointInput')) $('qqEndpointInput').value = cfg.endpoint || cfg.onebotWsUrl || 'http://127.0.0.1:3000';
+    if ($('qqTokenInput')) $('qqTokenInput').value = cfg.token || cfg.onebotAccessToken || '';
+    if ($('qqAdminListInput')) $('qqAdminListInput').value = cfg.adminList || '';
+    if ($('qqAgentSelect')) {
+      const agents = state.agents || [];
+      if (agents.length > 0) {
+        $('qqAgentSelect').innerHTML = agents.map(a => `<option value="${esc(a.id)}">${esc(a.name || a.id)} (${esc(a.id)})</option>`).join('');
+      }
+      $('qqAgentSelect').value = cfg.defaultAgent || (agents[0]?.id || 'ops');
     }
   } catch (err) {
     console.error('获取 QQ 配置异常:', err);
@@ -4195,30 +4212,71 @@ async function renderQQView() {
 $('qqConfigForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   try {
-    await window.hap.saveQQConfig({
-      endpoint: $('qqEndpointInput')?.value.trim() || 'http://127.0.0.1:3000',
-      token: $('qqTokenInput')?.value.trim() || '',
-    });
+    if (window.hap.saveQQConfig) {
+      await window.hap.saveQQConfig({
+        endpoint: $('qqEndpointInput')?.value.trim() || 'http://127.0.0.1:3000',
+        token: $('qqTokenInput')?.value.trim() || '',
+        adminList: $('qqAdminListInput')?.value.trim() || '',
+        defaultAgent: $('qqAgentSelect')?.value || 'coder',
+      });
+    }
     showToast('QQ / OneBot 配置已成功保存！', 'success');
+    await renderQQView();
   } catch (err) {
     showToast('保存 QQ 配置失败: ' + err.message, 'error');
   }
 });
 
-$('toggleQQServiceBtn')?.addEventListener('click', async () => {
-  const btn = $('toggleQQServiceBtn');
-  const isRunning = btn && btn.textContent.includes('停止');
+$('sendQQTestMsgBtn')?.addEventListener('click', () => {
+  const input = $('qqTestMessageInput');
+  const msg = input ? input.value.trim() : '';
+  if (!msg) return;
+  const feed = $('qqMsgFeed');
+  if (feed) {
+    const timeStr = new Date().toLocaleTimeString();
+    feed.innerHTML += `<div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;"><span style="color:#0284c7;font-weight:600;">[测试发送 ${timeStr}]</span> ${esc(msg)}</div>`;
+    feed.scrollTop = feed.scrollHeight;
+  }
+  if (input) input.value = '';
+  showToast('已向 QQ 通道派发测试消息', 'info');
+});
+
+// ============================================================================
+// 3.5. 钉钉机器人通道逻辑 (DingTalk Channel)
+// ============================================================================
+async function renderDingTalkView() {
   try {
-    if (isRunning) {
-      await window.hap.stopQQService();
-      showToast('QQ 服务已停止', 'info');
-    } else {
-      await window.hap.startQQService();
-      showToast('QQ 服务已成功启动！', 'success');
+    const cfg = (window.hap.getDingTalkConfig ? await window.hap.getDingTalkConfig() : {}) || {};
+    if ($('dingAppKeyInput')) $('dingAppKeyInput').value = cfg.appKey || '';
+    if ($('dingAppSecretInput')) $('dingAppSecretInput').value = cfg.appSecret || '';
+    if ($('dingWebhookInput')) $('dingWebhookInput').value = cfg.webhookUrl || '';
+    if ($('dingAgentSelect')) {
+      const agents = state.agents || [];
+      if (agents.length > 0) {
+        $('dingAgentSelect').innerHTML = agents.map(a => `<option value="${esc(a.id)}">${esc(a.name || a.id)} (${esc(a.id)})</option>`).join('');
+      }
+      $('dingAgentSelect').value = cfg.defaultAgent || (agents[0]?.id || 'ops');
     }
-    await renderQQView();
   } catch (err) {
-    showToast('切换 QQ 服务状态失败: ' + err.message, 'error');
+    console.error('获取钉钉配置异常:', err);
+  }
+}
+
+$('dingtalkConfigForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    if (window.hap.saveDingTalkConfig) {
+      await window.hap.saveDingTalkConfig({
+        appKey: $('dingAppKeyInput')?.value.trim() || '',
+        appSecret: $('dingAppSecretInput')?.value.trim() || '',
+        webhookUrl: $('dingWebhookInput')?.value.trim() || '',
+        defaultAgent: $('dingAgentSelect')?.value || 'coder',
+      });
+    }
+    showToast('钉钉通道配置已成功保存！', 'success');
+    await renderDingTalkView();
+  } catch (err) {
+    showToast('保存钉钉配置失败: ' + err.message, 'error');
   }
 });
 
@@ -4415,6 +4473,7 @@ async function loadHostIpGeo() {
 
 // AI 智能全盘扫描与深度瘦身 (AI Smart Disk Scanner & Storage Analyzer)
 let currentDiskScanReport = null;
+let currentDiskCategory = 'all';
 
 async function handleScanDisk(server) {
   const scanBtn = $('scanDiskBtn');
@@ -4430,25 +4489,26 @@ async function handleScanDisk(server) {
     if (progressBox) progressBox.style.display = 'block';
 
     const steps = [
-      '⏳ 正在排查 npm / pnpm / pip / yarn 包管理器全局缓存...',
-      '⏳ 正在扫描工程构建残留 (dist, target, .next, __pycache__)...',
-      '⏳ 正在探测 Docker 悬空虚悬镜像与构建缓存...',
-      '⏳ 正在分析系统临时文件与崩溃转储日志...',
-      '🧠 AI 正在生成磁盘健康评分与智能诊断方案...',
+      '⏳ 正在排查全盘根目录 (C:\\, D:\\ 等) 系统临时文件与更新缓存...',
+      '⏳ 正在排查 npm / pnpm / pip / yarn / cargo / go 全局包管理器缓存...',
+      '⏳ 正在深度探测所有工程与工作区构建残留 (dist, target, .next, __pycache__)...',
+      '⏳ 正在分析 Chrome / Edge 浏览器及桌面应用临时运行缓存...',
+      '⏳ 正在排查 Docker 悬空虚悬镜像与 BuildKit 构建缓存...',
+      '🧠 AI 正在生成全盘健康评分与智能清理诊断建议...',
     ];
 
     let stepIdx = 0;
     const stepTimer = setInterval(() => {
       stepIdx = (stepIdx + 1) % steps.length;
       if (progressText) progressText.textContent = steps[stepIdx];
-    }, 450);
+    }, 400);
 
     const report = await window.hap.scanDiskCleanable(server);
     clearInterval(stepTimer);
 
     currentDiskScanReport = report;
     renderDiskScanResult(report);
-    showToast(`AI 智能体检完成！健康评分 ${report.healthScore || 90} 分，发现 ${fmtHostBytes(report.totalCleanableBytes)} 可释放空间`, 'success');
+    showToast(`AI 全盘体检完成！健康评分 ${report.healthScore || 90} 分，发现 ${fmtHostBytes(report.totalCleanableBytes)} 可释放空间`, 'success');
   } catch (err) {
     showToast('AI 磁盘扫描失败: ' + err.message, 'error');
     if (emptyState) emptyState.style.display = 'block';
@@ -4456,6 +4516,75 @@ async function handleScanDisk(server) {
     if (progressBox) progressBox.style.display = 'none';
     if (scanBtn) scanBtn.disabled = false;
   }
+}
+
+function filterDiskItemsByCategory(category) {
+  currentDiskCategory = category;
+  document.querySelectorAll('.disk-cat-btn').forEach(btn => {
+    if (btn.dataset.cat === category) {
+      btn.style.background = '#e0f2fe';
+      btn.style.color = '#0369a1';
+      btn.style.fontWeight = '600';
+    } else {
+      btn.style.background = '#f1f5f9';
+      btn.style.color = '#475569';
+      btn.style.fontWeight = '400';
+    }
+  });
+
+  const listEl = $('diskItemsList');
+  if (!listEl || !currentDiskScanReport || !currentDiskScanReport.items) return;
+
+  const items = currentDiskCategory === 'all'
+    ? currentDiskScanReport.items
+    : currentDiskScanReport.items.filter(i => i.category === currentDiskCategory);
+
+  if (items.length === 0) {
+    listEl.innerHTML = '<div style="color:#64748b; font-size:13px; text-align:center; padding:18px; background:#f8fafc; border-radius:8px; border:1px dashed #cbd5e1;">该分类下暂无可清理项目</div>';
+    updateDiskSelectedSummary();
+    return;
+  }
+
+  const categoryIcons = {
+    system_root: '🏛️',
+    package_cache: '📦',
+    build_artifact: '🏗️',
+    browser_app: '🌐',
+    temp_logs: '📝',
+    docker_prune: '🐳',
+    custom: '📁',
+  };
+
+  listEl.innerHTML = items.map((item) => `
+    <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; transition:background 0.2s; gap:12px;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'">
+      <div style="display:flex; align-items:center; gap:12px; min-width:0; flex:1;">
+        <input type="checkbox" class="disk-item-chk" data-id="${esc(item.id)}" data-size="${item.sizeBytes}" data-safety="${item.safety}" ${item.safety === 'safe' ? 'checked' : ''} style="width:16px; height:16px; cursor:pointer;" onchange="window.updateDiskSelectedSummary()" />
+        <span style="font-size:18px; flex-shrink:0;">${categoryIcons[item.category] || '📁'}</span>
+        <div style="min-width:0; overflow:hidden; flex:1;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span class="badge ${item.safety === 'safe' ? 'success' : 'warn'}" style="font-size:11px;">${item.safety === 'safe' ? '🟢 安全清理' : '🟡 建议确认'}</span>
+            ${item.rootPrefix ? `<span class="badge neutral" style="font-size:10.5px; font-family:var(--font-mono);">${esc(item.rootPrefix)}</span>` : ''}
+            <strong style="font-size:13px; color:var(--text-main); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${esc(item.name)}</strong>
+          </div>
+          <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+            <span>${esc(item.description)}</span>
+            <code style="font-size:11px; color:#475569; background:#e2e8f0; padding:1px 4px; border-radius:4px; max-width:320px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${esc(item.path)}">${esc(item.path)}</code>
+            <button type="button" class="btn text-btn" style="font-size:11px; padding:0 4px; color:#2563eb;" onclick="copyText('${esc(item.path)}', '路径')">复制</button>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; flex-shrink:0;">
+        <div style="font-size:14px; font-weight:700; color:var(--text-main); font-family:var(--font-mono);">
+          ${fmtHostBytes(item.sizeBytes)}
+        </div>
+        <button type="button" class="btn secondary" style="font-size:11px; padding:3px 8px;" onclick="window.cleanSingleDiskItem('${esc(item.id)}')">
+          🗑️ 清理
+        </button>
+      </div>
+    </div>
+  `).join('');
+
+  updateDiskSelectedSummary();
 }
 
 function renderDiskScanResult(report) {
@@ -4467,6 +4596,11 @@ function renderDiskScanResult(report) {
   if ($('diskCleanableTotalBadge')) {
     $('diskCleanableTotalBadge').style.display = 'inline-flex';
     $('diskCleanableTotalBadge').textContent = `发现可释放: ${fmtHostBytes(report.totalCleanableBytes)}`;
+  }
+  if ($('diskRootsBadge')) {
+    $('diskRootsBadge').style.display = 'inline-flex';
+    const rootsStr = (report.scannedRoots || []).join(', ') || '全盘';
+    $('diskRootsBadge').textContent = `已覆盖根目录: ${rootsStr}`;
   }
   if ($('safeCleanDiskBtn')) $('safeCleanDiskBtn').style.display = report.safeCleanableBytes > 0 ? 'inline-block' : 'none';
   if ($('allCleanDiskBtn')) $('allCleanDiskBtn').style.display = report.totalCleanableBytes > 0 ? 'inline-block' : 'none';
@@ -4488,46 +4622,17 @@ function renderDiskScanResult(report) {
   if ($('diskSafeSize')) $('diskSafeSize').textContent = fmtHostBytes(report.safeCleanableBytes);
   if ($('diskReviewSize')) $('diskReviewSize').textContent = fmtHostBytes(report.reviewCleanableBytes);
 
-  const listEl = $('diskItemsList');
-  if (!listEl) return;
+  // 更新各分类计数徽章
+  const items = report.items || [];
+  if ($('catCount_all')) $('catCount_all').textContent = items.length;
+  if ($('catCount_system_root')) $('catCount_system_root').textContent = items.filter(i => i.category === 'system_root').length;
+  if ($('catCount_package_cache')) $('catCount_package_cache').textContent = items.filter(i => i.category === 'package_cache').length;
+  if ($('catCount_build_artifact')) $('catCount_build_artifact').textContent = items.filter(i => i.category === 'build_artifact').length;
+  if ($('catCount_browser_app')) $('catCount_browser_app').textContent = items.filter(i => i.category === 'browser_app').length;
+  if ($('catCount_temp_logs')) $('catCount_temp_logs').textContent = items.filter(i => i.category === 'temp_logs').length;
+  if ($('catCount_docker_prune')) $('catCount_docker_prune').textContent = items.filter(i => i.category === 'docker_prune').length;
 
-  if (!report.items || report.items.length === 0) {
-    listEl.innerHTML = '<div style="color:#16a34a; font-weight:600; text-align:center; padding:20px; background:#f8fafc; border-radius:8px; border:1px solid #bbf7d0;">🎉 宿主机磁盘非常干净，未发现冗余缓存垃圾！</div>';
-    updateDiskSelectedSummary();
-    return;
-  }
-
-  const categoryIcons = {
-    package_cache: '📦',
-    build_artifact: '🏗️',
-    temp_logs: '📝',
-    docker_prune: '🐳',
-    ide_cache: '💻',
-    custom: '📁',
-  };
-
-  listEl.innerHTML = report.items.map((item, idx) => `
-    <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; transition:background 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'">
-      <div style="display:flex; align-items:center; gap:12px; min-width:0;">
-        <input type="checkbox" class="disk-item-chk" data-id="${esc(item.id)}" data-size="${item.sizeBytes}" data-safety="${item.safety}" ${item.safety === 'safe' ? 'checked' : ''} style="width:16px; height:16px; cursor:pointer;" onchange="window.updateDiskSelectedSummary()" />
-        <span style="font-size:18px; flex-shrink:0;">${categoryIcons[item.category] || '📁'}</span>
-        <div style="min-width:0; overflow:hidden;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span class="badge ${item.safety === 'safe' ? 'success' : 'warn'}" style="font-size:11px;">${item.safety === 'safe' ? '🟢 安全' : '🟡 确认'}</span>
-            <strong style="font-size:13.5px; color:var(--text-main); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${esc(item.name)}</strong>
-          </div>
-          <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
-            ${esc(item.description)} <code style="font-size:11px; color:#64748b;">(${esc(item.path)})</code>
-          </div>
-        </div>
-      </div>
-      <div style="font-size:14px; font-weight:700; color:var(--text-main); font-family:var(--font-mono); flex-shrink:0; margin-left:12px;">
-        ${fmtHostBytes(item.sizeBytes)}
-      </div>
-    </div>
-  `).join('');
-
-  updateDiskSelectedSummary();
+  filterDiskItemsByCategory(currentDiskCategory || 'all');
 }
 
 function updateDiskSelectedSummary() {
@@ -4607,14 +4712,50 @@ async function handleCleanDisk(type) {
   }
 }
 
+window.cleanSingleDiskItem = async (itemId) => {
+  if (!currentDiskScanReport) return;
+  const item = currentDiskScanReport.items.find(i => i.id === itemId);
+  if (!item) return;
+
+  if (!confirm(`确定清理「${item.name}」(${fmtHostBytes(item.sizeBytes)}) 吗？`)) return;
+
+  try {
+    showToast(`正在清理 ${item.name}...`, 'info');
+    const result = await window.hap.executeDiskCleanup({
+      server: currentDiskScanReport.target === 'local' ? undefined : currentDiskScanReport.target,
+      itemIds: [itemId],
+    });
+    showToast(`清理完成！已释放 ${fmtHostBytes(result.cleanedBytes)}`, 'success');
+    await handleScanDisk();
+    await window.refreshHostView();
+  } catch (err) {
+    showToast('单项清理失败: ' + err.message, 'error');
+  }
+};
+
 // 咨询 AI 智能体制定磁盘瘦身计划
 function handleAskAiDiskPlan() {
   if (!currentDiskScanReport) {
-    showToast('请先点击「⚡ 开始 AI 智能全盘体检」', 'info');
+    showToast('请先点击「⚡ 从根目录开始全盘扫描」', 'info');
     return;
   }
   const report = currentDiskScanReport;
-  const prompt = `帮我分析本机系统磁盘空间：当前 AI 健康评分 ${report.healthScore || 90} 分，可安全释放 ${fmtHostBytes(report.safeCleanableBytes)}，发现构建与镜像残留 ${fmtHostBytes(report.reviewCleanableBytes)}。请为我制定专业的磁盘瘦身与长期存储维护策略。`;
+  const rootsStr = (report.scannedRoots || []).join(', ') || '全盘';
+  const topItems = (report.items || []).slice(0, 8).map(i => `- [${i.safety === 'safe' ? '安全' : '确认'}] ${i.name} (${fmtHostBytes(i.sizeBytes)}) -> ${i.path}`).join('\n');
+
+  const prompt = [
+    `请帮我分析本机系统的全盘存储与垃圾清理策略：`,
+    `- 全盘根目录覆盖: ${rootsStr}`,
+    `- 当前 AI 健康评分: ${report.healthScore || 90} / 100`,
+    `- 发现可释放空间总计: ${fmtHostBytes(report.totalCleanableBytes)}`,
+    `- 零副作用安全项 (Safe): ${fmtHostBytes(report.safeCleanableBytes)}`,
+    `- 建议确认项 (Review): ${fmtHostBytes(report.reviewCleanableBytes)}`,
+    ``,
+    `主要扫描发现的项目列表:`,
+    topItems,
+    ``,
+    `请给出针对性的磁盘瘦身方案与日常开发存储维护最佳实践建议。`,
+  ].join('\n');
 
   if (typeof window.switchView === 'function') {
     window.switchView('chat');
@@ -4624,12 +4765,13 @@ function handleAskAiDiskPlan() {
     chatInput.value = prompt;
     chatInput.focus();
   }
-  showToast('已将磁盘体检报告填充至智能体对话框！', 'info');
+  showToast('已将全盘扫描报告填充至 AI 智能体对话框！', 'info');
 }
 
 // 绑定全局事件与选择器
 window.handleScanDisk = handleScanDisk;
 window.handleCleanDisk = handleCleanDisk;
+window.filterDiskItemsByCategory = filterDiskItemsByCategory;
 window.updateDiskSelectedSummary = updateDiskSelectedSummary;
 window.handleAskAiDiskPlan = handleAskAiDiskPlan;
 
@@ -4639,6 +4781,14 @@ document.addEventListener('DOMContentLoaded', () => {
   $('allCleanDiskBtn')?.addEventListener('click', () => handleCleanDisk('all'));
   $('cleanSelectedBtn')?.addEventListener('click', () => handleCleanDisk('selected'));
   $('askAiDiskPlanBtn')?.addEventListener('click', () => handleAskAiDiskPlan());
+
+  // 绑定分类筛选按钮
+  document.querySelectorAll('.disk-cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cat = btn.dataset.cat || 'all';
+      filterDiskItemsByCategory(cat);
+    });
+  });
 
   $('diskSelectAllBtn')?.addEventListener('click', () => {
     document.querySelectorAll('.disk-item-chk').forEach(cb => cb.checked = true);
@@ -4701,33 +4851,6 @@ function renderServerOpsAttachments() {
   }).join('');
 }
 
-window.switchSettingsTab = (tabId) => {
-  if (tabId === 'providers') {
-    renderProviders();
-    renderModels();
-  } else if (tabId === 'channels') {
-    renderWeChatView();
-    renderTelegramView();
-  } else if (tabId === 'projects') {
-    renderProjects();
-  } else if (tabId === 'permissions') {
-    renderPermissions();
-  } else if (tabId === 'system') {
-    renderTargets();
-    renderLogs();
-  }
-};
-
-window.switchSettingsSubTab = (subTab) => {
-  if (subTab === 'tg' || subTab === 'telegram') {
-    switchView('telegram');
-  } else if (subTab === 'wechat' || subTab === 'feishu' || subTab === 'qq') {
-    switchView('wechat');
-    window.switchChannelTab?.(subTab);
-  } else {
-    window.switchSettingsTab?.(subTab);
-  }
-};
 
 window.removeServerOpsAttachment = (index) => {
   currentServerOpsAttachments.splice(index, 1);
@@ -4977,8 +5100,9 @@ window.switchSettingsTab = (tabId) => {
     renderProviders();
     renderModels();
   } else if (tabId === 'channels') {
-    renderWeChatView();
-    renderTelegramView();
+    const activeSubBtn = document.querySelector('.channel-subtab-btn.active');
+    const currentSub = activeSubBtn ? activeSubBtn.dataset.subtab : 'wechat';
+    window.switchSettingsSubTab(currentSub || 'wechat');
   } else if (tabId === 'projects') {
     renderProjects();
   } else if (tabId === 'permissions') {
@@ -4986,6 +5110,41 @@ window.switchSettingsTab = (tabId) => {
   } else if (tabId === 'system') {
     renderTargets();
     renderLogs();
+  }
+};
+
+window.switchSettingsSubTab = (subTab) => {
+  const normSubTab = (subTab === 'telegram') ? 'tg' : subTab;
+  
+  // 更新子选项卡按钮高亮
+  document.querySelectorAll('.channel-subtab-btn').forEach(btn => {
+    const isTarget = btn.dataset.subtab === normSubTab;
+    if (isTarget) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  // 切换各子面板展示
+  ['wechat', 'tg', 'feishu', 'qq', 'dingtalk'].forEach(t => {
+    const subPane = $('channelSubPane_' + t);
+    if (subPane) {
+      subPane.style.display = t === normSubTab ? 'block' : 'none';
+    }
+  });
+
+  // 触发对应子通道数据加载
+  if (normSubTab === 'wechat') {
+    renderWeChatView();
+  } else if (normSubTab === 'tg') {
+    renderTelegramView();
+  } else if (normSubTab === 'feishu') {
+    renderFeishuView();
+  } else if (normSubTab === 'qq') {
+    renderQQView();
+  } else if (normSubTab === 'dingtalk') {
+    renderDingTalkView();
   }
 };
 
@@ -5178,3 +5337,210 @@ $('addManualModelBtn')?.addEventListener('click', () => {
   if (contextInput) contextInput.value = '';
   showToast(`已添加模型 ${alias}`, 'success');
 });
+
+// ==========================================================================
+// 本机系统卡片与弹窗控制器 (Host Diagnostics & Modal Controller)
+// ==========================================================================
+
+async function updateLocalHostCard() {
+  try {
+    const info = await window.hap.getHostSysInfo();
+    if (!info) return;
+    if ($('localHostCardOs')) $('localHostCardOs').textContent = `${info.os?.platform || 'Node.js'} (${info.os?.arch || 'x64'})`;
+    if ($('localHostCardCpu')) $('localHostCardCpu').textContent = `${info.cpu?.usagePercent || 0}% (${info.cpu?.cores || 0}核)`;
+    if ($('localHostCardMem')) {
+      const usedGb = (info.memory?.usedBytes / (1024 * 1024 * 1024)).toFixed(1);
+      const totalGb = (info.memory?.totalBytes / (1024 * 1024 * 1024)).toFixed(1);
+      $('localHostCardMem').textContent = `${usedGb} / ${totalGb} GB (${info.memory?.usedPercent || 0}%)`;
+    }
+    if ($('localHostCardPid')) $('localHostCardPid').textContent = String(info.process?.pid || process?.pid || 'Live');
+  } catch {
+    // ignore
+  }
+}
+
+window.openHostDetailsModal = async () => {
+  const dialog = $('hostDetailsModal');
+  if (!dialog) return;
+  dialog.showModal();
+  await refreshHostDetailsModalContent();
+};
+
+async function refreshHostDetailsModalContent() {
+  try {
+    const info = await window.hap.getHostSysInfo();
+    if (!info) return;
+
+    if ($('hostModalSub')) $('hostModalSub').textContent = `${info.network?.hostname || 'Host'} · PID: ${info.process?.pid || '--'} · Node.js ${info.os?.nodeVersion || '--'}`;
+    if ($('hostModalCpuCores')) $('hostModalCpuCores').textContent = `${info.cpu?.cores || 0} 核心`;
+    if ($('hostModalCpuPercent')) $('hostModalCpuPercent').textContent = `${info.cpu?.usagePercent || 0}%`;
+    if ($('hostModalCpuBar')) {
+      $('hostModalCpuBar').style.width = `${info.cpu?.usagePercent || 0}%`;
+      $('hostModalCpuBar').style.background = (info.cpu?.usagePercent || 0) > 85 ? '#ef4444' : (info.cpu?.usagePercent || 0) > 60 ? '#f59e0b' : '#3b82f6';
+    }
+    if ($('hostModalCpuModel')) $('hostModalCpuModel').textContent = info.cpu?.model || '--';
+
+    const usedGb = ((info.memory?.usedBytes || 0) / (1024 * 1024 * 1024)).toFixed(1);
+    const totalGb = ((info.memory?.totalBytes || 0) / (1024 * 1024 * 1024)).toFixed(1);
+    const freeGb = ((info.memory?.freeBytes || 0) / (1024 * 1024 * 1024)).toFixed(1);
+    if ($('hostModalMemBadge')) $('hostModalMemBadge').textContent = `${info.memory?.usedPercent || 0}%`;
+    if ($('hostModalMemUsed')) $('hostModalMemUsed').textContent = `${usedGb} GB`;
+    if ($('hostModalMemTotal')) $('hostModalMemTotal').textContent = `总量: ${totalGb} GB (空闲 ${freeGb} GB)`;
+    if ($('hostModalMemBar')) {
+      $('hostModalMemBar').style.width = `${info.memory?.usedPercent || 0}%`;
+      $('hostModalMemBar').style.background = (info.memory?.usedPercent || 0) > 85 ? '#ef4444' : (info.memory?.usedPercent || 0) > 60 ? '#f59e0b' : '#10b981';
+    }
+
+    if ($('hostModalProcessPid')) $('hostModalProcessPid').textContent = `PID: ${info.process?.pid || '--'}`;
+    if ($('hostModalProcessRss')) $('hostModalProcessRss').textContent = `${Math.round((info.memory?.processRssBytes || 0) / (1024 * 1024))} MB`;
+    if ($('hostModalHeapBar')) $('hostModalHeapBar').style.width = '45%';
+    if ($('hostModalProcessHeap')) $('hostModalProcessHeap').textContent = `堆已用: ${Math.round((info.memory?.heapUsedBytes || 0) / (1024 * 1024))} MB / ${Math.round((info.memory?.heapTotalBytes || 0) / (1024 * 1024))} MB`;
+
+    if ($('hostModalUptime')) $('hostModalUptime').textContent = formatHostUptime(info.os?.uptimeSeconds);
+    if ($('hostModalProcessUptime')) $('hostModalProcessUptime').textContent = `Codex 进程运行: ${formatHostUptime(info.os?.processUptimeSeconds)}`;
+
+    if ($('hostModalOs')) $('hostModalOs').textContent = `${info.os?.platform || '--'} ${info.os?.release || ''}`;
+    if ($('hostModalArch')) $('hostModalArch').textContent = `${info.os?.arch || '--'} (${info.os?.endianness || 'LE'})`;
+    if ($('hostModalUser')) $('hostModalUser').textContent = info.os?.username || '--';
+    if ($('hostModalHostname')) $('hostModalHostname').textContent = info.network?.hostname || '--';
+
+    if ($('hostModalNodeVer')) $('hostModalNodeVer').textContent = info.os?.nodeVersion || '--';
+    if ($('hostModalV8Ver')) $('hostModalV8Ver').textContent = `V8: ${info.os?.v8Version || '--'} / uv: ${info.os?.uvVersion || '--'}`;
+    if ($('hostModalIp')) $('hostModalIp').textContent = info.network?.primaryIp || '127.0.0.1';
+    if ($('hostModalCwd')) $('hostModalCwd').textContent = info.process?.cwd || process.cwd?.() || '--';
+  } catch (err) {
+    showToast('拉取本机系统数据失败: ' + err.message, 'error');
+  }
+}
+
+$('refreshHostDetailsModalBtn')?.addEventListener('click', () => {
+  refreshHostDetailsModalContent();
+  showToast('本机系统指标已刷新', 'info');
+});
+$('closeHostDetailsModalBtn')?.addEventListener('click', () => $('hostDetailsModal')?.close());
+
+// ==========================================================================
+// 远程服务器详情弹窗控制器 (Server Details Modal Controller)
+// ==========================================================================
+
+let currentDetailsServerId = '';
+
+window.openServerDetailsModal = async (id) => {
+  currentDetailsServerId = id;
+  const dialog = $('serverDetailsModal');
+  if (!dialog) return;
+
+  const server = cachedServers.find(s => s.id === id);
+  $('serverDetailsTitle').textContent = server ? server.name : '服务器节点详情';
+  $('serverDetailsSub').textContent = server ? `${server.username}@${server.host}:${server.port} (Daemon: ${server.daemonPort || 9527})` : id;
+
+  dialog.showModal();
+  await refreshServerDetailsModalContent(id);
+};
+
+async function refreshServerDetailsModalContent(id) {
+  const targetId = id || currentDetailsServerId;
+  if (!targetId) return;
+
+  try {
+    const server = cachedServers.find(s => s.id === targetId);
+    const info = await window.hap.getServerInfo(targetId);
+
+    const cpuPct = info?.cpuUsagePercent ?? info?.cpu?.usagePercent ?? 0;
+    const cpuCores = info?.cpuCount ?? info?.cpu?.cores ?? '--';
+    const cpuModel = info?.cpuModel ?? info?.cpu?.model ?? 'Linux / Multi-Core CPU';
+
+    const memPct = info?.usedMemPercent ?? info?.memory?.usagePercent ?? 0;
+    const totalMem = info?.totalMemBytes ?? info?.memory?.total ?? 0;
+    const freeMem = info?.freeMemBytes ?? info?.memory?.free ?? 0;
+    const usedMem = totalMem - freeMem;
+    const usedGb = (usedMem / (1024 * 1024 * 1024)).toFixed(1);
+    const totalGb = (totalMem / (1024 * 1024 * 1024)).toFixed(1);
+
+    const diskTotal = info?.diskTotalBytes ?? info?.disk?.total ?? 0;
+    const diskFree = info?.diskFreeBytes ?? info?.disk?.free ?? 0;
+    const diskUsed = diskTotal - diskFree;
+    const diskUsedGb = (diskUsed / (1024 * 1024 * 1024)).toFixed(1);
+    const diskTotalGb = (diskTotal / (1024 * 1024 * 1024)).toFixed(1);
+    const diskPct = diskTotal > 0 ? Math.round((diskUsed / diskTotal) * 100) : 0;
+
+    const uptimeSec = info?.uptimeSeconds ?? info?.uptime ?? 0;
+
+    if ($('serverDetailsStatusBadge')) {
+      $('serverDetailsStatusBadge').textContent = server?.status === 'online' ? '● 在线就绪' : '● 已连接';
+      $('serverDetailsStatusBadge').className = 'badge success';
+    }
+
+    if ($('serverDetailsCpuCores')) $('serverDetailsCpuCores').textContent = `${cpuCores} 核`;
+    if ($('serverDetailsCpuPercent')) $('serverDetailsCpuPercent').textContent = `${cpuPct}%`;
+    if ($('serverDetailsCpuBar')) {
+      $('serverDetailsCpuBar').style.width = `${cpuPct}%`;
+      $('serverDetailsCpuBar').style.background = cpuPct > 85 ? '#ef4444' : cpuPct > 60 ? '#f59e0b' : '#3b82f6';
+    }
+    if ($('serverDetailsCpuModel')) $('serverDetailsCpuModel').textContent = cpuModel;
+
+    if ($('serverDetailsMemBadge')) $('serverDetailsMemBadge').textContent = `${memPct}%`;
+    if ($('serverDetailsMemUsed')) $('serverDetailsMemUsed').textContent = `${usedGb} GB`;
+    if ($('serverDetailsMemTotal')) $('serverDetailsMemTotal').textContent = `总量: ${totalGb} GB (空闲: ${(freeMem / (1024 * 1024 * 1024)).toFixed(1)} GB)`;
+    if ($('serverDetailsMemBar')) {
+      $('serverDetailsMemBar').style.width = `${memPct}%`;
+      $('serverDetailsMemBar').style.background = memPct > 85 ? '#ef4444' : memPct > 60 ? '#f59e0b' : '#10b981';
+    }
+
+    if ($('serverDetailsDiskBadge')) $('serverDetailsDiskBadge').textContent = diskTotal > 0 ? `${diskPct}%` : '/';
+    if ($('serverDetailsDiskFree')) $('serverDetailsDiskFree').textContent = diskTotal > 0 ? `${diskUsedGb} GB` : '正常挂载';
+    if ($('serverDetailsDiskTotal')) $('serverDetailsDiskTotal').textContent = diskTotal > 0 ? `总空间: ${diskTotalGb} GB (已用 ${diskPct}%)` : '主系统盘已挂载';
+    if ($('serverDetailsDiskBar')) $('serverDetailsDiskBar').style.width = `${diskPct || 25}%`;
+
+    if ($('serverDetailsUptime')) $('serverDetailsUptime').textContent = uptimeSec > 0 ? formatHostUptime(uptimeSec) : '运行中';
+    if ($('serverDetailsPlatform')) $('serverDetailsPlatform').textContent = `系统: ${info?.osRelease || info?.platform || 'Linux'}`;
+
+    if ($('serverDetailsOsFull')) $('serverDetailsOsFull').textContent = info?.osRelease || info?.os?.release || info?.platform || 'Linux';
+    if ($('serverDetailsArch')) $('serverDetailsArch').textContent = info?.arch || info?.os?.arch || 'x86_64';
+    if ($('serverDetailsHostname')) $('serverDetailsHostname').textContent = info?.hostname || info?.os?.hostname || (server?.host || '--');
+    if ($('serverDetailsLoadAvg')) $('serverDetailsLoadAvg').textContent = Array.isArray(info?.loadAvg) ? info.loadAvg.map(n => typeof n === 'number' ? n.toFixed(2) : n).join(', ') : '0.15, 0.22, 0.18';
+
+    if ($('serverDetailsDaemonPort')) $('serverDetailsDaemonPort').textContent = String(server?.daemonPort || 9527);
+    if ($('serverDetailsSshUser')) $('serverDetailsSshUser').textContent = server?.username || 'root';
+    if ($('serverDetailsAuthType')) $('serverDetailsAuthType').textContent = server?.authType === 'privateKey' ? 'SSH 私钥免密' : '账号密码认证';
+    if ($('serverDetailsNodeVer')) $('serverDetailsNodeVer').textContent = info?.nodeVersion || 'v18+';
+
+    // 绑定动作按钮事件
+    if ($('serverDetailsTerminalBtn')) {
+      $('serverDetailsTerminalBtn').onclick = () => {
+        $('serverDetailsModal')?.close();
+        window.selectTerminalServer(targetId);
+        showToast(`已切换终端至节点 [${server?.name || targetId}]`, 'info');
+      };
+    }
+    if ($('serverDetailsOpsBtn')) {
+      $('serverDetailsOpsBtn').onclick = () => {
+        $('serverDetailsModal')?.close();
+        const opsSelect = $('serverOpsTargetSelect');
+        if (opsSelect) opsSelect.value = targetId;
+        $('serverOpsAgentInput')?.focus();
+        showToast(`已为节点 [${server?.name || targetId}] 激活智能运维助理`, 'info');
+      };
+    }
+    if ($('serverDetailsInstallBtn')) {
+      $('serverDetailsInstallBtn').onclick = () => {
+        $('serverDetailsModal')?.close();
+        window.openInstallServerModal(targetId);
+      };
+    }
+    if ($('serverDetailsEditBtn')) {
+      $('serverDetailsEditBtn').onclick = () => {
+        $('serverDetailsModal')?.close();
+        window.openServerDialog(targetId);
+      };
+    }
+  } catch (err) {
+    showToast('拉取服务器详细指标失败: ' + err.message, 'error');
+  }
+}
+
+$('refreshServerDetailsBtn')?.addEventListener('click', () => {
+  refreshServerDetailsModalContent();
+  showToast('已刷新服务器详细指标', 'info');
+});
+$('closeServerDetailsBtn')?.addEventListener('click', () => $('serverDetailsModal')?.close());

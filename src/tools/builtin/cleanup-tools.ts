@@ -52,19 +52,24 @@ export const diskCleanupTool = defineTool({
     if (dryRun) {
       const formattedItems = report.items.map(item => {
         const tag = item.safety === 'safe' ? '🟢 [安全]' : '🟡 [建议确认]';
-        return `- ${tag} **${item.name}** (\`${formatBytes(item.sizeBytes)}\`)\n  路径: \`${item.path}\`\n  说明: ${item.description}`;
+        const rootBadge = item.rootPrefix ? ` [${item.rootPrefix}]` : '';
+        return `- ${tag}${rootBadge} **${item.name}** (\`${formatBytes(item.sizeBytes)}\`)\n  - 路径: \`${item.path}\`\n  - 分类: \`${item.category}\` · 说明: ${item.description}`;
       }).join('\n');
 
+      const rootsStr = (report.scannedRoots || []).join(', ') || '全盘';
       const summary = [
-        `### 🖥️ 本地宿主机磁盘体检报告 (Dry-Run 模式)`,
+        `### 🖥️ 本地宿主机全盘深度体检报告 (从根目录 ${rootsStr} 扫描)`,
+        `- **全盘健康评分**: **${report.healthScore} / 100**`,
+        `- **AI 诊断结论**: ${report.aiDiagnosis}`,
+        `- **扫描覆盖根目录**: \`${rootsStr}\``,
         `- **可释放空间总计**: **${formatBytes(report.totalCleanableBytes)}**`,
-        `- **安全可清 (Safe)**: \`${formatBytes(report.safeCleanableBytes)}\``,
-        `- **建议确认 (Review)**: \`${formatBytes(report.reviewCleanableBytes)}\``,
+        `- **安全可清 (Safe)**: \`${formatBytes(report.safeCleanableBytes)}\` (零副作用直接清理)`,
+        `- **建议确认 (Review)**: \`${formatBytes(report.reviewCleanableBytes)}\` (工程构建产物/容器)`,
         ``,
-        `#### 扫描发现的垃圾与缓存项 (${report.items.length} 项):`,
+        `#### 扫描发现的可清理与释放项 (${report.items.length} 项):`,
         formattedItems || '（未扫描到可清理的冗余垃圾文件）',
         ``,
-        `> 💡 **提示**: 当前为仅扫描预览模式。若确认清理，请执行 \`disk_cleanup(dryRun=false)\`。`,
+        `> 💡 **AI 清理建议**: 建议优先使用 \`disk_cleanup(level='safe', dryRun=false)\` 清理全部安全缓存。若需彻底回收工程构建产物，可指定 \`level='all'\`。`,
       ].join('\n');
 
       return { content: summary, isError: false };

@@ -137,6 +137,7 @@ export interface GuiTelegramConfig {
   running: boolean;
   botUsername?: string | undefined;
   botName?: string | undefined;
+  allowedUsers?: string[] | string | undefined;
 }
 
 // 微信与企业微信通道可视化配置
@@ -153,6 +154,8 @@ export interface GuiWeChatConfig {
   wecomAgentId?: number | undefined;
   wecomSecret?: string | undefined;
   wecomWebhookUrl?: string | undefined;
+  voiceTranscribe?: boolean | undefined;
+  approvalCard?: boolean | undefined;
 }
 
 // 飞书机器人通道可视化配置
@@ -175,6 +178,8 @@ export interface GuiFeishuConfig {
 export interface GuiQQConfig {
   enabled: boolean;
   mode: 'onebot' | 'official';
+  endpoint?: string | undefined;
+  token?: string | undefined;
   onebotWsUrl?: string | undefined;
   onebotAccessToken?: string | undefined;
   onebotHttpUrl?: string | undefined;
@@ -185,6 +190,20 @@ export interface GuiQQConfig {
   officialSecret?: string | undefined;
   defaultAgent: string;
   workspace?: string | undefined;
+  adminList?: string | undefined;
   running: boolean;
   status: 'idle' | 'running' | 'error';
 }
+
+// 钉钉机器人通道可视化配置
+export interface GuiDingTalkConfig {
+  enabled: boolean;
+  appKey?: string | undefined;
+  appSecret?: string | undefined;
+  webhookUrl?: string | undefined;
+  defaultAgent: string;
+  workspace?: string | undefined;
+  running: boolean;
+  status: 'idle' | 'running' | 'error';
+}
+
