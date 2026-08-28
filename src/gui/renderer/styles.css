@@ -3278,3 +3278,34 @@ dialog .toast-container.in-dialog {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+
+/* ==========================================================================
+   综合设置中心 Tab 样式 (Settings Hub Tabs & Panes)
+   ========================================================================== */
+.settings-tab-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.settings-tab-btn:hover {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  color: #0284c7;
+}
+
+.settings-tab-btn.active {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%) !important;
+  color: #0369a1 !important;
+  border-color: #7dd3fc !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 6px rgba(14, 165, 233, 0.12);
+}

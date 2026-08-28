@@ -4494,3 +4494,53 @@ $('serverOpsChatForm')?.addEventListener('submit', async (e) => {
   renderServerOpsAttachments();
   await window.executeServerOpsPrompt(server, text, agentId, attachmentsToSend);
 });
+
+
+// ============================================================================
+// 7. 综合设置中心 Tab 切换与数据分发 (Settings Hub Controller)
+// ============================================================================
+window.switchSettingsTab = (tabId) => {
+  document.querySelectorAll('.settings-tab-btn').forEach(btn => {
+    if (btn.dataset.tab === tabId) {
+      btn.style.background = 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)';
+      btn.style.color = '#0369a1';
+      btn.style.borderColor = '#7dd3fc';
+      btn.style.fontWeight = '600';
+    } else {
+      btn.style.background = '#ffffff';
+      btn.style.color = '#334155';
+      btn.style.borderColor = '#cbd5e1';
+      btn.style.fontWeight = '500';
+    }
+  });
+
+  ['providers', 'channels', 'projects', 'permissions', 'system'].forEach(t => {
+    const pane = $('settingsPane_' + t);
+    if (pane) pane.style.display = t === tabId ? 'block' : 'none';
+  });
+
+  if (tabId === 'providers') {
+    renderProviders();
+    renderModels();
+  } else if (tabId === 'channels') {
+    renderWeChatView();
+    renderTelegramView();
+  } else if (tabId === 'projects') {
+    renderProjects();
+  } else if (tabId === 'permissions') {
+    renderPermissions();
+  } else if (tabId === 'system') {
+    renderTargets();
+    renderLogs();
+  }
+};
+
+// 监听进入设置中心
+document.addEventListener('click', (e) => {
+  const navItem = e.target.closest('.nav');
+  if (!navItem) return;
+  const view = navItem.getAttribute('data-view');
+  if (view === 'settings') {
+    window.switchSettingsTab('providers');
+  }
+});

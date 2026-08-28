@@ -51,132 +51,70 @@
       <!-- 侧边栏底部独立模块导航 -->
       
       <!-- 侧边栏底部精简结构化导航面板 -->
+      
+      <!-- 侧边栏底部精简日常导航 -->
       <div class="sidebar-bottom-panel">
-        <!-- 分组 1: 核心控制台 -->
-        <div class="nav-category-group">
-          <div class="nav-category-title">核心控制台</div>
-          <div class="nav active" data-view="chat" id="navChatBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
-            <span>对话工作台</span>
-          </div>
-          <div class="nav" data-view="host" id="navHostBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-              <line x1="8" y1="21" x2="16" y2="21"/>
-              <line x1="12" y1="17" x2="12" y2="21"/>
-            </svg>
-            <span>本机系统桌面</span>
-          </div>
-          <div class="nav" data-view="servers" id="navServersBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
-              <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
-              <line x1="6" y1="6" x2="6.01" y2="6"/>
-              <line x1="6" y1="18" x2="6.01" y2="18"/>
-            </svg>
-            <span>远程服务器 & 节点</span>
-          </div>
+        <div class="nav active" data-view="chat" id="navChatBtn">
+          <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span>对话工作台</span>
+        </div>
+        <div class="nav" data-view="host" id="navHostBtn">
+          <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+          <span>本机系统桌面</span>
+        </div>
+        <div class="nav" data-view="servers" id="navServersBtn">
+          <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+            <line x1="6" y1="6" x2="6.01" y2="6"/>
+            <line x1="6" y1="18" x2="6.01" y2="18"/>
+          </svg>
+          <span>远程服务器集群</span>
+        </div>
+        <div class="nav" data-view="agents" id="navAgentsBtn">
+          <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <span>智能体角色管理</span>
+        </div>
+        <div class="nav" data-view="skills" id="navSkillsBtn">
+          <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          <span>Skill & MCP 市场</span>
+        </div>
+        <div class="nav" data-view="schedules" id="navSchedulesBtn">
+          <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <span>自动化定时任务</span>
+        </div>
+        <div class="nav" data-view="memory" id="navMemoryBtn">
+          <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"/>
+            <line x1="9" y1="21" x2="15" y2="21"/>
+          </svg>
+          <span>智能体记忆库</span>
         </div>
 
-        <!-- 分组 2: 智能体与能力 -->
-        <div class="nav-category-group">
-          <div class="nav-category-title">智能体与扩展</div>
-          <div class="nav" data-view="agents" id="navAgentsBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-            </svg>
-            <span>智能体角色管理</span>
-          </div>
-          <div class="nav" data-view="skills" id="navSkillsBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-            </svg>
-            <span>Skill 技能市场</span>
-          </div>
-          <div class="nav" data-view="plugins" id="navPluginsBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-            </svg>
-            <span>MCP 插件市场</span>
-          </div>
-          <div class="nav" data-view="memory" id="navMemoryBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"/>
-              <line x1="9" y1="21" x2="15" y2="21"/>
-            </svg>
-            <span>智能体记忆库</span>
-          </div>
-          <div class="nav" data-view="schedules" id="navSchedulesBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-            </svg>
-            <span>自动化定时任务</span>
-          </div>
-        </div>
+        <div style="height:1px;background:#e0f2fe;margin:4px 0;"></div>
 
-        <!-- 分组 3: 算力与通道网关 -->
-        <div class="nav-category-group">
-          <div class="nav-category-title">算力与通道网关</div>
-          <div class="nav" data-view="models" id="navModelsBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="4" y="4" width="16" height="16" rx="2" ry="2"/>
-              <rect x="9" y="9" width="6" height="6"/>
-            </svg>
-            <span>模型目录</span>
-          </div>
-          <div class="nav" data-view="providers" id="navProvidersBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
-            </svg>
-            <span>模型服务商</span>
-          </div>
-          <div class="nav" data-view="wechat" id="navWeChatBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm7 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
-              <path d="M12 2C6.48 2 2 6.03 2 11c0 2.87 1.5 5.42 3.84 7.04L5 22l4.22-1.41C10.12 20.84 11.04 21 12 21c5.52 0 10-4.03 10-9s-4.48-10-10-10z"/>
-            </svg>
-            <span>多通道协同网关</span>
-          </div>
-          <div class="nav" data-view="telegram" id="navTelegramBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-            </svg>
-            <span>Telegram 机器人</span>
-          </div>
-          <div class="nav" data-view="projects" id="navProjectsBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-            </svg>
-            <span>工作区项目库</span>
-          </div>
-          <div class="nav" data-view="permissions" id="navPermissionsBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            </svg>
-            <span>权限与安全</span>
-          </div>
-          <div class="nav" data-view="switcher" id="navSwitcherBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="16 3 21 3 21 8"/>
-              <line x1="4" y1="20" x2="21" y2="3"/>
-              <polyline points="21 16 21 21 16 21"/>
-              <line x1="15" y1="15" x2="21" y2="21"/>
-              <line x1="4" y1="4" x2="9" y2="9"/>
-            </svg>
-            <span>CLI 同步</span>
-          </div>
-          <div class="nav" data-view="logs" id="navLogsBtn">
-            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="4 17 10 11 4 5"/>
-              <line x1="12" y1="19" x2="20" y2="19"/>
-            </svg>
-            <span>运行日志</span>
-          </div>
+        <!-- 综合设置中心入口 -->
+        <div class="nav" data-view="settings" id="navSettingsBtn">
+          <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          <span style="font-weight:600;">系统设置中心</span>
         </div>
 
         <!-- 底部配置路径快速复制 -->
@@ -1173,6 +1111,149 @@
           </div>
 
           <div id="logList" class="stack log-stack" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+      </section>
+    
+      <!-- 独立视图: 综合设置中心 (Settings Hub) -->
+      <section id="settings" class="view">
+        <div class="page-container">
+          <div class="page-header-row">
+            <div>
+              <h2 class="page-title">系统设置中心</h2>
+              <p class="page-subtitle">集中管理模型服务商、多通道通信网关、工作区项目库、安全权限与运行日志</p>
+            </div>
+          </div>
+
+          <!-- 设置中心选项卡切换栏 -->
+          <div class="settings-nav-tabs" style="display:flex;gap:8px;border-bottom:1px solid #e0f2fe;padding-bottom:12px;margin-bottom:20px;overflow-x:auto;">
+            <button type="button" class="settings-tab-btn active" data-tab="providers" onclick="window.switchSettingsTab('providers')">
+              模型与服务商
+            </button>
+            <button type="button" class="settings-tab-btn" data-tab="channels" onclick="window.switchSettingsTab('channels')">
+              多通道消息 (微信/飞书/QQ/TG)
+            </button>
+            <button type="button" class="settings-tab-btn" data-tab="projects" onclick="window.switchSettingsTab('projects')">
+              工作区项目库
+            </button>
+            <button type="button" class="settings-tab-btn" data-tab="permissions" onclick="window.switchSettingsTab('permissions')">
+              权限与安全策略
+            </button>
+            <button type="button" class="settings-tab-btn" data-tab="system" onclick="window.switchSettingsTab('system')">
+              CLI 同步与运行日志
+            </button>
+          </div>
+
+          <!-- Tab 1 内容: 模型与服务商 -->
+          <div id="settingsPane_providers" class="settings-pane" style="display:block;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+              <div class="card">
+                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                  <div>
+                    <div style="font-weight:700;font-size:14px;">模型服务商</div>
+                    <div style="font-size:11.5px;color:var(--text-muted);">配置 OpenAI、Anthropic、DeepSeek、智谱等服务商 Endpoint 与 Key</div>
+                  </div>
+                  <button type="button" class="btn primary" onclick="window.openProviderDialog()">+ 添加服务商</button>
+                </div>
+                <div class="card-body" style="padding:14px;">
+                  <div id="providersTable" class="table-container"></div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                  <div>
+                    <div style="font-weight:700;font-size:14px;">模型目录</div>
+                    <div style="font-size:11.5px;color:var(--text-muted);">声明模型别名、上下文上限、Token 单价与推理能力</div>
+                  </div>
+                  <button type="button" class="btn primary" onclick="window.openModelDialog()">+ 添加模型</button>
+                </div>
+                <div class="card-body" style="padding:14px;">
+                  <div id="modelsTable" class="table-container"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 2 内容: 多通道消息 (微信 / 飞书 / QQ / Telegram) -->
+          <div id="settingsPane_channels" class="settings-pane" style="display:none;">
+            <div class="card" style="margin-bottom:16px;">
+              <div class="card-header">
+                <div style="font-weight:700;font-size:14px;">多通道消息集成 (WeChat / Feishu / QQ / Telegram)</div>
+                <div style="font-size:11.5px;color:var(--text-muted);">打通手机端与协同软件，随时随地向智能体定向派发任务</div>
+              </div>
+              <div class="card-body" style="padding:16px;">
+                <div class="channel-tabs" style="display:flex;gap:8px;margin-bottom:16px;">
+                  <button type="button" class="btn secondary" onclick="window.switchChannelTab('wechat')" style="font-size:12px;">微信 / 企微配置</button>
+                  <button type="button" class="btn secondary" onclick="window.switchChannelTab('feishu')" style="font-size:12px;">飞书机器人配置</button>
+                  <button type="button" class="btn secondary" onclick="window.switchChannelTab('qq')" style="font-size:12px;">QQ / OneBot 配置</button>
+                  <button type="button" class="btn secondary" onclick="window.switchSettingsSubTab('tg')" style="font-size:12px;">Telegram 机器人配置</button>
+                </div>
+                <div id="settingsChannelEmbed">
+                  <!-- 动态嵌入当前活跃通道 -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 3 内容: 工作区项目库 -->
+          <div id="settingsPane_projects" class="settings-pane" style="display:none;">
+            <div class="card">
+              <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                  <div style="font-weight:700;font-size:14px;">工作区项目工程库</div>
+                  <div style="font-size:11.5px;color:var(--text-muted);">注册本地代码仓库，为每个工程绑定专属智能体角色与 Git 状态</div>
+                </div>
+                <div style="display:flex;gap:8px;">
+                  <button type="button" class="btn secondary" id="importProjectBtn">+ 导入已有项目</button>
+                  <button type="button" class="btn primary" onclick="window.openProjectDialog()">+ 手动添加项目</button>
+                </div>
+              </div>
+              <div class="card-body" style="padding:14px;">
+                <div id="projectsTable" class="table-container"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 4 内容: 权限与安全策略 -->
+          <div id="settingsPane_permissions" class="settings-pane" style="display:none;">
+            <div class="card">
+              <div class="card-header">
+                <div style="font-weight:700;font-size:14px;">安全控制与工具审批策略</div>
+                <div style="font-size:11.5px;color:var(--text-muted);">精细化控制智能体对终端命令、敏感写入与外部网络请求的执行权限</div>
+              </div>
+              <div class="card-body" style="padding:16px;">
+                <div id="permissionsContainer"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 5 内容: CLI 同步与运行日志 -->
+          <div id="settingsPane_system" class="settings-pane" style="display:none;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+              <div class="card">
+                <div class="card-header">
+                  <div style="font-weight:700;font-size:14px;">CLI 目标环境与切换器</div>
+                  <div style="font-size:11.5px;color:var(--text-muted);">无缝对齐本地 CLI 工具与全局模型协议线制</div>
+                </div>
+                <div class="card-body" style="padding:14px;">
+                  <div id="targetsContainer"></div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                  <div>
+                    <div style="font-weight:700;font-size:14px;">系统运行日志</div>
+                    <div style="font-size:11.5px;color:var(--text-muted);">实时追踪后台调度、IPC 通信与智能体执行追踪</div>
+                  </div>
+                  <button type="button" class="btn secondary" onclick="window.hap.clearLogs?.()" style="font-size:11.5px;padding:3px 8px;">清空日志</button>
+                </div>
+                <div class="card-body" style="padding:14px;">
+                  <div id="logsViewer" style="max-height:360px;overflow-y:auto;font-family:var(--font-mono);font-size:11.5px;background:#f8fafc;padding:10px;border-radius:8px;border:1px solid #e2e8f0;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </main>
