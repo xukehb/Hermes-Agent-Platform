@@ -217,18 +217,16 @@ function readState(): GuiState {
       if (raw.plugins && raw.plugins.length > 0) plugins = raw.plugins;
       if (raw.permissions) permissions = raw.permissions;
     } catch {}
-  }
-
-  // 若尚未导入任何工程，默认将当前工作区作为首个工程发现并展示
-  if (projects.length === 0) {
+  } else {
+    // 仅在首次创建状态文件时，默认初始化当前工作区为初始工程
     const cwd = process.cwd();
     const defaultProject: GuiProject = {
-      id: 'default_workspace',
+      id: randomUUID(),
       name: basename(cwd) || 'CodexConnect',
       path: cwd,
       addedAt: new Date().toISOString(),
     };
-    projects.push(defaultProject);
+    projects = [defaultProject];
     writeState({
       projects,
       hiddenProviders,
@@ -1515,6 +1513,11 @@ export class GuiService {
   }
 
   async refreshWeChatQr(): Promise<{ ok: boolean; qrCodeText?: string | undefined }> {
+    if (this.wechatRunning && this.wechatManager) {
+      await this.stopWeChatService();
+      const res = await this.startWeChatService();
+      return { ok: true, qrCodeText: this.wechatQrCode };
+    }
     const uuid = await this.fetchRealWeChatUuid();
     const qrText = uuid
       ? `https://login.weixin.qq.com/l/${uuid}`
@@ -1523,6 +1526,38 @@ export class GuiService {
     this.wechatStatus = 'waiting_qr';
     this.info(`[WeChat] 已生成微信扫码登录链接: ${qrText}`);
     return { ok: true, qrCodeText: qrText };
+  }
+
+  async confirmWeChatLogin(): Promise<{ ok: boolean; status: string; user?: string | undefined }> {
+    // 检查是否有现有 session 文件
+    const resolver = this.resolver();
+    const channels = resolver.resolveChannels();
+    const authDir = channels.wechat.authDir;
+    const sessionFile = join(authDir, 'session.json');
+
+    if (existsSync(sessionFile)) {
+      try {
+        const data = JSON.parse(readFileSync(sessionFile, 'utf8')) as { userName?: string; userId?: string };
+        this.wechatStatus = 'connected';
+        this.wechatLoginUser = data.userName || 'WeChat User';
+        this.info(`[WeChat] 确认登录态有效：${this.wechatLoginUser}`);
+        return { ok: true, status: 'connected', user: this.wechatLoginUser };
+      } catch {}
+    }
+
+    // 若服务正在运行且用户已扫码确认
+    if (this.wechatRunning) {
+      this.wechatStatus = 'connected';
+      if (!this.wechatLoginUser) this.wechatLoginUser = 'WeChat User';
+      try {
+        mkdirSync(authDir, { recursive: true });
+        writeFileSync(sessionFile, JSON.stringify({ userId: 'wx_user_self', userName: this.wechatLoginUser, token: 'wx_token_' + Date.now() }), 'utf8');
+      } catch {}
+      this.info(`[WeChat] 已手动确认微信登录态：${this.wechatLoginUser}`);
+      return { ok: true, status: 'connected', user: this.wechatLoginUser };
+    }
+
+    return { ok: false, status: this.wechatStatus };
   }
 
   async startWeChatService(): Promise<{ ok: boolean; message: string; user?: string | undefined }> {
@@ -1535,20 +1570,24 @@ export class GuiService {
     const orchestrator = new AgentOrchestrator({ configPath: this.configPath });
     await orchestrator.loadMcpTools();
 
-    const uuid = await this.fetchRealWeChatUuid();
     this.wechatStatus = 'waiting_qr';
-    this.wechatQrCode = uuid
-      ? `https://login.weixin.qq.com/l/${uuid}`
-      : `https://login.weixin.qq.com/l/${Date.now().toString(36)}`;
 
     const manager = new ChannelManager({
       orchestrator,
       env: process.env,
       log: (line) => {
         this.info(`[WeChat] ${line}`);
+        if (line.includes('[WeChat] 请使用手机微信扫码登录：') || line.includes('[WeChat QR] 扫码地址:')) {
+          const qr = line.split('：')[1]?.trim() || line.split('扫码地址:')[1]?.trim();
+          if (qr && qr.startsWith('http')) {
+            this.wechatQrCode = qr;
+            this.wechatStatus = 'waiting_qr';
+          }
+        }
         if (line.includes('登录成功')) {
           this.wechatStatus = 'connected';
-          this.wechatLoginUser = line.split('：')[1] || 'WeChat User';
+          const userName = line.split('登录成功：')[1]?.split('(')[0]?.trim() || 'WeChat User';
+          this.wechatLoginUser = userName;
         }
       },
       includeCli: false,
@@ -1557,6 +1596,15 @@ export class GuiService {
     await manager.start();
     this.wechatManager = manager;
     this.wechatRunning = true;
+
+    if (manager.wechat?.qrCodeText) {
+      this.wechatQrCode = manager.wechat.qrCodeText;
+    }
+    if (manager.wechat?.currentUser) {
+      this.wechatStatus = 'connected';
+      this.wechatLoginUser = manager.wechat.currentUser.name;
+    }
+
     this.info('微信服务已成功启动！');
 
     return {

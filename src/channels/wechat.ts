@@ -143,7 +143,7 @@ class DefaultPersonalDriver implements WeChatPersonalDriver {
         if (text.includes('window.code=201')) {
           tip = 0;
           this.log(`[WeChat] 手机端已扫描二维码，请在微信中点击【确认登录】...`);
-        } else if (text.includes('window.code=200')) {
+        } else if (text.includes('window.code=200') || text.includes('window.redirect_uri')) {
           this.log(`[WeChat] 登录成功：WeChat User`);
           const sessionFile = join(this.authDir, 'session.json');
           try {
@@ -155,10 +155,10 @@ class DefaultPersonalDriver implements WeChatPersonalDriver {
           this.log(`[WeChat] 二维码已失效，请重新刷新二维码`);
           break;
         }
-        await new Promise((r) => setTimeout(r, 1500));
+        await new Promise((r) => setTimeout(r, 1200));
       } catch {
         if (!this.running) break;
-        await new Promise((r) => setTimeout(r, 3000));
+        await new Promise((r) => setTimeout(r, 2000));
       }
     }
   }
