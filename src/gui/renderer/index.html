@@ -1,0 +1,1554 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChatGPT · HAP Studio</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <!-- 左侧侧边栏 (ChatGPT / Codex 官方树形项目导航架构) -->
+    <aside class="rail">
+      <!-- 顶部：+ New Conversation 大按钮 -->
+      <div class="new-conversation-box">
+        <button class="new-conversation-btn" id="newChatBtn">
+          <div class="plus-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <span>New Conversation</span>
+        </button>
+      </div>
+
+      <!-- 全局辅助导航条 -->
+      <div class="global-nav-group">
+        <div class="global-nav-item" id="globalHistoryBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+          <span>Conversation History</span>
+        </div>
+        <div class="global-nav-item" id="scheduledTasksBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>Scheduled Tasks</span>
+        </div>
+      </div>
+
+      <!-- 核心树形结构：Projects 目录与嵌套会话列表 -->
+      <div class="projects-header-row">
+        <span class="projects-title">Projects</span>
+        <div class="projects-header-actions">
+          <div class="tree-icon-btn" id="filterProjectsBtn" title="过滤/搜索工程">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          </div>
+          <div class="tree-icon-btn" id="importProjectQuickBtn" title="导入或新建项目工程">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="projects-tree-section" id="projectsTreeContainer">
+        <!-- 动态树形渲染项目与会话 -->
+      </div>
+
+      <!-- 侧边栏底部独立模块导航 -->
+      <div class="sidebar-bottom-panel">
+        <nav class="nav-menu">
+          <div class="nav active" data-view="chat" id="navChatBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span>对话工作台</span>
+          </div>
+          <div class="nav" data-view="skills" id="navSkillsBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+            <span>Skill 技能市场</span>
+          </div>
+          <div class="nav" data-view="plugins" id="navPluginsBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+            <span>MCP 插件市场</span>
+          </div>
+          <div class="nav" data-view="permissions" id="navPermissionsBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            <span>权限与安全策略</span>
+          </div>
+          <div class="nav" data-view="agents" id="navAgentsBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            <span>智能体角色管理</span>
+          </div>
+          <div class="nav" data-view="projects" id="navProjectsBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span>工作区项目库</span>
+          </div>
+          <div class="nav" data-view="providers" id="navProvidersBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
+            </svg>
+            <span>模型服务商</span>
+          </div>
+          <div class="nav" data-view="models" id="navModelsBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="4" y="4" width="16" height="16" rx="2" ry="2"/>
+              <rect x="9" y="9" width="6" height="6"/>
+            </svg>
+            <span>模型目录</span>
+          </div>
+          <div class="nav" data-view="switcher" id="navSwitcherBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="16 3 21 3 21 8"/>
+              <line x1="4" y1="20" x2="21" y2="3"/>
+              <polyline points="21 16 21 21 16 21"/>
+              <line x1="15" y1="15" x2="21" y2="21"/>
+              <line x1="4" y1="4" x2="9" y2="9"/>
+            </svg>
+            <span>CLI 目标同步</span>
+          </div>
+          <div class="nav" data-view="telegram" id="navTelegramBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+            <span>Telegram 机器人</span>
+          </div>
+          <div class="nav" data-view="wechat" id="navWeChatBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm7 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
+              <path d="M12 2C6.48 2 2 6.03 2 11c0 2.87 1.5 5.42 3.84 7.04L5 22l4.22-1.41C10.12 20.84 11.04 21 12 21c5.52 0 10-4.03 10-9s-4.48-10-10-10z"/>
+            </svg>
+            <span>微信 / 企微连接</span>
+          </div>
+          <div class="nav" data-view="servers" id="navServersBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+              <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+              <line x1="6" y1="6" x2="6.01" y2="6"/>
+              <line x1="6" y1="18" x2="6.01" y2="18"/>
+            </svg>
+            <span>远程服务器 & 节点</span>
+          </div>
+          <div class="nav" data-view="logs" id="navLogsBtn">
+            <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 17 10 11 4 5"/>
+              <line x1="12" y1="19" x2="20" y2="19"/>
+            </svg>
+            <span>运行日志</span>
+          </div>
+        </nav>
+
+        <div class="config-footer-row" id="configPathBtn" title="点击复制完整路径">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          <span id="configPathText" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">~/.hap/config.toml</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 主工作舞台 (Main Canvas) -->
+    <main class="main-content">
+      <!-- 独立视图 1: 对话工作台 (Chat) -->
+      <section id="chat" class="view active">
+        <header class="chat-header">
+          <div class="header-left-tools">
+            <div class="model-switch-pill" title="切换当前对话模型">
+              <span class="model-brand-badge">HAP</span>
+              <select id="chatModelPickerSelect" class="model-switch-select"></select>
+              <svg class="pill-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+
+            <div class="workspace-pill-badge" id="currentWorkspacePill" title="当前对话绑定的工作区目录">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+              <span id="currentWorkspaceNameText">默认工作区</span>
+            </div>
+          </div>
+
+          <div class="header-right-tools">
+            <button id="gitStatusTopBtn" class="btn text-btn git-capsule-btn" title="Git 关联、提交与推送代码">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 9v12"/><path d="M18 9a9 9 0 0 0-9 9"/>
+              </svg>
+              <span id="gitBranchTopText">Git</span>
+              <span class="git-badge-pill" id="gitChangesTopBadge" style="display:none;">0</span>
+            </button>
+            <div class="tool-capsule" title="切换处理智能体">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+              <select id="chatAgentSelect" class="agent-switch-select"></select>
+              <svg class="pill-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <button id="openProjectVsCodeTopBtn" class="btn text-btn" title="在 VS Code 中打开当前绑定的项目">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              <span>VS Code</span>
+            </button>
+            <button id="clearChatHistoryTopBtn" class="btn text-btn" title="清空上下文开启新对话 (/new)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+              </svg>
+              <span>清空</span>
+            </button>
+            <button id="deleteCurrentChatBtn" class="btn text-btn" title="删除当前会话">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <div class="chat-thread-container" id="chatThreadContainer">
+          <div class="thread-inner" id="messagesInner">
+            <div class="hero-welcome" id="heroWelcome">
+              <div class="hero-logo">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+              </div>
+              <h1 class="hero-title">今天有什么我可以帮你的？</h1>
+              <p class="hero-subtitle" id="heroSubtitleText">选择或导入工作区项目，开启高效智能编排与自动化修复</p>
+              <div class="hero-grid">
+                <div class="hero-card" data-hero-prompt="分析当前绑定的项目工程结构并列出关键模块与潜在风险" onclick="triggerHeroPrompt('分析当前绑定的项目工程结构并列出关键模块与潜在风险')">
+                  <div class="hero-card-icon">🚀</div>
+                  <div class="hero-card-title">分析工程架构</div>
+                  <div class="hero-card-sub">梳理模块依赖、调用拓扑与架构建议</div>
+                </div>
+                <div class="hero-card" data-hero-prompt="对当前项目进行全面的代码质量、安全漏洞与潜在 Bug 审查" onclick="triggerHeroPrompt('对当前项目进行全面的代码质量、安全漏洞与潜在 Bug 审查')">
+                  <div class="hero-card-icon">🔍</div>
+                  <div class="hero-card-title">代码安全审查</div>
+                  <div class="hero-card-sub">自动化排查潜在代码缺陷与性能瓶颈</div>
+                </div>
+                <div class="hero-card" data-hero-prompt="为当前核心功能模块设计并编写高覆盖率的单元测试用例" onclick="triggerHeroPrompt('为当前核心功能模块设计并编写高覆盖率的单元测试用例')">
+                  <div class="hero-card-icon">🧪</div>
+                  <div class="hero-card-title">编写测试套件</div>
+                  <div class="hero-card-sub">生成高覆盖率的自动化测试用例并执行</div>
+                </div>
+                <div class="hero-card" data-hero-prompt="审查 Git 变更并协助生成规范的 Commit 提交和推送代码" onclick="triggerHeroPrompt('审查 Git 变更并协助生成规范的 Commit 提交和推送代码')">
+                  <div class="hero-card-icon">🌿</div>
+                  <div class="hero-card-title">Git 协同与推送</div>
+                  <div class="hero-card-sub">一键审查 Diff 差异并自动提交代码</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="composer-dock">
+          <div class="composer-inner">
+            <!-- 快捷指令胶囊栏 -->
+            <div class="composer-quick-chips">
+              <button type="button" class="quick-chip" data-quick-prefix="/git " onclick="insertPromptPrefix('/git ')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 9v12"/></svg>
+                <span>/git 状态</span>
+              </button>
+              <button type="button" class="quick-chip" data-quick-prefix="/diff " onclick="insertPromptPrefix('/diff ')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                <span>/diff 变更</span>
+              </button>
+              <button type="button" class="quick-chip" data-quick-prefix="/commit " onclick="insertPromptPrefix('/commit ')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><line x1="1.05" y1="12" x2="7" y2="12"/><line x1="17.01" y1="12" x2="22.96" y2="12"/></svg>
+                <span>/commit 提交</span>
+              </button>
+              <button type="button" class="quick-chip" data-quick-prefix="/sh " onclick="insertPromptPrefix('/sh ')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                <span>/sh 执行命令</span>
+              </button>
+              <button type="button" class="quick-chip" data-quick-prefix="/models" onclick="insertPromptPrefix('/models')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg>
+                <span>/models 列表</span>
+              </button>
+            </div>
+
+            <!-- 主输入框卡片 (Floating Island & Multimodal) -->
+            <form id="chatForm" class="composer-island-card">
+              <!-- 多模态附件预览栏 -->
+              <div id="composerAttachmentsTray" class="composer-attachments-tray" style="display:none;"></div>
+
+              <div class="composer-text-area-wrap">
+                <textarea id="chatInput" class="composer-textarea" rows="1" placeholder="给智能体下发开发、修复或审查任务... (支持粘贴图片/拖拽文件, Enter 发送)"></textarea>
+                <div id="composerDropOverlay" class="composer-drop-overlay" style="display:none;">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  <span>拖拽图片或代码文件到此处附加</span>
+                </div>
+              </div>
+
+              <div class="composer-bottom-bar">
+                <div class="composer-bottom-left">
+                  <button type="button" class="composer-attach-btn" id="chatAttachBtn" title="附加图片或文件 (支持拖拽/截图粘贴)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                    </svg>
+                    <span>图片/附件</span>
+                  </button>
+                  <input type="file" id="chatFileInput" multiple accept="image/*,.txt,.md,.json,.ts,.js,.py,.pdf,.log,.html,.css,.sql" style="display:none;" />
+
+                  <span class="composer-hint-tag">
+                    <span class="composer-kbd">Enter</span> 发送
+                  </span>
+                  <span class="composer-hint-tag">
+                    <span class="composer-kbd">Shift</span> + <span class="composer-kbd">Enter</span> 换行
+                  </span>
+                </div>
+
+                <div class="composer-bottom-right">
+                  <button type="submit" class="send-circle-btn" id="sendChatBtn" title="发送指令 (Enter)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="19" x2="12" y2="5"/>
+                      <polyline points="5 12 12 5 19 12"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </form>
+            <div class="disclaimer-text">HAP 智能体自主编排执行。请审查关键代码与指令变更。</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 独立视图 2: Skill 技能市场 -->
+      <section id="skills" class="view">
+        <div class="page-container">
+          <div class="page-header-row">
+            <div>
+              <h2 class="page-title">Skill 技能市场</h2>
+              <p class="page-subtitle">关联 GitHub 开源技能生态，支持一键安装专业领域技能增强智能体</p>
+            </div>
+            <button id="openInstallSkillModalBtn" class="btn primary">从 GitHub 安装 Skill</button>
+          </div>
+
+          <div class="page-actions-bar">
+            <input type="text" id="skillSearchInput" placeholder="🔍 搜索开源技能 (如 Security, Git, Testing, React)..." style="max-width:360px;" />
+            <span style="font-size:12px;color:var(--text-muted);margin-left:auto;">支持 GitHub 开源仓库地址直连安装</span>
+          </div>
+
+          <div id="skillsList" class="grid"></div>
+        </div>
+      </section>
+
+      <!-- 独立视图 3: MCP 插件市场 -->
+      <section id="plugins" class="view">
+        <div class="page-container">
+          <div class="page-header-row">
+            <div>
+              <h2 class="page-title">MCP 插件市场</h2>
+              <p class="page-subtitle">管理内置工具与 Model Context Protocol (MCP) 扩展插件</p>
+            </div>
+            <button id="openAddPluginModalBtn" class="btn primary">添加自定义 MCP 插件</button>
+          </div>
+
+          <div class="page-actions-bar">
+            <div style="font-size:12.5px;color:var(--text-secondary);">
+              智能体在对话与编排任务中可自动调度已启用的 MCP 插件
+            </div>
+          </div>
+
+          <div id="pluginsList" class="grid"></div>
+        </div>
+      </section>
+
+      <!-- 独立视图 4: 权限与安全策略 -->
+      <section id="permissions" class="view">
+        <div class="page-container">
+          <div class="page-header-row">
+            <div>
+              <h2 class="page-title">权限与安全策略</h2>
+              <p class="page-subtitle">控制智能体在执行任务时的自动化权限级别与授权模式</p>
+            </div>
+            <button id="savePermissionsBtn" class="btn primary">保存权限配置</button>
+          </div>
+
+          <div class="permission-mode-grid">
+            <div class="permission-mode-card full-access" id="modeCardFullAccess" onclick="selectPermissionMode('full-access')">
+              <div class="mode-icon-title">
+                <span style="font-size:18px;">🟢</span>
+                <span>完完全全放开权限</span>
+              </div>
+              <div class="mode-desc">
+                全自主极速执行！自动允许文件读写、执行终端 Shell、调用所有 MCP 插件与子智能体，零阻断弹窗。
+              </div>
+              <span class="badge" style="margin-top:auto;width:fit-content;">推荐开发者使用</span>
+            </div>
+
+            <div class="permission-mode-card" id="modeCardConfirmWrites" onclick="selectPermissionMode('confirm-writes')">
+              <div class="mode-icon-title">
+                <span style="font-size:18px;">🟡</span>
+                <span>敏感写操作确认</span>
+              </div>
+              <div class="mode-desc">
+                读取文件和代码分析自动执行，修改本地磁盘文件或执行终端危险命令前进行弹窗确认。
+              </div>
+              <span class="badge warn" style="margin-top:auto;width:fit-content;">平衡模式</span>
+            </div>
+
+            <div class="permission-mode-card" id="modeCardStrict" onclick="selectPermissionMode('strict')">
+              <div class="mode-icon-title">
+                <span style="font-size:18px;">🔴</span>
+                <span>严格单步确认</span>
+              </div>
+              <div class="mode-desc">
+                最严格安全模式。智能体的每一个工具调用、网络请求和命令执行均需人工逐项审核授权。
+              </div>
+              <span class="badge neutral" style="margin-top:auto;width:fit-content;">高安全要求</span>
+            </div>
+          </div>
+
+          <div class="permission-toggle-box">
+            <h3 style="margin:0 0 4px 0;font-size:15px;font-weight:700;">细粒度权限开关</h3>
+
+            <div class="permission-toggle-row">
+              <div class="toggle-info">
+                <span class="toggle-title">系统终端 Shell 命令执行 (allowShell)</span>
+                <span class="toggle-desc">允许智能体在工作区运行 build, test, git, npm 等终端命令</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="permAllowShell" checked />
+                <span class="slider green"></span>
+              </label>
+            </div>
+
+            <div class="permission-toggle-row">
+              <div class="toggle-info">
+                <span class="toggle-title">工作区文件磁盘写入与修改 (allowFsWrite)</span>
+                <span class="toggle-desc">允许智能体创建、修改与应用代码 Patch 到本地文件</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="permAllowFsWrite" checked />
+                <span class="slider green"></span>
+              </label>
+            </div>
+
+            <div class="permission-toggle-row">
+              <div class="toggle-info">
+                <span class="toggle-title">网络请求与外网数据抓取 (allowNetwork)</span>
+                <span class="toggle-desc">允许智能体发起 HTTP 请求抓取远程 API 与文档数据</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="permAllowNetwork" checked />
+                <span class="slider green"></span>
+              </label>
+            </div>
+
+            <div class="permission-toggle-row">
+              <div class="toggle-info">
+                <span class="toggle-title">多智能体分工与子 Agent 编排 (allowSpawnSubagent)</span>
+                <span class="toggle-desc">允许主智能体派发并调度子智能体并发执行专项子任务</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="permAllowSubagent" checked />
+                <span class="slider green"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 独立视图: 智能体角色管理 (Agents) -->
+      <section id="agents" class="view">
+        <div class="page-container">
+          <div class="page-header-row">
+            <div>
+              <h2 class="page-title">智能体角色管理</h2>
+              <p class="page-subtitle">配置各个专项智能体（Coder、Researcher、Reviewer 等）的主模型、工作区与工具权限</p>
+            </div>
+          </div>
+
+          <div id="agentList" class="grid"></div>
+        </div>
+      </section>
+
+      <!-- 独立视图 5: 工作区项目 (Projects) -->
+      <section id="projects" class="view">
+        <div class="page-container">
+          <div class="page-header-row">
+            <div>
+              <h2 class="page-title">工作区项目库</h2>
+              <p class="page-subtitle">管理本地工程代码库，支持一键在 VS Code 中打开编辑</p>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button id="addProjectManualBtn" class="btn secondary">手动添加</button>
+              <button id="importProjectBtn" class="btn primary">导入本地目录</button>
+            </div>
+          </div>
+
+          <div class="page-actions-bar">
+            <div class="batch-bar" id="projectBatchBar" style="display:none;">
+              <button id="batchDeleteProjectsBtn" class="btn danger">
+                <span id="batchDeleteProjectsText">批量移除 (0)</span>
+              </button>
+            </div>
+            <button id="selectAllProjectsBtn" class="btn text-btn" style="margin-left:auto;">全选</button>
+          </div>
+
+          <div id="projectList" class="grid"></div>
+        </div>
+      </section>
+
+      <!-- 独立视图 6: 模型服务商 (Providers) -->
+      <section id="providers" class="view">
+        <div class="page-container">
+          <div class="page-header-row">
+            <div>
+              <h2 class="page-title">模型服务商</h2>
+              <p class="page-subtitle">配置大模型服务商 API URL、API Key 凭据与通信协议</p>
+            </div>
+            <button id="addProviderBtn" class="btn primary">新增服务商</button>
+          </div>
+
+          <div class="page-actions-bar">
+            <div class="batch-bar" id="providerBatchBar" style="display:none;">
+              <button id="batchDeleteProvidersBtn" class="btn danger">
+                <span id="batchDeleteProvidersText">批量删除 (0)</span>
+              </button>
+            </div>
+            <button id="selectAllProvidersBtn" class="btn text-btn" style="margin-left:auto;">全选</button>
+          </div>
+
+          <div id="providerList" class="grid"></div>
+        </div>
+      </section>
+
+      <!-- 独立视图 7: 模型目录 (Models) -->
+      <section id="models" class="view">
+        <div class="page-container">
+          <div class="page-header-row">
+            <div>
+              <h2 class="page-title">模型目录</h2>
+              <p class="page-subtitle">在线拉取或自定义注册可用模型，设定上下文与输出上限</p>
+            </div>
+            <button id="addModelBtn" class="btn primary">新增模型</button>
+          </div>
+
+          <div class="page-actions-bar">
+            <div class="batch-bar" id="modelBatchBar" style="display:none;">
+              <button id="batchDeleteModelsBtn" class="btn danger">
+                <span id="batchDeleteModelsText">批量删除 (0)</span>
+              </button>
+            </div>
+            <button id="selectAllModelsBtn" class="btn text-btn" style="margin-left:auto;">全选</button>
+          </div>
+
+          <div id="modelList" class="grid"></div>
+        </div>
+      </section>
+
+      <!-- 独立视图 8: CLI 目标同步 (Switcher) -->
+      <section id="switcher" class="view">
+        <div class="page-container">
+          <div class="page-header-row">
+            <div>
+              <h2 class="page-title">CLI 目标同步</h2>
+              <p class="page-subtitle">一键将已配置模型注入同步到 Codex、Claude、Gemini 等 CLI 工具</p>
+            </div>
+          </div>
+
+          <div style="background:#ffffff;border:1px solid var(--border-default);border-radius:var(--radius-md);padding:22px;margin-bottom:24px;">
+            <form id="switchForm" class="switch-form">
+              <div class="form-group">
+                <label>目标 CLI 工具</label>
+                <select name="target">
+                  <option value="codex">Codex (~/.codex/config.toml)</option>
+                  <option value="claude">Claude (~/.claude/settings.json)</option>
+                  <option value="gemini">Gemini (~/.gemini/settings.json)</option>
+                  <option value="grok">Grok (~/.grok/config.json)</option>
+                  <option value="openclaw">OpenClaw (~/.openclaw/settings.json)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>注入模型</label>
+                <select name="model" id="switchModelSelect"></select>
+              </div>
+              <div class="switch-actions" style="margin-top:10px;display:flex;gap:8px;">
+                <button type="submit" name="preview" value="preview" class="btn secondary">预览变更</button>
+                <button type="submit" name="write" value="write" class="btn primary">写入同步</button>
+              </div>
+            </form>
+            <div class="preview-box" style="margin-top:16px;">
+              <div class="preview-header" style="display:flex;justify-content:space-between;align-items:center;background:#202123;padding:8px 12px;color:#ececf1;font-size:12px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;">
+                <span>同步结果 / 注入预览</span>
+                <button id="copyPreviewBtn" class="btn text-btn" style="color:#ffffff;font-size:11.5px;padding:2px 6px;">复制内容</button>
+              </div>
+              <pre id="syncPreview" style="margin:0;padding:14px;background:#000000;color:#ececf1;font-family:var(--font-mono);font-size:12.5px;border-radius:0 0 var(--radius-sm) var(--radius-sm);overflow-x:auto;">// 点击上方“预览变更”或“写入同步”查看配置注入详情...</pre>
+            </div>
+          </div>
+
+          <div id="targetList" class="grid"></div>
+        </div>
+      </section>
+
+      <!-- 独立视图 9: Telegram 机器人与远程协同 (Telegram Channel) -->
+      <section id="telegram" class="view">
+        <div class="page-container">
+          <div class="page-header-row">
+            <div>
+              <h1 class="page-title">Telegram 机器人与远程协同</h1>
+              <p class="page-subtitle">连接 Telegram Bot，随时随地在手机端与智能体对话，直接远程审查与修复本地代码</p>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn secondary" id="testTgBotBtn">测试 Token 连通性</button>
+              <button class="btn primary" id="toggleTgServiceBtn">启动 Telegram 机器人</button>
+            </div>
+          </div>
+
+          <!-- 状态横幅卡片 -->
+          <div class="card" style="margin-bottom:20px;background:linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);border-color:#bae0ff;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
+              <div style="display:flex;align-items:center;gap:14px;">
+                <div style="width:42px;height:42px;border-radius:50%;background:#0088cc;color:#ffffff;display:grid;place-items:center;flex-shrink:0;">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                  </svg>
+                </div>
+                <div>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <strong id="tgBotDisplayName" style="font-size:15px;">未连接机器人</strong>
+                    <span id="tgBotUsernameBadge" class="prop-chip" style="color:#0088cc;display:none;">@bot</span>
+                    <span id="tgStatusBadge" class="badge neutral">未运行</span>
+                  </div>
+                  <div id="tgStatusDescription" style="font-size:12.5px;color:var(--text-secondary);margin-top:2px;">
+                    填写 Bot Token 并启动后，即可在 Telegram 直接向机器人发送指令
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 配置表单 -->
+          <div class="card" style="margin-bottom:20px;">
+            <div class="card-header">
+              <div class="card-title-wrap">
+                <span class="card-title">机器人连接参数配置</span>
+                <span class="card-subtitle">配置 Telegram Bot Token 与绑定的默认工作区工程</span>
+              </div>
+            </div>
+            <form id="tgConfigForm" class="card-body" style="display:flex;flex-direction:column;gap:14px;">
+              <div class="form-group full-width">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                  <label style="font-weight:600;font-size:12.5px;">Telegram Bot Token *</label>
+                  <span style="font-size:11.5px;color:var(--text-muted);">从 Telegram @BotFather 获取</span>
+                </div>
+                <div style="display:flex;gap:8px;">
+                  <input type="password" id="tgTokenInput" name="token" placeholder="例如：1234567890:ABCdefGhIJKlmNoPQRsTUVwxyZ" style="flex:1;" />
+                  <button type="button" class="btn secondary" id="toggleTgTokenVisibilityBtn" style="font-size:12px;">显示明文</button>
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label style="font-weight:600;font-size:12.5px;">运行模式 (Mode)</label>
+                  <select id="tgModeSelect" name="mode">
+                    <option value="polling">Polling (长轮询 · 本地开箱即用，无需公网IP)</option>
+                    <option value="webhook">Webhook (网络钩子 · 适合服务器反代)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label style="font-weight:600;font-size:12.5px;">默认处理智能体 (Default Agent)</label>
+                  <select id="tgAgentSelect" name="defaultAgent">
+                    <option value="coder">coder (核心代码编程与修复专家)</option>
+                    <option value="researcher">researcher (调研与检索智能体)</option>
+                    <option value="reviewer">reviewer (代码审查与质量控制)</option>
+                    <option value="ops">ops (运维与部署专家)</option>
+                  </select>
+                </div>
+
+                <div class="form-group full-width">
+                  <label style="font-weight:600;font-size:12.5px;">默认绑定的工作区工程 (Workspace)</label>
+                  <div style="display:flex;gap:8px;">
+                    <input id="tgWorkspaceInput" name="workspace" placeholder="选择或填入智能体默认操作的项目根目录绝对路径" style="flex:1;" />
+                    <select id="tgWorkspacePickerSelect" class="workspace-quick-select" style="max-width:210px;">
+                      <option value="">-- 从项目库快捷点选 --</option>
+                    </select>
+                  </div>
+                  <span style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">智能体在 Telegram 中执行代码审查、创建文件、运行命令时，默认在此目录下生效</span>
+                </div>
+              </div>
+
+              <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
+                <button type="submit" class="btn primary" id="saveTgConfigBtn">保存配置</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- 快速上手指南卡片 -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title-wrap">
+                <span class="card-title">💡 Telegram 远程修复指令指南</span>
+                <span class="card-subtitle">启动机器人后，可在 Telegram 中发送以下指令与智能体协同</span>
+              </div>
+            </div>
+            <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div style="padding:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-main);">
+                <div style="font-weight:700;font-size:13px;margin-bottom:4px;">🔍 审查与修复工程</div>
+                <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">
+                  向 Bot 发送：<br/>
+                  <code>“分析当前工程中的报错并直接修改修复”</code><br/>
+                  <code>“运行 npm test，如果失败请定位并修复”</code>
+                </div>
+              </div>
+
+              <div style="padding:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-main);">
+                <div style="font-weight:700;font-size:13px;margin-bottom:4px;">⚙️ 控制与状态指令</div>
+                <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">
+                  <code>/status</code>：查看当前模型与 Token 用量<br/>
+                  <code>/stop</code>：紧急中止当前正在执行的任务<br/>
+                  <code>项目路径：D:/work/app 请帮我新增登录组件</code>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 独立视图: 微信 / 企业微信连接 (WeChat / WeCom) -->
+      <section id="wechat" class="view">
+        <div class="page-container">
+          <div class="page-header-row">
+            <div>
+              <h1 class="page-title">微信与企业微信远程协同</h1>
+              <p class="page-subtitle">支持个人微信扫码登录、企业微信（WeCom）机器人与自建应用双向对话，随时远程操控智能体</p>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn secondary" id="refreshWxQrBtn">刷新二维码</button>
+              <button class="btn primary" id="toggleWxServiceBtn">启动微信服务</button>
+            </div>
+          </div>
+
+          <!-- 状态横幅卡片 -->
+          <div class="card" style="margin-bottom:20px;background:linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);border-color:#bbf7d0;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
+              <div style="display:flex;align-items:center;gap:14px;">
+                <div style="width:42px;height:42px;border-radius:50%;background:#07c160;color:#ffffff;display:grid;place-items:center;flex-shrink:0;">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm7 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
+                    <path d="M12 2C6.48 2 2 6.03 2 11c0 2.87 1.5 5.42 3.84 7.04L5 22l4.22-1.41C10.12 20.84 11.04 21 12 21c5.52 0 10-4.03 10-9s-4.48-10-10-10z"/>
+                  </svg>
+                </div>
+                <div>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <strong id="wxDisplayName" style="font-size:15px;">微信未连接</strong>
+                    <span id="wxStatusBadge" class="badge neutral">未运行</span>
+                  </div>
+                  <div id="wxStatusDescription" style="font-size:12.5px;color:var(--text-secondary);margin-top:2px;">
+                    启动服务后，可在手机微信中直接给智能体发送需求与指令
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:320px 1fr;gap:16px;margin-bottom:20px;">
+            <!-- 扫码登录卡片 -->
+            <div class="card" style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:20px;">
+              <div class="card-title" style="margin-bottom:4px;">个人微信扫码登录</div>
+              <div class="card-subtitle" style="margin-bottom:8px;">使用手机微信扫描下方二维码完成授权绑定</div>
+              <div id="wxQrContainer" style="min-height:220px;width:100%;max-width:230px;background:#ffffff;border:1px dashed #cbd5e1;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:10px 0;padding:12px;box-sizing:border-box;transition:all 0.2s ease;">
+                <div id="wxQrPlaceholder" style="font-size:12.5px;color:var(--text-muted);padding:16px;line-height:1.5;">
+                  启动微信服务后<br/>将在此生成扫码二维码
+                </div>
+                <div id="wxQrBox" style="display:none;width:100%;text-align:center;"></div>
+              </div>
+              <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">
+                登录凭据将自动保存至本地，下次启动无需重复扫码
+              </div>
+            </div>
+
+            <!-- 配置表单 -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title-wrap">
+                  <span class="card-title">微信通道参数配置</span>
+                  <span class="card-subtitle">支持切换个人微信、企业微信或公众号模式</span>
+                </div>
+              </div>
+              <form id="wxConfigForm" class="card-body" style="display:flex;flex-direction:column;gap:14px;">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label style="font-weight:600;font-size:12.5px;">接入模式 (Mode)</label>
+                    <select id="wxModeSelect" name="mode">
+                      <option value="personal">个人微信扫码模式 (免服务器 · 手机直扫)</option>
+                      <option value="wecom">企业微信 WeCom 模式 (官方推荐 · 0封号)</option>
+                      <option value="official_account">微信公众号模式 (服务号/订阅号)</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label style="font-weight:600;font-size:12.5px;">默认处理智能体 (Default Agent)</label>
+                    <select id="wxAgentSelect" name="defaultAgent">
+                      <option value="coder">coder (核心代码编程与修复专家)</option>
+                      <option value="researcher">researcher (调研与检索智能体)</option>
+                      <option value="reviewer">reviewer (代码审查与质量控制)</option>
+                      <option value="ops">ops (运维与部署专家)</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group full-width">
+                    <label style="font-weight:600;font-size:12.5px;">默认绑定的工作区工程 (Workspace)</label>
+                    <div style="display:flex;gap:8px;">
+                      <input id="wxWorkspaceInput" name="workspace" placeholder="选择或填入智能体默认操作的项目根目录绝对路径" style="flex:1;" />
+                      <select id="wxWorkspacePickerSelect" class="workspace-quick-select" style="max-width:210px;">
+                        <option value="">-- 从项目库快捷点选 --</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 企微专用字段段落 -->
+                <div id="wxWeComFields" style="display:none;flex-direction:column;gap:12px;padding:12px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;">
+                  <div style="font-size:12px;font-weight:700;color:var(--text-main);">企业微信 WeCom 参数设置</div>
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label style="font-size:12px;">企业 CorpID</label>
+                      <input id="wxCorpIdInput" name="wecomCorpId" placeholder="例如：ww1234567890abcdef" />
+                    </div>
+                    <div class="form-group">
+                      <label style="font-size:12px;">应用 AgentID</label>
+                      <input type="number" id="wxAgentIdInput" name="wecomAgentId" placeholder="例如：1000002" />
+                    </div>
+                  </div>
+                  <div class="form-group full-width">
+                    <label style="font-size:12px;">应用 Secret / 机器人 Webhook</label>
+                    <input id="wxSecretInput" name="wecomSecret" placeholder="填写企业微信应用 Secret 或群机器人 Webhook 地址" />
+                  </div>
+                </div>
+
+                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
+                  <button type="submit" class="btn primary" id="saveWxConfigBtn">保存配置</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- 微信实时交互与消息监控面板 (WeChat Live Message & Control Panel) -->
+          <div class="card" style="margin-bottom:20px;">
+            <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+              <div class="card-title-wrap">
+                <span class="card-title">📡 微信消息实时监控与交互测试面板</span>
+                <span class="card-subtitle">实时显示微信端进出的用户消息、智能体分析思考过程，并支持在界面中直接下发测试</span>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button type="button" class="btn text-btn" id="clearWxMsgFeedBtn" style="font-size:12px;">清空面板</button>
+              </div>
+            </div>
+            <div class="card-body" style="padding:0;">
+              <!-- 消息流容器 -->
+              <div id="wxMessageFeed" style="min-height:220px;max-height:380px;overflow-y:auto;padding:16px;background:#f8fafc;display:flex;flex-direction:column;gap:12px;">
+                <div class="empty-feed" id="wxEmptyFeedHint" style="text-align:center;color:var(--text-muted);padding:32px 0;font-size:12.5px;">
+                  暂无微信消息。启动微信服务后，在微信中发送指令，或在下方输入模拟指令即可在此实时呈现。
+                </div>
+              </div>
+
+              <!-- 快捷模拟测试输入条 -->
+              <div style="display:flex;gap:8px;padding:12px 16px;background:#ffffff;border-top:1px solid var(--border-default);align-items:center;">
+                <div style="font-size:12px;font-weight:600;color:var(--text-secondary);white-space:nowrap;">模拟微信发送：</div>
+                <input id="wxTestMessageInput" placeholder="输入测试指令（例如：帮我审查当前代码工程的潜在缺陷）..." style="flex:1;font-size:13px;padding:8px 12px;border:1px solid var(--border-default);border-radius:6px;outline:none;" />
+                <button type="button" class="btn primary" id="sendWxTestMsgBtn" style="font-size:12.5px;padding:8px 16px;white-space:nowrap;">
+                  🚀 模拟下发
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 快速指令指南 -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title-wrap">
+                <span class="card-title">💡 微信端协同指令指南</span>
+                <span class="card-subtitle">通过微信向智能体直接发送指令完成开发与代码审计</span>
+              </div>
+            </div>
+            <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div style="padding:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-main);">
+                <div style="font-weight:700;font-size:13px;margin-bottom:4px;">💬 群聊与私聊派发</div>
+                <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">
+                  私聊：直接发送 <code>“帮我写一个快速排序算法并输出单测”</code><br/>
+                  群聊：<code>@hap @coder 请审查今天提交的 PR 并定位性能瓶颈</code>
+                </div>
+              </div>
+
+              <div style="padding:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-main);">
+                <div style="font-weight:700;font-size:13px;margin-bottom:4px;">📱 手机端状态控制</div>
+                <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">
+                  <code>/status</code>：查看当前会话与 Token 消耗<br/>
+                  <code>/stop</code>：紧急中止在跑任务<br/>
+                  <code>/new</code>：新建并清空当前上下文
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 独立视图: 远程服务器与节点管理 (Remote Servers) -->
+      <section id="servers" class="view">
+        <div class="page-container">
+          <div class="page-header-row">
+            <div>
+              <h2 class="page-title">远程服务器与节点管理</h2>
+              <p class="page-subtitle">一键 SSH 部署 HAP 守护进程，打通双向低延迟通信与远程算力操控</p>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button id="refreshServersBtn" class="btn secondary">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                刷新状态
+              </button>
+              <button id="addServerBtn" class="btn primary">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                + 添加服务器
+              </button>
+            </div>
+          </div>
+
+          <!-- 服务器卡片网格 -->
+          <div id="serverCardsGrid" class="cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(360px, 1fr));gap:16px;margin-bottom:24px;">
+            <!-- 动态渲染服务器卡片 -->
+          </div>
+
+          <!-- 远程命令终端与交互操控台 -->
+          <div class="card" style="margin-top:16px;">
+            <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                <span style="font-weight:700;font-size:14px;">远程命令终端 & 操控台</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <label style="font-size:12px;color:var(--text-secondary);">目标节点：</label>
+                <select id="terminalServerSelect" style="padding:4px 8px;font-size:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--text-main);min-width:140px;">
+                  <option value="">-- 请选择服务器 --</option>
+                </select>
+                <button type="button" class="btn secondary" id="clearTerminalOutputBtn" style="padding:3px 8px;font-size:11.5px;">清屏</button>
+              </div>
+            </div>
+
+            <div class="card-body" style="padding:14px;">
+              <!-- 快捷指令胶囊 -->
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+                <span style="font-size:11.5px;color:var(--text-secondary);align-self:center;">快捷指令:</span>
+                <button type="button" class="quick-cmd-btn" data-cmd="uname -a">uname -a</button>
+                <button type="button" class="quick-cmd-btn" data-cmd="df -h">df -h (磁盘)</button>
+                <button type="button" class="quick-cmd-btn" data-cmd="free -m">free -m (内存)</button>
+                <button type="button" class="quick-cmd-btn" data-cmd="top -b -n 1 | head -n 12">top 负载</button>
+                <button type="button" class="quick-cmd-btn" data-cmd="systemctl status hap-daemon">hap-daemon 状态</button>
+                <button type="button" class="quick-cmd-btn" data-cmd="node -v">node -v</button>
+              </div>
+
+              <!-- 命令输入条 -->
+              <form id="remoteExecForm" style="display:flex;gap:8px;margin-bottom:12px;">
+                <input id="remoteCommandInput" placeholder="输入要执行的 Shell 指令 (如: ls -la /opt)..." style="flex:1;font-family:monospace;padding:8px 12px;font-size:13px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--text-main);" required />
+                <button type="submit" class="btn primary" id="execRemoteCmdBtn" style="display:flex;align-items:center;gap:6px;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  执行
+                </button>
+              </form>
+
+              <!-- 终端输出黑底控制台 -->
+              <div class="terminal-container" style="background:#141414;border:1px solid #2d2d2d;border-radius:6px;overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,0.5);">
+                <div class="terminal-titlebar" style="background:#1e1e1e;padding:6px 12px;border-bottom:1px solid #2d2d2d;display:flex;align-items:center;justify-content:space-between;">
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ff5f56;"></span>
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ffbd2e;"></span>
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#27c93f;"></span>
+                    <span style="margin-left:8px;font-size:11.5px;color:#888;font-family:monospace;" id="terminalConsoleTitle">Console (Ready)</span>
+                  </div>
+                  <span style="font-size:11px;color:#666;" id="terminalDuration">0ms</span>
+                </div>
+                <pre id="remoteTerminalOutput" style="margin:0;padding:12px 14px;color:#00ff66;font-family:'Cascadia Code', Consolas, Menlo, Monaco, monospace;font-size:12.5px;line-height:1.5;overflow:auto;max-height:280px;min-height:120px;white-space:pre-wrap;word-break:break-all;"># 等待执行指令...</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 独立视图 10: 运行日志 (Logs) -->
+      <section id="logs" class="view">
+        <div class="page-container">
+          <div class="page-header-row">
+            <div>
+              <h2 class="page-title">运行日志</h2>
+              <p class="page-subtitle">记录服务商连通测试、配置同步与智能体执行事件</p>
+            </div>
+            <button id="clearLogsBtn" class="btn secondary">清空日志</button>
+          </div>
+
+          <div class="page-actions-bar">
+            <div class="filter-group" style="display:flex;gap:6px;">
+              <button class="filter-btn active btn secondary" data-filter="all" style="padding:4px 10px;font-size:12px;">全部</button>
+              <button class="filter-btn btn secondary" data-filter="error" style="padding:4px 10px;font-size:12px;">仅错误</button>
+              <button class="filter-btn btn secondary" data-filter="info" style="padding:4px 10px;font-size:12px;">仅信息</button>
+            </div>
+          </div>
+
+          <div id="logList" class="stack log-stack" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 弹窗: 从 GitHub 安装 Skill -->
+    <dialog id="installSkillModal" class="modal modal-sm">
+      <form id="installSkillForm" class="modal-form-wrap">
+        <div class="modal-header-row">
+          <h2>从 GitHub 安装 Skill</h2>
+          <button type="button" class="btn-close" id="closeInstallSkillModalBtn">✕</button>
+        </div>
+        <div class="form-group">
+          <label>GitHub 仓库名或完整 URL *</label>
+          <input name="repo" id="skillRepoInput" placeholder="例如：open-skills/code-auditor 或 https://github.com/..." required />
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);">
+          安装后将自动拉取并在智能体编排系统中加载该技能规则与提示词。
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:14px;border-top:1px solid var(--border-default);">
+          <button type="button" class="btn secondary" id="cancelInstallSkillBtn">取消</button>
+          <button type="submit" class="btn primary">确认安装</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- 弹窗: 添加自定义 MCP 插件 -->
+    <dialog id="addPluginModal" class="modal">
+      <form id="addPluginForm" class="modal-form-wrap">
+        <div class="modal-header-row">
+          <h2>添加自定义 MCP 插件</h2>
+          <button type="button" class="btn-close" id="closeAddPluginModalBtn">✕</button>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>插件 ID *</label>
+            <input name="id" placeholder="例如：postgres-mcp" required />
+          </div>
+          <div class="form-group">
+            <label>插件名称 *</label>
+            <input name="name" placeholder="例如：PostgreSQL 数据库直连" required />
+          </div>
+          <div class="form-group full-width">
+            <label>功能描述</label>
+            <input name="description" placeholder="支持执行 SQL 查询与表结构分析" />
+          </div>
+          <div class="form-group">
+            <label>执行命令 (Command) *</label>
+            <input name="command" placeholder="npx, python, node..." required />
+          </div>
+          <div class="form-group">
+            <label>参数列表 (Args，逗号分隔)</label>
+            <input name="args" placeholder="-y, @modelcontextprotocol/server-postgres" />
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:14px;border-top:1px solid var(--border-default);">
+          <button type="button" class="btn secondary" id="cancelAddPluginBtn">取消</button>
+          <button type="submit" class="btn primary">保存插件</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- 弹窗 1: 服务商 新增/修改 (Provider Dialog) -->
+    <dialog id="providerDialog" class="modal">
+      <form id="providerForm" class="modal-form-wrap">
+        <div class="modal-header-row">
+          <h2 id="providerDialogTitle">新增服务商</h2>
+          <button type="button" class="btn-close" id="closeProviderDialogBtn">✕</button>
+        </div>
+
+        <div class="form-group" id="providerPresetRow">
+          <label>从预置模板快速填充（可选）</label>
+          <select id="providerPresetSelect" class="preset-template-select">
+            <option value="">-- 选择预置模板（如 OpenAI、DeepSeek、OpenRouter 等） --</option>
+          </select>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>服务商 ID *</label>
+            <input name="id" id="providerInputId" placeholder="例如：openai, deepseek" required />
+          </div>
+
+          <div class="form-group">
+            <label>显示名称</label>
+            <input name="name" id="providerInputName" placeholder="例如：DeepSeek 官方" />
+          </div>
+
+          <div class="form-group full-width">
+            <label>API 基础地址 (URL / Base URL) *</label>
+            <input name="baseUrl" id="providerInputBaseUrl" placeholder="https://api.openai.com/v1" required />
+          </div>
+
+          <div class="form-group full-width">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <label>API Key (密钥凭据)</label>
+              <button type="button" class="btn text-btn" id="toggleApiKeyVisibilityBtn" style="font-size:11.5px;padding:2px 6px;">显示明文</button>
+            </div>
+            <input type="password" name="apiKey" id="providerInputApiKey" placeholder="在此粘贴 API Key（如 sk-...），系统将持久化安全存储" autocomplete="off" />
+          </div>
+
+          <div class="form-group full-width">
+            <label>API Key 环境变量名 (可选)</label>
+            <input name="envKey" id="providerInputEnvKey" placeholder="留空自动根据 ID 生成" />
+          </div>
+
+          <div class="form-group">
+            <label>线制 (Wire API)</label>
+            <select name="wireApi" id="providerInputWireApi">
+              <option value="chat">chat (标准 Chat 接口)</option>
+              <option value="responses">responses (OpenAI 新格式)</option>
+              <option value="anthropic-messages">anthropic-messages (Claude 原生)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>默认通信协议 (Protocol)</label>
+            <select name="protocol" id="providerInputProtocol">
+              <option value="openai-tools">openai-tools</option>
+              <option value="deepseek">deepseek</option>
+              <option value="anthropic">anthropic</option>
+              <option value="hermes-native">hermes-native</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px;border-top:1px solid var(--border-default);">
+          <button type="button" class="btn danger" id="deleteProviderBtn">删除服务商</button>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn secondary" id="testProviderBtn">连通测试</button>
+            <button type="button" class="btn secondary" id="cancelProviderDialogBtn">取消</button>
+            <button type="submit" class="btn primary">保存</button>
+          </div>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- 弹窗 2: 模型 新增/修改 (Model Dialog) -->
+    <dialog id="modelDialog" class="modal">
+      <form id="modelForm" class="modal-form-wrap">
+        <div class="modal-header-row">
+          <h2 id="modelDialogTitle">新增模型</h2>
+          <button type="button" class="btn-close" id="closeModelDialogBtn">✕</button>
+        </div>
+
+        <div class="form-group">
+          <label>所属服务商 *</label>
+          <select name="provider" id="modelProviderSelect" required></select>
+        </div>
+
+        <div class="form-group" style="background:#f9f9f9;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-default);">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <label style="font-size:12px;font-weight:600;">在线获取服务商可用模型</label>
+            <button type="button" class="btn secondary" id="fetchRemoteModelsBtn" style="font-size:11.5px;padding:4px 8px;">
+              <span id="fetchRemoteBtnText">获取可用模型列表</span>
+            </button>
+          </div>
+          <select id="remoteModelPicker" style="display:none;margin-top:6px;">
+            <option value="">-- 点击快速点选拉取到的模型 --</option>
+          </select>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>模型别名 (Alias) *</label>
+            <input name="alias" id="modelInputAlias" placeholder="例如：gpt-4.1, ds-v3" required />
+          </div>
+
+          <div class="form-group">
+            <label>厂商真实模型名 (Model Name) *</label>
+            <input name="model" id="modelInputModel" placeholder="例如：deepseek-chat" required />
+          </div>
+
+          <div class="form-group">
+            <label>上下文窗口</label>
+            <input name="contextWindow" id="modelInputContext" type="number" placeholder="128000" />
+          </div>
+
+          <div class="form-group">
+            <label>最大输出 Tokens</label>
+            <input name="maxOutputTokens" id="modelInputMaxOutput" type="number" placeholder="4096" />
+          </div>
+
+          <div class="form-group full-width">
+            <label>协议覆盖 (可选)</label>
+            <select name="protocol" id="modelInputProtocol">
+              <option value="">跟随服务商默认</option>
+              <option value="openai-tools">openai-tools</option>
+              <option value="deepseek">deepseek</option>
+              <option value="anthropic">anthropic</option>
+              <option value="hermes-native">hermes-native</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px;border-top:1px solid var(--border-default);">
+          <button type="button" class="btn danger" id="deleteModelBtn">删除模型</button>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn secondary" id="cancelModelDialogBtn">取消</button>
+            <button type="submit" class="btn primary">保存</button>
+          </div>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- 弹窗: 智能体配置与编辑 (Agent Modal) -->
+    <dialog id="agentModal" class="modal">
+      <form id="agentForm" class="modal-form-wrap">
+        <div class="modal-header-row">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span id="agentModalEmoji" style="font-size:20px;">🤖</span>
+            <h2 id="agentModalTitle">编辑智能体配置</h2>
+          </div>
+          <button type="button" class="btn-close" id="closeAgentModalBtn">✕</button>
+        </div>
+
+        <input type="hidden" id="agentInputId" name="id" />
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>显示名称 (Display Name)</label>
+            <input id="agentInputDisplayName" name="displayName" placeholder="如：全栈开发专家" required />
+          </div>
+          <div class="form-group">
+            <label>图标 (Emoji)</label>
+            <input id="agentInputEmoji" name="emoji" placeholder="如：💻" style="max-width:80px;" />
+          </div>
+          <div class="form-group full-width">
+            <label>主要绑定模型 (Primary Model)</label>
+            <select id="agentInputModel" name="model"></select>
+          </div>
+          <div class="form-group full-width">
+            <label>工具权限档位 (Tool Tier)</label>
+            <select id="agentInputToolTier" name="toolTier">
+              <option value="coding">coding (编码与审查工具)</option>
+              <option value="research">research (检索与只读研究工具)</option>
+              <option value="full">full (完整系统与工具权限)</option>
+              <option value="standard">standard (标准通用工具)</option>
+              <option value="minimal">minimal (最小安全工具集)</option>
+            </select>
+          </div>
+          <div class="form-group full-width">
+            <label>默认工作区目录 (Workspace Path)</label>
+            <input id="agentInputWorkspace" name="workspace" placeholder="留空则继承全局 workspace_root 规则" />
+          </div>
+          <div class="form-group full-width">
+            <label>角色描述与系统职责 (Description)</label>
+            <textarea id="agentInputDescription" name="description" rows="3" placeholder="定义该智能体的专长、系统设定与任务倾向..."></textarea>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:14px;border-top:1px solid var(--border-default);margin-top:10px;">
+          <button type="button" class="btn secondary" id="cancelAgentModalBtn">取消</button>
+          <button type="submit" class="btn primary">保存配置</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- 弹窗 3: 项目 手动添加 (Project Dialog) -->
+    <dialog id="projectDialog" class="modal">
+      <form id="projectForm" class="modal-form-wrap">
+        <div class="modal-header-row">
+          <h2 id="projectDialogTitle">添加项目工程</h2>
+          <button type="button" class="btn-close" id="closeProjectDialogBtn">✕</button>
+        </div>
+
+        <div class="form-group">
+          <label>项目名称</label>
+          <input name="name" id="projectInputName" placeholder="例如：My App" />
+        </div>
+
+        <div class="form-group">
+          <label>本地绝对路径 *</label>
+          <input name="path" id="projectInputPath" placeholder="C:\projects\my-app" required />
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:14px;border-top:1px solid var(--border-default);">
+          <button type="button" class="btn secondary" id="cancelProjectDialogBtn">取消</button>
+          <button type="submit" class="btn primary">添加项目</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- 弹窗 4: VS Code 风格代码查看器 (Code Viewer Modal) -->
+    <dialog id="codeViewerModal" class="modal">
+      <div class="code-viewer-wrap">
+        <div class="code-viewer-head">
+          <span id="codeViewerTitle">code_preview.ts</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button type="button" class="codeblock-btn" id="codeViewerCopyBtn">复制代码</button>
+            <button type="button" class="codeblock-btn" id="codeViewerOpenVsCodeBtn">VS Code 打开</button>
+            <button type="button" class="codeblock-btn" id="closeCodeViewerBtn" style="font-size:14px;">✕</button>
+          </div>
+        </div>
+        <div class="code-viewer-body">
+          <div class="code-lines" id="codeLineNumbers"></div>
+          <pre class="code-text-area" id="codeViewerContent"></pre>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- 弹窗 5: Git 版本控制与协同工作流 (Git Modal) -->
+    <!-- 弹窗 5: Git 版本控制与协同工作流 (Git Modal - Split View) -->
+    <dialog id="gitModal" class="modal modal-lg">
+      <div class="modal-form-wrap" style="max-height:88vh;display:flex;flex-direction:column;">
+        <div class="modal-header-row">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 9v12"/><path d="M18 9a9 9 0 0 0-9 9"/>
+            </svg>
+            <h2 id="gitModalTitle">Git 版本协同与变更审查</h2>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button type="button" class="btn text-btn" id="refreshGitStatusBtn" style="font-size:12px;">🔄 刷新状态</button>
+            <button type="button" class="btn-close" id="closeGitModalBtn">✕</button>
+          </div>
+        </div>
+
+        <div style="padding:4px 0 10px 0;border-bottom:1px solid var(--border-default);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;align-items:center;gap:12px;font-size:12px;">
+            <div><span style="color:var(--text-muted);">工程：</span><strong id="gitProjectPathText" style="font-family:var(--font-mono);">-</strong></div>
+            <div><span style="color:var(--text-muted);">分支：</span><strong id="gitBranchBadge" class="prop-chip" style="color:var(--accent);">main</strong></div>
+            <div><span style="color:var(--text-muted);">远端：</span><span id="gitRemoteUrlText" style="font-family:var(--font-mono);color:var(--text-secondary);">-</span></div>
+          </div>
+          <div id="gitSummaryStatsBadge" style="font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--text-main);">
+            共 <span id="gitChangedCount">0</span> 个文件变更
+          </div>
+        </div>
+
+        <div id="gitNotRepoState" style="display:none;padding:32px 0;text-align:center;">
+          <div style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;">当前工程尚未初始化为 Git 仓库</div>
+          <button type="button" class="btn primary" id="gitInitRepoBtn">初始化为 Git 仓库 (git init)</button>
+        </div>
+
+        <div id="gitRepoState" style="display:flex;flex-direction:column;flex:1;min-height:0;margin-top:10px;">
+          <!-- 左右分栏：左侧文件列表，右侧 Diff 代码对比 -->
+          <div class="git-split-container" style="display:grid;grid-template-columns:290px 1fr;gap:12px;flex:1;min-height:280px;max-height:420px;border:1px solid var(--border-default);border-radius:var(--radius-sm);overflow:hidden;background:#ffffff;">
+            <!-- 左侧：改动文件清单 -->
+            <div style="background:var(--bg-main);border-right:1px solid var(--border-default);display:flex;flex-direction:column;min-height:0;">
+              <div style="padding:8px 10px;border-bottom:1px solid var(--border-default);display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:12px;font-weight:700;">改动文件 (<span id="gitFileListCount">0</span>)</span>
+                <button type="button" class="btn text-btn" id="viewAllDiffsBtn" style="font-size:11px;padding:2px 4px;color:var(--accent);">查看全局补丁</button>
+              </div>
+              <div id="gitChangedFilesList" style="flex:1;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:3px;">
+                <div style="color:var(--text-muted);font-style:italic;padding:8px;font-size:12px;">暂无文件改动</div>
+              </div>
+            </div>
+
+            <!-- 右侧：实时 Diff 对比区 -->
+            <div style="display:flex;flex-direction:column;min-height:0;background:#1e1e1e;">
+              <div style="padding:6px 12px;background:#252526;border-bottom:1px solid #333333;display:flex;justify-content:space-between;align-items:center;">
+                <div style="display:flex;align-items:center;gap:8px;overflow:hidden;">
+                  <span id="gitInlineDiffFileTitle" style="font-family:var(--font-mono);font-size:12px;color:#e1e4e8;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">选择左侧文件查看代码差异</span>
+                </div>
+                <div style="display:flex;gap:6px;">
+                  <button type="button" class="codeblock-btn" id="gitInlineDiffCopyBtn" style="font-size:11px;">复制代码</button>
+                  <button type="button" class="codeblock-btn" id="gitInlineDiffOpenVsCodeBtn" style="font-size:11px;">VS Code 对比</button>
+                </div>
+              </div>
+              <div id="gitInlineDiffContent" class="git-diff-content" style="flex:1;overflow:auto;padding:12px 14px;color:#d4d4d4;font-size:12px;line-height:1.55;">
+                <div class="git-diff-line normal" style="color:#858585;">👈 点击左侧文件，实时审查具体修改的代码差异</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 提交说明与操作栏 -->
+          <div style="margin-top:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+              <label style="font-size:12px;font-weight:600;">提交信息 (Commit Message)</label>
+              <button type="button" class="btn text-btn" id="aiGenerateCommitBtn" style="font-size:11.5px;padding:2px 6px;color:var(--accent);">
+                ✨ AI 智能生成 Commit 说明
+              </button>
+            </div>
+            <textarea id="gitCommitMessageInput" rows="2" placeholder="输入提交说明，例如: feat: 完善项目树形导航与 Git 提交协同" style="width:100%;padding:6px 10px;border:1px solid var(--border-default);border-radius:var(--radius-sm);font-size:12px;font-family:var(--font-sans);resize:none;"></textarea>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-default);gap:8px;">
+            <div style="display:flex;gap:8px;">
+              <button type="button" class="btn secondary" id="gitPullBtn" title="拉取远端最新代码">⬇️ Git Pull 拉取</button>
+              <button type="button" class="btn secondary" id="gitPushBtn" title="推送提交到远端仓库">⬆️ Git Push 推送</button>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button type="button" class="btn secondary" id="cancelGitModalBtn">关闭</button>
+              <button type="button" class="btn primary" id="gitCommitBtn">提交变更 (Commit)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- 弹窗 6: Git 差异代码查看器 (Git Diff Viewer Modal) -->
+    <dialog id="gitDiffModal" class="modal modal-lg">
+      <div class="code-viewer-wrap" style="max-height:85vh;">
+        <div class="code-viewer-head">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 9v12"/><path d="M18 9a9 9 0 0 0-9 9"/>
+            </svg>
+            <span id="gitDiffTitle" style="font-weight:600;font-family:var(--font-mono);font-size:13px;">diff_preview.patch</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button type="button" class="codeblock-btn" id="gitDiffCopyBtn">复制 Diff</button>
+            <button type="button" class="codeblock-btn" id="gitDiffOpenVsCodeBtn">VS Code 打开对比</button>
+            <button type="button" class="codeblock-btn" id="closeGitDiffModalBtn" style="font-size:14px;">✕</button>
+          </div>
+        </div>
+        <div class="code-viewer-body" style="background:#1e1e1e;">
+          <pre class="code-text-area git-diff-content" id="gitDiffContent" style="color:#d4d4d4;padding:14px 18px;font-size:12.5px;line-height:1.6;overflow:auto;max-height:65vh;"></pre>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- 弹窗 8: 图片多模态全屏查看器 (Image Lightbox Modal) -->
+    <dialog id="imageLightboxModal" class="modal lightbox-modal">
+      <div class="lightbox-wrap">
+        <div class="lightbox-header">
+          <div style="display:flex;align-items:center;gap:8px;overflow:hidden;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <span id="lightboxTitle" class="lightbox-title">图片查看</span>
+          </div>
+          <div class="lightbox-tools">
+            <button type="button" class="codeblock-btn" id="lightboxCopyBtn">复制图片</button>
+            <button type="button" class="codeblock-btn" id="lightboxDownloadBtn">下载原图</button>
+            <button type="button" class="codeblock-btn" id="closeLightboxBtn" style="font-size:14px;">✕</button>
+          </div>
+        </div>
+        <div class="lightbox-body">
+          <img id="lightboxImg" class="lightbox-img" src="" alt="查看图片" />
+        </div>
+      </div>
+    </dialog>
+
+    <!-- 弹窗: 添加/编辑远程服务器 (Server Dialog) -->
+    <dialog id="serverDialog" class="modal">
+      <form id="serverForm" class="modal-form-wrap">
+        <div class="modal-header-row">
+          <h2 id="serverDialogTitle">添加远程服务器</h2>
+          <button type="button" class="btn-close" id="closeServerDialogBtn">✕</button>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>节点唯一 ID *</label>
+            <input name="id" id="serverInputId" placeholder="例如: vps-prod, node-gpu, dev-vm" required />
+          </div>
+
+          <div class="form-group">
+            <label>显示别名 (名称)</label>
+            <input name="name" id="serverInputName" placeholder="例如: 生产算力集群 #1" />
+          </div>
+
+          <div class="form-group full-width">
+            <label>主机 IP 或域名 (Host) *</label>
+            <input name="host" id="serverInputHost" placeholder="例如: 192.168.1.100 或 123.45.67.89" required />
+          </div>
+
+          <div class="form-group">
+            <label>SSH 端口 *</label>
+            <input type="number" name="port" id="serverInputPort" value="22" required />
+          </div>
+
+          <div class="form-group">
+            <label>SSH 用户名 *</label>
+            <input name="username" id="serverInputUsername" value="root" required />
+          </div>
+
+          <div class="form-group">
+            <label>认证方式 *</label>
+            <select name="authType" id="serverInputAuthType">
+              <option value="password">账号密码登录</option>
+              <option value="privateKey">SSH 私钥登录</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="serverPasswordGroup">
+            <label>SSH 登录密码</label>
+            <input type="password" name="password" id="serverInputPassword" placeholder="输入 root / 登录密码" autocomplete="off" />
+          </div>
+
+          <div class="form-group full-width" id="serverPrivateKeyGroup" style="display:none;">
+            <label>SSH 私钥内容 (OpenSSH / RSA 格式)</label>
+            <textarea name="privateKey" id="serverInputPrivateKey" rows="4" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----..." style="font-family:monospace;font-size:12px;"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>HAP Daemon 通信端口</label>
+            <input type="number" name="daemonPort" id="serverInputDaemonPort" value="9527" />
+          </div>
+
+          <div class="form-group">
+            <label>通信安全 Token (留空自动生成)</label>
+            <input name="token" id="serverInputToken" placeholder="自动生成高强度 Token" />
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px;border-top:1px solid var(--border-default);">
+          <button type="button" class="btn danger" id="deleteServerModalBtn" style="display:none;">删除节点</button>
+          <div style="display:flex;gap:8px;margin-left:auto;">
+            <button type="button" class="btn secondary" id="cancelServerModalBtn">取消</button>
+            <button type="submit" class="btn primary">保存节点配置</button>
+          </div>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- 弹窗: 一键安装部署进度面板 (Install Server Dialog) -->
+    <dialog id="installServerDialog" class="modal modal-lg">
+      <div class="modal-form-wrap" style="max-height:85vh;display:flex;flex-direction:column;">
+        <div class="modal-header-row">
+          <div>
+            <h2 id="installServerTitle">🚀 正在远程一键部署 HAP Agent 守护进程</h2>
+            <p id="installServerSubtitle" style="font-size:12px;color:var(--text-secondary);margin:4px 0 0 0;">目标节点：127.0.0.1</p>
+          </div>
+          <button type="button" class="btn-close" id="closeInstallDialogBtn">✕</button>
+        </div>
+
+        <!-- 进度条 -->
+        <div style="margin:12px 0;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
+            <span id="installStepText" style="font-weight:600;color:var(--text-main);">步骤 1/7: 连接远程 SSH 服务</span>
+            <span id="installPercentText" style="color:var(--accent);font-weight:700;">15%</span>
+          </div>
+          <div style="height:8px;background:var(--bg-main);border-radius:4px;overflow:hidden;border:1px solid var(--border-default);">
+            <div id="installProgressBar" style="width:15%;height:100%;background:linear-gradient(90deg, #10a37f, #22c55e);transition:width 0.3s ease;"></div>
+          </div>
+        </div>
+
+        <!-- 步骤清单 -->
+        <div id="installStepsList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;background:var(--bg-main);padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-default);font-size:12.5px;">
+          <!-- 动态步骤状态 -->
+        </div>
+
+        <!-- 部署控制台日志 -->
+        <div style="flex:1;min-height:160px;background:#111;border:1px solid #333;border-radius:6px;padding:10px 12px;font-family:monospace;font-size:12px;color:#a3e635;overflow:auto;line-height:1.5;max-height:220px;" id="installLogsConsole">
+          [System] 准备就绪，正在通过 SSH 登录远端服务器...
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:14px;border-top:1px solid var(--border-default);margin-top:12px;">
+          <button type="button" class="btn primary" id="finishInstallBtn" disabled>完成并关闭</button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- 弹窗 7: 确认弹窗 (Confirm Dialog) -->
+    <dialog id="confirmDialog" class="modal modal-sm">
+      <div style="padding:24px;text-align:center;">
+        <h3 id="confirmTitle" style="margin:0 0 8px 0;font-size:16px;">确认操作</h3>
+        <p id="confirmMessage" style="margin:0 0 18px 0;font-size:13px;color:var(--text-secondary);">确定要执行此操作吗？</p>
+        <div style="display:flex;justify-content:center;gap:8px;">
+          <button type="button" class="btn secondary" id="confirmCancelBtn">取消</button>
+          <button type="button" class="btn primary" id="confirmOkBtn">确认</button>
+        </div>
+      </div>
+    </dialog>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="./qrcode.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
