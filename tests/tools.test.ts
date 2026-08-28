@@ -265,6 +265,16 @@ describe('工具注册表', () => {
       'search',
       'http_fetch',
       'spawn_subagent',
+      'remote_exec',
+      'remote_sysinfo',
+      'remote_list_servers',
+      'remote_upgrade_daemon',
+      'find_definition',
+      'find_references',
+      'list_symbols',
+      'host_sysinfo',
+      'disk_cleanup',
+      'ip_lookup',
     ]);
   });
 

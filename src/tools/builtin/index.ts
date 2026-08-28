@@ -15,6 +15,10 @@ import { openExternalTool } from './open-external.js';
 import { searchTool } from './search.js';
 import { shellTool } from './shell.js';
 import { spawnSubagentTool } from './spawn-subagent.js';
+import { remoteExecTool, remoteSysinfoTool, remoteListServersTool, remoteUpgradeDaemonTool } from './remote-tools.js';
+import { findDefinitionTool, findReferencesTool, listSymbolsTool } from './symbol-tools.js';
+import { hostSysinfoTool } from './host-tools.js';
+import { diskCleanupTool, ipLookupTool } from './cleanup-tools.js';
 
 export const BUILTIN_TOOL_MODULES: readonly ToolModule[] = [
   shellTool,
@@ -26,6 +30,16 @@ export const BUILTIN_TOOL_MODULES: readonly ToolModule[] = [
   searchTool,
   httpFetchTool,
   spawnSubagentTool,
+  remoteExecTool,
+  remoteSysinfoTool,
+  remoteListServersTool,
+  remoteUpgradeDaemonTool,
+  findDefinitionTool,
+  findReferencesTool,
+  listSymbolsTool,
+  hostSysinfoTool,
+  diskCleanupTool,
+  ipLookupTool,
 ];
 
 /** 返回内置工具的新数组，避免调用方改动共享常量。 */
@@ -33,6 +47,26 @@ export function builtinTools(): ToolModule[] {
   return [...BUILTIN_TOOL_MODULES];
 }
 
-export { applyPatchTool, listDirTool, openExternalTool, readFileTool, writeFileTool, httpFetchTool, searchTool, shellTool, spawnSubagentTool };
+export {
+  applyPatchTool,
+  listDirTool,
+  openExternalTool,
+  readFileTool,
+  writeFileTool,
+  httpFetchTool,
+  searchTool,
+  shellTool,
+  spawnSubagentTool,
+  remoteExecTool,
+  remoteSysinfoTool,
+  remoteListServersTool,
+  remoteUpgradeDaemonTool,
+  findDefinitionTool,
+  findReferencesTool,
+  listSymbolsTool,
+  hostSysinfoTool,
+  diskCleanupTool,
+  ipLookupTool,
+};
 export { applyHunks, parsePatch } from './patch-envelope.js';
 export type { PatchHunk, PatchLine, PatchOperation } from './patch-envelope.js';

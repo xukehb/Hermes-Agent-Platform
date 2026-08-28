@@ -52,16 +52,18 @@ export function defineTool<S extends z.ZodType>(spec: {
   schema: S;
   source?: string;
   run: (args: z.output<S>, ctx: ToolContext) => Promise<ToolOutput> | ToolOutput;
-}): ToolModule {
+}): ToolModule & { run: (args: z.output<S>, ctx: ToolContext) => Promise<ToolOutput> } {
   const definition: ToolDefinition = {
     name: spec.name,
     description: spec.description,
     parameters: toolJsonSchema(spec.schema),
     source: spec.source ?? 'builtin',
   };
+  const runFn = async (args: Record<string, unknown>, ctx: ToolContext) => spec.run(args as z.output<S>, ctx);
   return {
     definition,
     validate: (args) => validateWithSchema(spec.schema, args),
-    handler: async (args, ctx) => spec.run(args as z.output<S>, ctx),
+    handler: runFn,
+    run: runFn as (args: z.output<S>, ctx: ToolContext) => Promise<ToolOutput>,
   };
 }

@@ -34,9 +34,9 @@ export const openExternalTool = defineTool({
       } else {
         await execa('xdg-open', [target]);
       }
-      return { content: '✅ 已成功在本地操作系统中打开目标：' + target, isError: false };
+      return { content: '[OK] 已成功在本地操作系统中打开目标：' + target, isError: false };
     } catch (error) {
-      return { content: '✗ 无法打开目标：' + (error instanceof Error ? error.message : String(error)), isError: true };
+      return { content: '[FAIL] 无法打开目标：' + (error instanceof Error ? error.message : String(error)), isError: true };
     }
   },
 });
