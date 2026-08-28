@@ -33,6 +33,11 @@ export class WeChatContactStore {
     });
   }
 
+  upsertRealContact(input: { id: string; name: string; isRoom: boolean }): WeChatContact {
+    const existing = this.getContact(input.id);
+    return this.upsertContact({ ...existing, id: input.id, name: input.name, type: input.isRoom ? 'room' : 'user', isRoom: input.isRoom, autoReply: existing?.autoReply ?? true, replyMode: existing?.replyMode ?? (input.isRoom ? 'mention' : 'all') });
+  }
+
   recordIncomingMessage(msg: {
     fromId: string;
     fromName: string;

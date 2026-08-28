@@ -27,6 +27,7 @@ import type { AttachmentKind } from '../domain/index.js';
 import type { ResolvedChannels, ResolvedLimits, ResolvedPaths, ResolvedWeChatChannel } from '../config/index.js';
 import { ConfigError } from '../domain/index.js';
 import { parseBind } from './bind.js';
+import { WechatyPersonalDriver } from './wechat/wechaty-personal-driver.js';
 
 /** 微信个人号驱动状态与事件回调。 */
 export interface WeChatPersonalDriver {
@@ -46,6 +47,7 @@ export interface WeChatPersonalDriver {
   start: () => Promise<void>;
   stop: () => Promise<void>;
   sendMessage: (targetId: string, text: string) => Promise<string | undefined>;
+  syncContacts?: () => Promise<{ contacts: number; rooms: number; syncedAt: number }>;
 }
 
 export type PersonalDriverFactory = (authDir: string, log: (line: string) => void) => WeChatPersonalDriver;
@@ -255,7 +257,7 @@ export class WeChatChannel implements Channel {
 
   /** 个人微信模式启动。 */
   private async startPersonalMode(): Promise<void> {
-    const factory = this.options.personalDriverFactory ?? ((authDir, log) => new DefaultPersonalDriver(authDir, log));
+    const factory = this.options.personalDriverFactory ?? ((_authDir, log) => new WechatyPersonalDriver({ tokenEnv: this.config.personal.puppetServiceTokenEnv, endpoint: this.config.personal.puppetServiceEndpoint, env: this.env, log }));
     const driver = factory(this.config.authDir, this.log);
     this.personalDriver = driver;
 
@@ -281,6 +283,11 @@ export class WeChatChannel implements Channel {
     };
 
     await driver.start();
+  }
+
+  async syncPersonalContacts(): Promise<{ contacts: number; rooms: number; syncedAt: number }> {
+    if (this.config.mode !== 'personal' || !this.personalDriver?.syncContacts) throw new Error('当前微信模式不支持真实联系人同步');
+    return this.personalDriver.syncContacts();
   }
 
   /** 处理个人微信入站消息。 */

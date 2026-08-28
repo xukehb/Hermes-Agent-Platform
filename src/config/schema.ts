@@ -194,6 +194,12 @@ export const wechatOfficialAccountSchema = z.strictObject({
   path: z.string().min(1).optional(),
 });
 
+export const wechatPersonalSchema = z.strictObject({
+  puppet: z.literal('service').optional(),
+  puppet_service_token_env: z.string().min(1).optional(),
+  puppet_service_endpoint: z.string().url().optional(),
+});
+
 /** 微信通道（支持个人微信扫码登录、企业微信 WeCom 机器人/应用、微信公众号多模式） */
 export const wechatChannelSchema = z.strictObject({
   enabled: z.boolean().optional(),
@@ -203,6 +209,7 @@ export const wechatChannelSchema = z.strictObject({
   message_char_limit: z.number().int().positive().optional(),
   auth_dir: z.string().min(1).optional(),
   qr_log: z.boolean().optional(),
+  personal: wechatPersonalSchema.optional(),
   wecom: wechatWeComSchema.optional(),
   official_account: wechatOfficialAccountSchema.optional(),
 });

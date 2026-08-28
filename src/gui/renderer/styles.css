@@ -844,28 +844,27 @@ body {
 /* 用户气泡: 优雅温润的浅灰胶囊卡片 */
 .msg-row.user {
   justify-content: flex-end;
+  margin: 8px 0;
 }
 
 .user-bubble-wrapper {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  max-width: 80%;
-  gap: 4px;
+  max-width: 75%;
+  gap: 6px;
 }
 
 .user-bubble {
-  background: #f4f4f4;
-  color: #0d0d0d;
-  padding: 10px 16px;
-  border-radius: 18px 18px 4px 18px;
-  border: 1px solid rgba(0, 0, 0, 0.04);
-  font-size: 14.5px;
+  background: #f4f4f5;
+  color: #0f172a;
+  padding: 12px 18px;
+  border-radius: 20px 20px 4px 20px;
+  font-size: 15px;
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-  letter-spacing: -0.1px;
+  box-shadow: none;
 }
 
 /* 用户气泡多模态附件展示 */
@@ -965,36 +964,38 @@ body {
 /* 助手回复: 清爽通透的流式布局 */
 .msg-row.assistant {
   justify-content: flex-start;
+  margin: 12px 0;
 }
 
 .assistant-container {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   max-width: 100%;
   width: 100%;
 }
 
 .assistant-avatar {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background: #0f172a;
+  background: #10a37f; /* ChatGPT green or elegant black */
   color: #ffffff;
   display: grid;
   place-items: center;
   flex-shrink: 0;
   margin-top: 2px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  font-size: 13px;
+}
+.assistant-avatar svg {
+  width: 18px; height: 18px;
 }
 
 .assistant-content {
   flex: 1;
-  font-size: 14.5px;
-  line-height: 1.68;
+  font-size: 15px;
+  line-height: 1.7;
   color: #1e293b;
   overflow-wrap: break-word;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
 .assistant-content p {
@@ -1486,12 +1487,10 @@ body {
   flex-shrink: 0;
   position: relative;
   width: 100%;
-  padding: 4px 20px 14px 20px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.88) 30%, #ffffff 100%);
-  border-top: 1px solid rgba(0, 0, 0, 0.04);
+  padding: 0 20px 24px 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.95) 25%, #ffffff 100%);
   z-index: 15;
   pointer-events: auto;
-  backdrop-filter: blur(12px);
 }
 
 .composer-inner {
@@ -1547,21 +1546,21 @@ body {
 
 /* 悬浮岛式输入框 */
 .composer-island-card {
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 20px;
-  padding: 10px 14px 8px 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  background: #f4f4f5;
+  border: 1px solid transparent;
+  border-radius: 26px;
+  padding: 12px 14px 10px 16px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: all 0.2s ease;
   pointer-events: auto;
 }
 
 .composer-island-card:focus-within {
-  border-color: #0d0d0d;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
 }
 
 .composer-text-area-wrap {

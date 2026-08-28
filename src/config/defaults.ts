@@ -103,6 +103,7 @@ export const BUILTIN_CHANNELS: ResolvedChannels = {
     messageCharLimit: 2_048,
     authDir: '~/.hap/wechat-auth',
     qrLog: true,
+    personal: { puppet: 'service' as const, puppetServiceTokenEnv: 'WECHATY_PUPPET_SERVICE_TOKEN', puppetServiceEndpoint: undefined },
     wecom: undefined,
     officialAccount: undefined,
   },

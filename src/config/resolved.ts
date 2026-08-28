@@ -188,6 +188,12 @@ export interface ResolvedWeChatOfficialAccount {
   path: string;
 }
 
+export interface ResolvedWeChatPersonal {
+  puppet: 'service';
+  puppetServiceTokenEnv: string;
+  puppetServiceEndpoint: string | undefined;
+}
+
 /** 解析后的微信通道配置。 */
 export interface ResolvedWeChatChannel {
   enabled: boolean;
@@ -197,6 +203,7 @@ export interface ResolvedWeChatChannel {
   messageCharLimit: number;
   authDir: string;
   qrLog: boolean;
+  personal: ResolvedWeChatPersonal;
   wecom: ResolvedWeChatWeCom | undefined;
   officialAccount: ResolvedWeChatOfficialAccount | undefined;
 }

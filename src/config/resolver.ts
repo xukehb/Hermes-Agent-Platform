@@ -1099,6 +1099,11 @@ export class ConfigResolver {
         messageCharLimit: asNumber(this.read('channels.wechat.message_char_limit', ctx)) ?? BUILTIN_CHANNELS.wechat.messageCharLimit,
         authDir: expandHome(asString(this.read('channels.wechat.auth_dir', ctx)) ?? BUILTIN_CHANNELS.wechat.authDir),
         qrLog: asBoolean(this.read('channels.wechat.qr_log', ctx)) ?? BUILTIN_CHANNELS.wechat.qrLog,
+        personal: {
+          puppet: 'service',
+          puppetServiceTokenEnv: ctx.root.channels?.wechat?.personal?.puppet_service_token_env ?? BUILTIN_CHANNELS.wechat.personal.puppetServiceTokenEnv,
+          puppetServiceEndpoint: ctx.root.channels?.wechat?.personal?.puppet_service_endpoint,
+        },
         wecom: ctx.root.channels?.wechat?.wecom
           ? {
               corpId: ctx.root.channels.wechat.wecom.corp_id,
