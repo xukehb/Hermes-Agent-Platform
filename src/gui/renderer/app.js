@@ -7248,7 +7248,7 @@ window.refreshHostView = async () => {
   // 渲染节点专属机器人状态卡片
   if ($('panoramaBotTitle')) {
     const s = isLocal ? null : cachedServers.find(item => item.id === targetId);
-    const botCfg = s?.botConfig;
+    const botCfg = isLocal ? getLocalHostBotConfig() : s?.botConfig;
     const agentId = botCfg?.agentId || s?.agentId || 'ops';
     const channelName = botCfg?.channel === 'feishu' ? '飞书群聊机器人'
       : botCfg?.channel === 'wechat' ? '企业微信机器人'
@@ -8135,6 +8135,33 @@ $('nodeBotServerSelect')?.addEventListener('change', (e) => {
   if ($('nodeBotAutoHealing')) $('nodeBotAutoHealing').checked = botCfg.autoHealing !== false;
 });
 
+// 本地宿主告警机器人配置读取与持久化
+function getLocalHostBotConfig() {
+  try {
+    const raw = localStorage.getItem('hap_local_bot_config');
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return {
+    enabled: true,
+    agentId: 'ops',
+    channel: 'feishu',
+    webhookUrl: '',
+    targetId: '',
+    secret: '',
+    alertOnHighCpu: true,
+    alertOnHighMem: true,
+    alertOnHighDisk: true,
+    alertOnOffline: true,
+    autoHealing: true,
+  };
+}
+
+function saveLocalHostBotConfig(cfg) {
+  try {
+    localStorage.setItem('hap_local_bot_config', JSON.stringify(cfg));
+  } catch (e) {}
+}
+
 window.openNodeBotConfigModal = (preServerId) => {
   try {
     const modal = $('nodeBotConfigModal');
@@ -8158,20 +8185,25 @@ window.openNodeBotConfigModal = (preServerId) => {
     }
 
     // 读取并回填当前节点已配置的 botConfig
-    const server = targetId === 'local' ? null : cachedServers.find(s => s.id === targetId);
-    const botCfg = server?.botConfig || {
-      enabled: true,
-      agentId: server?.agentId || 'ops',
-      channel: 'feishu',
-      webhookUrl: '',
-      targetId: '',
-      secret: '',
-      alertOnHighCpu: true,
-      alertOnHighMem: true,
-      alertOnHighDisk: true,
-      alertOnOffline: true,
-      autoHealing: true,
-    };
+    let botCfg;
+    if (targetId === 'local') {
+      botCfg = getLocalHostBotConfig();
+    } else {
+      const server = cachedServers.find(s => s.id === targetId);
+      botCfg = server?.botConfig || {
+        enabled: true,
+        agentId: server?.agentId || 'ops',
+        channel: 'feishu',
+        webhookUrl: '',
+        targetId: '',
+        secret: '',
+        alertOnHighCpu: true,
+        alertOnHighMem: true,
+        alertOnHighDisk: true,
+        alertOnOffline: true,
+        autoHealing: true,
+      };
+    }
 
     if ($('nodeBotAgentSelect')) $('nodeBotAgentSelect').value = botCfg.agentId || 'ops';
     if ($('nodeBotChannelSelect')) {
@@ -8207,11 +8239,11 @@ window.saveNodeBotConfig = async (e) => {
   const webhookUrl = $('nodeBotWebhookUrl')?.value?.trim() || '';
   const targetId = $('nodeBotTargetId')?.value?.trim() || '';
   const secret = $('nodeBotSecret')?.value?.trim() || '';
-  const alertOnHighCpu = $('nodeBotAlertCpu')?.checked;
-  const alertOnHighMem = $('nodeBotAlertMem')?.checked;
-  const alertOnHighDisk = $('nodeBotAlertDisk')?.checked;
-  const alertOnOffline = $('nodeBotAlertOffline')?.checked;
-  const autoHealing = $('nodeBotAutoHealing')?.checked;
+  const alertOnHighCpu = $('nodeBotAlertCpu')?.checked ?? true;
+  const alertOnHighMem = $('nodeBotAlertMem')?.checked ?? true;
+  const alertOnHighDisk = $('nodeBotAlertDisk')?.checked ?? true;
+  const alertOnOffline = $('nodeBotAlertOffline')?.checked ?? true;
+  const autoHealing = $('nodeBotAutoHealing')?.checked ?? true;
 
   const botConfig = {
     enabled: true,
@@ -8227,23 +8259,30 @@ window.saveNodeBotConfig = async (e) => {
     autoHealing,
   };
 
-  if (serverId === 'local') {
-    showToast('已更新本机宿主系统的专属智能体与告警设置！', 'success');
-  } else {
-    const s = cachedServers.find(item => item.id === serverId);
-    if (s) {
-      await window.hap.upsertServer({
-        ...s,
-        agentId,
-        botConfig,
-      });
-      showToast(`服务器 [${s.name}] 专属机器人与告警策略已保存！`, 'success');
-      await renderServers();
+  try {
+    if (serverId === 'local') {
+      saveLocalHostBotConfig(botConfig);
+      showToast('已更新本机宿主系统的专属智能体与告警设置！', 'success');
+    } else {
+      const s = cachedServers.find(item => item.id === serverId);
+      if (s) {
+        await window.hap.upsertServer({
+          ...s,
+          agentId,
+          botConfig,
+        });
+        showToast(`服务器 [${s.name}] 专属机器人与告警策略已保存！`, 'success');
+        await renderServers();
+      }
     }
-  }
 
-  $('nodeBotConfigModal')?.close();
-  refreshHostView();
+    $('nodeBotConfigModal')?.close();
+    if (typeof refreshHostView === 'function') {
+      refreshHostView();
+    }
+  } catch (err) {
+    showToast('保存机器人设置失败: ' + err.message, 'error');
+  }
 };
 
 window.testNodeBotAlertModal = async () => {
@@ -8251,7 +8290,13 @@ window.testNodeBotAlertModal = async () => {
   const channel = $('nodeBotChannelSelect')?.value || 'feishu';
   const webhookUrl = $('nodeBotWebhookUrl')?.value?.trim() || '';
   const targetId = $('nodeBotTargetId')?.value?.trim() || '';
+  const secret = $('nodeBotSecret')?.value?.trim() || '';
   const agentId = $('nodeBotAgentSelect')?.value || 'ops';
+
+  if (!webhookUrl && channel !== 'telegram') {
+    showToast('请先填写 Webhook 地址后再进行测试', 'warn');
+    return;
+  }
 
   showToast('正在发送测试告警消息...', 'info');
   try {
@@ -8263,6 +8308,7 @@ window.testNodeBotAlertModal = async () => {
         channel,
         webhookUrl,
         targetId,
+        secret,
       },
     });
     if (res.ok) {
@@ -8277,16 +8323,21 @@ window.testNodeBotAlertModal = async () => {
 
 window.testNodeBotAlert = async () => {
   const targetId = activePanoramaTarget || 'local';
-  const s = targetId === 'local' ? null : cachedServers.find(item => item.id === targetId);
-  const botCfg = s?.botConfig || {
-    enabled: true,
-    agentId: s?.agentId || 'ops',
-    channel: 'feishu',
-    webhookUrl: '',
-  };
+  let botCfg;
+  if (targetId === 'local') {
+    botCfg = getLocalHostBotConfig();
+  } else {
+    const s = cachedServers.find(item => item.id === targetId);
+    botCfg = s?.botConfig || {
+      enabled: true,
+      agentId: s?.agentId || 'ops',
+      channel: 'feishu',
+      webhookUrl: '',
+    };
+  }
 
   if (!botCfg.webhookUrl && botCfg.channel !== 'telegram') {
-    showToast('当前节点尚未配置机器人 Webhook，请先点击「机器人设置」', 'info');
+    showToast('当前节点尚未配置机器人 Webhook，请先设置', 'info');
     window.openNodeBotConfigModal(targetId);
     return;
   }
@@ -8310,14 +8361,25 @@ window.testNodeBotAlert = async () => {
 window.chatWithNodeAgent = () => {
   const targetId = activePanoramaTarget || 'local';
   const s = targetId === 'local' ? null : cachedServers.find(item => item.id === targetId);
+  const prompt = targetId === 'local'
+    ? '请帮我全面巡检本机宿主系统的 CPU 拓扑、内存负载、全盘挂载与异常进程状态：'
+    : `请帮我巡检远程服务器 [${s?.name || targetId}] (${s?.host || ''}) 的系统健康状况与 Docker 服务：`;
+
   show('chat');
-  const textarea = $('composerTextarea');
-  if (textarea) {
-    textarea.value = targetId === 'local'
-      ? '请帮我巡检本机宿主系统的 CPU、内存与磁盘占用情况。'
-      : `请帮我巡检远程服务器 [${s?.name || targetId}] (${s?.host || ''}) 的系统健康状况与 Docker 服务。`;
-    textarea.focus();
+  const agentSelect = $('chatAgentSelect');
+  if (agentSelect) {
+    agentSelect.value = 'ops';
   }
+  const input = $('chatInput');
+  if (input) {
+    input.value = prompt;
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+    if (typeof updateComposerState === 'function') {
+      updateComposerState();
+    }
+  }
+  showToast(`已在会话中激活运维智能体 (Ops Agent) 并绑定节点 [${targetId === 'local' ? '本机宿主' : (s?.name || targetId)}]`, 'success');
 };
 
 
