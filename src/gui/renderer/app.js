@@ -1938,30 +1938,58 @@ function renderProviders() {
   const containers = [$('providerList'), $('providersTable')].filter(Boolean);
   if (containers.length === 0) return;
 
-  const html = state.providers.length === 0
-    ? `<div class="empty-card" style="padding:24px;text-align:center;color:var(--text-muted);font-size:12.5px;">暂无配置的服务商，点击右上角“+ 添加服务商”开始。</div>`
-    : state.providers.map((p) => `
-        <div class="card provider-card" style="margin-bottom:10px;padding:12px;background:#ffffff;border:1px solid var(--border-default);border-radius:8px;">
-          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+  if (state.providers.length === 0) {
+    const emptyHtml = `<div class="empty-card" style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">暂无配置的服务商，点击右上角“+ 添加 AI 服务商与模型”开始配置。</div>`;
+    containers.forEach(c => { c.innerHTML = emptyHtml; });
+    return;
+  }
+
+  const html = state.providers.map((p) => {
+    const models = (state.models || []).filter(m => (m.providerId || m.provider) === p.id);
+    const modelPills = models.length === 0
+      ? '<span style="font-size:11.5px;color:var(--text-muted);font-style:italic;">尚未添加任何模型，可点击右侧「🔄 获取模型」或「+ 添加模型」</span>'
+      : models.map(m => `
+          <span class="prop-chip" style="background:#f0f9ff;border:1px solid #bae6fd;color:#0369a1;padding:3px 8px;font-size:11.5px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;">
+            <span style="font-weight:600;">${esc(m.alias)}</span>
+            ${m.model && m.model !== m.alias ? `<span style="color:#64748b;font-size:10.5px;">(${esc(m.model)})</span>` : ''}
+            ${m.contextWindow ? `<span style="font-size:10px;background:#e0f2fe;padding:1px 4px;border-radius:4px;color:#0284c7;">${(m.contextWindow / 1024).toFixed(0)}k</span>` : ''}
+          </span>
+        `).join(' ');
+
+    return `
+      <div class="card provider-card" style="margin-bottom:14px;padding:14px;background:#ffffff;border:1px solid var(--border-default);border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+          <div>
             <div style="display:flex;align-items:center;gap:8px;">
-              <span style="font-weight:600;font-size:13.5px;color:var(--text-main);">${esc(p.name || p.id)}</span>
-              <span class="prop-chip" style="font-size:11px;">${esc(p.id)}</span>
+              <strong style="font-size:15px;color:var(--text-main);">${esc(p.name || p.id)}</strong>
+              <span class="prop-chip" style="font-size:11.5px;font-weight:600;">${esc(p.id)}</span>
+              <span class="badge ${p.hasCredential ? 'success' : 'warn'}" style="font-size:11px;">
+                ${p.hasCredential ? '凭据就绪' : '缺凭据'}
+              </span>
             </div>
-            <span class="badge ${p.hasCredential ? 'success' : 'warn'}" style="font-size:11px;">
-              ${p.hasCredential ? '凭据就绪' : '缺凭据'}
-            </span>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;word-break:break-all;font-family:var(--font-mono);">
+              URL: ${esc(p.baseUrl)} | 线制: ${esc(p.wireApi)} | 协议: ${esc(p.defaultProtocol || p.protocol || '默认')}
+            </div>
           </div>
-          <div style="font-size:11.5px;color:var(--text-secondary);margin-bottom:8px;word-break:break-all;">
-            URL：${esc(p.baseUrl)} | 线制：${esc(p.wireApi)} | 协议：${esc(p.defaultProtocol || p.protocol || '默认')}
-          </div>
-          <div style="display:flex;gap:6px;justify-content:flex-end;">
-            <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="openModelDialogWithProvider('${escJs(p.id)}')">添加模型</button>
-            <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="openProviderDialog('${escJs(p.id)}')">编辑</button>
-            <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="testProvider('${escJs(p.id)}')">测试</button>
-            <button type="button" class="btn danger" style="font-size:11.5px;padding:3px 8px;" onclick="deleteProvider('${escJs(p.id)}')">删除</button>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="window.fetchAndSyncModelsForProvider('${escJs(p.id)}')">🔄 获取模型</button>
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="openProviderDialog('${escJs(p.id)}')">编辑服务商及模型</button>
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="testProvider('${escJs(p.id)}')">测试</button>
+            <button type="button" class="btn danger" style="font-size:11.5px;padding:4px 10px;" onclick="deleteProvider('${escJs(p.id)}')">删除</button>
           </div>
         </div>
-      `).join('');
+
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid #f1f5f9;">
+          <div style="font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+            <span>包含的模型 (${models.length})：</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+            ${modelPills}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
 
   containers.forEach(c => { c.innerHTML = html; });
 }
@@ -2874,11 +2902,12 @@ window.openProviderDialog = (id) => {
   isApiKeyVisible = false;
   $('providerInputApiKey').type = 'password';
   $('toggleApiKeyVisibilityBtn').textContent = '显示明文';
+  if ($('remoteModelPoolBox')) $('remoteModelPoolBox').style.display = 'none';
 
   if (id) {
     const p = state.providers.find((item) => item.id === id);
     if (!p) return;
-    $('providerDialogTitle').textContent = `编辑服务商：${p.name || p.id}`;
+    $('providerDialogTitle').textContent = `编辑 AI 服务商及模型：${p.name || p.id}`;
     $('providerPresetRow').style.display = 'none';
     $('providerInputId').value = p.id;
     $('providerInputId').readOnly = true;
@@ -2890,13 +2919,19 @@ window.openProviderDialog = (id) => {
     $('providerInputProtocol').value = p.defaultProtocol || p.protocol || 'openai-tools';
     $('deleteProviderBtn').style.display = 'inline-block';
     $('testProviderBtn').style.display = 'inline-block';
+
+    currentDialogModels = (state.models || [])
+      .filter(m => (m.providerId || m.provider) === p.id)
+      .map(m => ({ alias: m.alias, model: m.model || m.modelName || m.alias, contextWindow: m.contextWindow || 64000 }));
   } else {
-    $('providerDialogTitle').textContent = '新增服务商';
+    $('providerDialogTitle').textContent = '新增 AI 服务商与模型';
     $('providerPresetRow').style.display = 'block';
     $('providerInputId').readOnly = false;
     $('deleteProviderBtn').style.display = 'none';
     $('testProviderBtn').style.display = 'none';
+    currentDialogModels = [];
   }
+  renderCurrentDialogModels();
   dialog.showModal();
 };
 
@@ -2904,10 +2939,12 @@ $('providerForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const form = e.currentTarget;
   const data = Object.fromEntries(new FormData(form));
+  const providerId = data.id.trim();
 
   try {
+    // 1. 保存服务商
     await window.hap.upsertProvider({
-      id: data.id.trim(),
+      id: providerId,
       name: data.name?.trim(),
       baseUrl: data.baseUrl.trim(),
       apiKey: data.apiKey?.trim() || undefined,
@@ -2915,11 +2952,22 @@ $('providerForm')?.addEventListener('submit', async (e) => {
       wireApi: data.wireApi,
       protocol: data.protocol,
     });
+
+    // 2. 同步保存该服务商名下的所有模型
+    for (const m of currentDialogModels) {
+      await window.hap.upsertModel({
+        alias: m.alias,
+        provider: providerId,
+        model: m.model || m.alias,
+        contextWindow: m.contextWindow || 64000,
+      }).catch(err => console.warn('保存模型警告:', err));
+    }
+
     $('providerDialog').close();
-    showToast(`服务商 ${data.id} 保存成功`, 'success');
+    showToast(`🎉 服务商 ${providerId} 与 ${currentDialogModels.length} 个模型已成功保存！`, 'success');
     await refresh();
   } catch (error) {
-    showToast('保存服务商失败：' + error.message, 'error');
+    showToast('保存失败：' + error.message, 'error');
   }
 });
 
@@ -4347,21 +4395,48 @@ async function loadHostIpGeo() {
   }
 }
 
-// AI 智能磁盘分析与安全清理
+// AI 智能全盘扫描与深度瘦身 (AI Smart Disk Scanner & Storage Analyzer)
 let currentDiskScanReport = null;
 
 async function handleScanDisk(server) {
+  const scanBtn = $('scanDiskBtn');
+  const progressBox = $('diskScanProgressBox');
+  const progressText = $('diskScanProgressText');
+  const emptyState = $('diskEmptyState');
+  const resultContainer = $('diskScanResultContainer');
+
   try {
-    showToast('正在扫描分析磁盘冗余垃圾与缓存...', 'info');
-    if ($('scanDiskBtn')) $('scanDiskBtn').disabled = true;
+    if (scanBtn) scanBtn.disabled = true;
+    if (emptyState) emptyState.style.display = 'none';
+    if (resultContainer) resultContainer.style.display = 'none';
+    if (progressBox) progressBox.style.display = 'block';
+
+    const steps = [
+      '⏳ 正在排查 npm / pnpm / pip / yarn 包管理器全局缓存...',
+      '⏳ 正在扫描工程构建残留 (dist, target, .next, __pycache__)...',
+      '⏳ 正在探测 Docker 悬空虚悬镜像与构建缓存...',
+      '⏳ 正在分析系统临时文件与崩溃转储日志...',
+      '🧠 AI 正在生成磁盘健康评分与智能诊断方案...',
+    ];
+
+    let stepIdx = 0;
+    const stepTimer = setInterval(() => {
+      stepIdx = (stepIdx + 1) % steps.length;
+      if (progressText) progressText.textContent = steps[stepIdx];
+    }, 450);
+
     const report = await window.hap.scanDiskCleanable(server);
+    clearInterval(stepTimer);
+
     currentDiskScanReport = report;
     renderDiskScanResult(report);
-    showToast(`扫描完成！发现 ${fmtHostBytes(report.totalCleanableBytes)} 可释放空间`, 'success');
+    showToast(`AI 智能体检完成！健康评分 ${report.healthScore || 90} 分，发现 ${fmtHostBytes(report.totalCleanableBytes)} 可释放空间`, 'success');
   } catch (err) {
-    showToast('磁盘扫描失败: ' + err.message, 'error');
+    showToast('AI 磁盘扫描失败: ' + err.message, 'error');
+    if (emptyState) emptyState.style.display = 'block';
   } finally {
-    if ($('scanDiskBtn')) $('scanDiskBtn').disabled = false;
+    if (progressBox) progressBox.style.display = 'none';
+    if (scanBtn) scanBtn.disabled = false;
   }
 }
 
@@ -4370,10 +4445,28 @@ function renderDiskScanResult(report) {
   if ($('diskEmptyState')) $('diskEmptyState').style.display = 'none';
   if ($('diskScanResultContainer')) $('diskScanResultContainer').style.display = 'block';
 
+  // 顶部徽章与操作按钮
   if ($('diskCleanableTotalBadge')) {
     $('diskCleanableTotalBadge').style.display = 'inline-flex';
-    $('diskCleanableTotalBadge').textContent = `可释放: ${fmtHostBytes(report.totalCleanableBytes)}`;
+    $('diskCleanableTotalBadge').textContent = `发现可释放: ${fmtHostBytes(report.totalCleanableBytes)}`;
   }
+  if ($('safeCleanDiskBtn')) $('safeCleanDiskBtn').style.display = report.safeCleanableBytes > 0 ? 'inline-block' : 'none';
+  if ($('allCleanDiskBtn')) $('allCleanDiskBtn').style.display = report.totalCleanableBytes > 0 ? 'inline-block' : 'none';
+
+  // AI 健康分与诊断建议
+  const score = report.healthScore ?? 95;
+  if ($('diskHealthScore')) {
+    $('diskHealthScore').textContent = score;
+    $('diskHealthScore').style.color = score >= 90 ? '#16a34a' : score >= 70 ? '#d97706' : '#dc2626';
+  }
+  if ($('diskHealthLevel')) {
+    $('diskHealthLevel').textContent = score >= 90 ? '🟢 空间充裕' : score >= 70 ? '🟡 建议优化' : '🔴 空间偏紧';
+    $('diskHealthLevel').className = `badge ${score >= 90 ? 'success' : score >= 70 ? 'warn' : 'danger'}`;
+  }
+  if ($('diskAiDiagnosisText')) {
+    $('diskAiDiagnosisText').textContent = report.aiDiagnosis || 'AI 体检完成，建议定期清理依赖包缓存以保持系统轻快。';
+  }
+
   if ($('diskSafeSize')) $('diskSafeSize').textContent = fmtHostBytes(report.safeCleanableBytes);
   if ($('diskReviewSize')) $('diskReviewSize').textContent = fmtHostBytes(report.reviewCleanableBytes);
 
@@ -4381,24 +4474,68 @@ function renderDiskScanResult(report) {
   if (!listEl) return;
 
   if (!report.items || report.items.length === 0) {
-    listEl.innerHTML = '<div style="color:#16a34a; font-weight:600; text-align:center; padding:16px;">🎉 磁盘非常干净，未发现冗余缓存垃圾！</div>';
+    listEl.innerHTML = '<div style="color:#16a34a; font-weight:600; text-align:center; padding:20px; background:#f8fafc; border-radius:8px; border:1px solid #bbf7d0;">🎉 宿主机磁盘非常干净，未发现冗余缓存垃圾！</div>';
+    updateDiskSelectedSummary();
     return;
   }
 
-  listEl.innerHTML = report.items.map(item => `
-    <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px 14px;">
-      <div style="display:flex; align-items:center; gap:10px;">
-        <span class="badge ${item.safety === 'safe' ? 'success' : 'warn'}">${item.safety === 'safe' ? '🟢 安全' : '🟡 确认'}</span>
-        <div>
-          <div style="font-weight:600; font-size:13.5px; color:var(--text-main);">${esc(item.name)}</div>
-          <div style="font-size:12px; color:var(--text-muted);">${esc(item.description)} <code style="font-size:11px;">(${esc(item.path)})</code></div>
+  const categoryIcons = {
+    package_cache: '📦',
+    build_artifact: '🏗️',
+    temp_logs: '📝',
+    docker_prune: '🐳',
+    ide_cache: '💻',
+    custom: '📁',
+  };
+
+  listEl.innerHTML = report.items.map((item, idx) => `
+    <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; transition:background 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'">
+      <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+        <input type="checkbox" class="disk-item-chk" data-id="${esc(item.id)}" data-size="${item.sizeBytes}" data-safety="${item.safety}" ${item.safety === 'safe' ? 'checked' : ''} style="width:16px; height:16px; cursor:pointer;" onchange="window.updateDiskSelectedSummary()" />
+        <span style="font-size:18px; flex-shrink:0;">${categoryIcons[item.category] || '📁'}</span>
+        <div style="min-width:0; overflow:hidden;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="badge ${item.safety === 'safe' ? 'success' : 'warn'}" style="font-size:11px;">${item.safety === 'safe' ? '🟢 安全' : '🟡 确认'}</span>
+            <strong style="font-size:13.5px; color:var(--text-main); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${esc(item.name)}</strong>
+          </div>
+          <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+            ${esc(item.description)} <code style="font-size:11px; color:#64748b;">(${esc(item.path)})</code>
+          </div>
         </div>
       </div>
-      <div style="font-size:14px; font-weight:700; color:var(--text-main); font-family:var(--font-mono);">
+      <div style="font-size:14px; font-weight:700; color:var(--text-main); font-family:var(--font-mono); flex-shrink:0; margin-left:12px;">
         ${fmtHostBytes(item.sizeBytes)}
       </div>
     </div>
   `).join('');
+
+  updateDiskSelectedSummary();
+}
+
+function updateDiskSelectedSummary() {
+  const checkboxes = document.querySelectorAll('.disk-item-chk');
+  let selectedCount = 0;
+  let selectedBytes = 0;
+
+  checkboxes.forEach(cb => {
+    if (cb.checked) {
+      selectedCount++;
+      selectedBytes += parseInt(cb.getAttribute('data-size') || '0', 10);
+    }
+  });
+
+  const summaryEl = $('diskSelectedSummary');
+  if (summaryEl) {
+    summaryEl.textContent = `已选择 ${selectedCount} 项 (共 ${fmtHostBytes(selectedBytes)})`;
+  }
+
+  const cleanSelectedBtn = $('cleanSelectedBtn');
+  if (cleanSelectedBtn) {
+    cleanSelectedBtn.disabled = selectedCount === 0;
+    cleanSelectedBtn.textContent = selectedCount > 0
+      ? `🚀 一键清理选中项 (${fmtHostBytes(selectedBytes)})`
+      : '🚀 一键清理选中项';
+  }
 }
 
 async function handleCleanDisk(type) {
@@ -4410,18 +4547,31 @@ async function handleCleanDisk(type) {
     return;
   }
 
-  const targetIds = type === 'all'
-    ? ['all']
-    : currentDiskScanReport.items.filter(i => i.safety === 'safe').map(i => i.id);
+  let targetIds = [];
+  if (type === 'all') {
+    targetIds = ['all'];
+  } else if (type === 'safe') {
+    targetIds = currentDiskScanReport.items.filter(i => i.safety === 'safe').map(i => i.id);
+  } else if (type === 'selected') {
+    const checked = Array.from(document.querySelectorAll('.disk-item-chk:checked'));
+    targetIds = checked.map(cb => cb.getAttribute('data-id')).filter(Boolean);
+  }
 
   if (targetIds.length === 0) {
-    showToast('未发现属于该级别的垃圾文件', 'info');
+    showToast('请先勾选需要清理的垃圾项', 'info');
     return;
   }
 
+  let expectedBytes = currentDiskScanReport.totalCleanableBytes;
+  if (type === 'safe') expectedBytes = currentDiskScanReport.safeCleanableBytes;
+  else if (type === 'selected') {
+    const checked = Array.from(document.querySelectorAll('.disk-item-chk:checked'));
+    expectedBytes = checked.reduce((sum, cb) => sum + parseInt(cb.getAttribute('data-size') || '0', 10), 0);
+  }
+
   const confirmMsg = type === 'all'
-    ? `确定全量清理全部可回收项 (含构建产物 dist/target，预计释放 ${fmtHostBytes(currentDiskScanReport.totalCleanableBytes)}) 吗？`
-    : `确定执行安全清理 (仅清理安全缓存与临时日志，预计释放 ${fmtHostBytes(currentDiskScanReport.safeCleanableBytes)}) 吗？`;
+    ? `确定全量清理全部可回收项 (含工程构建产物 dist/target，预计释放 ${fmtHostBytes(expectedBytes)}) 吗？`
+    : `确定执行清理 (共 ${targetIds.length} 项，预计释放 ${fmtHostBytes(expectedBytes)}) 吗？`;
 
   if (!confirm(confirmMsg)) return;
 
@@ -4431,7 +4581,7 @@ async function handleCleanDisk(type) {
       server: currentDiskScanReport.target === 'local' ? undefined : currentDiskScanReport.target,
       itemIds: targetIds,
     });
-    showToast(`清理成功！释放了 ${fmtHostBytes(result.cleanedBytes)} 空间！`, 'success');
+    showToast(`清理成功！已释放 ${fmtHostBytes(result.cleanedBytes)} 空间！`, 'success');
     await handleScanDisk();
     await window.refreshHostView();
   } catch (err) {
@@ -4439,18 +4589,60 @@ async function handleCleanDisk(type) {
   }
 }
 
-// 绑定全局事件
+// 咨询 AI 智能体制定磁盘瘦身计划
+function handleAskAiDiskPlan() {
+  if (!currentDiskScanReport) {
+    showToast('请先点击「⚡ 开始 AI 智能全盘体检」', 'info');
+    return;
+  }
+  const report = currentDiskScanReport;
+  const prompt = `帮我分析本机系统磁盘空间：当前 AI 健康评分 ${report.healthScore || 90} 分，可安全释放 ${fmtHostBytes(report.safeCleanableBytes)}，发现构建与镜像残留 ${fmtHostBytes(report.reviewCleanableBytes)}。请为我制定专业的磁盘瘦身与长期存储维护策略。`;
+
+  if (typeof window.switchView === 'function') {
+    window.switchView('chat');
+  }
+  const chatInput = $('chatInput') || $('messageInput') || $('promptInput');
+  if (chatInput) {
+    chatInput.value = prompt;
+    chatInput.focus();
+  }
+  showToast('已将磁盘体检报告填充至智能体对话框！', 'info');
+}
+
+// 绑定全局事件与选择器
 window.handleScanDisk = handleScanDisk;
 window.handleCleanDisk = handleCleanDisk;
+window.updateDiskSelectedSummary = updateDiskSelectedSummary;
+window.handleAskAiDiskPlan = handleAskAiDiskPlan;
+
 document.addEventListener('DOMContentLoaded', () => {
   $('scanDiskBtn')?.addEventListener('click', () => handleScanDisk());
   $('safeCleanDiskBtn')?.addEventListener('click', () => handleCleanDisk('safe'));
   $('allCleanDiskBtn')?.addEventListener('click', () => handleCleanDisk('all'));
+  $('cleanSelectedBtn')?.addEventListener('click', () => handleCleanDisk('selected'));
+  $('askAiDiskPlanBtn')?.addEventListener('click', () => handleAskAiDiskPlan());
+
+  $('diskSelectAllBtn')?.addEventListener('click', () => {
+    document.querySelectorAll('.disk-item-chk').forEach(cb => cb.checked = true);
+    updateDiskSelectedSummary();
+  });
+  $('diskSelectSafeBtn')?.addEventListener('click', () => {
+    document.querySelectorAll('.disk-item-chk').forEach(cb => {
+      cb.checked = cb.getAttribute('data-safety') === 'safe';
+    });
+    updateDiskSelectedSummary();
+  });
+  $('diskSelectNoneBtn')?.addEventListener('click', () => {
+    document.querySelectorAll('.disk-item-chk').forEach(cb => cb.checked = false);
+    updateDiskSelectedSummary();
+  });
+
   $('refreshHostBtn')?.addEventListener('click', async () => {
     await window.refreshHostView();
     showToast('本机系统全景状态已刷新！', 'info');
   });
 });
+
 
 // 5. 导航切换监听补充 (Host / Schedules / Memory)
 // ============================================================================
@@ -4804,3 +4996,113 @@ setInterval(async () => {
     // 静默容错
   }
 }, 2500);
+
+// ==========================================================================
+// AI 服务商与模型统一弹窗与在线拉取逻辑
+// ==========================================================================
+let currentDialogModels = [];
+
+function renderCurrentDialogModels() {
+  const container = $('currentProviderModelsList');
+  if (!container) return;
+  if (currentDialogModels.length === 0) {
+    container.innerHTML = '<span style="font-size:11.5px;color:#94a3b8;line-height:24px;">暂无添加模型，请点击上方「一键从服务商获取模型」或手动添加</span>';
+    return;
+  }
+  container.innerHTML = currentDialogModels.map((m, idx) => `
+    <span style="background:#e0f2fe;color:#0369a1;padding:3px 8px;border-radius:6px;font-size:12px;display:inline-flex;align-items:center;gap:6px;border:1px solid #bae6fd;">
+      <strong>${esc(m.alias)}</strong>
+      ${m.model && m.model !== m.alias ? `<span style="color:#64748b;font-size:11px;">(${esc(m.model)})</span>` : ''}
+      ${m.contextWindow ? `<span style="font-size:10px;background:#bae6fd;padding:1px 3px;border-radius:3px;">${(m.contextWindow/1024).toFixed(0)}k</span>` : ''}
+      <span style="cursor:pointer;font-weight:bold;margin-left:2px;color:#ef4444;" onclick="window.removeModelFromDialog(${idx})">×</span>
+    </span>
+  `).join('');
+}
+
+window.removeModelFromDialog = (index) => {
+  currentDialogModels.splice(index, 1);
+  renderCurrentDialogModels();
+};
+
+window.fetchAndSyncModelsForProvider = async (providerId) => {
+  openProviderDialog(providerId);
+  setTimeout(() => $('fetchRemoteModelsInDialogBtn')?.click(), 100);
+};
+
+// 弹窗内部拉取模型
+$('fetchRemoteModelsInDialogBtn')?.addEventListener('click', async () => {
+  const id = $('providerInputId')?.value.trim();
+  const baseUrl = $('providerInputBaseUrl')?.value.trim();
+  const apiKey = $('providerInputApiKey')?.value.trim();
+  const wireApi = $('providerInputWireApi')?.value;
+  const protocol = $('providerInputProtocol')?.value;
+
+  if (!baseUrl) {
+    showToast('请先填写 API 基础地址 (Base URL)', 'warning');
+    return;
+  }
+
+  const btnText = $('fetchRemoteBtnTextInDialog');
+  if (btnText) btnText.textContent = '正在获取云端模型...';
+
+  try {
+    const res = await window.hap.fetchProviderModels(id || 'temp', { baseUrl, apiKey, wireApi, protocol });
+    if (res.ok && res.models && res.models.length > 0) {
+      showToast(`成功获取到 ${res.models.length} 个可用模型！`, 'success');
+      const poolBox = $('remoteModelPoolBox');
+      const chipsBox = $('remoteModelChips');
+      if (poolBox && chipsBox) {
+        poolBox.style.display = 'block';
+        chipsBox.innerHTML = res.models.map(name => `
+          <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="window.addModelToDialogFromRemote('${escJs(name)}')">+ ${esc(name)}</button>
+        `).join('');
+
+        $('addAllRemoteModelsBtn').onclick = () => {
+          res.models.forEach(name => {
+            if (!currentDialogModels.some(m => m.model === name || m.alias === name)) {
+              currentDialogModels.push({ alias: name.split('/').pop(), model: name, contextWindow: 64000 });
+            }
+          });
+          renderCurrentDialogModels();
+          poolBox.style.display = 'none';
+          showToast(`已批量添加 ${res.models.length} 个模型`, 'success');
+        };
+      }
+    } else {
+      showToast('获取失败：' + (res.error || '该服务商未开放标准 /v1/models 模型查询接口，可直接手动填入模型'), 'error');
+    }
+  } catch (err) {
+    showToast('拉取异常：' + err.message, 'error');
+  } finally {
+    if (btnText) btnText.textContent = '一键从服务商获取模型';
+  }
+});
+
+window.addModelToDialogFromRemote = (name) => {
+  if (!currentDialogModels.some(m => m.model === name || m.alias === name)) {
+    currentDialogModels.push({ alias: name.split('/').pop(), model: name, contextWindow: 64000 });
+    renderCurrentDialogModels();
+    showToast(`已添加模型 ${name}`, 'info');
+  }
+};
+
+// 手动添加模型条
+$('addManualModelBtn')?.addEventListener('click', () => {
+  const nameInput = $('manualModelNameInput');
+  const aliasInput = $('manualModelAliasInput');
+  const contextInput = $('manualModelContextInput');
+  const model = nameInput?.value.trim();
+  if (!model) {
+    showToast('请填写模型名称（如 deepseek-chat）', 'warning');
+    return;
+  }
+  const alias = aliasInput?.value.trim() || model.split('/').pop() || model;
+  const contextWindow = parseInt(contextInput?.value, 10) || 64000;
+
+  currentDialogModels.push({ alias, model, contextWindow });
+  renderCurrentDialogModels();
+  if (nameInput) nameInput.value = '';
+  if (aliasInput) aliasInput.value = '';
+  if (contextInput) contextInput.value = '';
+  showToast(`已添加模型 ${alias}`, 'success');
+});

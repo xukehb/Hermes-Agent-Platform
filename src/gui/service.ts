@@ -2297,6 +2297,8 @@ export class GuiService {
         totalCleanableBytes: 1024 * 1024 * 350,
         safeCleanableBytes: 1024 * 1024 * 200,
         reviewCleanableBytes: 1024 * 1024 * 150,
+        healthScore: 88,
+        aiDiagnosis: '远程 Linux 宿主运行良好，建议清理过期系统日志与临时缓存文件',
         items: [
           {
             id: 'remote_logs',

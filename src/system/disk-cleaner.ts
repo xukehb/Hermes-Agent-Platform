@@ -2,13 +2,13 @@ import { existsSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { execa } from 'execa';
-import { formatBytes } from './host-info.js';
+import { formatBytes, getHostSystemInfo } from './host-info.js';
 
 export type CleanSafetyLevel = 'safe' | 'review' | 'dangerous';
 
 export interface CleanableItem {
   id: string;
-  category: 'package_cache' | 'build_artifact' | 'temp_logs' | 'docker_prune' | 'custom';
+  category: 'package_cache' | 'build_artifact' | 'temp_logs' | 'docker_prune' | 'ide_cache' | 'custom';
   name: string;
   path: string;
   description: string;
@@ -22,6 +22,8 @@ export interface DiskScanReport {
   totalCleanableBytes: number;
   safeCleanableBytes: number;
   reviewCleanableBytes: number;
+  healthScore: number;
+  aiDiagnosis: string;
   items: CleanableItem[];
   scannedAt: number;
 }
@@ -79,6 +81,7 @@ export async function scanLocalDisk(options: { workspace?: string; extraProjects
   const tmp = tmpdir();
 
   // 1. 包管理器缓存 (Safe)
+  // npm
   const npmCache = process.platform === 'win32'
     ? join(home, 'AppData', 'Local', 'npm-cache')
     : join(home, '.npm');
@@ -98,6 +101,7 @@ export async function scanLocalDisk(options: { workspace?: string; extraProjects
     }
   }
 
+  // pnpm
   const pnpmCache = process.platform === 'win32'
     ? join(home, 'AppData', 'Local', 'pnpm-cache')
     : join(home, '.cache', 'pnpm');
@@ -107,7 +111,7 @@ export async function scanLocalDisk(options: { workspace?: string; extraProjects
       items.push({
         id: 'pnpm_cache',
         category: 'package_cache',
-        name: 'pnpm 全局缓存',
+        name: 'pnpm 全局包缓存',
         path: pnpmCache,
         description: 'pnpm 下载与硬链接缓存',
         sizeBytes: size,
@@ -117,6 +121,27 @@ export async function scanLocalDisk(options: { workspace?: string; extraProjects
     }
   }
 
+  // yarn
+  const yarnCache = process.platform === 'win32'
+    ? join(home, 'AppData', 'Local', 'Yarn', 'Cache')
+    : join(home, '.cache', 'yarn');
+  if (existsSync(yarnCache)) {
+    const size = getPathSizeBytes(yarnCache);
+    if (size > 1024 * 1024) {
+      items.push({
+        id: 'yarn_cache',
+        category: 'package_cache',
+        name: 'Yarn 依赖缓存',
+        path: yarnCache,
+        description: 'Yarn v1/v2 下载的依赖包压缩包',
+        sizeBytes: size,
+        safety: 'safe',
+        type: 'dir',
+      });
+    }
+  }
+
+  // pip
   const pipCache = process.platform === 'win32'
     ? join(home, 'AppData', 'Local', 'pip', 'cache')
     : join(home, '.cache', 'pip');
@@ -129,6 +154,24 @@ export async function scanLocalDisk(options: { workspace?: string; extraProjects
         name: 'pip Python 依赖缓存',
         path: pipCache,
         description: 'Python wheel 与源码包下载缓存',
+        sizeBytes: size,
+        safety: 'safe',
+        type: 'dir',
+      });
+    }
+  }
+
+  // Rust Cargo cache
+  const cargoCache = join(home, '.cargo', 'registry', 'cache');
+  if (existsSync(cargoCache)) {
+    const size = getPathSizeBytes(cargoCache);
+    if (size > 1024 * 1024) {
+      items.push({
+        id: 'cargo_cache',
+        category: 'package_cache',
+        name: 'Cargo Rust Crates 依赖包缓存',
+        path: cargoCache,
+        description: 'Rust cargo 下载的 crates.io 离线压缩包',
         sizeBytes: size,
         safety: 'safe',
         type: 'dir',
@@ -151,6 +194,26 @@ export async function scanLocalDisk(options: { workspace?: string; extraProjects
         safety: 'safe',
         type: 'dir',
       });
+    }
+  }
+
+  // Windows CrashDumps
+  if (process.platform === 'win32') {
+    const crashDumps = join(home, 'AppData', 'Local', 'CrashDumps');
+    if (existsSync(crashDumps)) {
+      const size = getPathSizeBytes(crashDumps);
+      if (size > 1024 * 1024) {
+        items.push({
+          id: 'win_crash_dumps',
+          category: 'temp_logs',
+          name: 'Windows 进程崩溃转储 (.dmp)',
+          path: crashDumps,
+          description: '系统和应用程序历史崩溃内存转储文件',
+          sizeBytes: size,
+          safety: 'safe',
+          type: 'dir',
+        });
+      }
     }
   }
 
@@ -213,11 +276,39 @@ export async function scanLocalDisk(options: { workspace?: string; extraProjects
     if (item.safety === 'review') totalReview += item.sizeBytes;
   }
 
+  // 计算健康评分与 AI 智能诊断
+  let healthScore = 95;
+  try {
+    const host = getHostSystemInfo();
+    const mainDisk = host.disk;
+    if (mainDisk && mainDisk.totalBytes > 0) {
+      const usedPct = mainDisk.usedPercent;
+      if (usedPct > 90) healthScore -= 35;
+      else if (usedPct > 80) healthScore -= 20;
+      else if (usedPct > 70) healthScore -= 10;
+    }
+  } catch {}
+
+  if (totalAll > 1024 * 1024 * 1024 * 5) healthScore -= 20;
+  else if (totalAll > 1024 * 1024 * 1024 * 1) healthScore -= 10;
+  healthScore = Math.max(20, Math.min(100, healthScore));
+
+  let aiDiagnosis = '';
+  if (healthScore >= 90) {
+    aiDiagnosis = `✨ 宿主系统磁盘整体状态非常健康（评分 ${healthScore} 分），仅发现 ${formatBytes(totalAll)} 冗余包缓存与临时日志，可随时执行一键安全瘦身。`;
+  } else if (healthScore >= 70) {
+    aiDiagnosis = `⚡ 系统磁盘状态良好（评分 ${healthScore} 分）。建议清理 ${formatBytes(totalSafe)} 安全依赖包缓存及历史编译产物，释放宝贵可用空间。`;
+  } else {
+    aiDiagnosis = `🚨 警告：系统驱动盘空间偏紧（评分 ${healthScore} 分）！AI 诊断建议优先清理 ${formatBytes(totalSafe)} 包管理器与临时缓存，并回收工程构建产物 (dist/target)，预防磁盘写满引发构建失败。`;
+  }
+
   return {
     target: 'local',
     totalCleanableBytes: totalAll,
     safeCleanableBytes: totalSafe,
     reviewCleanableBytes: totalReview,
+    healthScore,
+    aiDiagnosis,
     items,
     scannedAt: Date.now(),
   };

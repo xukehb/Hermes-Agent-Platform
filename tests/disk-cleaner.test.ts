@@ -27,6 +27,10 @@ describe('Smart Disk Cleaner Engine', () => {
     expect(Array.isArray(report.items)).toBe(true);
     expect(typeof report.totalCleanableBytes).toBe('number');
     expect(typeof report.safeCleanableBytes).toBe('number');
+    expect(typeof report.healthScore).toBe('number');
+    expect(report.healthScore).toBeGreaterThanOrEqual(0);
+    expect(typeof report.aiDiagnosis).toBe('string');
+    expect(report.aiDiagnosis.length).toBeGreaterThan(5);
   });
 
   it('diskCleanupTool executes dryRun successfully with markdown report', async () => {
@@ -59,6 +63,8 @@ describe('Smart Disk Cleaner Engine', () => {
           type: 'dir' as const,
         },
       ],
+      healthScore: 95,
+      aiDiagnosis: '系统运行良好',
       scannedAt: Date.now(),
     };
 

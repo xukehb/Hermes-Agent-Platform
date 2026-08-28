@@ -61,8 +61,11 @@ export function registerCleanCommands(root: Command, globals: () => GlobalOption
       if (isDryRun) {
         const lines = [
           `\n🧹 ════════════════════════════════════════════════════════════════════`,
-          `   CodexConnect 本地宿主机磁盘体检报告 (Dry-Run 扫描模式)`,
+          `   CodexConnect 本地宿主机 AI 智能磁盘体检报告 (Dry-Run 模式)`,
           `════════════════════════════════════════════════════════════════════`,
+          `   AI 健康评分:    ${report.healthScore} 分 (${report.healthScore >= 90 ? '🟢 空间充裕' : report.healthScore >= 70 ? '🟡 建议优化' : '🔴 空间偏紧'})`,
+          `   AI 智能诊断:    ${report.aiDiagnosis}`,
+          `────────────────────────────────────────────────────────────────────`,
           `   可释放空间总计:  ${formatBytes(report.totalCleanableBytes)}`,
           `   - 🟢 安全可清:   ${formatBytes(report.safeCleanableBytes)} (包管理缓存、旧日志、临时文件)`,
           `   - 🟡 建议确认:   ${formatBytes(report.reviewCleanableBytes)} (工程构建产物、Docker 悬空镜像)`,
