@@ -5782,13 +5782,9 @@ $('marketSearchInput')?.addEventListener('input', (e) => {
   renderMarket(e.target.value);
 });
 
-function renderSkills() {
-  renderMarket();
-}
-
-function renderPlugins() {
-  renderMarket();
-}
+// Market aliases
+window.renderSkillsMarket = () => renderMarket();
+window.renderPluginsMarket = () => renderMarket();
 
 // 预设 MCP 市场对话框
 function renderPresetMcpModal() {
