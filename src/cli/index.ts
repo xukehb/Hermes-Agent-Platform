@@ -15,10 +15,12 @@ import { orDash, renderPairs, renderTable, yesNo } from './render.js';
 import { registerProviderCommands } from './provider-commands.js';
 import { registerModelCommands } from './model-commands.js';
 import { registerAgentCommands } from './agent-commands.js';
+import { registerServerCommands } from './server-commands.js';
 import { ChannelManager, CliChannel, createChannelHost, describeError, renderStatus, renderTrace, renderUsage } from '../channels/index.js';
 import { ProviderRegistry } from '../providers/index.js';
 import type { TaskEvent } from '../agent/index.js';
 import { HapError } from '../domain/index.js';
+import { launchWithInjection, planInjection, targetCommand, writeInjection, type InjectionTarget } from '../inject/index.js';
 
 const VERSION = '0.1.0';
 
@@ -43,9 +45,11 @@ export function buildProgram(): Command {
   registerChat(program, globals);
   registerConfig(program, globals);
   registerOps(program, globals);
+  registerInject(program, globals);
   registerProviderCommands(program, globals);
   registerModelCommands(program, globals);
   registerAgentCommands(program, globals);
+  registerServerCommands(program, globals);
 
   return program;
 }
@@ -72,7 +76,64 @@ function registerInit(program: Command, globals: () => GlobalOptions): void {
     });
 }
 
-// ── serve ──
+function registerInject(program: Command, globals: () => GlobalOptions): void {
+  const inject = program.command('inject').description('把 HAP 模型注入 Codex、Claude、Gemini 或 Grok');
+  inject
+    .command('plan <target>')
+    .description('预览目标客户端配置与环境变量映射')
+    .requiredOption('-m, --model <provider/model>', 'HAP 模型全名，如 anthropic/claude-sonnet-4-5')
+    .action((target: string, options: { model: string }) => {
+      const ctx = new CliContext(globals());
+      const plan = makeInjectionPlan(ctx, target, options.model);
+      emit(ctx, renderPairs([
+        ['目标', plan.target],
+        ['模型', plan.model],
+        ['Base URL', plan.baseUrl],
+        ['配置文件', plan.configPath],
+        ['凭据环境变量', plan.apiKeyEnv ?? '无'],
+        ['注入环境变量', Object.keys(plan.environment).join(', ') || '无'],
+      ]), plan);
+    });
+  inject
+    .command('sync <target>')
+    .description('写入目标客户端配置文件')
+    .requiredOption('-m, --model <provider/model>', 'HAP 模型全名')
+    .action((target: string, options: { model: string }) => {
+      const ctx = new CliContext(globals());
+      const plan = makeInjectionPlan(ctx, target, options.model);
+      writeInjection(plan);
+      emit(ctx, '✓ 已将 ' + plan.model + ' 写入 ' + plan.configPath, plan);
+    });
+  inject
+    .command('run <target> [args...]')
+    .description('临时注入环境变量并启动目标 CLI，不修改配置文件')
+    .requiredOption('-m, --model <provider/model>', 'HAP 模型全名')
+    .action(async (target: string, args: string[], options: { model: string }) => {
+      const ctx = new CliContext(globals());
+      const plan = makeInjectionPlan(ctx, target, options.model);
+      const code = await launchWithInjection(plan, targetCommand(plan.target), args ?? []);
+      process.exitCode = code;
+      await ctx.close();
+    });
+}
+
+function makeInjectionPlan(ctx: CliContext, target: string, fullName: string) {
+  const allowed: InjectionTarget[] = ['codex', 'claude', 'gemini', 'grok', 'openclaw'];
+  if (!allowed.includes(target as InjectionTarget)) {
+    fail('未知注入目标 ' + target + '，可选：' + allowed.join(' | '));
+  }
+  const resolved = [...ctx.resolver().resolveModels().values()].find((item) => item.fullName === fullName || item.alias === fullName);
+  if (resolved === undefined) {
+    fail('找不到模型 ' + fullName + '，请先执行 hap model list');
+  }
+  const provider = ctx.resolver().resolveProviders().get(resolved.providerId);
+  if (provider === undefined) {
+    fail('模型 ' + fullName + ' 的服务商不存在：' + resolved.providerId);
+  }
+  return planInjection({ target: target as InjectionTarget, model: resolved, provider, env: process.env });
+}
+
+
 
 function registerServe(program: Command, globals: () => GlobalOptions): void {
   program
@@ -532,7 +593,8 @@ interface DoctorReport {
  */
 export async function main(argv: readonly string[] = process.argv): Promise<void> {
   try {
-    await buildProgram().parseAsync([...argv]);
+    const args = argv.length <= 2 ? [...argv, '--help'] : [...argv];
+    await buildProgram().parseAsync(args);
   } catch (error) {
     if (error instanceof CliExit) {
       return;

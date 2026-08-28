@@ -214,6 +214,36 @@ polling 适合本地和内网，开箱即用；webhook 适合有公网域名的�
 
 直接发消息即下发任务。`@researcher 查一下 TOML 1.0 的日期类型` 这样以 `@智能体id` 开头就能定向派活，不写则用 `default_agent`。长任务会先回一条占位消息，随后按 `edit_interval_ms` 节流地编辑同一条消息推进度；超过 `async_threshold_ms` 的任务转为异步模式，完成后再推终态。
 
+## 手机端：微信与企业微信 (WeChat / WeCom)
+
+平台原生支持三种微信接入模式：**个人微信扫码登录**、**企业微信（WeCom）机器人与自建应用**、**微信公众号**。
+
+```toml
+[channels.wechat]
+enabled = true
+mode = "personal"             # 可选 "personal" | "wecom" | "official_account"
+default_agent = "coder"
+mention_patterns = ["@hap"]
+message_char_limit = 2048
+auth_dir = "~/.hap/wechat-auth"
+qr_log = true                 # 启动时是否在终端打印扫码二维码
+
+# 企业微信 WeCom 模式可选配置
+[channels.wechat.wecom]
+corp_id = "ww1234567890abcdef"
+corp_secret_env = "WECHAT_WECOM_CORP_SECRET"
+agent_id = 1000002
+token = "your_wecom_token"
+encoding_aes_key = "your_encoding_aes_key"
+webhook_url_env = "WECHAT_WECOM_WEBHOOK_URL"
+bind = "0.0.0.0:8789"
+path = "/wecom"
+```
+
+### 使用方式：
+1. **个人微信扫码**：执行 `hap serve` 或在 GUI 控制台点选「微信 / 企微连接」→「启动微信服务」，使用手机微信扫码一次，凭据自动持久化，支持私聊指令与群聊 `@hap` 指令。
+2. **企业微信 WeCom**：在企业微信后台配置应用或群机器人 Webhook，支持富文本 Markdown 进度与代码输出，企业级稳定免封号。
+
 ## HTTP 通道
 
 ```toml

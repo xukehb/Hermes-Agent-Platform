@@ -9,3 +9,5 @@ coverage/
 .env
 .env.*
 !.env.example
+.dbg/
+.codex/
