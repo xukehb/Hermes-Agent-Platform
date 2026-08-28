@@ -19,6 +19,20 @@ export interface RemoteSystemInfo {
   timestamp: number;
 }
 
+export interface ServerBotConfig {
+  enabled: boolean;
+  agentId: string; // 绑定的专属智能体角色 (如 'ops', 'coder')
+  channel: 'feishu' | 'wechat' | 'qq' | 'telegram' | 'webhook'; // 告警机器人通道类型
+  webhookUrl?: string; // Webhook 地址
+  targetId?: string; // 群号 / Chat ID / 接收人
+  secret?: string; // 签名密钥 (如飞书安全秘钥)
+  alertOnHighCpu?: boolean; // CPU > 85% 告警
+  alertOnHighMem?: boolean; // 内存 > 90% 告警
+  alertOnHighDisk?: boolean; // 磁盘 > 85% 告警
+  alertOnOffline?: boolean; // 节点离线告警
+  autoHealing?: boolean; // 异常时自动唤醒 Agent 自愈
+}
+
 export interface RemoteServerConfig {
   id: string;
   name: string;
@@ -37,6 +51,7 @@ export interface RemoteServerConfig {
   // Dedicated Ops Agent & Bound Bot
   agentId?: string | undefined; // e.g. 'ops', 'coder'
   boundBotId?: string | undefined; // 绑定的专属机器人实例 ID
+  botConfig?: ServerBotConfig | undefined; // 节点专属机器人与告警策略配置
 
   // Runtime status
   status: 'online' | 'offline' | 'installing' | 'error' | 'uninstalled';

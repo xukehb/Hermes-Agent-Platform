@@ -62,6 +62,8 @@ export class RemoteServerStore {
       daemonPort: config.daemonPort || 9527,
       token: config.token,
       agentId: config.agentId || (existing?.agentId || 'ops'),
+      boundBotId: config.boundBotId ?? existing?.boundBotId,
+      botConfig: config.botConfig ?? existing?.botConfig,
       status: config.status || 'uninstalled',
       lastConnectedAt: config.lastConnectedAt,
       lastError: config.lastError,

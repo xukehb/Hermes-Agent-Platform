@@ -41,6 +41,19 @@ function formatFileSize(bytes) {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
+function formatHostUptime(seconds) {
+  if (!seconds || isNaN(seconds) || seconds <= 0) return '刚刚启动';
+  const sec = Math.floor(seconds);
+  const d = Math.floor(sec / 86400);
+  const h = Math.floor((sec % 86400) / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (d > 0) return `${d}天 ${h}小时 ${m}分`;
+  if (h > 0) return `${h}小时 ${m}分 ${s}秒`;
+  if (m > 0) return `${m}分 ${s}秒`;
+  return `${s}秒`;
+}
+
 function showToast(message, type = 'info') {
   // 智能查找当前处于开启状态的顶层模态框
   const openDialogs = document.querySelectorAll('dialog[open]');
