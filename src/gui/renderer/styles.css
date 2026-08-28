@@ -4,7 +4,7 @@
    - 可折叠能力分组导航、极简面包屑 Header、优雅悬浮输入岛
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+/* Using local high-performance font stacks */
 
 
 :root {
@@ -3661,3 +3661,19 @@ dialog .toast-container.in-dialog {
 .eco-status-dot.inactive {
   background: #94a3b8;
 }
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+@media (max-width: 768px) {
+  .image-studio-split {
+    grid-template-columns: 1fr !important;
+  }
+}
+

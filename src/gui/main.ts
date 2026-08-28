@@ -36,8 +36,14 @@ function registerIpc(): void {
   ipcMain.handle('gui:openInVsCode', (_event, path) => invoke(() => service.openInVsCode(path)));
   ipcMain.handle('gui:openInExplorer', (_event, path) => invoke(() => service.openInExplorer(path)));
   ipcMain.handle('gui:openInTerminal', (_event, path) => invoke(() => service.openInTerminal(path)));
-  ipcMain.handle('gui:testProvider', (_event, id) => invoke(() => service.testProvider(id)));
+  ipcMain.handle('gui:testProvider', (_event, idOrConfig) => invoke(() => service.testProvider(idOrConfig)));
   ipcMain.handle('gui:fetchProviderModels', (_event, payload) => invoke(() => service.fetchProviderModels(payload.providerId, payload.options)));
+  ipcMain.handle('gui:getProviderApiKey', (_event, providerId) => invoke(() => service.getProviderApiKey(providerId)));
+  ipcMain.handle('gui:getEnvVars', () => invoke(() => service.getEnvVars()));
+  ipcMain.handle('gui:saveEnvVar', (_event, input) => invoke(() => service.saveEnvVar(input)));
+  ipcMain.handle('gui:deleteEnvVar', (_event, key) => invoke(() => service.deleteEnvVar(key)));
+  ipcMain.handle('gui:batchSaveEnvVars', (_event, entries) => invoke(() => service.batchSaveEnvVars(entries)));
+  ipcMain.handle('gui:generateImage', (_event, payload) => invoke(() => service.generateImage(payload)));
   ipcMain.handle('gui:listSkills', () => invoke(() => service.listSkills()));
   ipcMain.handle('gui:installSkill', (_event, repoUrl) => invoke(() => service.installSkill(repoUrl)));
   ipcMain.handle('gui:toggleSkill', (_event, payload) => invoke(() => service.toggleSkill(payload.id, payload.enabled)));
@@ -97,7 +103,11 @@ function registerIpc(): void {
   ipcMain.handle('gui:getChannelMessages', (_event, contactId, channel) => invoke(() => service.getChannelMessages(contactId, channel)));
   ipcMain.handle('gui:upsertChannelContact', (_event, input) => invoke(() => service.upsertChannelContact(input)));
   ipcMain.handle('gui:removeChannelContact', (_event, id, channel) => invoke(() => service.removeChannelContact(id, channel)));
-  ipcMain.handle('gui:sendChannelMessage', (_event, payload) => invoke(() => service.sendChannelMessage(payload)));
+  ipcMain.handle('gui:listBots', () => invoke(() => service.listBots()));
+  ipcMain.handle('gui:upsertBot', (_event, bot) => invoke(() => service.upsertBot(bot)));
+  ipcMain.handle('gui:deleteBot', (_event, id) => invoke(() => service.deleteBot(id)));
+  ipcMain.handle('gui:toggleBotStatus', (_event, id, enabled) => invoke(() => service.toggleBotStatus(id, enabled)));
+  ipcMain.handle('gui:testBotConnection', (_event, bot) => invoke(() => service.testBotConnection(bot)));
   ipcMain.handle('gui:listServers', () => invoke(() => service.listServers()));
   ipcMain.handle('gui:upsertServer', (_event, input) => invoke(() => service.upsertServer(input)));
   ipcMain.handle('gui:removeServer', (_event, id) => invoke(() => service.removeServer(id)));

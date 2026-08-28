@@ -15,12 +15,41 @@
  * 日期：2026-08-24  执行者：Codex
  */
 
+import { existsSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { ConfigError } from '../domain/index.js';
 import type { ProviderCheckResult, ProviderClient } from '../domain/index.js';
 import type { ResolvedProvider } from '../config/resolved.js';
 import { AnthropicClient } from './anthropic.js';
 import { GateRegistry, GatedProviderClient } from './gate.js';
 import { OpenAiCompatibleClient } from './openai-compatible.js';
+
+/** 从本地 JSON 凭据持久化文件读取已保存的 API Key 凭据 */
+function loadLocalJsonEnv(): Record<string, string> {
+  const map: Record<string, string> = {};
+  try {
+    const candidates = [
+      join(homedir(), '.hap', 'gui', 'env.json'),
+      join(homedir(), '.hap', 'credentials.json'),
+      join(homedir(), '.hap', 'env.json'),
+    ];
+    for (const p of candidates) {
+      if (existsSync(p)) {
+        const text = readFileSync(p, 'utf-8');
+        const json = JSON.parse(text) as Record<string, unknown>;
+        for (const [k, v] of Object.entries(json)) {
+          if (typeof v === 'string' && v.trim() !== '') {
+            map[k] = v.trim();
+          }
+        }
+      }
+    }
+  } catch {
+    // 忽略异常
+  }
+  return map;
+}
 
 /** 环境变量视图。测试一律传自造对象，不透传 process.env。 */
 export type EnvLike = Record<string, string | undefined>;
@@ -51,11 +80,11 @@ export interface ProviderRegistryOptions {
 }
 
 export class ProviderRegistry {
+  private providers: Map<string, ResolvedProvider>;
   private readonly env: EnvLike;
   private readonly gates: GateRegistry | undefined;
   private readonly factory: ProviderFactory;
   private readonly clients = new Map<string, ProviderClient>();
-  private providers: Map<string, ResolvedProvider>;
 
   constructor(providers: Map<string, ResolvedProvider>, options: ProviderRegistryOptions = {}) {
     this.providers = providers;
@@ -64,16 +93,18 @@ export class ProviderRegistry {
     this.factory = options.factory ?? defaultProviderFactory;
   }
 
-  /** 已配置的提供商 id，按字典序。 */
   get ids(): string[] {
-    return [...this.providers.keys()].sort((left, right) => left.localeCompare(right));
+    return Array.from(this.providers.keys());
   }
 
   has(id: string): boolean {
     return this.providers.has(id);
   }
 
-  /** 取提供商定义；缺失时报可操作错误而不是返回 undefined 让调用点各自处理。 */
+  get(id: string): ResolvedProvider | undefined {
+    return this.providers.get(id);
+  }
+
   provider(id: string): ResolvedProvider {
     const provider = this.providers.get(id);
     if (provider === undefined) {
@@ -85,47 +116,55 @@ export class ProviderRegistry {
     return provider;
   }
 
-  /** 取客户端。同 id 复用；套闸门（若提供 gates）。 */
   client(id: string): ProviderClient {
     const cached = this.clients.get(id);
-    if (cached !== undefined) return cached;
+    if (cached !== undefined) {
+      return cached;
+    }
     const provider = this.provider(id);
-    const created = this.factory({ provider, apiKey: this.credential(provider), headers: this.resolveHeaders(provider) });
-    const wrapped = this.gates === undefined ? created : new GatedProviderClient(created, this.gates.gate(id));
+    const apiKey = this.credential(provider);
+    const headers = this.resolveHeaders(provider);
+    const rawClient = this.factory({ provider, apiKey, headers });
+    const wrapped = this.gates === undefined ? rawClient : new GatedProviderClient(rawClient, this.gates.gate(id));
     this.clients.set(id, wrapped);
     return wrapped;
   }
 
   /**
-   * 读取凭据。env_key 缺省表示该端点无需凭据（本地 Ollama）；
-   * 配了 env_key 但环境变量为空则立即报错，附上变量名便于修复（FR-PROV-003）。
+   * 读取凭据。优先匹配内存/系统环境，其次匹配本地 JSON 凭据中心；
+   * env_key 缺省表示该端点无需凭据（本地 Ollama）；
    */
   credential(provider: ResolvedProvider): string | undefined {
     const envKey = provider.envKey;
     if (envKey === undefined) return undefined;
-    const value = this.env[envKey];
+    const jsonEnv = loadLocalJsonEnv();
+    const value = this.env[envKey] || jsonEnv[envKey] || (provider.id ? this.env[`${provider.id.toUpperCase()}_API_KEY`] || jsonEnv[`${provider.id.toUpperCase()}_API_KEY`] : undefined);
     if (value === undefined || value.trim() === '') {
-      throw new ConfigError('CONFIG_ENV_MISSING', '提供商 ' + provider.id + ' 需要环境变量 ' + envKey + '，当前为空', {
+      throw new ConfigError('CONFIG_ENV_MISSING', '提供商 ' + provider.id + ' 尚未配置 API Key 密钥凭据（' + envKey + '），请在服务商设置或凭据中心配置 API Key', {
         providerId: provider.id,
         envKey,
       });
     }
-    return value;
+    let clean = value.trim();
+    if ((clean.startsWith('"') && clean.endsWith('"')) || (clean.startsWith("'") && clean.endsWith("'"))) {
+      clean = clean.slice(1, -1).trim();
+    }
+    if (clean.startsWith('Bearer ')) {
+      clean = clean.slice(7).trim();
+    }
+    return clean;
   }
 
   /**
    * 探测凭据是否就绪，不抛错。
-   *
-   * credential() 在缺变量时立即抛错是运行时该有的行为（早失败胜过一个难定位的 401），
-   * 但「列出服务商」这类只读展示需要的是一个布尔值而不是异常，
-   * 因此这里单独给出探测入口，避免调用点用 try/catch 当条件判断。
    */
   hasCredential(provider: ResolvedProvider): boolean {
     const envKey = provider.envKey;
     if (envKey === undefined) {
       return true;
     }
-    const value = this.env[envKey];
+    const jsonEnv = loadLocalJsonEnv();
+    const value = this.env[envKey] || jsonEnv[envKey] || (provider.id ? this.env[`${provider.id.toUpperCase()}_API_KEY`] || jsonEnv[`${provider.id.toUpperCase()}_API_KEY`] : undefined);
     return value !== undefined && value.trim() !== '';
   }
 

@@ -61,6 +61,50 @@ export interface GuiLogEntry {
   message: string;
 }
 
+export interface GuiImageGenInput {
+  prompt: string;
+  providerId?: string | undefined;
+  model?: string | undefined;
+  customBaseUrl?: string | undefined;
+  customApiKey?: string | undefined;
+  size?: '1024x1024' | '512x512' | '1024x1792' | '1792x1024' | '1024x768' | '768x1024' | string | undefined;
+  aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:4' | undefined;
+  style?: 'vivid' | 'natural' | 'anime' | 'digital-art' | 'photorealistic' | '3d-render' | 'cyberpunk' | 'watercolor' | 'vector' | undefined;
+  engine?: string | undefined;
+  outputFileName?: string | undefined;
+  workspace?: string | undefined;
+}
+
+export interface GuiImageGenResult {
+  ok: boolean;
+  imageUrl?: string | undefined;
+  localFilePath?: string | undefined;
+  localUri?: string | undefined;
+  prompt: string;
+  width: number;
+  height: number;
+  engineUsed: string;
+  error?: string | undefined;
+}
+
+export interface GuiEnvVarItem {
+  key: string;
+  label: string;
+  desc: string;
+  value: string;
+  isSet: boolean;
+  category: 'llm' | 'search' | 'channel' | 'custom';
+}
+
+export interface GuiProviderTestInput {
+  id: string;
+  baseUrl?: string;
+  apiKey?: string;
+  envKey?: string;
+  wireApi?: 'chat' | 'responses' | 'anthropic-messages';
+  protocol?: 'hermes-native' | 'openai-tools' | 'deepseek' | 'anthropic';
+}
+
 export type {
   AuthType,
   RemoteServerConfig,
@@ -125,6 +169,33 @@ export interface GuiGitStatus {
   totalAdditions: number;
   totalDeletions: number;
   recentCommits: Array<{ hash: string; message: string }>;
+}
+
+// 多机器人实例平台与数据模型
+export type GuiBotPlatform = 'telegram' | 'qq' | 'feishu' | 'dingtalk' | 'wechat' | 'discord' | 'slack' | 'webhook';
+
+export interface GuiBotInstance {
+  id: string;
+  name: string;
+  platform: GuiBotPlatform;
+  enabled: boolean;
+  boundServerId?: string | undefined; // 绑定的目标服务器 ID (如 "local" 或 "node_xxx")
+  defaultAgent?: string | undefined; // 默认调度的智能体 (如 "ops", "coder", "researcher")
+  config: {
+    token?: string; // Telegram / Discord / Slack
+    botName?: string;
+    adminUsers?: string[]; // 管理员 User ID 列表
+    appId?: string; // 飞书 / 钉钉 / 微信
+    appSecret?: string; // 飞书 / 钉钉
+    wsEndpoint?: string; // QQ / OneBot WebSocket 地址
+    accessToken?: string;
+    webhookUrl?: string; // 钉钉 / Webhook
+    secret?: string; // 钉钉加签密钥
+    puppetToken?: string; // 微信 Puppet Token
+  };
+  status?: 'running' | 'stopped' | 'error' | undefined;
+  lastActiveAt?: string | undefined;
+  error?: string | undefined;
 }
 
 // Telegram 机器人与通道可视化配置

@@ -11,3 +11,4 @@ coverage/
 !.env.example
 .dbg/
 .codex/
+release/

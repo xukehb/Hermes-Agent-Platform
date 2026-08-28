@@ -34,8 +34,9 @@ export interface RemoteServerConfig {
   daemonPort: number; // default 9527
   token?: string | undefined; // security token for daemon communication
   
-  // Dedicated Ops Agent
+  // Dedicated Ops Agent & Bound Bot
   agentId?: string | undefined; // e.g. 'ops', 'coder'
+  boundBotId?: string | undefined; // 绑定的专属机器人实例 ID
 
   // Runtime status
   status: 'online' | 'offline' | 'installing' | 'error' | 'uninstalled';

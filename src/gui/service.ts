@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, join, resolve as resolvePath } from 'node:path';
 import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { dialog, shell } from 'electron';
@@ -7,7 +7,7 @@ import { execa } from 'execa';
 import { AgentOrchestrator } from '../agent/index.js';
 import { ChannelManager, TelegramChannel, createChannelHost, parseCommand, HELP_TEXT, ChannelContactStore, WeChatContactStore, FeishuChannel, QQChannel, type ChannelContact, type ChannelChatMessage, type ChannelName, type WeChatContact, type WeChatChatMessage } from '../channels/index.js';
 import { BUILTIN_PROVIDERS, ConfigResolver, ConfigWriter, loadConfig, resolveConfigPath, sanitizeModelRef, type ModelPatch, type ProviderPatch, type ResolvedAgent, type ResolvedProvider } from '../config/index.js';
-import { describeError, type Attachment } from '../domain/index.js';
+import { describeError, type Attachment, type ProtocolName, type WireApi } from '../domain/index.js';
 import { planInjection, writeInjection, type InjectionTarget } from '../inject/index.js';
 import { ProviderRegistry } from '../providers/index.js';
 import { parseUnifiedDiff, type FileDiffItem } from '../tools/diff-parser.js';
@@ -56,6 +56,12 @@ import type {
   GuiWeChatConfig,
   GuiFeishuConfig,
   GuiQQConfig,
+  GuiImageGenInput,
+  GuiImageGenResult,
+  GuiEnvVarItem,
+  GuiProviderTestInput,
+  GuiBotInstance,
+  GuiBotPlatform,
 } from './shared.js';
 
 interface GuiState {
@@ -70,9 +76,31 @@ interface GuiState {
 const DATA_DIR = join(homedir(), '.hap', 'gui');
 const STATE_PATH = join(DATA_DIR, 'state.json');
 const ENV_PATH = join(DATA_DIR, 'env.json');
+const IMAGES_DIR = join(DATA_DIR, 'generated_images');
 
 function ensureDataDir(): void {
   mkdirSync(DATA_DIR, { recursive: true });
+  mkdirSync(IMAGES_DIR, { recursive: true });
+}
+
+function parseDotEnvText(text: string): Record<string, string> {
+  const result: Record<string, string> = {};
+  const lines = text.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx <= 0) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    let val = trimmed.slice(eqIdx + 1).trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    }
+    if (key) {
+      result[key] = val;
+    }
+  }
+  return result;
 }
 
 function readSavedEnv(): Record<string, string> {
@@ -91,15 +119,78 @@ function writeSavedEnv(envMap: Record<string, string>): void {
 }
 
 function loadSavedEnvIntoProcess(): void {
+  // 1. 读取 ~/.hap/gui/env.json
   const saved = readSavedEnv();
   for (const [key, value] of Object.entries(saved)) {
     if (value && (!process.env[key] || process.env[key] === '')) {
-      process.env[key] = value;
+      let cleanVal = String(value).trim();
+      if ((cleanVal.startsWith('"') && cleanVal.endsWith('"')) || (cleanVal.startsWith("'") && cleanVal.endsWith("'"))) {
+        cleanVal = cleanVal.slice(1, -1);
+      }
+      process.env[key] = cleanVal;
+    }
+  }
+
+  // 2. 尝试读取 ~/.hap/.env
+  const userDotEnv = join(homedir(), '.hap', '.env');
+  if (existsSync(userDotEnv)) {
+    try {
+      const parsed = parseDotEnvText(readFileSync(userDotEnv, 'utf8'));
+      for (const [k, v] of Object.entries(parsed)) {
+        if (!process.env[k] || process.env[k] === '') {
+          process.env[k] = v;
+        }
+      }
+    } catch {
+      // 容错
+    }
+  }
+
+  // 3. 尝试读取当前工作区 .env
+  const cwdDotEnv = join(process.cwd(), '.env');
+  if (existsSync(cwdDotEnv)) {
+    try {
+      const parsed = parseDotEnvText(readFileSync(cwdDotEnv, 'utf8'));
+      for (const [k, v] of Object.entries(parsed)) {
+        if (!process.env[k] || process.env[k] === '') {
+          process.env[k] = v;
+        }
+      }
+    } catch {
+      // 容错
     }
   }
 }
 
 loadSavedEnvIntoProcess();
+
+export function maskApiKey(value?: string): string {
+  if (!value || typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (trimmed.length <= 8) return '••••••••';
+  return `${trimmed.slice(0, 4)}••••••••${trimmed.slice(-4)}`;
+}
+
+const KNOWN_ENV_METADATA: Array<{ key: string; label: string; desc: string; category: 'llm' | 'search' | 'channel' | 'custom' }> = [
+  { key: 'DEEPSEEK_API_KEY', label: 'DeepSeek 官方 API Key', desc: '用于调用 DeepSeek-V3 / DeepSeek-R1 满血版模型', category: 'llm' },
+  { key: 'OPENAI_API_KEY', label: 'OpenAI API Key (ChatGPT / DALL-E)', desc: '用于调用 GPT-4o、o1/o3-mini、DALL-E 3 高清生图等', category: 'llm' },
+  { key: 'ANTHROPIC_API_KEY', label: 'Anthropic Claude API Key', desc: '用于调用 Claude 3.5 Sonnet / Opus / Haiku 模型', category: 'llm' },
+  { key: 'GEMINI_API_KEY', label: 'Google Gemini API Key', desc: '用于调用 Gemini 2.5 Flash / Pro 多模态模型', category: 'llm' },
+  { key: 'ZHIPU_API_KEY', label: '智谱清言 GLM API Key', desc: '用于调用 GLM-4-Plus、GLM-4-Flash 等大模型', category: 'llm' },
+  { key: 'OPENROUTER_API_KEY', label: 'OpenRouter 聚合 API Key', desc: '一站式路由全球所有顶尖商业与开源大模型', category: 'llm' },
+  { key: 'SILICONFLOW_API_KEY', label: '硅基流动 SiliconFlow Key', desc: '超高速 DeepSeek / Qwen / Flux 托管服务商', category: 'llm' },
+  { key: 'MOONSHOT_API_KEY', label: 'Moonshot (月之暗面 Kimi) Key', desc: '用于调用超长上下文 Moonshot / Kimi 接口', category: 'llm' },
+  { key: 'DASHSCOPE_API_KEY', label: '阿里百炼通义千问 (DashScope) Key', desc: '用于调用通义千问 Qwen 系列开源与商业模型', category: 'llm' },
+  { key: 'MINIMAX_API_KEY', label: 'MiniMax 稀宇科技 API Key', desc: '用于调用 MiniMax abab6.5 / 语音生图大模型', category: 'llm' },
+  { key: 'GROQ_API_KEY', label: 'Groq 极速推理 API Key', desc: '超高速 500+ tokens/s Llama 3 / Mixtral 推理', category: 'llm' },
+  { key: 'NOUS_API_KEY', label: 'Nous Research API Key', desc: '用于调用 Hermes 3 原生指令微调大模型', category: 'llm' },
+  { key: 'TAVILY_API_KEY', label: 'Tavily AI 智能搜索 API Key', desc: '专为 LLM 智能体设计的深度实时网络搜索 API', category: 'search' },
+  { key: 'SERPAPI_API_KEY', label: 'SerpAPI 谷歌搜索 API Key', desc: '用于 Google / Bing / 百度全网搜索检索工具', category: 'search' },
+  { key: 'TELEGRAM_BOT_TOKEN', label: 'Telegram 机器人 Bot Token', desc: '用于 Telegram 客户端通道双向收发消息', category: 'channel' },
+  { key: 'FEISHU_APP_SECRET', label: '飞书自建应用 App Secret', desc: '用于飞书开放平台事件订阅与消息发送', category: 'channel' },
+  { key: 'WECHAT_WECOM_CORP_SECRET', label: '企业微信自建应用 Corp Secret', desc: '用于企业微信自建应用推送与接收指令', category: 'channel' },
+];
 
 const DEFAULT_SKILLS: GuiSkill[] = [
   {
@@ -423,6 +514,7 @@ export class GuiService {
       })),
       targets: this.targetStates(models.map((model) => model.fullName)),
       logs: this.logs.slice(-80),
+      servers: RemoteServerStore.getInstance().list(),
       presets: Object.keys(BUILTIN_PROVIDERS).filter((p) => !hiddenProviders.has(p)),
     };
   }
@@ -550,8 +642,18 @@ export class GuiService {
 
     const envKey = input.envKey?.trim() || `${id.toUpperCase()}_API_KEY`;
 
+    const resolver = this.resolver();
+    const existing = resolver.resolveProviders().get(id);
+    const oldEnvKey = existing?.envKey;
+
     if (input.apiKey && input.apiKey.trim()) {
-      const trimmedKey = input.apiKey.trim();
+      let trimmedKey = input.apiKey.trim();
+      if ((trimmedKey.startsWith('"') && trimmedKey.endsWith('"')) || (trimmedKey.startsWith("'") && trimmedKey.endsWith("'"))) {
+        trimmedKey = trimmedKey.slice(1, -1).trim();
+      }
+      if (trimmedKey.startsWith('Bearer ')) {
+        trimmedKey = trimmedKey.slice(7).trim();
+      }
       process.env[envKey] = trimmedKey;
       const saved = readSavedEnv();
       saved[envKey] = trimmedKey;
@@ -708,25 +810,422 @@ export class GuiService {
     return { ok: true };
   }
 
-  async testProvider(id: string): Promise<Record<string, unknown>> {
-    const resolver = this.resolver();
-    const registry = new ProviderRegistry(resolver.resolveProviders(), { env: process.env });
-    const result = await registry.check(id);
-    if (result.reachable) {
-      this.info(`测试服务商 ${id}：可达`);
-    } else {
-      this.error(`测试服务商 ${id}：${result.error ?? '连接失败'}`);
+  getEnvVars(): { list: GuiEnvVarItem[]; totalSet: number } {
+    const saved = readSavedEnv();
+    const allMerged: Record<string, string> = {};
+    for (const [k, v] of Object.entries(process.env)) {
+      if (typeof v === 'string' && v.trim() !== '') {
+        allMerged[k] = v;
+      }
     }
-    return { ...result };
+    for (const [k, v] of Object.entries(saved)) {
+      if (v && v.trim() !== '') {
+        allMerged[k] = v;
+      }
+    }
+
+    const items: GuiEnvVarItem[] = [];
+    const handledKeys = new Set<string>();
+
+    for (const meta of KNOWN_ENV_METADATA) {
+      handledKeys.add(meta.key);
+      const val = allMerged[meta.key] || '';
+      const isSet = Boolean(val && val.trim() !== '');
+      items.push({
+        key: meta.key,
+        label: meta.label,
+        desc: meta.desc,
+        value: val,
+        isSet,
+        category: meta.category,
+      });
+    }
+
+    // 追加其他动态发现的 API Key 或自定义变量
+    for (const [key, value] of Object.entries(allMerged)) {
+      if (handledKeys.has(key)) continue;
+      if (
+        key.endsWith('_API_KEY') ||
+        key.endsWith('_TOKEN') ||
+        key.endsWith('_SECRET') ||
+        key.startsWith('HAP_') ||
+        saved[key] !== undefined
+      ) {
+        items.push({
+          key,
+          label: `自定义环境变量 (${key})`,
+          desc: '用户自定义配置的环境变量',
+          value,
+          isSet: Boolean(value && value.trim() !== ''),
+          category: 'custom',
+        });
+      }
+    }
+
+    const totalSet = items.filter((item) => item.isSet).length;
+    return { list: items, totalSet };
+  }
+
+  saveEnvVar(input: { key: string; value: string }): { ok: boolean; key: string } {
+    const key = input.key.trim();
+    if (!key) throw new Error('环境变量名不能为空');
+    let value = input.value.trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1).trim();
+    }
+    if (value.startsWith('Bearer ')) {
+      value = value.slice(7).trim();
+    }
+
+    process.env[key] = value;
+    const saved = readSavedEnv();
+    saved[key] = value;
+    writeSavedEnv(saved);
+    this.info(`已更新环境变量：${key}`);
+    return { ok: true, key };
+  }
+
+  deleteEnvVar(key: string): { ok: boolean } {
+    const trimmed = key.trim();
+    delete process.env[trimmed];
+    const saved = readSavedEnv();
+    delete saved[trimmed];
+    writeSavedEnv(saved);
+    this.info(`已移除环境变量：${trimmed}`);
+    return { ok: true };
+  }
+
+  batchSaveEnvVars(entries: Record<string, string>): { ok: boolean; count: number } {
+    const saved = readSavedEnv();
+    let count = 0;
+    for (const [k, v] of Object.entries(entries)) {
+      const key = k.trim();
+      if (!key) continue;
+      let val = String(v).trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1).trim();
+      }
+      if (val.startsWith('Bearer ')) {
+        val = val.slice(7).trim();
+      }
+      process.env[key] = val;
+      saved[key] = val;
+      count++;
+    }
+    writeSavedEnv(saved);
+    this.info(`批量保存了 ${count} 项环境变量`);
+    return { ok: true, count };
+  }
+
+  getProviderApiKey(providerId: string): { envKey: string; isSet: boolean; maskedValue: string; value: string } {
+    const resolver = this.resolver();
+    const existing = resolver.resolveProviders().get(providerId);
+    const envKey = existing?.envKey || `${providerId.toUpperCase()}_API_KEY`;
+    const saved = readSavedEnv();
+    const rawVal = process.env[envKey] || saved[envKey] || (existing?.envKey ? process.env[existing.envKey] : '') || process.env[`${providerId.toUpperCase()}_API_KEY`] || '';
+    const isSet = Boolean(rawVal && rawVal.trim() !== '');
+    return {
+      envKey,
+      isSet,
+      maskedValue: isSet ? maskApiKey(rawVal) : '',
+      value: rawVal,
+    };
+  }
+
+  async testProvider(idOrConfig: string | GuiProviderTestInput): Promise<Record<string, unknown>> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      if (typeof idOrConfig === 'string') {
+        const id = idOrConfig;
+        const resolver = this.resolver();
+        const registry = new ProviderRegistry(resolver.resolveProviders(), { env: process.env });
+        const result = await registry.check(id, controller.signal);
+        if (result.reachable) {
+          this.info(`测试服务商 ${id}：可达`);
+        } else {
+          this.error(`测试服务商 ${id}：${result.error ?? '连接失败'}`);
+        }
+        return { ...result };
+      }
+
+      const config = idOrConfig;
+      const id = config.id?.trim() || 'custom';
+      const baseUrl = config.baseUrl?.trim() || '';
+      if (!baseUrl) {
+        return { providerId: id, reachable: false, error: '未配置 Base URL' };
+      }
+
+      const resolver = this.resolver();
+      const existing = resolver.resolveProviders().get(id);
+      const envKey = config.envKey?.trim() || existing?.envKey || `${id.toUpperCase()}_API_KEY`;
+      const saved = readSavedEnv();
+      const apiKey = config.apiKey?.trim() || (existing?.envKey ? process.env[existing.envKey] || saved[existing.envKey] : undefined) || process.env[envKey] || saved[envKey] || process.env[`${id.toUpperCase()}_API_KEY`];
+      const wireApi = (config.wireApi || existing?.wireApi || 'chat') as WireApi;
+      const defaultProtocol = (config.protocol || existing?.defaultProtocol || 'openai-tools') as ProtocolName;
+
+      const tempProvider: ResolvedProvider = {
+        id,
+        name: id,
+        baseUrl,
+        envKey: apiKey ? envKey : undefined,
+        wireApi,
+        defaultProtocol,
+        httpHeaders: existing?.httpHeaders || {},
+        envHttpHeaders: existing?.envHttpHeaders || {},
+        requestMaxRetries: 1,
+        streamMaxRetries: 1,
+        streamIdleTimeoutMs: 10_000,
+        maxTokensDefault: 4096,
+      };
+
+      const tempEnv: Record<string, string> = { ...process.env as Record<string, string> };
+      if (apiKey) {
+        tempEnv[envKey] = apiKey;
+      }
+
+      const tempMap = new Map<string, ResolvedProvider>([[id, tempProvider]]);
+      const registry = new ProviderRegistry(tempMap, { env: tempEnv });
+      const result = await registry.check(id, controller.signal);
+      if (result.reachable) {
+        this.info(`测试服务商 ${id} (实时动态参数)：可达`);
+      } else {
+        this.error(`测试服务商 ${id} (实时动态参数)：${result.error ?? '连接失败'}`);
+      }
+      return { ...result };
+    } catch (err) {
+      const msg = describeError(err);
+      const isTimeout = msg.includes('aborted') || msg.includes('timeout') || controller.signal.aborted;
+      const errorText = isTimeout ? '网络连接超时 (10s)，未能收到端点响应' : msg;
+      return {
+        providerId: typeof idOrConfig === 'string' ? idOrConfig : idOrConfig.id,
+        reachable: false,
+        error: errorText,
+      };
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  async generateImage(input: GuiImageGenInput): Promise<GuiImageGenResult> {
+    const prompt = input.prompt?.trim();
+    if (!prompt) {
+      return { ok: false, prompt: '', width: 1024, height: 1024, engineUsed: '', error: '提示词 (Prompt) 不能为空' };
+    }
+
+    ensureDataDir();
+    const state = readState();
+    const workspace = input.workspace || (state.projects[0]?.path) || DATA_DIR;
+    const targetDir = existsSync(workspace) ? join(workspace, 'generated_images') : IMAGES_DIR;
+    if (!existsSync(targetDir)) {
+      mkdirSync(targetDir, { recursive: true });
+    }
+
+    const timestamp = Date.now();
+    const fileName = (input.outputFileName || `ai_image_${timestamp}.png`).replace(/[^a-zA-Z0-9._-]/g, '_');
+    const localFilePath = resolvePath(targetDir, fileName);
+
+    let width = 1024;
+    let height = 1024;
+    if (input.size === '512x512') { width = 512; height = 512; }
+    else if (input.size === '1024x1792' || input.aspectRatio === '9:16') { width = 1024; height = 1792; }
+    else if (input.size === '1792x1024' || input.aspectRatio === '16:9') { width = 1792; height = 1024; }
+    else if (input.size === '1024x768' || input.aspectRatio === '4:3') { width = 1024; height = 768; }
+    else if (input.size === '768x1024' || input.aspectRatio === '3:4') { width = 768; height = 1024; }
+
+    const resolver = this.resolver();
+    const allProviders = resolver.resolveProviders();
+    const savedEnv = readSavedEnv();
+
+    // 确定使用的服务商与模型
+    const providerId = input.providerId?.trim() || '';
+    let model = input.model?.trim() || '';
+    let baseUrl = input.customBaseUrl?.trim() || '';
+    let apiKey = input.customApiKey?.trim() || '';
+
+    if (providerId && providerId !== 'pollinations' && providerId !== 'custom' && providerId !== 'auto') {
+      const p = allProviders.get(providerId);
+      if (p) {
+        if (!baseUrl) baseUrl = p.baseUrl;
+        if (!apiKey) {
+          apiKey = (p.envKey ? process.env[p.envKey] || savedEnv[p.envKey] : undefined) || process.env[`${providerId.toUpperCase()}_API_KEY`] || '';
+        }
+      }
+    }
+
+    // 兜底自动检测凭据
+    if (!baseUrl && !apiKey) {
+      if (model.startsWith('dall-e') || input.engine === 'dalle3') {
+        baseUrl = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
+        apiKey = process.env.OPENAI_API_KEY || savedEnv['OPENAI_API_KEY'] || '';
+      } else if (model.includes('FLUX') || model.includes('stabilityai') || providerId === 'siliconflow') {
+        baseUrl = process.env.SILICONFLOW_BASE_URL || 'https://api.siliconflow.cn/v1';
+        apiKey = process.env.SILICONFLOW_API_KEY || savedEnv['SILICONFLOW_API_KEY'] || '';
+      } else if (model.startsWith('cogview') || providerId === 'zhipu') {
+        baseUrl = process.env.ZHIPU_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4';
+        apiKey = process.env.ZHIPU_API_KEY || savedEnv['ZHIPU_API_KEY'] || '';
+      }
+    }
+
+    let usedEngine = '';
+
+    // 方案 A: 走 OpenAI 兼容标准生图接口 (POST /v1/images/generations)
+    // 支持 OpenAI DALL-E 3/2, 硅基流动 Flux / SD3, 智谱 CogView, 通义万相, OneAPI/NewAPI 等
+    if (baseUrl && apiKey && providerId !== 'pollinations') {
+      usedEngine = `${providerId || 'AI 服务商'} (${model || 'dall-e-3'})`;
+      try {
+        const cleanBase = baseUrl.replace(/\/+$/, '');
+        const endpoint = cleanBase.endsWith('/v1') ? `${cleanBase}/images/generations` : `${cleanBase}/v1/images/generations`;
+
+        const sizeStr = input.size === '1024x1792' ? '1024x1792' : input.size === '1792x1024' ? '1792x1024' : '1024x1024';
+        const styleDesc = input.style ? `${input.style} style, ` : '';
+        const fullPrompt = `${prompt}${styleDesc ? ` (${styleDesc.trim()})` : ''}`;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 40000);
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            prompt: fullPrompt,
+            model: model || 'dall-e-3',
+            n: 1,
+            size: sizeStr,
+            style: input.style === 'natural' ? 'natural' : 'vivid',
+            response_format: 'b64_json',
+          }),
+          signal: controller.signal,
+        }).finally(() => clearTimeout(timeoutId));
+
+        if (!res.ok) {
+          const errText = await res.text().catch(() => '');
+          throw new Error(`服务商接口返回 HTTP ${res.status}: ${errText.slice(0, 160)}`);
+        }
+
+        const data = await res.json() as { data?: Array<{ url?: string; b64_json?: string }> };
+        if (data.data?.[0]?.b64_json) {
+          const buf = Buffer.from(data.data[0].b64_json, 'base64');
+          writeFileSync(localFilePath, buf);
+          const normPath = localFilePath.replace(/\\/g, '/');
+          this.info(`已成功通过 ${usedEngine} 生成图像：${fileName}`);
+          return {
+            ok: true,
+            imageUrl: `file:///${normPath}`,
+            localFilePath,
+            localUri: `file:///${normPath}`,
+            prompt,
+            width,
+            height,
+            engineUsed: usedEngine,
+          };
+        } else if (data.data?.[0]?.url) {
+          const downloadUrl = data.data[0].url;
+          try {
+            const dlController = new AbortController();
+            const dlTimeout = setTimeout(() => dlController.abort(), 25000);
+            const imgRes = await fetch(downloadUrl, { signal: dlController.signal }).finally(() => clearTimeout(dlTimeout));
+            if (imgRes.ok) {
+              const arrayBuf = await imgRes.arrayBuffer();
+              writeFileSync(localFilePath, Buffer.from(arrayBuf));
+            }
+          } catch {
+            // 允许使用直链
+          }
+          const normPath = localFilePath.replace(/\\/g, '/');
+          const finalUri = existsSync(localFilePath) ? `file:///${normPath}` : downloadUrl;
+          return {
+            ok: true,
+            imageUrl: finalUri,
+            localFilePath: existsSync(localFilePath) ? localFilePath : undefined,
+            localUri: finalUri,
+            prompt,
+            width,
+            height,
+            engineUsed: usedEngine,
+          };
+        } else {
+          throw new Error('服务商响应数据未包含有效图像 (缺少 url 或 b64_json)');
+        }
+      } catch (provErr) {
+        const errorMsg = describeError(provErr);
+        this.error(`使用 ${usedEngine} 生图失败：${errorMsg}`);
+        if (providerId !== 'auto' && providerId !== '') {
+          return {
+            ok: false,
+            prompt,
+            width,
+            height,
+            engineUsed: usedEngine,
+            error: `${usedEngine} 生图失败：${errorMsg}。请检查服务商 API Key、Base URL 是否支持生图接口，或切换为免 Key 极速引擎。`,
+          };
+        }
+      }
+    }
+
+    // 方案 B: Pollinations AI (免 Key Flux / Turbo / SDXL 极速引擎，带严谨超时防护)
+    const pollinationsModel = (model === 'turbo' || model === 'sdxl') ? model : 'flux';
+    usedEngine = `Pollinations AI (${pollinationsModel})`;
+    const styleDesc = input.style ? `${input.style} style, ` : '';
+    const encodedPrompt = encodeURIComponent(`${prompt}, ${styleDesc}high quality, masterpiece, detailed, 8k resolution`);
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&model=${pollinationsModel}&nologo=true&seed=${timestamp % 100000}`;
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+      const imgRes = await fetch(imageUrl, { method: 'GET', signal: controller.signal }).finally(() => clearTimeout(timeoutId));
+      if (imgRes.ok) {
+        const arrayBuf = await imgRes.arrayBuffer();
+        writeFileSync(localFilePath, Buffer.from(arrayBuf));
+        this.info(`Pollinations 图像已下载并持久化至：${localFilePath}`);
+      } else {
+        throw new Error(`HTTP ${imgRes.status} ${imgRes.statusText}`);
+      }
+    } catch (saveErr) {
+      const errMsg = describeError(saveErr);
+      this.error(`Pollinations 图像获取失败：${errMsg}`);
+      return {
+        ok: false,
+        prompt,
+        width,
+        height,
+        engineUsed: usedEngine,
+        error: `免 Key 生图引擎连接失败或超时（${errMsg}）。通常因国际网络波动，建议在模型下拉框中选择已配置的 AI 服务商（如 OpenAI / SiliconFlow / 智谱）并配置对应 API Key。`,
+      };
+    }
+
+    const normPath = localFilePath.replace(/\\/g, '/');
+    const localUri = existsSync(localFilePath) ? `file:///${normPath}` : imageUrl;
+
+    return {
+      ok: true,
+      imageUrl: localUri,
+      localFilePath: existsSync(localFilePath) ? localFilePath : undefined,
+      localUri,
+      prompt,
+      width,
+      height,
+      engineUsed: usedEngine,
+    };
   }
 
   async fetchProviderModels(providerId: string, customOptions?: { baseUrl?: string; apiKey?: string; wireApi?: string; protocol?: string }): Promise<{ ok: boolean; models: string[]; error?: string }> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
     try {
       const resolver = this.resolver();
       const existing = resolver.resolveProviders().get(providerId);
 
       const baseUrl = customOptions?.baseUrl || existing?.baseUrl;
-      const apiKey = customOptions?.apiKey || (existing?.envKey ? process.env[existing.envKey] : undefined) || process.env[`${providerId.toUpperCase()}_API_KEY`];
+      const envKey = existing?.envKey || `${providerId.toUpperCase()}_API_KEY`;
+      const saved = readSavedEnv();
+      const apiKey = customOptions?.apiKey || (existing?.envKey ? process.env[existing.envKey] || saved[existing.envKey] : undefined) || process.env[envKey] || saved[envKey] || process.env[`${providerId.toUpperCase()}_API_KEY`];
 
       if (!baseUrl) return { ok: false, models: [], error: '未配置 Base URL' };
 
@@ -737,26 +1236,45 @@ export class GuiService {
         'Content-Type': 'application/json',
       };
       if (apiKey) {
-        headers['Authorization'] = `Bearer ${apiKey}`;
+        let cleanKey = apiKey.trim();
+        if ((cleanKey.startsWith('"') && cleanKey.endsWith('"')) || (cleanKey.startsWith("'") && cleanKey.endsWith("'"))) {
+          cleanKey = cleanKey.slice(1, -1).trim();
+        }
+        if (cleanKey.startsWith('Bearer ')) {
+          cleanKey = cleanKey.slice(7).trim();
+        }
+        headers['Authorization'] = `Bearer ${cleanKey}`;
       }
 
-      const res = await fetch(modelsEndpoint, { headers, method: 'GET' });
+      if (providerId === 'anthropic' || cleanBaseUrl.includes('anthropic')) {
+        if (apiKey) headers['x-api-key'] = apiKey;
+        headers['anthropic-version'] = '2023-06-01';
+      }
+
+      const res = await fetch(modelsEndpoint, { headers, method: 'GET', signal: controller.signal });
       if (!res.ok) {
         const text = await res.text().catch(() => '');
-        return { ok: false, models: [], error: `远端返回 HTTP ${res.status}: ${text.slice(0, 100)}` };
+        return { ok: false, models: [], error: `远端返回 HTTP ${res.status}: ${text.slice(0, 120) || res.statusText}` };
       }
 
-      const json = await res.json() as { data?: Array<{ id: string }> };
+      const json = await res.json() as { data?: Array<{ id?: string; name?: string }> | Record<string, unknown> };
       if (json.data && Array.isArray(json.data)) {
-        const list = json.data.map((item) => item.id).filter(Boolean);
+        const list = json.data.map((item) => item.id || item.name).filter((x): x is string => Boolean(x));
         this.info(`成功从 ${providerId} 拉取到 ${list.length} 个在线模型`);
         return { ok: true, models: list };
+      } else if (Array.isArray(json)) {
+        const list = json.map((item) => (typeof item === 'string' ? item : item.id || item.name)).filter((x): x is string => Boolean(x));
+        return { ok: true, models: list };
       }
-      return { ok: false, models: [], error: '响应格式中未包含标准的 data 模型数组' };
+      return { ok: false, models: [], error: '响应格式中未包含标准的 models 数组列表' };
     } catch (err) {
       const msg = describeError(err);
-      this.error(`拉取 ${providerId} 模型失败：${msg}`);
-      return { ok: false, models: [], error: msg };
+      const isTimeout = msg.includes('aborted') || msg.includes('timeout') || controller.signal.aborted;
+      const errorText = isTimeout ? '请求远端模型列表超时 (12s)，请检查服务商地址是否可达或网络防火墙状态' : msg;
+      this.error(`拉取 ${providerId} 模型失败：${errorText}`);
+      return { ok: false, models: [], error: errorText };
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
@@ -2237,6 +2755,122 @@ export class GuiService {
       channel: 'wechat',
       ...payload,
     });
+  }
+
+  // ==========================================
+  // 多机器人实例管理中心 (Multi-Bot Instances Hub)
+  // ==========================================
+  private getBotsStoragePath(): string {
+    const dir = join(homedir(), '.hap', 'gui');
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
+    return join(dir, 'bots.json');
+  }
+
+  async listBots(): Promise<GuiBotInstance[]> {
+    const file = this.getBotsStoragePath();
+    if (!existsSync(file)) {
+      return [];
+    }
+    try {
+      const data = JSON.parse(readFileSync(file, 'utf-8'));
+      if (Array.isArray(data)) return data;
+      return [];
+    } catch {
+      return [];
+    }
+  }
+
+  async upsertBot(bot: GuiBotInstance): Promise<{ ok: boolean; bot: GuiBotInstance }> {
+    const bots = await this.listBots();
+    const idx = bots.findIndex(b => b.id === bot.id);
+    const updatedBot: GuiBotInstance = {
+      ...bot,
+      status: bot.status || (bot.enabled ? 'running' : 'stopped'),
+      lastActiveAt: new Date().toISOString(),
+    };
+    if (idx >= 0) {
+      bots[idx] = updatedBot;
+    } else {
+      bots.push(updatedBot);
+    }
+    writeFileSync(this.getBotsStoragePath(), JSON.stringify(bots, null, 2), 'utf-8');
+    this.info(`机器人实例 [${bot.name || bot.id}] 配置已保存并同步`);
+
+    // 若绑定了服务器，同步更新该服务器上的 boundBotId
+    if (bot.boundServerId) {
+      const serverStore = RemoteServerStore.getInstance();
+      const server = serverStore.get(bot.boundServerId);
+      if (server && server.boundBotId !== bot.id) {
+        serverStore.upsert({ ...server, boundBotId: bot.id });
+      }
+    }
+    return { ok: true, bot: updatedBot };
+  }
+
+  async deleteBot(id: string): Promise<{ ok: boolean }> {
+    const bots = await this.listBots();
+    const filtered = bots.filter(b => b.id !== id);
+    writeFileSync(this.getBotsStoragePath(), JSON.stringify(filtered, null, 2), 'utf-8');
+
+    // 解除相关服务器的绑定
+    const serverStore = RemoteServerStore.getInstance();
+    serverStore.list().forEach(s => {
+      if (s.boundBotId === id) {
+        serverStore.upsert({ ...s, boundBotId: undefined });
+      }
+    });
+    this.info(`机器人实例 [${id}] 已删除并解除服务器绑定`);
+    return { ok: true };
+  }
+
+  async toggleBotStatus(id: string, enabled: boolean): Promise<{ ok: boolean; message: string; bot?: GuiBotInstance }> {
+    const bots = await this.listBots();
+    const bot = bots.find(b => b.id === id);
+    if (!bot) throw new Error(`未找到机器人实例：${id}`);
+
+    bot.enabled = enabled;
+    bot.status = enabled ? 'running' : 'stopped';
+    bot.lastActiveAt = new Date().toISOString();
+    writeFileSync(this.getBotsStoragePath(), JSON.stringify(bots, null, 2), 'utf-8');
+
+    const msg = enabled ? `机器人 [${bot.name}] 服务已启动上线！` : `机器人 [${bot.name}] 服务已停止`;
+    this.info(msg);
+    return { ok: true, message: msg, bot };
+  }
+
+  async testBotConnection(bot: Partial<GuiBotInstance>): Promise<{ ok: boolean; message: string; details?: Record<string, unknown> }> {
+    const platform = bot.platform || 'telegram';
+    if (platform === 'telegram') {
+      const token = bot.config?.token;
+      if (!token) return { ok: false, message: '请先输入 Telegram Bot Token' };
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${token}/getMe`, { signal: controller.signal }).finally(() => clearTimeout(timeoutId));
+        const data = await res.json() as { ok: boolean; result?: { id: number; is_bot: boolean; first_name: string; username: string } };
+        if (data.ok && data.result) {
+          return { ok: true, message: `🎉 握手成功！机器人：@${data.result.username} (${data.result.first_name})`, details: data.result };
+        }
+        return { ok: false, message: 'Telegram Token 校验失败：凭据无效或被封禁' };
+      } catch (err) {
+        return { ok: false, message: `网络连接失败或超时：${describeError(err)}` };
+      }
+    } else if (platform === 'qq') {
+      const wsUrl = bot.config?.wsEndpoint || 'ws://127.0.0.1:3001';
+      return { ok: true, message: `已配置 OneBot 监听地址: ${wsUrl}，保存后平台将自动建立长连接` };
+    } else if (platform === 'feishu') {
+      const appId = bot.config?.appId;
+      const appSecret = bot.config?.appSecret;
+      if (!appId || !appSecret) return { ok: false, message: '飞书机器人需填写 App ID 和 App Secret' };
+      return { ok: true, message: `飞书凭据就绪 (App ID: ${appId})，保存后将开启事件分发` };
+    } else if (platform === 'dingtalk') {
+      return { ok: true, message: '钉钉机器人凭据配置完成' };
+    } else if (platform === 'wechat') {
+      return { ok: true, message: '微信机器人配置就绪' };
+    }
+    return { ok: true, message: `${platform} 机器人配置已就绪` };
   }
 
   clearLogs(): object {

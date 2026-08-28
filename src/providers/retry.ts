@@ -92,9 +92,11 @@ export function normalizeProviderError(error: unknown, context: ProviderErrorCon
   }
 
   if (status === 401 || status === 403) {
-    const hint = context.envKey === undefined ? '该提供商未配置 env_key，请确认端点是否需要凭据' : '请检查环境变量 ' + context.envKey;
+    const hint = context.envKey === undefined
+      ? '该服务商未配置 API Key 密钥凭据，请在服务商设置中填写 API Key'
+      : `服务商拒绝了当前凭据（HTTP ${status}），请在服务商设置或凭据中心检查 API Key（${context.envKey}）是否正确有效`;
     return new FatalError('CONFIG_ENV_MISSING', '提供商拒绝凭据（' + where + '，HTTP ' + String(status) + '）：' + hint, {
-      userMessage: '提供商凭据无效：' + hint + '。',
+      userMessage: '提供商凭据无效或被拒绝（HTTP ' + String(status) + '）：' + hint + '。',
       context: base,
       cause: error,
     });

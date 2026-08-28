@@ -1528,6 +1528,7 @@ async function refresh() {
     renderTelegramView();
     renderWeChatView();
     renderLogs(currentLogFilter);
+    await window.loadBotInstances();
     await renderServers();
     fillSelects();
     updateBatchBars();
@@ -2050,9 +2051,9 @@ function renderProviders() {
             </div>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="window.fetchAndSyncModelsForProvider('${escJs(p.id)}')">🔄 获取模型</button>
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="window.fetchAndSyncModelsForProvider('${escJs(p.id)}', this)">🔄 获取模型</button>
             <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="openProviderDialog('${escJs(p.id)}')">编辑服务商及模型</button>
-            <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="testProvider('${escJs(p.id)}')">测试</button>
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="window.testProvider('${escJs(p.id)}', this)">测试</button>
             <button type="button" class="btn danger" style="font-size:11.5px;padding:4px 10px;" onclick="deleteProvider('${escJs(p.id)}')">删除</button>
           </div>
         </div>
@@ -3012,7 +3013,7 @@ $('toggleApiKeyVisibilityBtn')?.addEventListener('click', () => {
   $('toggleApiKeyVisibilityBtn').textContent = isApiKeyVisible ? '隐藏明文' : '显示明文';
 });
 
-window.openProviderDialog = (id) => {
+window.openProviderDialog = async (id) => {
   const dialog = $('providerDialog');
   const form = $('providerForm');
   form.reset();
@@ -3020,6 +3021,12 @@ window.openProviderDialog = (id) => {
   $('providerInputApiKey').type = 'password';
   $('toggleApiKeyVisibilityBtn').textContent = '显示明文';
   if ($('remoteModelPoolBox')) $('remoteModelPoolBox').style.display = 'none';
+
+  const statusChip = $('providerApiKeyStatusChip');
+  if (statusChip) statusChip.innerHTML = '';
+
+  // 连通测试按钮在新增与编辑模式下均保持可用，支持直接测试表单输入的参数
+  if ($('testProviderBtn')) $('testProviderBtn').style.display = 'inline-block';
 
   if (id) {
     const p = state.providers.find((item) => item.id === id);
@@ -3035,7 +3042,19 @@ window.openProviderDialog = (id) => {
     $('providerInputWireApi').value = p.wireApi || 'chat';
     $('providerInputProtocol').value = p.defaultProtocol || p.protocol || 'openai-tools';
     $('deleteProviderBtn').style.display = 'inline-block';
-    $('testProviderBtn').style.display = 'inline-block';
+
+    try {
+      const keyInfo = await window.hap.getProviderApiKey(p.id);
+      if (statusChip) {
+        if (keyInfo.isSet) {
+          statusChip.innerHTML = `<span style="color:#10b981;font-weight:600;">🟢 已配置密钥</span> 环境变量 <code>${esc(keyInfo.envKey)}</code> (掩码: ${esc(keyInfo.maskedValue)})，留空保存将保持原样`;
+        } else {
+          statusChip.innerHTML = `<span style="color:#f59e0b;font-weight:600;">⚪ 尚未配置密钥</span> 环境变量 <code>${esc(keyInfo.envKey)}</code> 当前为空`;
+        }
+      }
+    } catch {
+      // 容错
+    }
 
     currentDialogModels = (state.models || [])
       .filter(m => (m.providerId || m.provider) === p.id)
@@ -3045,7 +3064,6 @@ window.openProviderDialog = (id) => {
     $('providerPresetRow').style.display = 'block';
     $('providerInputId').readOnly = false;
     $('deleteProviderBtn').style.display = 'none';
-    $('testProviderBtn').style.display = 'none';
     currentDialogModels = [];
   }
   renderCurrentDialogModels();
@@ -3111,19 +3129,74 @@ window.deleteProvider = async (targetId) => {
   }
 };
 
-window.testProvider = async (targetId) => {
-  const id = targetId || $('providerInputId').value.trim();
-  if (!id) return;
-  showToast(`正在测试连通性：${id}...`, 'info');
+window.testProvider = async (targetId, clickBtn) => {
+  const btn = clickBtn || (window.event?.currentTarget) || $('testProviderBtn');
+  const origText = btn ? btn.textContent : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="display:inline-block;width:11px;height:11px;border:2px solid #cbd5e1;border-top-color:#0284c7;border-radius:50%;margin-right:4px;vertical-align:middle;"></span>探测中...';
+  }
+
+  const dialog = $('providerDialog');
+  const isDialogOpen = dialog && dialog.open;
+  const statusChip = $('providerApiKeyStatusChip');
+
   try {
+    // 若弹窗处于打开状态且未传特定外部 targetId，则以当前弹窗表单中输入的实时参数发起连通测试
+    if (isDialogOpen && (!targetId || targetId === $('providerInputId')?.value.trim())) {
+      const id = $('providerInputId')?.value.trim();
+      const baseUrl = $('providerInputBaseUrl')?.value.trim();
+      const apiKey = $('providerInputApiKey')?.value.trim();
+      const envKey = $('providerInputEnvKey')?.value.trim();
+      const wireApi = $('providerInputWireApi')?.value;
+      const protocol = $('providerInputProtocol')?.value;
+
+      if (!baseUrl) {
+        showToast('请先填写 API 基础地址 (Base URL)', 'warning');
+        $('providerInputBaseUrl')?.focus();
+        return;
+      }
+
+      if (statusChip) {
+        statusChip.innerHTML = '<span style="color:#0284c7;">⏳ 正在与服务商建立握手连接...</span>';
+      }
+      showToast(`正在测试连通性：${id || baseUrl}...`, 'info');
+
+      const res = await window.hap.testProvider({ id: id || 'custom', baseUrl, apiKey, envKey, wireApi, protocol });
+      if (res.reachable) {
+        showToast(`🎉 服务商连通性测试通过！握手成功 (${res.handshakeMs || 0}ms)`, 'success');
+        if (statusChip) {
+          statusChip.innerHTML = `<span style="color:#10b981;font-weight:600;">🟢 连通测试通过！握手成功 (${res.handshakeMs || 0}ms)，网络可达</span>`;
+        }
+      } else {
+        showToast(`❌ 连接失败：${res.error || '无法建立握手'}`, 'error');
+        if (statusChip) {
+          statusChip.innerHTML = `<span style="color:#ef4444;font-weight:600;">❌ 连接失败：${esc(res.error || '无法建立握手')}</span>`;
+        }
+      }
+      return;
+    }
+
+    const id = targetId || $('providerInputId')?.value.trim();
+    if (!id) return;
+
+    showToast(`正在测试服务商 [${id}] 连通性...`, 'info');
     const res = await window.hap.testProvider(id);
     if (res.reachable) {
-      showToast(`服务商 ${id} 连通性测试通过！可达`, 'success');
+      showToast(`🎉 服务商 [${id}] 连通性测试通过！握手成功 (${res.handshakeMs || 0}ms)`, 'success');
     } else {
-      showToast(`连接失败：${res.error || '无法建立握手'}`, 'error');
+      showToast(`❌ 服务商 [${id}] 连接失败：${res.error || '无法建立握手'}`, 'error');
     }
   } catch (error) {
     showToast('测试异常：' + error.message, 'error');
+    if (statusChip && isDialogOpen) {
+      statusChip.innerHTML = `<span style="color:#ef4444;">测试异常: ${esc(error.message)}</span>`;
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = origText || '测试';
+    }
   }
 };
 
@@ -3282,8 +3355,25 @@ function switchView(view) {
 window.switchView = switchView;
 
 function show(view) {
+  if (view === 'channels') {
+    document.querySelectorAll('.view').forEach((item) => item.classList.toggle('active', item.id === 'settings'));
+    document.querySelectorAll('.nav').forEach((item) => item.classList.toggle('active', item.dataset.view === 'channels'));
+    window.switchSettingsTab('channels');
+    return;
+  }
+
   document.querySelectorAll('.view').forEach((item) => item.classList.toggle('active', item.id === view));
   document.querySelectorAll('.nav').forEach((item) => item.classList.toggle('active', item.dataset.view === view));
+
+  if (view === 'servers') {
+    renderServers();
+  } else if (view === 'host') {
+    refreshHostView();
+  } else if (view === 'skills' || view === 'plugins') {
+    renderMarket();
+  } else if (view === 'logs') {
+    renderLogs(currentLogFilter);
+  }
 }
 
 document.querySelectorAll('.nav').forEach((btn) => {
@@ -3371,6 +3461,31 @@ $('switchForm')?.addEventListener('submit', async (event) => {
     showToast('同步失败：' + error.message, 'error');
   }
 });
+
+window.quickSyncTarget = async (target) => {
+  if (!target) return;
+  const modelSelect = $('targetModelSelect') || $('switchModelSelect') || $('composerModelSelect');
+  let selectedModel = modelSelect?.value;
+  if (!selectedModel) {
+    selectedModel = state.models?.[0]?.alias || state.models?.[0]?.fullName || 'gpt-4o';
+  }
+
+  showToast(`正在将模型 [${selectedModel}] 一键注入到 ${target}...`, 'info');
+  try {
+    const result = await window.hap.syncTarget({
+      target,
+      model: selectedModel,
+      write: true,
+    });
+    if ($('syncPreview')) {
+      $('syncPreview').textContent = JSON.stringify(result, null, 2);
+    }
+    showToast(`🎉 已成功将 [${selectedModel}] 注入到 ${target} 命令行环境！`, 'success');
+    await refresh();
+  } catch (err) {
+    showToast(`注入失败：${err.message}`, 'error');
+  }
+};
 
 // ==========================================================================
 // 多模态附件管理 (Multimodal Attachments, Paste, Drag&Drop, Lightbox)
@@ -3739,83 +3854,167 @@ async function renderServers() {
   const grid = $('serverCardsGrid');
   if (!grid) return;
 
-  const servers = state.servers || [];
+  // 1. 刷新顶部本机宿主状态卡片
+  updateLocalHostCard();
 
-  // 同步下拉框选项
-  const select = $('terminalServerSelect');
-  if (select) {
-    select.innerHTML = '<option value="">-- 选择目标服务器 --</option>' +
-      servers.map(s => `<option value="${esc(s.id)}">${esc(s.name)} (${esc(s.host)}:${esc(s.port)})${s.status === 'online' ? ' [在线]' : ''}</option>`).join('');
+  // 2. 获取并同步服务器列表
+  try {
+    cachedServers = (await window.hap.listServers()) || [];
+  } catch (err) {
+    cachedServers = state.servers || [];
   }
 
-  if (servers.length === 0) {
+  // 3. 同步终端与运维助理下拉框
+  const select = $('terminalServerSelect');
+  const opsSelect = $('serverOpsTargetSelect');
+  const optionsHtml = '<option value="">-- 请选择目标服务器 --</option>' +
+    cachedServers.map(s => `<option value="${esc(s.id)}">${esc(s.name)} (${esc(s.host)}:${esc(s.port)})${s.status === 'online' ? ' [在线]' : ''}</option>`).join('');
+
+  if (select) {
+    const curVal = select.value || activeTerminalServerId;
+    select.innerHTML = optionsHtml;
+    if (curVal && cachedServers.some(s => s.id === curVal)) {
+      select.value = curVal;
+    } else if (cachedServers.length > 0) {
+      activeTerminalServerId = cachedServers[0].id;
+      select.value = activeTerminalServerId;
+    }
+  }
+
+  if (opsSelect) {
+    const curVal = opsSelect.value;
+    opsSelect.innerHTML = optionsHtml;
+    if (curVal && cachedServers.some(s => s.id === curVal)) {
+      opsSelect.value = curVal;
+    } else if (cachedServers.length > 0) {
+      opsSelect.value = cachedServers[0].id;
+    }
+  }
+
+  // 4. 空状态友好渲染
+  if (cachedServers.length === 0) {
     grid.innerHTML = `
-      <div class="empty-card" style="grid-column: 1 / -1; padding: 48px; text-align: center; color: var(--text-muted);">
-        <div style="font-size: 32px; margin-bottom: 8px;">🌐</div>
-        <div style="font-size: 14px; font-weight: 600; color: var(--text-main);">暂未添加任何远程服务器</div>
-        <div style="font-size: 12px; margin-top: 4px;">点击右上角「+ 添加服务器」配置 Linux 节点，打通双向智能运维与远程算力操控</div>
+      <div class="card" style="grid-column: 1 / -1; padding: 42px 20px; text-align: center; color: var(--text-secondary); background: #ffffff; border-radius: 12px; border: 1px dashed #cbd5e1;">
+        <div style="font-size: 36px; margin-bottom: 12px;">🌐</div>
+        <div style="font-weight: 700; font-size: 15px; color: var(--text-main); margin-bottom: 6px;">尚未添加任何远程服务器</div>
+        <div style="font-size: 13px; max-width: 440px; margin: 0 auto 18px auto; line-height: 1.5; color: #64748b;">
+          输入服务器 IP 与 SSH 凭据，即可一键自动化部署 HAP 守护进程，实现跨机器算力协同与实时操控。
+        </div>
+        <button type="button" class="btn primary" onclick="window.openServerDialog()" style="margin:0 auto;padding:7px 18px;font-size:13px;">
+          + 立即添加第一台服务器
+        </button>
       </div>
     `;
     return;
   }
 
-  grid.innerHTML = servers.map(s => {
+  // 5. 渲染各服务器节点卡片
+  grid.innerHTML = cachedServers.map(s => {
     const isOnline = s.status === 'online';
-    const isDeploying = s.status === 'deploying';
+    const isDeploying = s.status === 'installing' || s.status === 'deploying';
     const info = s.systemInfo;
-    const cpuPercent = info ? Math.round(info.cpu?.usagePercent ?? 0) : 0;
-    const memPercent = info ? Math.round(info.memory?.usagePercent ?? 0) : 0;
-    const memUsedGb = info ? (info.memory?.used / 1024 / 1024 / 1024).toFixed(1) : '0';
-    const memTotalGb = info ? (info.memory?.total / 1024 / 1024 / 1024).toFixed(1) : '0';
+    const cpuPercent = info ? Math.round(info.cpu?.usagePercent ?? info.cpuUsagePercent ?? 0) : 0;
+    const totalMem = info ? (info.memory?.total ?? info.totalMemBytes ?? 0) : 0;
+    const freeMem = info ? (info.memory?.free ?? info.freeMemBytes ?? 0) : 0;
+    const usedMem = totalMem - freeMem;
+    const memPercent = totalMem > 0 ? Math.round((usedMem / totalMem) * 100) : (info?.usedMemPercent ?? 0);
+    const memUsedGb = (usedMem / (1024 * 1024 * 1024)).toFixed(1);
+    const memTotalGb = (totalMem / (1024 * 1024 * 1024)).toFixed(1);
+    const uptimeSec = info ? (info.uptimeSeconds ?? info.uptime ?? 0) : 0;
+    const uptimeStr = uptimeSec > 0 ? `${Math.floor(uptimeSec / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m` : '—';
 
     return `
-      <div class="card server-node-card ${isOnline ? 'online' : 'offline'}" style="border:1px solid #e0f2fe;border-radius:14px;transition:all 0.2s ease;">
-        <div class="card-header" style="display:flex;justify-content:space-between;align-items:flex-start;padding:14px 16px;border-bottom:1px solid #f1f5f9;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);color:#0284c7;display:grid;place-items:center;font-weight:700;font-size:14px;">
-              ${esc(s.name.slice(0, 2).toUpperCase())}
+      <div class="card server-card" id="server-card-${esc(s.id)}" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,0.04);display:flex;flex-direction:column;gap:12px;">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div class="card-title-wrap" style="cursor:pointer;" onclick="window.openServerDetailsModal('${esc(s.id)}')" title="点击查看服务器系统完整详情">
+            <div class="card-title" style="font-size:14.5px;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:6px;">
+              <span>${esc(s.name)}</span>
+              <span style="font-size:11px;color:#3b82f6;font-weight:normal;">[详情 ↗]</span>
             </div>
-            <div>
-              <div style="font-weight:700;font-size:14px;color:var(--text-main);">${esc(s.name)}</div>
-              <div style="font-size:11.5px;color:var(--text-muted);font-family:var(--font-mono);">${esc(s.username)}@${esc(s.host)}:${esc(s.port)}</div>
-            </div>
+            <div class="card-subtitle" style="font-size:12px;color:var(--text-muted);font-family:var(--font-mono);">${esc(s.username)}@${esc(s.host)}:${esc(s.port)}</div>
           </div>
-          <span class="badge ${isOnline ? 'success' : isDeploying ? 'warning' : 'neutral'}" style="font-size:10.5px;">
-            ${isOnline ? '● 在线' : isDeploying ? '⏳ 部署中' : '○ 离线'}
+          <span class="badge ${isOnline ? 'success' : isDeploying ? 'warning' : 'neutral'}" style="font-size:11px;">
+            ${isOnline ? '● 在线 (已连接)' : isDeploying ? '⏳ 部署中' : '○ 离线'}
           </span>
         </div>
 
-        <div class="card-body" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+        <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
+            <div class="server-stat-pill">
+              <span style="color:var(--text-secondary);">OS:</span>
+              <span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:4px;">${info ? esc(info.osRelease || info.platform || 'Linux') : 'Linux'}</span>
+            </div>
+            <div class="server-stat-pill">
+              <span style="color:var(--text-secondary);">运行:</span>
+              <span style="font-weight:600;margin-left:4px;">${uptimeStr}</span>
+            </div>
+          </div>
+
+          <!-- CPU 监控 -->
           <div>
             <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-secondary);margin-bottom:3px;">
               <span>CPU 占用</span>
               <strong style="color:var(--text-main);">${info ? `${cpuPercent}%` : '—'}</strong>
             </div>
-            <div class="server-meter-bar">
-              <div class="server-meter-fill ${cpuPercent > 80 ? 'danger' : cpuPercent > 50 ? 'warn' : ''}" style="width:${info ? cpuPercent : 0}%;"></div>
+            <div class="server-meter-bar" style="height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+              <div class="server-meter-fill ${cpuPercent > 80 ? 'danger' : cpuPercent > 50 ? 'warn' : ''}" style="width:${info ? cpuPercent : 0}%;height:100%;background:${cpuPercent > 80 ? '#ef4444' : cpuPercent > 50 ? '#f59e0b' : '#3b82f6'};transition:width 0.3s;"></div>
             </div>
           </div>
 
+          <!-- 内存 监控 -->
           <div>
             <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-secondary);margin-bottom:3px;">
               <span>内存 占用</span>
-              <strong style="color:var(--text-main);">${info ? `${memPercent}% (${memUsedGb}/${memTotalGb}G)` : '—'}</strong>
+              <strong style="color:var(--text-main);">${info && totalMem > 0 ? `${memPercent}% (${memUsedGb}/${memTotalGb}G)` : '—'}</strong>
             </div>
-            <div class="server-meter-bar">
-              <div class="server-meter-fill ${memPercent > 85 ? 'danger' : memPercent > 60 ? 'warn' : ''}" style="width:${info ? memPercent : 0}%;"></div>
+            <div class="server-meter-bar" style="height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+              <div class="server-meter-fill ${memPercent > 85 ? 'danger' : memPercent > 60 ? 'warn' : ''}" style="width:${info ? memPercent : 0}%;height:100%;background:${memPercent > 85 ? '#ef4444' : memPercent > 60 ? '#f59e0b' : '#10b981'};transition:width 0.3s;"></div>
             </div>
+          </div>
+
+          <!-- 绑定的专属机器人状态徽标 -->
+          <div style="margin-top:4px;padding:6px 10px;background:#f8fafc;border-radius:6px;font-size:11.5px;display:flex;justify-content:space-between;align-items:center;border:1px dashed #cbd5e1;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span>🤖</span>
+              <span style="color:#475569;">绑定机器人：</span>
+              ${(() => {
+                const boundBot = (cachedBots || []).find(b => b.id === s.boundBotId || b.boundServerId === s.id);
+                if (boundBot) {
+                  return `<strong style="color:#0284c7;">${esc(boundBot.name)}</strong> <span style="font-size:10px;color:#94a3b8;">(${esc(boundBot.platform)})</span>`;
+                }
+                return '<span style="color:#94a3b8;">未绑定</span>';
+              })()}
+            </div>
+            ${(() => {
+              const boundBot = (cachedBots || []).find(b => b.id === s.boundBotId || b.boundServerId === s.id);
+              if (boundBot) {
+                return `<span class="badge ${boundBot.enabled ? 'success' : 'neutral'}" style="font-size:10.5px;">${boundBot.enabled ? '🟢 在线' : '⚪ 停止'}</span>`;
+              }
+              return `<button type="button" class="btn text-btn" style="font-size:11px;color:#0284c7;padding:0;" onclick="window.openBotDialog('', '${escJs(s.id)}')">+ 绑定机器人</button>`;
+            })()}
           </div>
         </div>
 
-        <div class="card-footer" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-top:1px solid #f1f5f9;background:#f8fafc;border-radius:0 0 14px 14px;">
-          <button type="button" class="btn primary" onclick="window.openServerDetail('${esc(s.id)}')" style="font-size:12px;padding:5px 14px;">
-            进入管理详情 ↗
-          </button>
+        <div class="card-footer" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #f1f5f9;margin-top:auto;">
           <div style="display:flex;gap:6px;">
-            <button type="button" class="btn secondary" onclick="window.openServerDialog('${esc(s.id)}')" style="padding:4px 8px;font-size:12px;">
+            <button type="button" class="btn primary" onclick="window.openServerDetailsModal('${esc(s.id)}')" style="padding:4px 10px;font-size:12px;" title="查看服务器完整硬件与系统详情">
+              🔍 详情
+            </button>
+            <button type="button" class="btn secondary" onclick="window.testServerNode('${esc(s.id)}')" style="padding:4px 10px;font-size:12px;" title="测试 SSH 连通性">
+              连通测试
+            </button>
+            <button type="button" class="btn ${s.status === 'online' ? 'secondary' : 'primary'}" onclick="window.openInstallServerModal('${esc(s.id)}')" style="padding:4px 10px;font-size:12px;" title="一键远程部署守护服务">
+              ${s.status === 'online' ? '重新部署' : '一键安装'}
+            </button>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button type="button" class="btn secondary" onclick="window.selectTerminalServer('${esc(s.id)}')" style="padding:4px 8px;font-size:12px;" title="在下方终端中选中此机器">
+              终端
+            </button>
+            <button type="button" class="btn secondary" onclick="window.openServerDialog('${esc(s.id)}')" style="padding:4px 8px;font-size:12px;" title="编辑配置">
               编辑
             </button>
-            <button type="button" class="btn secondary" onclick="window.deleteServerNode('${esc(s.id)}')" style="padding:4px 8px;font-size:12px;color:#ef4444;border-color:#fecaca;background:#fef2f2;">
+            <button type="button" class="btn secondary" onclick="window.deleteServerNode('${esc(s.id)}')" style="padding:4px 8px;font-size:12px;color:#ef4444;border-color:#fecaca;background:#fef2f2;" title="移除此服务器">
               删除
             </button>
           </div>
@@ -3828,69 +4027,119 @@ async function renderServers() {
 window.openServerDialog = (id) => {
   const dialog = $('serverDialog');
   const form = $('serverForm');
-  if (!dialog || !form) return;
+  if (!dialog) {
+    showToast('未能定位服务器配置弹窗组件', 'error');
+    return;
+  }
 
-  const isEdit = !!id;
+  const isEdit = Boolean(id);
   const server = isEdit ? cachedServers.find(s => s.id === id) : null;
 
-  $('serverDialogTitle').textContent = isEdit ? '编辑远程服务器配置' : '添加远程服务器';
-  $('serverInputId').value = server ? server.id : '';
-  $('serverInputId').disabled = isEdit;
-  $('serverInputName').value = server ? server.name : '';
-  $('serverInputHost').value = server ? server.host : '';
-  $('serverInputPort').value = server ? server.port : 22;
-  $('serverInputUsername').value = server ? server.username : 'root';
-  $('serverInputAuthType').value = server ? server.authType : 'password';
-  $('serverInputPassword').value = server && server.password ? server.password : '';
-  $('serverInputPrivateKey').value = server && server.privateKey ? server.privateKey : '';
-  $('serverInputDaemonPort').value = server ? server.daemonPort : 9527;
-  $('serverInputToken').value = server && server.token ? server.token : '';
+  if ($('serverDialogTitle')) $('serverDialogTitle').textContent = isEdit ? '编辑远程服务器配置' : '添加远程服务器';
+  if ($('serverInputId')) {
+    $('serverInputId').value = server ? server.id : '';
+    $('serverInputId').readOnly = isEdit;
+    $('serverInputId').style.background = isEdit ? '#f1f5f9' : '#ffffff';
+  }
+  if ($('serverInputName')) $('serverInputName').value = server ? server.name : '';
+  if ($('serverInputHost')) $('serverInputHost').value = server ? server.host : '';
+  if ($('serverInputPort')) $('serverInputPort').value = server ? server.port : 22;
+  if ($('serverInputUsername')) $('serverInputUsername').value = server ? server.username : 'root';
+  if ($('serverInputAuthType')) $('serverInputAuthType').value = server ? server.authType : 'password';
+  if ($('serverInputPassword')) $('serverInputPassword').value = server && server.password ? server.password : '';
+  if ($('serverInputPrivateKey')) $('serverInputPrivateKey').value = server && server.privateKey ? server.privateKey : '';
+  if ($('serverInputDaemonPort')) $('serverInputDaemonPort').value = server ? server.daemonPort : 9527;
+  if ($('serverInputToken')) $('serverInputToken').value = server && server.token ? server.token : '';
+
+  // 渲染绑定机器人下拉列表
+  const boundBotSelect = $('serverInputBoundBot');
+  if (boundBotSelect) {
+    boundBotSelect.innerHTML = '<option value="">-- 未绑定机器人 (可选) --</option>' + (cachedBots || []).map(b => `
+      <option value="${esc(b.id)}" ${server && (server.boundBotId === b.id || b.boundServerId === server.id) ? 'selected' : ''}>
+        ${b.platform === 'telegram' ? '✈️' : b.platform === 'qq' ? '🐧' : b.platform === 'feishu' ? '🕊️' : b.platform === 'dingtalk' ? '📌' : b.platform === 'wechat' ? '🟢' : '🤖'} ${esc(b.name)} (${esc(b.id)})
+      </option>
+    `).join('');
+  }
 
   const isKey = (server ? server.authType : 'password') === 'privateKey';
-  $('serverPasswordGroup').style.display = isKey ? 'none' : 'block';
-  $('serverPrivateKeyGroup').style.display = isKey ? 'block' : 'none';
+  if ($('serverPasswordGroup')) $('serverPasswordGroup').style.display = isKey ? 'none' : 'block';
+  if ($('serverPrivateKeyGroup')) $('serverPrivateKeyGroup').style.display = isKey ? 'block' : 'none';
 
-  $('deleteServerModalBtn').style.display = isEdit ? 'inline-block' : 'none';
-  $('deleteServerModalBtn').onclick = () => {
-    if (id) window.deleteServerNode(id);
-    dialog.close();
-  };
+  if ($('deleteServerModalBtn')) {
+    $('deleteServerModalBtn').style.display = isEdit ? 'inline-block' : 'none';
+    $('deleteServerModalBtn').onclick = () => {
+      if (id) window.deleteServerNode(id);
+      dialog.close();
+    };
+  }
 
+  if (dialog.open) dialog.close();
   dialog.showModal();
+  $('serverInputHost')?.focus();
 };
+
+// 监听 Host 输入，若 ID 为空则智能建议节点 ID
+$('serverInputHost')?.addEventListener('input', (e) => {
+  const hostVal = e.target.value.trim();
+  const idInput = $('serverInputId');
+  if (idInput && !idInput.readOnly && (!idInput.value || idInput.value.startsWith('node_'))) {
+    if (hostVal) {
+      idInput.value = 'node_' + hostVal.replace(/[^a-zA-Z0-9_-]/g, '_');
+    }
+  }
+});
 
 $('serverInputAuthType')?.addEventListener('change', (e) => {
   const isKey = e.target.value === 'privateKey';
-  $('serverPasswordGroup').style.display = isKey ? 'none' : 'block';
-  $('serverPrivateKeyGroup').style.display = isKey ? 'block' : 'none';
+  if ($('serverPasswordGroup')) $('serverPasswordGroup').style.display = isKey ? 'none' : 'block';
+  if ($('serverPrivateKeyGroup')) $('serverPrivateKeyGroup').style.display = isKey ? 'block' : 'none';
 });
 
-$('closeServerDialogBtn')?.addEventListener('click', () => $('serverDialog').close());
-$('cancelServerModalBtn')?.addEventListener('click', () => $('serverDialog').close());
+$('closeServerDialogBtn')?.addEventListener('click', () => $('serverDialog')?.close());
+$('cancelServerModalBtn')?.addEventListener('click', () => $('serverDialog')?.close());
 
 $('serverForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const form = e.target;
-  const formData = new FormData(form);
+  
+  const hostVal = $('serverInputHost')?.value?.trim();
+  if (!hostVal) {
+    showToast('请填写主机 IP 或域名 (Host)', 'warn');
+    $('serverInputHost')?.focus();
+    return;
+  }
+
+  const rawId = $('serverInputId')?.value?.trim();
+  const id = rawId || ('node_' + hostVal.replace(/[^a-zA-Z0-9_-]/g, '_'));
+  const name = $('serverInputName')?.value?.trim() || hostVal;
+  const port = parseInt($('serverInputPort')?.value, 10) || 22;
+  const username = $('serverInputUsername')?.value?.trim() || 'root';
+  const authType = $('serverInputAuthType')?.value || 'password';
+  const password = $('serverInputPassword')?.value || undefined;
+  const privateKey = $('serverInputPrivateKey')?.value || undefined;
+  const daemonPort = parseInt($('serverInputDaemonPort')?.value, 10) || 9527;
+  const token = $('serverInputToken')?.value?.trim() || undefined;
+  const boundBotId = $('serverInputBoundBot')?.value || undefined;
 
   const payload = {
-    id: formData.get('id').trim(),
-    name: formData.get('name')?.trim() || formData.get('host').trim(),
-    host: formData.get('host').trim(),
-    port: parseInt(formData.get('port'), 10) || 22,
-    username: formData.get('username').trim() || 'root',
-    authType: formData.get('authType'),
-    password: formData.get('password') || undefined,
-    privateKey: formData.get('privateKey') || undefined,
-    daemonPort: parseInt(formData.get('daemonPort'), 10) || 9527,
-    token: formData.get('token')?.trim() || undefined,
+    id,
+    name,
+    host: hostVal,
+    port,
+    username,
+    authType,
+    password,
+    privateKey,
+    daemonPort,
+    token,
+    boundBotId,
   };
 
   try {
     await window.hap.upsertServer(payload);
-    $('serverDialog').close();
-    showToast(`服务器 [${payload.name}] 配置保存成功！`, 'success');
+    $('serverDialog')?.close();
+    showToast(`服务器 [${payload.name}] 配置已成功保存！`, 'success');
     await renderServers();
+    await window.loadBotInstances();
   } catch (err) {
     showToast(`保存失败：${err.message}`, 'error');
   }
@@ -4132,6 +4381,326 @@ $('refreshServersBtn')?.addEventListener('click', async () => {
 // 初始化加载
 refresh().catch((error) => showToast('初始化加载失败：' + error.message, 'error'));
 
+
+// ============================================================================
+// 0. 多机器人实例中心与服务器绑定 (Multi-Bot Instances Hub & Server Binding)
+// ============================================================================
+let cachedBots = [];
+
+function getPlatformIcon(platform) {
+  switch (platform) {
+    case 'telegram': return '✈️';
+    case 'qq': return '🐧';
+    case 'feishu': return '🕊️';
+    case 'dingtalk': return '📌';
+    case 'wechat': return '🟢';
+    case 'discord': return '🎮';
+    case 'slack': return '💼';
+    default: return '🤖';
+  }
+}
+
+function getPlatformName(platform) {
+  switch (platform) {
+    case 'telegram': return 'Telegram 机器人';
+    case 'qq': return 'QQ / OneBot';
+    case 'feishu': return '飞书 (Feishu/Lark)';
+    case 'dingtalk': return '钉钉 (DingTalk)';
+    case 'wechat': return '微信 / 企业微信';
+    case 'discord': return 'Discord';
+    case 'slack': return 'Slack';
+    default: return platform;
+  }
+}
+
+window.renderBotInstancesGrid = () => {
+  const container = $('botInstancesGrid');
+  if (!container) return;
+
+  if (cachedBots.length === 0) {
+    container.innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:36px 20px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;">
+        <div style="font-size:32px;margin-bottom:8px;">🤖</div>
+        <div style="font-size:14px;font-weight:600;color:#334155;margin-bottom:4px;">暂无配置任何机器人实例</div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:14px;">您可以为不同的服务器或业务场景创建多个专属机器人，直接在群内遥控目标服务器。</div>
+        <button type="button" class="btn primary" onclick="window.openBotDialog()" style="font-size:12.5px;padding:6px 16px;">
+          + 立即添加第一个机器人
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = cachedBots.map(bot => {
+    const isRunning = bot.enabled !== false && bot.status === 'running';
+    const boundServer = (bot.boundServerId === 'local' || !bot.boundServerId)
+      ? { name: '本机 (Localhost / 当前工作区)', host: '127.0.0.1' }
+      : cachedServers.find(s => s.id === bot.boundServerId);
+    
+    const serverLabel = boundServer ? `${boundServer.name || boundServer.id} (${boundServer.host || ''})` : (bot.boundServerId || '未绑定');
+
+    return `
+      <div class="card" style="border:1px solid ${isRunning ? '#bae6fd' : '#e2e8f0'};background:#ffffff;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:22px;">${getPlatformIcon(bot.platform)}</span>
+            <div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <strong style="font-size:14px;color:#0f172a;">${esc(bot.name || bot.id)}</strong>
+                <span class="badge ${isRunning ? 'success' : 'neutral'}" style="font-size:10px;">
+                  ${isRunning ? '🟢 运行中' : '⚪ 已停止'}
+                </span>
+              </div>
+              <div style="font-size:11px;color:#64748b;font-family:var(--font-mono);margin-top:2px;">
+                ID: ${esc(bot.id)} | 平台: ${esc(getPlatformName(bot.platform))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:#f8fafc;padding:8px 10px;border-radius:6px;font-size:11.5px;display:flex;flex-direction:column;gap:4px;border:1px solid #f1f5f9;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:#64748b;">🖥️ 绑定服务器：</span>
+            <strong style="color:#0284c7;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(serverLabel)}">${esc(serverLabel)}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:#64748b;">🤖 调度智能体：</span>
+            <span class="prop-chip" style="font-size:10.5px;">${esc(bot.defaultAgent || 'ops')}</span>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:6px;border-top:1px solid #f1f5f9;margin-top:auto;">
+          <div style="display:flex;gap:6px;">
+            <button type="button" class="btn ${isRunning ? 'secondary' : 'primary'}" style="font-size:11.5px;padding:3px 8px;" onclick="window.toggleBotStatus('${escJs(bot.id)}', ${!isRunning})">
+              ${isRunning ? '⏹️ 停止' : '🚀 启动'}
+            </button>
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="window.testBotInstanceDirectly('${escJs(bot.id)}')">
+              连通测试
+            </button>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="window.openBotDialog('${escJs(bot.id)}')">
+              编辑
+            </button>
+            <button type="button" class="btn danger" style="font-size:11.5px;padding:3px 8px;" onclick="window.deleteBotInstance('${escJs(bot.id)}')">
+              删除
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+};
+
+window.loadBotInstances = async () => {
+  try {
+    cachedBots = (await window.hap.listBots()) || [];
+    window.renderBotInstancesGrid();
+  } catch (err) {
+    console.error('加载机器人列表失败', err);
+  }
+};
+
+window.openBotDialog = (botId, preselectedServerId) => {
+  const dialog = $('botDialog');
+  if (!dialog) return;
+
+  const isEdit = Boolean(botId);
+  const bot = isEdit ? cachedBots.find(b => b.id === botId) : null;
+
+  $('botDialogTitle').textContent = isEdit ? '编辑机器人实例' : '添加机器人实例';
+  
+  const idInput = $('botInputId');
+  if (idInput) {
+    idInput.value = bot ? bot.id : `bot-${Date.now().toString(36)}`;
+    idInput.readOnly = isEdit;
+    idInput.style.background = isEdit ? '#f1f5f9' : '#ffffff';
+  }
+  if ($('botInputName')) $('botInputName').value = bot ? bot.name : '';
+  if ($('botInputPlatform')) $('botInputPlatform').value = bot ? bot.platform : 'telegram';
+  if ($('botInputDefaultAgent')) $('botInputDefaultAgent').value = bot ? (bot.defaultAgent || 'ops') : 'ops';
+
+  // 渲染服务器绑定下拉框
+  const serverSelect = $('botInputBoundServer');
+  if (serverSelect) {
+    serverSelect.innerHTML = '<option value="local">🖥️ 本机 (Localhost / 当前工作区)</option>' + cachedServers.map(s => `
+      <option value="${esc(s.id)}">🖥️ ${esc(s.name || s.id)} (${esc(s.host)})</option>
+    `).join('');
+    if (bot && bot.boundServerId) {
+      serverSelect.value = bot.boundServerId;
+    } else if (preselectedServerId) {
+      serverSelect.value = preselectedServerId;
+    } else {
+      serverSelect.value = 'local';
+    }
+  }
+
+  // 填充凭据
+  const cfg = bot?.config || {};
+  if ($('botTgToken')) $('botTgToken').value = cfg.token || '';
+  if ($('botTgAdminUsers')) $('botTgAdminUsers').value = (cfg.adminUsers || []).join(', ');
+  if ($('botQqWsEndpoint')) $('botQqWsEndpoint').value = cfg.wsEndpoint || 'ws://127.0.0.1:3001';
+  if ($('botQqAccessToken')) $('botQqAccessToken').value = cfg.accessToken || '';
+  if ($('botFeishuAppId')) $('botFeishuAppId').value = cfg.appId || '';
+  if ($('botFeishuAppSecret')) $('botFeishuAppSecret').value = cfg.appSecret || '';
+  if ($('botDingWebhook')) $('botDingWebhook').value = cfg.webhookUrl || '';
+  if ($('botDingSecret')) $('botDingSecret').value = cfg.secret || '';
+  if ($('botWechatToken')) $('botWechatToken').value = cfg.puppetToken || '';
+  if ($('botDiscordToken')) $('botDiscordToken').value = cfg.token || '';
+  if ($('botSlackToken')) $('botSlackToken').value = cfg.token || '';
+
+  // 更新平台动态字段展示
+  window.updateBotPlatformFields();
+
+  const delBtn = $('deleteBotModalBtn');
+  if (delBtn) {
+    delBtn.style.display = isEdit ? 'inline-block' : 'none';
+    delBtn.onclick = () => {
+      if (botId) window.deleteBotInstance(botId);
+      dialog.close();
+    };
+  }
+
+  if (dialog.open) dialog.close();
+  dialog.showModal();
+};
+
+window.updateBotPlatformFields = () => {
+  const platform = $('botInputPlatform')?.value || 'telegram';
+  document.querySelectorAll('.bot-platform-fields').forEach(el => {
+    el.style.display = el.id === `botFields_${platform}` ? 'block' : 'none';
+  });
+};
+
+$('botInputPlatform')?.addEventListener('change', window.updateBotPlatformFields);
+$('closeBotDialogBtn')?.addEventListener('click', () => $('botDialog')?.close());
+$('cancelBotDialogBtn')?.addEventListener('click', () => $('botDialog')?.close());
+
+$('botForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = $('botInputId')?.value.trim();
+  const name = $('botInputName')?.value.trim();
+  const platform = $('botInputPlatform')?.value || 'telegram';
+  const boundServerId = $('botInputBoundServer')?.value || 'local';
+  const defaultAgent = $('botInputDefaultAgent')?.value || 'ops';
+
+  if (!id || !name) {
+    showToast('请填写机器人 ID 与名称', 'warning');
+    return;
+  }
+
+  const config = {};
+  if (platform === 'telegram') {
+    config.token = $('botTgToken')?.value.trim() || undefined;
+    const adminStr = $('botTgAdminUsers')?.value.trim();
+    if (adminStr) config.adminUsers = adminStr.split(',').map(s => s.trim()).filter(Boolean);
+  } else if (platform === 'qq') {
+    config.wsEndpoint = $('botQqWsEndpoint')?.value.trim() || 'ws://127.0.0.1:3001';
+    config.accessToken = $('botQqAccessToken')?.value.trim() || undefined;
+  } else if (platform === 'feishu') {
+    config.appId = $('botFeishuAppId')?.value.trim() || undefined;
+    config.appSecret = $('botFeishuAppSecret')?.value.trim() || undefined;
+  } else if (platform === 'dingtalk') {
+    config.webhookUrl = $('botDingWebhook')?.value.trim() || undefined;
+    config.secret = $('botDingSecret')?.value.trim() || undefined;
+  } else if (platform === 'wechat') {
+    config.puppetToken = $('botWechatToken')?.value.trim() || undefined;
+  } else if (platform === 'discord') {
+    config.token = $('botDiscordToken')?.value.trim() || undefined;
+  } else if (platform === 'slack') {
+    config.token = $('botSlackToken')?.value.trim() || undefined;
+  }
+
+  try {
+    await window.hap.upsertBot({
+      id,
+      name,
+      platform,
+      boundServerId,
+      defaultAgent,
+      enabled: true,
+      config,
+    });
+    $('botDialog')?.close();
+    showToast(`🎉 机器人实例 [${name}] 已成功保存并绑定服务器！`, 'success');
+    await window.loadBotInstances();
+    await renderServers();
+  } catch (err) {
+    showToast('保存机器人失败：' + err.message, 'error');
+  }
+});
+
+$('testBotModalBtn')?.addEventListener('click', async () => {
+  const platform = $('botInputPlatform')?.value || 'telegram';
+  const token = $('botTgToken')?.value.trim();
+  const appId = $('botFeishuAppId')?.value.trim();
+  const appSecret = $('botFeishuAppSecret')?.value.trim();
+  const wsEndpoint = $('botQqWsEndpoint')?.value.trim();
+
+  const testBtn = $('testBotModalBtn');
+  if (testBtn) {
+    testBtn.disabled = true;
+    testBtn.textContent = '测试中...';
+  }
+
+  try {
+    const res = await window.hap.testBotConnection({
+      platform,
+      config: { token, appId, appSecret, wsEndpoint },
+    });
+    if (res.ok) {
+      showToast(res.message, 'success');
+    } else {
+      showToast('连通失败：' + res.message, 'error');
+    }
+  } catch (err) {
+    showToast('测试异常：' + err.message, 'error');
+  } finally {
+    if (testBtn) {
+      testBtn.disabled = false;
+      testBtn.textContent = '连通测试';
+    }
+  }
+});
+
+window.testBotInstanceDirectly = async (id) => {
+  const bot = cachedBots.find(b => b.id === id);
+  if (!bot) return;
+  showToast(`正在测试 [${bot.name}] 连通性...`, 'info');
+  try {
+    const res = await window.hap.testBotConnection(bot);
+    if (res.ok) {
+      showToast(res.message, 'success');
+    } else {
+      showToast('连通失败：' + res.message, 'error');
+    }
+  } catch (err) {
+    showToast('测试异常：' + err.message, 'error');
+  }
+};
+
+window.toggleBotStatus = async (id, enabled) => {
+  try {
+    const res = await window.hap.toggleBotStatus(id, enabled);
+    showToast(res.message, 'success');
+    await window.loadBotInstances();
+    await renderServers();
+  } catch (err) {
+    showToast('操作失败：' + err.message, 'error');
+  }
+};
+
+window.deleteBotInstance = async (id) => {
+  if (!confirm(`确定要删除机器人实例 [${id}] 吗？\n删除后将自动解除与其绑定的服务器关联。`)) return;
+  try {
+    await window.hap.deleteBot(id);
+    showToast('机器人实例已删除', 'info');
+    await window.loadBotInstances();
+    await renderServers();
+  } catch (err) {
+    showToast('删除失败：' + err.message, 'error');
+  }
+};
 
 // ============================================================================
 // 1. 多通道通信中心切换 (微信 / 飞书 / QQ)
@@ -5109,6 +5678,7 @@ window.switchSettingsTab = (tabId) => {
     renderProviders();
     renderModels();
   } else if (tabId === 'channels') {
+    window.loadBotInstances();
     const activeSubBtn = document.querySelector('.channel-subtab-btn.active');
     const currentSub = activeSubBtn ? activeSubBtn.dataset.subtab : 'wechat';
     window.switchSettingsSubTab(currentSub || 'wechat');
@@ -5210,7 +5780,14 @@ window.removeModelFromDialog = (index) => {
   renderCurrentDialogModels();
 };
 
-window.fetchAndSyncModelsForProvider = async (providerId) => {
+window.fetchAndSyncModelsForProvider = async (providerId, clickBtn) => {
+  const btn = clickBtn || (window.event?.currentTarget);
+  const origText = btn ? btn.textContent : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="display:inline-block;width:11px;height:11px;border:2px solid #cbd5e1;border-top-color:#0284c7;border-radius:50%;margin-right:4px;vertical-align:middle;"></span>拉取中...';
+  }
+
   showToast(`正在从服务商 [${providerId}] 获取模型列表...`, 'info');
   try {
     const res = await window.hap.fetchProviderModels(providerId);
@@ -5267,6 +5844,11 @@ window.fetchAndSyncModelsForProvider = async (providerId) => {
     dialog.showModal();
   } catch (err) {
     showToast(`获取模型异常：${err.message}`, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = origText || '🔄 获取模型';
+    }
   }
 };
 // 弹窗内部拉取模型
@@ -5279,11 +5861,14 @@ $('fetchRemoteModelsInDialogBtn')?.addEventListener('click', async () => {
 
   if (!baseUrl) {
     showToast('请先填写 API 基础地址 (Base URL)', 'warning');
+    $('providerInputBaseUrl')?.focus();
     return;
   }
 
+  const btn = $('fetchRemoteModelsInDialogBtn');
   const btnText = $('fetchRemoteBtnTextInDialog');
-  if (btnText) btnText.textContent = '正在获取云端模型...';
+  if (btn) btn.disabled = true;
+  if (btnText) btnText.innerHTML = '<span class="spinner" style="display:inline-block;width:11px;height:11px;border:2px solid #cbd5e1;border-top-color:#0284c7;border-radius:50%;margin-right:4px;vertical-align:middle;"></span>正在获取云端模型...';
 
   try {
     const res = await window.hap.fetchProviderModels(id || 'temp', { baseUrl, apiKey, wireApi, protocol });
@@ -5314,6 +5899,7 @@ $('fetchRemoteModelsInDialogBtn')?.addEventListener('click', async () => {
   } catch (err) {
     showToast('拉取异常：' + err.message, 'error');
   } finally {
+    if (btn) btn.disabled = false;
     if (btnText) btnText.textContent = '一键从服务商获取模型';
   }
 });
@@ -5515,7 +6101,13 @@ async function refreshServerDetailsModalContent(id) {
     if ($('serverDetailsNodeVer')) $('serverDetailsNodeVer').textContent = info?.nodeVersion || 'v18+';
 
     // 绑定动作按钮事件
-    if ($('serverDetailsTerminalBtn')) {
+    if ($('serverDetailsPanoramaBtn')) {
+    $('serverDetailsPanoramaBtn').onclick = () => {
+      $('serverDetailsModal')?.close();
+      window.openNodePanorama(targetId);
+    };
+  }
+  if ($('serverDetailsTerminalBtn')) {
       $('serverDetailsTerminalBtn').onclick = () => {
         $('serverDetailsModal')?.close();
         window.selectTerminalServer(targetId);
@@ -6097,5 +6689,1327 @@ window.deleteSchedule = async (id) => {
     await renderSchedules();
   } catch (err) {
     showToast('删除失败：' + err.message, 'error');
+  }
+};
+
+// ============================================================================
+// 1. 全局 AI 环境变量中心 (Global Environment Variables Center)
+// ============================================================================
+
+let cachedEnvList = [];
+
+function maskKeySnippet(value) {
+  if (!value || typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (trimmed.length <= 8) return '••••••••';
+  return `${trimmed.slice(0, 4)}••••••••${trimmed.slice(-4)}`;
+}
+
+window.openEnvManagerModal = async () => {
+  const dialog = $('envManagerModal');
+  if (!dialog) return;
+  $('batchEnvImportBox').style.display = 'none';
+  $('addCustomEnvBox').style.display = 'none';
+  if ($('searchEnvInput')) $('searchEnvInput').value = '';
+  await renderEnvManagerModal();
+  dialog.showModal();
+};
+
+async function renderEnvManagerModal() {
+  try {
+    const data = await window.hap.getEnvVars();
+    cachedEnvList = data.list || [];
+    if ($('envSetCount')) $('envSetCount').textContent = String(data.totalSet || 0);
+    if ($('envTotalCount')) $('envTotalCount').textContent = String(cachedEnvList.length);
+    renderEnvVarsList(cachedEnvList);
+  } catch (err) {
+    showToast('加载环境变量失败：' + err.message, 'error');
+  }
+}
+
+function renderEnvVarsList(list) {
+  const container = $('envVarsListContainer');
+  if (!container) return;
+  const search = $('searchEnvInput')?.value.trim().toLowerCase() || '';
+  const filtered = list.filter(item => {
+    if (!search) return true;
+    return item.key.toLowerCase().includes(search) || (item.label && item.label.toLowerCase().includes(search)) || (item.desc && item.desc.toLowerCase().includes(search));
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="text-align:center;padding:30px;color:var(--text-muted);font-size:12.5px;">未匹配到任何环境变量</div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(item => {
+    const masked = item.value ? maskKeySnippet(item.value) : '';
+    return `
+      <div class="card" style="padding:10px 14px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;display:flex;flex-direction:column;gap:6px;" data-env-key="${esc(item.key)}">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <strong style="font-size:13.5px;color:#0f172a;">${esc(item.label || item.key)}</strong>
+            <code style="font-size:11.5px;background:#f1f5f9;padding:2px 6px;border-radius:4px;color:#0284c7;">${esc(item.key)}</code>
+            <span class="badge ${item.isSet ? 'success' : 'warn'}" style="font-size:11px;">
+              ${item.isSet ? '🟢 已配置' : '⚪ 未配置'}
+            </span>
+          </div>
+          <div style="font-size:11.5px;color:#64748b;">${esc(item.desc || '')}</div>
+        </div>
+        <div style="display:grid;grid-template-columns: 1fr auto;gap:8px;align-items:center;">
+          <div style="display:flex;position:relative;align-items:center;">
+            <input type="password" class="env-val-input" id="envVal_${esc(item.key)}" data-raw="${esc(item.value)}" value="${esc(item.value)}" placeholder="${item.isSet ? '已配置: ' + esc(masked) : '在此粘贴 API Key / 凭据密钥...'}" style="width:100%;box-sizing:border-box;font-size:12.5px;padding:5px 65px 5px 10px;border-radius:6px;border:1px solid #cbd5e1;" />
+            <button type="button" class="btn text-btn toggle-env-eye" style="position:absolute;right:6px;font-size:11px;padding:2px 6px;color:#0284c7;" onclick="window.toggleEnvInputEye('${escJs(item.key)}')">显示</button>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button type="button" class="btn primary" style="font-size:11.5px;padding:4px 10px;" onclick="window.saveSingleEnvVar('${escJs(item.key)}')">保存</button>
+            ${item.isSet ? `<button type="button" class="btn text-btn" style="font-size:11.5px;padding:4px 8px;color:#ef4444;" onclick="window.clearSingleEnvVar('${escJs(item.key)}')">清除</button>` : ''}
+            ${item.category === 'custom' ? `<button type="button" class="btn danger" style="font-size:11.5px;padding:4px 8px;" onclick="window.deleteCustomEnvVar('${escJs(item.key)}')">删除</button>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+window.toggleEnvInputEye = (key) => {
+  const input = $(`envVal_${key}`);
+  if (!input) return;
+  const isPass = input.type === 'password';
+  input.type = isPass ? 'text' : 'password';
+  const btn = input.parentElement.querySelector('.toggle-env-eye');
+  if (btn) btn.textContent = isPass ? '隐藏' : '显示';
+};
+
+window.saveSingleEnvVar = async (key) => {
+  const input = $(`envVal_${key}`);
+  if (!input) return;
+  const value = input.value.trim();
+  try {
+    await window.hap.saveEnvVar({ key, value });
+    showToast(`环境变量 [${key}] 已保存生效！`, 'success');
+    await renderEnvManagerModal();
+    await refresh();
+  } catch (err) {
+    showToast('保存失败：' + err.message, 'error');
+  }
+};
+
+window.clearSingleEnvVar = async (key) => {
+  try {
+    await window.hap.saveEnvVar({ key, value: '' });
+    showToast(`环境变量 [${key}] 已清除`, 'info');
+    await renderEnvManagerModal();
+    await refresh();
+  } catch (err) {
+    showToast('清除失败：' + err.message, 'error');
+  }
+};
+
+window.deleteCustomEnvVar = async (key) => {
+  try {
+    await window.hap.deleteEnvVar(key);
+    showToast(`自定义变量 [${key}] 已删除`, 'info');
+    await renderEnvManagerModal();
+    await refresh();
+  } catch (err) {
+    showToast('删除失败：' + err.message, 'error');
+  }
+};
+
+// 批量导入与自定义抽屉
+$('openBatchImportEnvBtn')?.addEventListener('click', () => {
+  const box = $('batchEnvImportBox');
+  if (!box) return;
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+});
+
+$('cancelBatchEnvBtn')?.addEventListener('click', () => {
+  if ($('batchEnvImportBox')) $('batchEnvImportBox').style.display = 'none';
+});
+
+$('doBatchImportEnvBtn')?.addEventListener('click', async () => {
+  const text = $('batchEnvTextarea')?.value || '';
+  if (!text.trim()) {
+    showToast('请先输入 .env 格式内容', 'warning');
+    return;
+  }
+  const lines = text.split('\n');
+  const entries = {};
+  let count = 0;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx <= 0) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    let val = trimmed.slice(eqIdx + 1).trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    }
+    if (key) {
+      entries[key] = val;
+      count++;
+    }
+  }
+
+  if (count === 0) {
+    showToast('未能解析出有效的 KEY=VALUE 行', 'warning');
+    return;
+  }
+
+  try {
+    await window.hap.batchSaveEnvVars(entries);
+    showToast(`🎉 成功导入并生效 ${count} 项环境变量！`, 'success');
+    $('batchEnvTextarea').value = '';
+    $('batchEnvImportBox').style.display = 'none';
+    await renderEnvManagerModal();
+    await refresh();
+  } catch (err) {
+    showToast('批量导入失败：' + err.message, 'error');
+  }
+});
+
+$('openAddCustomEnvBtn')?.addEventListener('click', () => {
+  const box = $('addCustomEnvBox');
+  if (!box) return;
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+});
+
+$('cancelNewEnvBtn')?.addEventListener('click', () => {
+  if ($('addCustomEnvBox')) $('addCustomEnvBox').style.display = 'none';
+});
+
+$('saveNewEnvBtn')?.addEventListener('click', async () => {
+  const key = $('newEnvKeyInput')?.value.trim();
+  const value = $('newEnvValInput')?.value.trim();
+  if (!key) {
+    showToast('请输入环境变量名 (如 DEEPSEEK_API_KEY)', 'warning');
+    return;
+  }
+  try {
+    await window.hap.saveEnvVar({ key, value });
+    showToast(`自定义变量 [${key}] 已保存！`, 'success');
+    $('newEnvKeyInput').value = '';
+    $('newEnvValInput').value = '';
+    $('addCustomEnvBox').style.display = 'none';
+    await renderEnvManagerModal();
+    await refresh();
+  } catch (err) {
+    showToast('保存失败：' + err.message, 'error');
+  }
+});
+
+$('searchEnvInput')?.addEventListener('input', () => {
+  renderEnvVarsList(cachedEnvList);
+});
+
+$('closeEnvManagerModalBtn')?.addEventListener('click', () => $('envManagerModal')?.close());
+$('finishEnvManagerBtn')?.addEventListener('click', () => $('envManagerModal')?.close());
+
+
+// ============================================================================
+// 2. AI 图像生成与视觉创作工作室 (AI Image Studio)
+// ============================================================================
+
+let lastGeneratedImage = null;
+let isGeneratingImage = false;
+let imageGenTimerInterval = null;
+
+function populateImageGenProviders() {
+  const optGroup = $('systemConfiguredProvidersOptGroup');
+  if (!optGroup) return;
+  const providers = (state.providers || []).filter(p => p.id !== 'ollama');
+  if (providers.length === 0) {
+    optGroup.innerHTML = '';
+    return;
+  }
+  optGroup.innerHTML = providers.map(p => {
+    const isReady = p.hasCredential;
+    const label = `${p.name || p.id} (${isReady ? '🟢 凭据就绪' : '⚪ 需填Key'})`;
+    return `<option value="${esc(p.id)}:dall-e-3" data-provider="${esc(p.id)}" data-model="dall-e-3">${esc(label)} - DALL-E 3 / Flux</option>`;
+  }).join('');
+}
+
+function updateImageGenModelChip() {
+  const select = $('imageGenModelSelect');
+  const chip = $('imageModelStatusChip');
+  const customBox = $('customImageModelBox');
+  const manualBox = $('manualImageModelInlineBox');
+  if (!select || !chip) return;
+
+  const selectedOpt = select.selectedOptions?.[0];
+  const provider = selectedOpt?.getAttribute('data-provider') || '';
+  const val = select.value || '';
+
+  if (val === 'custom:custom') {
+    if (customBox) customBox.style.display = 'flex';
+    if (manualBox) manualBox.style.display = 'none';
+    chip.innerHTML = '<span style="color:#0284c7;">✨ 自定义生图端点</span>';
+    return;
+  } else if (val === 'manual:manual') {
+    if (customBox) customBox.style.display = 'none';
+    if (manualBox) {
+      manualBox.style.display = 'block';
+      $('manualImageModelInput')?.focus();
+    }
+    chip.innerHTML = '<span style="color:#0284c7;">✏️ 手动填写生图模型</span>';
+    return;
+  } else {
+    if (customBox) customBox.style.display = 'none';
+    if (manualBox) manualBox.style.display = 'none';
+  }
+
+  if (provider === 'pollinations') {
+    chip.innerHTML = '<span style="color:#10b981;">⚡ 免 Key · 即刻可用</span>';
+  } else {
+    const p = (state.providers || []).find(item => item.id === provider);
+    if (p && p.hasCredential) {
+      chip.innerHTML = `<span style="color:#10b981;">🟢 ${esc(p.name || p.id)} 凭据已就绪</span>`;
+    } else if (provider === 'openai' && (window.state?.env?.OPENAI_API_KEY || true)) {
+      chip.innerHTML = '<span style="color:#64748b;">🔑 使用全局 OPENAI_API_KEY</span>';
+    } else {
+      chip.innerHTML = `<span style="color:#f59e0b;">⚪ 需配置 ${esc(provider.toUpperCase())}_API_KEY</span>`;
+    }
+  }
+}
+
+function initAiImageStudio() {
+  const modal = $('aiImageGenModal');
+  if (!modal) return;
+
+  // 点击对话框底部的 "AI 生图" 按钮打开生图弹窗
+  $('aiGenImageBtn')?.addEventListener('click', () => {
+    const chatInputVal = $('chatInput')?.value.trim();
+    if (chatInputVal) {
+      $('imageGenPromptInput').value = chatInputVal;
+    }
+    populateImageGenProviders();
+    updateImageGenModelChip();
+    modal.showModal();
+  });
+
+  $('imageGenModelSelect')?.addEventListener('change', () => {
+    updateImageGenModelChip();
+  });
+
+  $('closeAiImageGenModalBtn')?.addEventListener('click', () => modal.close());
+  $('cancelAiImageGenModalBtn')?.addEventListener('click', () => modal.close());
+
+  $('clearImagePromptBtn')?.addEventListener('click', () => {
+    $('imageGenPromptInput').value = '';
+    $('imageGenPromptInput').focus();
+  });
+
+  // 灵感预置标签点击
+  document.querySelectorAll('.img-preset-tag').forEach(tag => {
+    tag.addEventListener('click', () => {
+      const promptText = tag.getAttribute('data-prompt');
+      const input = $('imageGenPromptInput');
+      if (!input.value.trim()) {
+        input.value = promptText;
+      } else {
+        input.value = input.value.trim() + '，' + promptText;
+      }
+      input.focus();
+    });
+  });
+
+  // 中止生成按钮
+  $('cancelGeneratingImgBtn')?.addEventListener('click', () => {
+    if (isGeneratingImage) {
+      isGeneratingImage = false;
+      if (imageGenTimerInterval) clearInterval(imageGenTimerInterval);
+      $('imageGenLoadingBox').style.display = 'none';
+      if (!lastGeneratedImage) {
+        $('imageGenEmptyBox').style.display = 'block';
+      } else {
+        $('imageGenResultBox').style.display = 'flex';
+      }
+      $('doGenerateImageBtn').disabled = false;
+      $('doGenerateImageBtnText').textContent = '立即生成 AI 图像';
+      showToast('已取消生图任务', 'info');
+    }
+  });
+
+  // 立即生成按钮
+  $('doGenerateImageBtn')?.addEventListener('click', async () => {
+    if (isGeneratingImage) return;
+
+    const prompt = $('imageGenPromptInput')?.value.trim();
+    if (!prompt) {
+      showToast('请先输入画面描述词 (Prompt)', 'warning');
+      $('imageGenPromptInput')?.focus();
+      return;
+    }
+
+    const modelSelect = $('imageGenModelSelect');
+    const selectedOpt = modelSelect?.selectedOptions?.[0];
+    let providerId = selectedOpt?.getAttribute('data-provider') || 'pollinations';
+    let model = selectedOpt?.getAttribute('data-model') || 'flux';
+    let customBaseUrl = '';
+    let customApiKey = '';
+
+    if (modelSelect?.value === 'custom:custom') {
+      customBaseUrl = $('customImageBaseUrl')?.value.trim() || '';
+      customApiKey = $('customImageApiKey')?.value.trim() || '';
+      model = $('customImageModelName')?.value.trim() || 'dall-e-3';
+      providerId = 'custom';
+      if (!customBaseUrl) {
+        showToast('自定义生图请输入 Base URL 地址', 'warning');
+        $('customImageBaseUrl')?.focus();
+        return;
+      }
+    } else if (modelSelect?.value === 'manual:manual') {
+      model = $('manualImageModelInput')?.value.trim();
+      if (!model) {
+        showToast('请输入生图模型名称 (如 dall-e-3, FLUX.1-schnell, cogview-3)', 'warning');
+        $('manualImageModelInput')?.focus();
+        return;
+      }
+      providerId = 'auto';
+    }
+
+    const style = $('imageGenStyleSelect')?.value || 'vivid';
+    const ratioSelect = $('imageGenRatioSelect');
+    const ratio = ratioSelect?.value || '1:1';
+    const size = ratioSelect?.selectedOptions?.[0]?.getAttribute('data-size') || '1024x1024';
+
+    // 展示生成中 Loading 状态
+    isGeneratingImage = true;
+    $('imageGenEmptyBox').style.display = 'none';
+    $('imageGenResultBox').style.display = 'none';
+    $('imageGenLoadingBox').style.display = 'block';
+    $('doGenerateImageBtn').disabled = true;
+    $('doGenerateImageBtnText').textContent = 'AI 正在绘制中...';
+
+    let elapsedSec = 0;
+    $('imageGenLoadingText').textContent = `AI 正在精心绘制中 (${elapsedSec}s)...`;
+    if (imageGenTimerInterval) clearInterval(imageGenTimerInterval);
+    imageGenTimerInterval = setInterval(() => {
+      if (!isGeneratingImage) return;
+      elapsedSec++;
+      $('imageGenLoadingText').textContent = `AI 正在精心绘制中 (${elapsedSec}s)...`;
+    }, 1000);
+
+    try {
+      const res = await window.hap.generateImage({
+        prompt,
+        providerId,
+        model,
+        customBaseUrl,
+        customApiKey,
+        style,
+        aspectRatio: ratio,
+        size,
+      });
+
+      if (!isGeneratingImage) return; // 已被用户主动中止
+
+      if (res.ok && (res.imageUrl || res.localUri)) {
+        lastGeneratedImage = res;
+        const imgUrl = res.imageUrl || res.localUri;
+        const imgEl = $('imageGenResultImg');
+        imgEl.src = imgUrl;
+        $('imageGenLoadingBox').style.display = 'none';
+        $('imageGenResultBox').style.display = 'flex';
+        $('imageGenEngineBadge').textContent = res.engineUsed || 'Flux SDXL';
+        $('imageGenInfoPrompt').textContent = `“${res.prompt}”`;
+        $('imageGenInfoMeta').textContent = `${res.width}x${res.height} (${ratio})`;
+        showToast(`🎉 AI 图像生成成功！耗时 ${elapsedSec}s`, 'success');
+
+        // 点击大图全屏预览 Lightbox
+        $('previewImgContainer').onclick = () => {
+          window.openImageLightbox(imgUrl, res.prompt);
+        };
+      } else {
+        throw new Error(res.error || '生成失败，请重试');
+      }
+    } catch (err) {
+      if (!isGeneratingImage) return;
+      showToast('生图失败：' + err.message, 'error');
+      $('imageGenLoadingBox').style.display = 'none';
+      if (!lastGeneratedImage) {
+        $('imageGenEmptyBox').style.display = 'block';
+      } else {
+        $('imageGenResultBox').style.display = 'flex';
+      }
+    } finally {
+      isGeneratingImage = false;
+      if (imageGenTimerInterval) clearInterval(imageGenTimerInterval);
+      $('doGenerateImageBtn').disabled = false;
+      $('doGenerateImageBtnText').textContent = '立即生成 AI 图像';
+    }
+  });
+
+  // 下载图片
+  $('downloadGenImgBtn')?.addEventListener('click', () => {
+    if (!lastGeneratedImage) return;
+    const url = lastGeneratedImage.imageUrl || lastGeneratedImage.localUri;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `hap_ai_image_${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('已开始下载图像', 'info');
+  });
+
+  // 复制路径
+  $('copyGenImgUriBtn')?.addEventListener('click', () => {
+    if (!lastGeneratedImage) return;
+    const uri = lastGeneratedImage.localFilePath || lastGeneratedImage.localUri || lastGeneratedImage.imageUrl;
+    copyText(uri, '本地图像路径');
+  });
+
+  // 插入对话
+  $('insertGenImgToChatBtn')?.addEventListener('click', () => {
+    if (!lastGeneratedImage) return;
+    const imgUrl = lastGeneratedImage.imageUrl || lastGeneratedImage.localUri;
+    currentAttachments.push({
+      kind: 'image',
+      fileName: `ai_gen_${Date.now()}.png`,
+      mimeType: 'image/png',
+      dataUrl: imgUrl.startsWith('data:') ? imgUrl : undefined,
+      path: lastGeneratedImage.localFilePath,
+    });
+    renderComposerAttachments();
+    modal.close();
+    showToast('已将生成的图片附加到对话框！', 'success');
+    $('chatInput')?.focus();
+  });
+}
+
+initAiImageStudio();
+
+// ==========================================================================
+// 计算节点全景监控控制器 (Universal Node & Server Panorama Controller)
+// ==========================================================================
+
+let activePanoramaTarget = 'local'; // 'local' 或 serverId
+
+window.openNodePanorama = (targetId) => {
+  activePanoramaTarget = targetId || 'local';
+  show('host');
+  const select = $('panoramaNodeSelect');
+  if (select) select.value = activePanoramaTarget;
+  refreshHostView();
+  showToast(`已切换监控全景至节点：${activePanoramaTarget === 'local' ? '本机宿主' : activePanoramaTarget}`, 'info');
+};
+
+$('panoramaNodeSelect')?.addEventListener('change', (e) => {
+  activePanoramaTarget = e.target.value || 'local';
+  refreshHostView();
+});
+
+// 重构 refreshHostView 支持监控任意节点
+window.refreshHostView = async () => {
+  const targetId = activePanoramaTarget || 'local';
+  const isLocal = targetId === 'local';
+
+  // 同步下拉选项
+  const select = $('panoramaNodeSelect');
+  if (select) {
+    const servers = cachedServers.length > 0 ? cachedServers : (state.servers || []);
+    const opts = ['<option value="local">🖥️ 本机宿主环境 (Local Host)</option>']
+      .concat(servers.map(s => `<option value="${esc(s.id)}">🌐 ${esc(s.name)} (${esc(s.host)})${s.status === 'online' ? ' [在线]' : ''}</option>`))
+      .join('');
+    select.innerHTML = opts;
+    select.value = targetId;
+  }
+
+  // 更新大盘标题
+  if ($('panoramaMainTitle')) {
+    if (isLocal) {
+      $('panoramaMainTitle').textContent = '本机系统全景监控中心 (Local Host Dashboard)';
+      if ($('panoramaMainSub')) $('panoramaMainSub').textContent = '全景监测宿主物理硬件、多核 CPU 拓扑、内存结构、全盘卷分区、活跃进程 Top 榜与 IP 归属';
+    } else {
+      const s = cachedServers.find(item => item.id === targetId);
+      $('panoramaMainTitle').textContent = `远端节点全景监控: ${s?.name || targetId} (${s?.host || ''})`;
+      if ($('panoramaMainSub')) $('panoramaMainSub').textContent = `实时采集 ${s?.username || 'root'}@${s?.host || ''}:${s?.port || 22} 远程硬件负载、进程、磁盘挂载与 Daemon 状态`;
+    }
+  }
+
+  try {
+    if (isLocal) {
+      // 本机系统全景
+      const info = await window.hap.getHostSysInfo();
+      if (!info || !info.cpu || !info.memory) return;
+
+      const cpuPct = info.cpu.usagePercent || 0;
+      if ($('hostCpuPercent')) $('hostCpuPercent').textContent = `${cpuPct}%`;
+      if ($('hostCpuSpeed')) $('hostCpuSpeed').textContent = `${info.cpu.speedMHz || 0} MHz`;
+      if ($('hostCpuCoresBadge')) $('hostCpuCoresBadge').textContent = `${info.cpu.cores} 核心`;
+      if ($('hostCpuCoreCountBadge')) $('hostCpuCoreCountBadge').textContent = `${info.cpu.cores} 逻辑核心`;
+      if ($('hostCpuModel')) $('hostCpuModel').textContent = info.cpu.model || 'CPU';
+      if ($('hostCpuBar')) {
+        $('hostCpuBar').style.width = `${cpuPct}%`;
+        $('hostCpuBar').style.background = cpuPct > 85 ? '#ef4444' : cpuPct > 60 ? '#f59e0b' : '#3b82f6';
+      }
+
+      const coreGrid = $('hostCoreGrid');
+      if (coreGrid && info.cpu.perCore) {
+        coreGrid.innerHTML = info.cpu.perCore.map(c => `
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:6px 8px; display:flex; flex-direction:column; gap:2px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; font-weight:600; color:var(--text-main);">
+              <span>Core #${c.coreIndex}</span>
+              <span style="color:#3b82f6; font-family:var(--font-mono);">${c.speedMHz}MHz</span>
+            </div>
+            <div style="font-size:10px; color:#64748b; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+              ${esc(c.model.replace(/CPU @.*$/, '').trim())}
+            </div>
+          </div>
+        `).join('');
+      }
+
+      const memPct = info.memory.usedPercent || 0;
+      if ($('hostMemUsed')) $('hostMemUsed').textContent = fmtHostBytes(info.memory.usedBytes);
+      if ($('hostMemTotalBrief')) $('hostMemTotalBrief').textContent = `/ ${fmtHostBytes(info.memory.totalBytes)}`;
+      if ($('hostMemTotal')) $('hostMemTotal').textContent = `空闲: ${fmtHostBytes(info.memory.freeBytes)}`;
+      if ($('hostMemPercentBadge')) {
+        $('hostMemPercentBadge').textContent = `${memPct}%`;
+        $('hostMemPercentBadge').className = `badge ${memPct > 85 ? 'danger' : memPct > 60 ? 'warn' : 'success'}`;
+      }
+      if ($('hostMemBar')) {
+        $('hostMemBar').style.width = `${memPct}%`;
+        $('hostMemBar').style.background = memPct > 85 ? '#ef4444' : memPct > 60 ? '#f59e0b' : '#10b981';
+      }
+
+      if ($('hostProcessPidBadge')) $('hostProcessPidBadge').textContent = `PID: ${info.process?.pid || '--'}`;
+      if ($('hostProcessRss')) $('hostProcessRss').textContent = fmtHostBytes(info.memory.processRssBytes);
+      if ($('hostProcessHeap')) $('hostProcessHeap').textContent = `堆使用: ${fmtHostBytes(info.memory.heapUsedBytes)} / ${fmtHostBytes(info.memory.heapTotalBytes)}`;
+      if ($('hostHeapBar')) {
+        const heapPct = Math.round((info.memory.heapUsedBytes / (info.memory.heapTotalBytes || 1)) * 100);
+        $('hostHeapBar').style.width = `${Math.min(heapPct, 100)}%`;
+      }
+
+      if ($('hostLoadAvgBadge')) $('hostLoadAvgBadge').textContent = `负载: ${info.loadAvg?.map(n => typeof n === 'number' ? n.toFixed(2) : n).join(', ') || '--'}`;
+      if ($('hostSystemUptime')) $('hostSystemUptime').textContent = formatHostUptime(info.os.uptimeSeconds);
+      if ($('hostProcessUptime')) $('hostProcessUptime').textContent = `Codex 服务运行: ${formatHostUptime(info.os.processUptimeSeconds)}`;
+      if ($('hostTimestamp')) $('hostTimestamp').textContent = `更新于: ${new Date().toLocaleTimeString()}`;
+
+      const partList = $('hostPartitionList');
+      if (partList && info.disk.partitions) {
+        if ($('hostDiskPartCountBadge')) $('hostDiskPartCountBadge').textContent = `${info.disk.partitions.length} 个卷`;
+        partList.innerHTML = info.disk.partitions.map(p => {
+          const usedPct = p.usagePercent || 0;
+          return `
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; font-size:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <strong>${esc(p.mount)} (${esc(p.filesystem || 'Local')})</strong>
+                <span style="font-family:var(--font-mono); font-weight:600; color:${usedPct > 85 ? '#ef4444' : '#0284c7'};">${usedPct}%</span>
+              </div>
+              <div style="width:100%; height:4px; background:#e2e8f0; border-radius:2px; overflow:hidden; margin-bottom:4px;">
+                <div style="width:${usedPct}%; height:100%; background:${usedPct > 85 ? '#ef4444' : '#0284c7'};"></div>
+              </div>
+              <div style="font-size:11px; color:#64748b; display:flex; justify-content:space-between;">
+                <span>已用: ${fmtHostBytes(p.usedBytes)}</span>
+                <span>总计: ${fmtHostBytes(p.totalBytes)}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      if ($('hostPlatformBadge')) $('hostPlatformBadge').textContent = `${info.os.platform} ${info.os.arch}`;
+      if ($('hostHostname')) $('hostHostname').textContent = info.network.hostname;
+      if ($('hostUsername')) $('hostUsername').textContent = info.os.username;
+      if ($('hostOsFull')) $('hostOsFull').textContent = `${info.os.type} ${info.os.release}`;
+      if ($('hostArch')) $('hostArch').textContent = `${info.os.arch} (${info.os.endianness})`;
+      if ($('hostNodeVersion')) $('hostNodeVersion').textContent = info.os.nodeVersion;
+      if ($('hostV8Version')) $('hostV8Version').textContent = info.os.v8Version;
+      if ($('hostUvVersion')) $('hostUvVersion').textContent = info.os.uvVersion;
+      if ($('hostCwd')) $('hostCwd').textContent = info.process.cwd;
+    } else {
+      // 远端服务器节点全景
+      const s = cachedServers.find(item => item.id === targetId);
+      const info = await window.hap.getServerInfo(targetId);
+      if (!info) return;
+
+      const cpuPct = info.cpuUsagePercent ?? info.cpu?.usagePercent ?? 0;
+      const cpuCores = info.cpuCount ?? info.cpu?.cores ?? '--';
+      const cpuModel = info.cpuModel ?? info.cpu?.model ?? 'Linux Remote Processor';
+      if ($('hostCpuPercent')) $('hostCpuPercent').textContent = `${cpuPct}%`;
+      if ($('hostCpuSpeed')) $('hostCpuSpeed').textContent = 'Remote Linux';
+      if ($('hostCpuCoresBadge')) $('hostCpuCoresBadge').textContent = `${cpuCores} 核心`;
+      if ($('hostCpuCoreCountBadge')) $('hostCpuCoreCountBadge').textContent = `${cpuCores} 逻辑核心`;
+      if ($('hostCpuModel')) $('hostCpuModel').textContent = cpuModel;
+      if ($('hostCpuBar')) {
+        $('hostCpuBar').style.width = `${cpuPct}%`;
+        $('hostCpuBar').style.background = cpuPct > 85 ? '#ef4444' : cpuPct > 60 ? '#f59e0b' : '#3b82f6';
+      }
+
+      const totalMem = info.totalMemBytes ?? info.memory?.total ?? 0;
+      const freeMem = info.freeMemBytes ?? info.memory?.free ?? 0;
+      const usedMem = totalMem - freeMem;
+      const memPct = totalMem > 0 ? Math.round((usedMem / totalMem) * 100) : (info.usedMemPercent ?? 0);
+
+      if ($('hostMemUsed')) $('hostMemUsed').textContent = fmtHostBytes(usedMem);
+      if ($('hostMemTotalBrief')) $('hostMemTotalBrief').textContent = `/ ${fmtHostBytes(totalMem)}`;
+      if ($('hostMemTotal')) $('hostMemTotal').textContent = `空闲: ${fmtHostBytes(freeMem)}`;
+      if ($('hostMemPercentBadge')) {
+        $('hostMemPercentBadge').textContent = `${memPct}%`;
+        $('hostMemPercentBadge').className = `badge ${memPct > 85 ? 'danger' : memPct > 60 ? 'warn' : 'success'}`;
+      }
+      if ($('hostMemBar')) {
+        $('hostMemBar').style.width = `${memPct}%`;
+        $('hostMemBar').style.background = memPct > 85 ? '#ef4444' : memPct > 60 ? '#f59e0b' : '#10b981';
+      }
+
+      if ($('hostProcessPidBadge')) $('hostProcessPidBadge').textContent = `Daemon Port: ${s?.daemonPort || 9527}`;
+      if ($('hostProcessRss')) $('hostProcessRss').textContent = s?.status === 'online' ? '● 在线就绪' : '○ 离线';
+      if ($('hostProcessHeap')) $('hostProcessHeap').textContent = `SSH 账户: ${s?.username || 'root'}@${s?.host || '--'}`;
+
+      const uptimeSec = info.uptimeSeconds ?? info.uptime ?? 0;
+      if ($('hostLoadAvgBadge')) $('hostLoadAvgBadge').textContent = `负载: ${Array.isArray(info.loadAvg) ? info.loadAvg.map(n => typeof n === 'number' ? n.toFixed(2) : n).join(', ') : '0.12, 0.18, 0.15'}`;
+      if ($('hostSystemUptime')) $('hostSystemUptime').textContent = formatHostUptime(uptimeSec);
+      if ($('hostProcessUptime')) $('hostProcessUptime').textContent = `节点别名: ${s?.name || targetId}`;
+      if ($('hostTimestamp')) $('hostTimestamp').textContent = `更新于: ${new Date().toLocaleTimeString()}`;
+
+      const partList = $('hostPartitionList');
+      if (partList) {
+        const diskTotal = info.diskTotalBytes ?? info.disk?.total ?? 0;
+        const diskFree = info.diskFreeBytes ?? info.disk?.free ?? 0;
+        const diskUsed = diskTotal - diskFree;
+        const diskPct = diskTotal > 0 ? Math.round((diskUsed / diskTotal) * 100) : 25;
+        partList.innerHTML = `
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; font-size:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <strong>/ (主文件系统根挂载)</strong>
+              <span style="font-family:var(--font-mono); font-weight:600; color:#0284c7;">${diskPct}%</span>
+            </div>
+            <div style="width:100%; height:4px; background:#e2e8f0; border-radius:2px; overflow:hidden; margin-bottom:4px;">
+              <div style="width:${diskPct}%; height:100%; background:#0284c7;"></div>
+            </div>
+            <div style="font-size:11px; color:#64748b; display:flex; justify-content:space-between;">
+              <span>已用: ${fmtHostBytes(diskUsed)}</span>
+              <span>总计: ${fmtHostBytes(diskTotal)}</span>
+            </div>
+          </div>
+        `;
+      }
+
+      if ($('hostPlatformBadge')) $('hostPlatformBadge').textContent = `${info.osRelease || info.platform || 'Linux'} ${info.arch || 'x64'}`;
+      if ($('hostHostname')) $('hostHostname').textContent = info.hostname || (s?.host || '--');
+      if ($('hostUsername')) $('hostUsername').textContent = s?.username || 'root';
+      if ($('hostOsFull')) $('hostOsFull').textContent = info.osRelease || 'Linux';
+      if ($('hostArch')) $('hostArch').textContent = info.arch || 'x86_64';
+      if ($('hostNodeVersion')) $('hostNodeVersion').textContent = info.nodeVersion || 'v18+';
+      if ($('hostCwd')) $('hostCwd').textContent = `/root/.hap/`;
+    }
+  } catch (error) {
+    // ignore
+  }
+};
+
+// ==========================================================================
+// 快捷运维脚本库与工具箱控制器 (Ops Scripts, SSL Wizard & Nginx Proxy)
+// ==========================================================================
+
+const OPS_PRESET_SCRIPTS = [
+  // 1. SSL 与 Web 代理
+  {
+    id: 'ssl_wizard',
+    category: 'web',
+    title: '申请 Let\'s Encrypt SSL 安全证书',
+    desc: '全自动向 Let\'s Encrypt 申请官方免费 HTTPS 证书，支持自动绑定 Nginx 与每 60 天自动续期',
+    icon: '🔒',
+    type: 'modal',
+    action: () => window.openSslCertModal(),
+  },
+  {
+    id: 'install_nginx',
+    category: 'web',
+    title: '一键安装 Nginx Web 服务器',
+    desc: '通过系统官方源一键安装 Nginx，配置默认反向代理根目录并设置开机自动启动守护服务',
+    icon: '🌐',
+    cmd: 'sudo apt-get update && sudo apt-get install -y nginx && sudo systemctl enable --now nginx && sudo nginx -v',
+  },
+  {
+    id: 'nginx_proxy_wizard',
+    category: 'web',
+    title: '可视化配置 Nginx 反向代理',
+    desc: '一键生成标准的 sites-available 域名反代规则，支持 WebSocket、流式响应并平滑 reload',
+    icon: '🔀',
+    type: 'modal',
+    action: () => window.openNginxProxyModal(),
+  },
+  {
+    id: 'nginx_test_reload',
+    category: 'web',
+    title: '测试并平滑重载 Nginx 配置',
+    desc: '执行 nginx -t 语法完整性自检，若语法通过则立即向主进程发送 HUP 信号无缝平滑重载',
+    icon: '🔄',
+    cmd: 'sudo nginx -t && sudo systemctl reload nginx && echo "\n[Success] Nginx 语法自检通过并已完成平滑重载！"',
+  },
+  {
+    id: 'certbot_status',
+    category: 'web',
+    title: '检查所有已配置 SSL 证书有效期',
+    desc: '扫描并列出 Certbot 管理的所有域名的证书路径、加密套件与剩余到期天数',
+    icon: '📜',
+    cmd: 'sudo certbot certificates 2>/dev/null || echo "当前机器尚未安装 Certbot 证书工具"',
+  },
+  {
+    id: 'certbot_renew',
+    category: 'web',
+    title: '强制续签全部 SSL 证书',
+    desc: '立即对当前服务器上所有已绑定的 Let\'s Encrypt 证书执行续签并重载 Web 服务',
+    icon: '⚡',
+    cmd: 'sudo certbot renew --force-renewal && sudo systemctl reload nginx || true',
+  },
+
+  // 2. 运行环境一键安装
+  {
+    id: 'install_node',
+    category: 'env',
+    title: 'Node.js LTS (v20+) & pnpm & PM2',
+    desc: '自动化配置 Nodesource 官方镜像源，安装最新 Node.js、npm、pnpm 与 PM2 生产级进程守护',
+    icon: '🟩',
+    cmd: 'curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs && sudo npm install -g pnpm pm2 && echo "\nNode 版本: $(node -v)\npm 版本: $(npm -v)\npm2 版本: $(pm2 -v)"',
+  },
+  {
+    id: 'install_docker',
+    category: 'env',
+    title: 'Docker & Docker Compose 官方最新版',
+    desc: '通过 Docker 官方全自动安装脚本部署容器引擎、安装 Compose 插件并加入当前用户组',
+    icon: '🐳',
+    cmd: 'curl -fsSL https://get.docker.com | sudo sh && sudo systemctl enable --now docker && sudo usermod -aG docker $USER 2>/dev/null || true && echo "\nDocker 已安装: $(docker --version)"',
+  },
+  {
+    id: 'install_python_uv',
+    category: 'env',
+    title: 'Python 3、pip 与 uv 极速包管理器',
+    desc: '安装 Python3 核心开发库、虚拟环境模块以及由 Astral 开发的万倍极速包管理器 uv',
+    icon: '🐍',
+    cmd: 'sudo apt-get update && sudo apt-get install -y python3 python3-pip python3-venv python3-dev && curl -LsSf https://astral.sh/uv/install.sh | sh && echo "\nPython 环境就绪: $(python3 --version)"',
+  },
+  {
+    id: 'install_redis',
+    category: 'env',
+    title: 'Redis 内存高速缓存数据库',
+    desc: '一键部署 Redis Server 内存数据库，开启 systemd 服务守护并验证 PING 连通响应',
+    icon: '🟥',
+    cmd: 'sudo apt-get update && sudo apt-get install -y redis-server && sudo systemctl enable --now redis-server && redis-cli ping && echo "\nRedis 数据库已成功启动并就绪！"',
+  },
+  {
+    id: 'install_postgresql',
+    category: 'env',
+    title: 'PostgreSQL 关系型数据库',
+    desc: '安装 PostgreSQL 关系型数据库服务端与 contrib 扩展包，并初始化默认 postgres 账户',
+    icon: '🐘',
+    cmd: 'sudo apt-get update && sudo apt-get install -y postgresql postgresql-contrib && sudo systemctl enable --now postgresql && sudo -u postgres psql -c "SELECT version();"',
+  },
+  {
+    id: 'install_ops_tools',
+    category: 'env',
+    title: 'Linux 基础运维工具全家桶',
+    desc: '一键安装 git, curl, wget, htop, jq, unzip, tar, net-tools, build-essential 等 10+ 常用运维软件',
+    icon: '🛠️',
+    cmd: 'sudo apt-get update && sudo apt-get install -y git build-essential curl wget htop jq unzip tar net-tools procps && echo "\n[Success] 基础运维工具包已全部就绪！"',
+  },
+
+  // 3. 安全与网络加速
+  {
+    id: 'enable_bbr',
+    category: 'sec',
+    title: '一键开启 Linux BBR 拥塞控制加速',
+    desc: '优化 TCP 队列算法为 fq+bbr，大幅提升高丢包、高延迟网络下的传输带宽与响应速度',
+    icon: '🚀',
+    cmd: 'echo "net.core.default_qdisc=fq" | sudo tee -a /etc/sysctl.conf && echo "net.ipv4.tcp_congestion_control=bbr" | sudo tee -a /etc/sysctl.conf && sudo sysctl -p && sysctl net.ipv4.tcp_congestion_control && echo "\n[Success] Linux BBR 拥塞控制加速已成功开启！"',
+  },
+  {
+    id: 'ufw_standard_ports',
+    category: 'sec',
+    title: 'UFW 防火墙一键放行核心业务端口',
+    desc: '自动启用 UFW 防火墙并快速放行 22 (SSH)、80 (HTTP)、443 (HTTPS) 及 9527 (HAP 通信) 端口',
+    icon: '🛡️',
+    cmd: 'sudo ufw allow 22/tcp && sudo ufw allow 80/tcp && sudo ufw allow 443/tcp && sudo ufw allow 9527/tcp && sudo ufw --force enable && sudo ufw status verbose',
+  },
+  {
+    id: 'create_swap_2g',
+    category: 'sec',
+    title: '一键创建 2GB Swap 虚拟内存 (防OOM)',
+    desc: '在磁盘创建 2GB 安全虚拟交换文件，写入 /etc/fstab 自动挂载，防止突发内存溢出崩溃',
+    icon: '💾',
+    cmd: 'sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile && (grep -q "/swapfile" /etc/fstab || echo "/swapfile none swap sw 0 0" | sudo tee -a /etc/fstab) && swapon --show && echo "\n[Success] 2GB Swap 虚拟内存创建并激活成功！"',
+  },
+  {
+    id: 'disable_pwd_ssh',
+    category: 'sec',
+    title: 'SSH 安全加固：禁用密码登录',
+    desc: '关闭 SSH 密码爆破通道，强制仅允许私钥认证登录 (请务必确保本地已成功配置 SSH 公钥)',
+    icon: '🔑',
+    cmd: 'sudo sed -i "s/^#*PasswordAuthentication.*/PasswordAuthentication no/" /etc/ssh/sshd_config && (sudo systemctl restart ssh || sudo systemctl restart sshd) && echo "\n[Success] SSH 密码认证已关闭，当前仅接受公钥验证！"',
+  },
+
+  // 4. 系统清理与排查
+  {
+    id: 'sys_full_upgrade',
+    category: 'clean',
+    title: '全量系统包与内核安全升级',
+    desc: '同步最新软件仓库索引，自动升级存在 CVE 漏洞的软件包并自动清理无用孤儿依赖',
+    icon: '📦',
+    cmd: 'sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get autoremove -y && echo "\n[Success] 系统全量软件包升级完毕！"',
+  },
+  {
+    id: 'clean_docker_prune',
+    category: 'clean',
+    title: '清理 Docker 无用容器、镜像与卷缓存',
+    desc: '一键深度释放 Docker 磁盘空间，清理所有已停止的容器、悬空无标签镜像及残留缓存',
+    icon: '🧹',
+    cmd: 'docker system prune -af --volumes && echo "\n[Success] Docker 无用容器与镜像缓存已深度清理！"',
+  },
+  {
+    id: 'clean_system_logs',
+    category: 'clean',
+    title: '清空 Systemd 过期日志与 apt 缓存',
+    desc: '清除 3 天前的旧系统日志（保留近期诊断），清空 apt 安装包本地缓存释放磁盘',
+    icon: '🗑️',
+    cmd: 'sudo journalctl --vacuum-time=3d && sudo journalctl --vacuum-size=100M && sudo apt-get clean && df -h /',
+  },
+  {
+    id: 'scan_large_files',
+    category: 'clean',
+    title: '扫描全盘 >100MB 大文件 TOP 15',
+    desc: '快速定位占用服务器存储空间最大的前 15 个大文件、归档包与服务 Core dump',
+    icon: '🔍',
+    cmd: 'sudo find / -type f -size +100M -exec ls -lh {} + 2>/dev/null | sort -k 5 -rh | head -n 15 || true',
+  },
+  {
+    id: 'check_open_ports',
+    category: 'clean',
+    title: '查看所有网络监听端口与关联进程',
+    desc: '通过 ss/netstat 实时输出当前机器所有正在监听的 TCP/UDP 端口及对应执行 PID',
+    icon: '🔌',
+    cmd: 'sudo ss -tulpn || sudo netstat -tulpn',
+  },
+  {
+    id: 'yabs_benchmark',
+    category: 'clean',
+    title: '全景 VPS 综合跑分与测速 (YABS)',
+    desc: '测试 Geekbench CPU 多核算力、4K 磁盘 IOPS 读写速度与国际骨干网回程延迟',
+    icon: '📊',
+    cmd: 'curl -sL yabs.sh | bash -s -- -i -g',
+  },
+];
+
+let currentOpsScriptTab = 'all';
+let lastExecutedCommand = '';
+let lastExecutedServerId = '';
+
+window.filterOpsScripts = (tab) => {
+  currentOpsScriptTab = tab;
+  document.querySelectorAll('#sdPane_scripts .market-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.scriptTab === tab);
+  });
+  renderOpsScriptsGrid();
+};
+
+function renderOpsScriptsGrid() {
+  const grid = $('opsScriptsGrid');
+  if (!grid) return;
+
+  const targetServerId = activeDedicatedServerId || (cachedServers[0]?.id || '');
+  const filtered = currentOpsScriptTab === 'all'
+    ? OPS_PRESET_SCRIPTS
+    : OPS_PRESET_SCRIPTS.filter(s => s.category === currentOpsScriptTab);
+
+  grid.innerHTML = filtered.map(item => {
+    return `
+      <div class="card" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,0.03);display:flex;flex-direction:column;justify-content:space-between;gap:12px;">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+            <div style="width:34px;height:34px;border-radius:8px;background:#f1f5f9;display:grid;place-items:center;font-size:17px;">
+              ${item.icon}
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:13.5px;color:var(--text-main);">${esc(item.title)}</div>
+              <span class="badge" style="font-size:10px;padding:1px 6px;margin-top:2px;">
+                ${item.category === 'web' ? 'SSL & Nginx' : item.category === 'env' ? '运行环境' : item.category === 'sec' ? '网络安全' : '系统清理'}
+              </span>
+            </div>
+          </div>
+          <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.5;">
+            ${esc(item.desc)}
+          </p>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #f1f5f9;">
+          <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            ${item.cmd ? esc(item.cmd) : '⚡ 引导式交互向导'}
+          </div>
+          <button type="button" class="btn primary" onclick="window.runPresetOpsScript('${item.id}')" style="padding:4px 14px;font-size:12px;white-space:nowrap;">
+            ${item.type === 'modal' ? '打开向导 ↗' : '立即执行 ⚡'}
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+window.runPresetOpsScript = (scriptId) => {
+  const item = OPS_PRESET_SCRIPTS.find(s => s.id === scriptId);
+  if (!item) return;
+
+  if (item.type === 'modal' && item.action) {
+    item.action();
+    return;
+  }
+
+  const targetId = activeDedicatedServerId || (cachedServers[0]?.id || '');
+  if (!targetId) {
+    showToast('请先在上方选择或配置一台目标服务器', 'warn');
+    return;
+  }
+
+  window.openScriptExecutionModal(targetId, item.title, item.cmd, true);
+};
+
+// 统一执行弹窗
+window.openScriptExecutionModal = async (serverId, title, command, autoRun = false) => {
+  const modal = $('scriptExecutionModal');
+  if (!modal) return;
+
+  const server = cachedServers.find(s => s.id === serverId) || { id: serverId, name: serverId, host: serverId };
+  lastExecutedServerId = serverId;
+  lastExecutedCommand = command;
+
+  if ($('execModalTitle')) $('execModalTitle').textContent = title || '执行运维命令';
+  if ($('execModalSub')) $('execModalSub').textContent = `目标节点: ${server.name} (${server.host})`;
+  if ($('execModalCmdBox')) $('execModalCmdBox').textContent = command;
+  if ($('execModalOutput')) $('execModalOutput').textContent = '# 准备向远端下发指令...\n';
+  if ($('execModalStatusBadge')) {
+    $('execModalStatusBadge').textContent = '待执行';
+    $('execModalStatusBadge').className = 'badge neutral';
+  }
+  if ($('execModalDuration')) $('execModalDuration').textContent = '耗时: 0ms';
+  if ($('execModalExitCode')) $('execModalExitCode').innerHTML = '状态: <strong>就绪</strong>';
+
+  modal.showModal();
+
+  if (autoRun) {
+    await window.doExecuteScript(serverId, command);
+  }
+};
+
+window.doExecuteScript = async (serverId, command) => {
+  const outputEl = $('execModalOutput');
+  const badge = $('execModalStatusBadge');
+  const durationEl = $('execModalDuration');
+  const exitCodeEl = $('execModalExitCode');
+
+  if (badge) {
+    badge.textContent = '执行中...';
+    badge.className = 'badge warning';
+  }
+  if (outputEl) outputEl.textContent = `$ ${command}\n\n[HAP SSH/Daemon] 正在向远程服务器下发指令，请稍候...\n`;
+
+  const startTime = Date.now();
+
+  try {
+    const res = await window.hap.execServerCommand({ id: serverId, command });
+    const duration = Date.now() - startTime;
+    if (durationEl) durationEl.textContent = `耗时: ${duration}ms`;
+
+    if (outputEl) {
+      let fullOut = res.stdout || '';
+      if (res.stderr) {
+        fullOut += (fullOut ? '\n\n[STDERR]\n' : '') + res.stderr;
+      }
+      if (!fullOut.trim()) {
+        fullOut = '[Command completed with no stdout output]';
+      }
+      outputEl.textContent = fullOut;
+      outputEl.scrollTop = outputEl.scrollHeight;
+    }
+
+    if (res.exitCode === 0 || res.exitCode === undefined) {
+      if (badge) {
+        badge.textContent = '执行成功 (Exit: 0)';
+        badge.className = 'badge success';
+      }
+      if (exitCodeEl) exitCodeEl.innerHTML = '退出代码: <strong style="color:#10b981;">0 (成功)</strong>';
+      showToast('远程指令执行完成！', 'success');
+    } else {
+      if (badge) {
+        badge.textContent = `异常退出 (${res.exitCode})`;
+        badge.className = 'badge danger';
+      }
+      if (exitCodeEl) exitCodeEl.innerHTML = `退出代码: <strong style="color:#ef4444;">${res.exitCode} (错误)</strong>`;
+      showToast(`指令执行异常，退出代码 ${res.exitCode}`, 'error');
+    }
+  } catch (err) {
+    const duration = Date.now() - startTime;
+    if (durationEl) durationEl.textContent = `耗时: ${duration}ms`;
+    if (badge) {
+      badge.textContent = '下发失败';
+      badge.className = 'badge danger';
+    }
+    if (outputEl) outputEl.textContent += `\n[System Error] 执行失败：${err.message}`;
+    if (exitCodeEl) exitCodeEl.innerHTML = `错误信息: <strong style="color:#ef4444;">${esc(err.message)}</strong>`;
+    showToast(`下发失败：${err.message}`, 'error');
+  }
+};
+
+$('reRunExecBtn')?.addEventListener('click', () => {
+  if (lastExecutedServerId && lastExecutedCommand) {
+    window.doExecuteScript(lastExecutedServerId, lastExecutedCommand);
+  }
+});
+
+$('copyExecOutputBtn')?.addEventListener('click', () => {
+  const txt = $('execModalOutput')?.textContent || '';
+  copyText(txt, '终端输出内容');
+});
+
+$('clearExecOutputBtn')?.addEventListener('click', () => {
+  if ($('execModalOutput')) $('execModalOutput').textContent = '# 终端已清空\n';
+});
+
+// SSL 申请向导
+window.openSslCertModal = (preServerId) => {
+  const modal = $('sslCertModal');
+  if (!modal) return;
+
+  const select = $('sslServerSelect');
+  if (select) {
+    const servers = cachedServers.length > 0 ? cachedServers : (state.servers || []);
+    select.innerHTML = servers.map(s => `<option value="${esc(s.id)}">${esc(s.name)} (${esc(s.host)})</option>`).join('');
+    if (preServerId) select.value = preServerId;
+  }
+
+  modal.showModal();
+};
+
+window.submitSslCertRequest = async (e) => {
+  e.preventDefault();
+  const serverId = $('sslServerSelect')?.value;
+  const domain = $('sslDomainInput')?.value.trim();
+  const email = $('sslEmailInput')?.value.trim();
+  const mode = $('sslModeSelect')?.value || 'nginx';
+  const redirect = $('sslRedirectHttps')?.checked;
+  const autoRenew = $('sslAutoRenewCron')?.checked;
+
+  if (!serverId || !domain || !email) {
+    showToast('请完整填写服务器、域名与联系邮箱', 'warn');
+    return;
+  }
+
+  // 构建自动化 Certbot 指令
+  const domainsList = domain.split(',').map(d => d.trim()).filter(Boolean);
+  const domainFlags = domainsList.map(d => `-d ${d}`).join(' ');
+
+  let certCmd = '';
+  if (mode === 'nginx') {
+    certCmd = `sudo apt-get update && sudo apt-get install -y certbot python3-certbot-nginx && sudo certbot --nginx ${domainFlags} --non-interactive --agree-tos -m ${email} ${redirect ? '--redirect' : ''}`;
+  } else if (mode === 'standalone') {
+    certCmd = `sudo apt-get update && sudo apt-get install -y certbot && sudo certbot certonly --standalone ${domainFlags} --non-interactive --agree-tos -m ${email}`;
+  } else {
+    certCmd = `sudo apt-get update && sudo apt-get install -y certbot && sudo certbot certonly ${domainFlags} --non-interactive --agree-tos -m ${email}`;
+  }
+
+  if (autoRenew) {
+    certCmd += ' && (crontab -l 2>/dev/null; echo "0 3 1 */2 * certbot renew --quiet --post-hook \"systemctl reload nginx\"") | crontab -';
+  }
+
+  certCmd += ` && sudo certbot certificates`;
+
+  $('sslCertModal')?.close();
+  window.openScriptExecutionModal(serverId, `申请 SSL 证书 (${domainsList[0]})`, certCmd, true);
+};
+
+// Nginx 反向代理向导
+window.openNginxProxyModal = (preServerId) => {
+  const modal = $('nginxProxyModal');
+  if (!modal) return;
+
+  const select = $('proxyServerSelect');
+  if (select) {
+    const servers = cachedServers.length > 0 ? cachedServers : (state.servers || []);
+    select.innerHTML = servers.map(s => `<option value="${esc(s.id)}">${esc(s.name)} (${esc(s.host)})</option>`).join('');
+    if (preServerId) select.value = preServerId;
+  }
+
+  modal.showModal();
+};
+
+window.submitNginxProxyRequest = async (e) => {
+  e.preventDefault();
+  const serverId = $('proxyServerSelect')?.value;
+  const domain = $('proxyDomainInput')?.value.trim();
+  const target = $('proxyTargetInput')?.value.trim();
+  const ws = $('proxyWsToggle')?.checked;
+  const sse = $('proxySseToggle')?.checked;
+  const upload = $('proxyUploadLimit')?.checked;
+  const gzip = $('proxyGzipToggle')?.checked;
+
+  if (!serverId || !domain || !target) {
+    showToast('请完整填写服务器、域名与转发目标', 'warn');
+    return;
+  }
+
+  // 拼接 Nginx 配置文件内容
+  const confContent = `server {
+    listen 80;
+    server_name ${domain};
+
+    ${upload ? 'client_max_body_size 100M;' : ''}
+    ${gzip ? 'gzip on; gzip_min_length 1k; gzip_types text/plain application/javascript text/css application/json;' : ''}
+
+    location / {
+        proxy_pass ${target};
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        ${ws ? 'proxy_http_version 1.1; proxy_set_header Upgrade \$http_upgrade; proxy_set_header Connection "upgrade";' : ''}
+        ${sse ? 'proxy_buffering off; proxy_cache off; chunked_transfer_encoding on;' : ''}
+    }
+}`;
+
+  const confFileName = domain.replace(/[^a-zA-Z0-9.-]/g, '_') + '.conf';
+  const cmd = `sudo tee /etc/nginx/sites-available/${confFileName} > /dev/null << 'EOF'\n${confContent}\nEOF\n` +
+    `sudo ln -sf /etc/nginx/sites-available/${confFileName} /etc/nginx/sites-enabled/${confFileName} && ` +
+    `sudo nginx -t && sudo systemctl reload nginx && echo "\n[Success] 反向代理配置已成功写入 /etc/nginx/sites-available/${confFileName} 并平滑重载！"`;
+
+  $('nginxProxyModal')?.close();
+  window.openScriptExecutionModal(serverId, `配置 Nginx 反代 (${domain})`, cmd, true);
+};
+
+// 触发自定义命令
+window.sdRunCustomCommand = () => {
+  const cmd = $('sdCustomCommandInput')?.value.trim();
+  if (!cmd) {
+    showToast('请输入要下发的 Shell 命令', 'warn');
+    $('sdCustomCommandInput')?.focus();
+    return;
+  }
+  const targetId = activeDedicatedServerId || (cachedServers[0]?.id || '');
+  if (!targetId) {
+    showToast('未选择目标服务器节点', 'warn');
+    return;
+  }
+  window.openScriptExecutionModal(targetId, '自定义 Shell 指令', cmd, true);
+};
+
+// 切换专属服务器 Tab 逻辑
+window.switchServerDetailTab = (tab) => {
+  ['ops', 'metrics', 'scripts', 'terminal'].forEach(t => {
+    const pane = $('sdPane_' + t);
+    if (pane) pane.style.display = t === tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('#serverDetail .settings-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+  if (tab === 'scripts') {
+    renderOpsScriptsGrid();
+  }
+};
+
+// ==========================================================================
+// 专属服务器工作台导航 (Dedicated Server Ops Workbench)
+// ==========================================================================
+
+let activeDedicatedServerId = '';
+
+window.openServerDetail = async (id, initialTab = 'scripts') => {
+  activeDedicatedServerId = id;
+  const s = cachedServers.find(item => item.id === id);
+  if (!s) {
+    showToast('未找到指定服务器节点', 'warn');
+    return;
+  }
+
+  if ($('sdServerName')) $('sdServerName').textContent = s.name;
+  if ($('sdServerSub')) $('sdServerSub').textContent = `${s.username}@${s.host}:${s.port} (Daemon: ${s.daemonPort || 9527})`;
+  if ($('sdServerStatusBadge')) {
+    const isOnline = s.status === 'online';
+    $('sdServerStatusBadge').textContent = isOnline ? '● 在线就绪' : '○ 离线';
+    $('sdServerStatusBadge').className = `badge ${isOnline ? 'success' : 'neutral'}`;
+  }
+
+  show('serverDetail');
+  window.switchServerDetailTab(initialTab);
+};
+
+window.sdTriggerTest = async () => {
+  if (activeDedicatedServerId) {
+    await window.testServerNode(activeDedicatedServerId);
+  }
+};
+
+window.sdTriggerRefresh = async () => {
+  if (activeDedicatedServerId) {
+    await window.fetchServerInfoNode(activeDedicatedServerId);
+    showToast('监控指标已同步刷新', 'success');
+  }
+};
+
+window.sdTriggerDeploy = () => {
+  if (activeDedicatedServerId) {
+    window.openInstallServerModal(activeDedicatedServerId);
+  }
+};
+
+window.sdJumpToChat = () => {
+  const s = cachedServers.find(item => item.id === activeDedicatedServerId);
+  if (!s) return;
+  show('chat');
+  const input = $('composerTextarea');
+  if (input) {
+    input.value = `请帮我巡检并维护远程服务器 [${s.name}] (${s.host}) 的系统状态与服务运行情况。`;
+    input.focus();
+  }
+};
+
+window.sdQuickAction = (actionType) => {
+  const s = cachedServers.find(item => item.id === activeDedicatedServerId);
+  if (!s) return;
+
+  if (actionType === '硬件巡检') {
+    window.openScriptExecutionModal(s.id, '全盘硬件与负载巡检', 'uptime && free -h && df -h && lscpu | head -n 15', true);
+  } else if (actionType === '升级守护进程') {
+    window.openInstallServerModal(s.id);
+  } else if (actionType === '排查服务') {
+    window.openScriptExecutionModal(s.id, '排查 Docker 与关键服务', 'docker ps -a 2>/dev/null || true; systemctl list-units --type=service --state=running | head -n 25', true);
+  } else if (actionType === '清理磁盘') {
+    window.openScriptExecutionModal(s.id, '清理临时垃圾与释放磁盘', 'journalctl --vacuum-time=3d && apt-get clean && df -h /', true);
+  } else if (actionType === '查看日志') {
+    window.openScriptExecutionModal(s.id, '排查系统近 50 行日志', 'journalctl -n 50 --no-pager || tail -n 50 /var/log/syslog 2>/dev/null', true);
+  }
+};
+
+window.sdExecuteOpsPrompt = async () => {
+  const prompt = $('sdOpsInputText')?.value.trim();
+  if (!prompt) {
+    showToast('请输入运维指令需求', 'warn');
+    return;
+  }
+  const s = cachedServers.find(item => item.id === activeDedicatedServerId);
+  if (!s) return;
+
+  const outWrap = $('sdOpsOutputWrap');
+  const outText = $('sdOpsOutputText');
+  const statusText = $('sdOpsStatusText');
+
+  if (outWrap) outWrap.style.display = 'block';
+  if (statusText) statusText.textContent = 'Agent 思考与下发执行中...';
+  if (outText) outText.textContent = `[HAP Ops Copilot] 正在针对服务器 [${s.name}] 分析任务："${prompt}"...\n`;
+
+  try {
+    const res = await window.hap.agentChat({
+      agentId: $('sdOpsAgentSelect')?.value || 'ops',
+      message: `[远程服务器节点: ${s.name} (${s.host})]
+${prompt}`,
+      sessionKey: 'ops:' + s.id,
+    });
+    if (statusText) statusText.textContent = '执行完毕';
+    if (outText) {
+      outText.textContent = (res.text || res.reply || JSON.stringify(res, null, 2));
+    }
+  } catch (err) {
+    if (statusText) statusText.textContent = '执行失败';
+    if (outText) outText.textContent += `\n[Error] 运维下发失败：${err.message}`;
   }
 };
