@@ -179,6 +179,12 @@ export class AgentLoop {
       plan = this.planAt(chain, planIndex);
       usage = addUsage(usage, turn.outcome.usage);
       if (turn.outcome.usage.totalTokens > 0) {
+        request.onUsage?.({
+          providerId: plan.providerId,
+          model: plan.fullName,
+          usage: turn.outcome.usage,
+          source: 'model_turn',
+        });
         request.onEvent?.({ type: 'usage', usage: turn.outcome.usage });
         request.onTrace?.({
           kind: 'usage',

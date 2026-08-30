@@ -391,6 +391,7 @@ export class AgentOrchestrator {
         // 记忆检索失败不阻断主流程
       }
 
+      let recordedLiveUsage = false;
       const loopRequest: LoopRequest = {
         agent: effectiveAgent,
         history,
@@ -405,12 +406,28 @@ export class AgentOrchestrator {
       };
       if (request.onEvent !== undefined) loopRequest.onEvent = request.onEvent;
       loopRequest.executionContext = request.executionContext ?? { serverId: 'local' };
+      loopRequest.onUsage = (event) => {
+        recordedLiveUsage = true;
+        this.recordUsage(
+          store,
+          effectiveAgent,
+          taskId,
+          sessionKey,
+          event.model,
+          event.usage,
+          new Date().toISOString(),
+          loopRequest.executionContext ?? { serverId: 'local' },
+          event.source,
+        );
+      };
 
       const result = await this.loop.run(loopRequest);
       const finishedAt = new Date().toISOString();
 
       store.appendMessages(sessionKey, agent.id, result.messages);
-      this.recordUsage(store, effectiveAgent, taskId, sessionKey, result.model, result.usage, finishedAt, loopRequest.executionContext);
+      if (!recordedLiveUsage) {
+        this.recordUsage(store, effectiveAgent, taskId, sessionKey, result.model, result.usage, finishedAt, loopRequest.executionContext);
+      }
       const tracePath = this.writeTrace(taskId, agent.id, sessionKey, startedAt, finishedAt, 'done', events);
       store.updateTask(taskId, {
         status: 'done',
@@ -525,6 +542,7 @@ export class AgentOrchestrator {
     usage: TokenUsage,
     at: string,
     executionContext: NonNullable<RunTaskRequest['executionContext']>,
+    source: 'model_turn' | 'compaction' = 'model_turn',
   ): void {
     if (usage.totalTokens <= 0 && usage.promptTokens <= 0 && usage.completionTokens <= 0) return;
     const slash = modelFullName.indexOf('/');
@@ -542,7 +560,7 @@ export class AgentOrchestrator {
         ...(executionContext.botAccountId === undefined ? {} : { botAccountId: executionContext.botAccountId }),
         providerId,
         model: modelFullName,
-        source: 'model_turn',
+        source,
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
         totalTokens: usage.totalTokens,

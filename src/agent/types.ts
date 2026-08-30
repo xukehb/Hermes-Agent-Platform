@@ -45,6 +45,12 @@ export type TaskEvent =
   | { type: 'usage'; usage: TokenUsage };
 
 export type TaskEventSink = (event: TaskEvent) => void;
+export type UsageEventSink = (event: {
+  providerId: string;
+  model: string;
+  usage: TokenUsage;
+  source: 'model_turn' | 'compaction';
+}) => void;
 
 /** 一次循环的产出。messages 为本次新增的消息（不含入参历史），便于增量落库。 */
 export interface LoopResult {
@@ -81,6 +87,7 @@ export interface LoopRequest {
   /** 未注入时 spawn_subagent 会以工具错误拒绝（FR-ROUTE-008） */
   spawn?: SubagentSpawner;
   onEvent?: TaskEventSink;
+  onUsage?: UsageEventSink;
   onTrace?: (event: TraceEvent) => void;
   executionContext?: TaskExecutionContext | undefined;
 }

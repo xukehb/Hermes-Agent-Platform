@@ -230,6 +230,33 @@ describe('AgentOrchestrator 工具回灌', () => {
     expect(outcome.messages[1]?.toolResult?.isError).toBe(true);
     expect(outcome.text).toBe('那我换个办法。');
   });
+
+  it('模型 usage 事件到达时立即写入用量统计', async () => {
+    const h = harness();
+    seedWorkspace(h, 'alpha', 'notes.md', '这是示例内容。');
+    h.primary.push(
+      toolCallTurn([{ name: 'read_file', args: { path: 'notes.md' } }], {
+        text: '我先读一下文件。',
+        usage: { promptTokens: 9, completionTokens: 11, totalTokens: 20 },
+      }),
+      textTurn('文件里写的是示例内容。', { usage: { promptTokens: 2, completionTokens: 3, totalTokens: 5 } }),
+    );
+
+    let liveTotalAtUsageEvent = 0;
+    const outcome = await h.orchestrator.runTask({
+      input: '看看 notes.md 写了什么',
+      sessionKey: 'tg:live-usage',
+      onEvent: (event) => {
+        if (event.type === 'usage' && liveTotalAtUsageEvent === 0) {
+          liveTotalAtUsageEvent = h.orchestrator.usageSince('1970-01-01T00:00:00.000Z')[0]?.totalTokens ?? 0;
+        }
+      },
+    });
+
+    expect(outcome.usage.totalTokens).toBe(25);
+    expect(liveTotalAtUsageEvent).toBe(20);
+    expect(h.orchestrator.usageSince('1970-01-01T00:00:00.000Z')[0]?.totalTokens).toBe(25);
+  });
 });
 
 describe('AgentOrchestrator 降级与上限', () => {
