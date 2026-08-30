@@ -10,6 +10,7 @@ import {
   type BotAccountInput,
   type BotOperator,
   type BotOperatorInput,
+  type OperatorRole,
   type ServerBotBinding,
   type ServerBotBindingInput,
 } from './types.js';
@@ -101,6 +102,15 @@ interface OperatorRecord {
   role: BotOperator['role'];
   paired_at: string;
   revoked_at: string | null;
+}
+
+interface PairingCodeRecord {
+  id: string;
+  bot_account_id: string;
+  code_hash: string;
+  role: OperatorRole;
+  expires_at: string;
+  consumed_at: string | null;
 }
 
 function nowIso(): string {
@@ -290,5 +300,29 @@ export class ControlPlaneStore {
       'SELECT * FROM bot_operators WHERE bot_account_id = ? AND platform_user_id = ? AND revoked_at IS NULL',
     ).get(botAccountId, platformUserId) as OperatorRecord | undefined;
     return row === undefined ? undefined : toOperator(row);
+  }
+
+  createPairingCode(input: { id: string; botAccountId: string; codeHash: string; role: OperatorRole; expiresAt: string }): void {
+    if (this.account(input.botAccountId) === undefined) {
+      throw new ControlPlaneError('BOT_ACCOUNT_NOT_FOUND', 'BOT_ACCOUNT_NOT_FOUND: ' + input.botAccountId);
+    }
+    this.db.prepare(
+      `INSERT INTO pairing_codes (id, bot_account_id, code_hash, role, expires_at, consumed_at)
+       VALUES (?, ?, ?, ?, ?, NULL)`,
+    ).run(input.id, input.botAccountId, input.codeHash, input.role, input.expiresAt);
+  }
+
+  consumePairingCode(botAccountId: string, codeHash: string, consumedAt: string): { id: string; role: OperatorRole; expiresAt: string } | undefined {
+    const run = this.db.transaction(() => {
+      const row = this.db.prepare(
+        `SELECT id, bot_account_id, code_hash, role, expires_at, consumed_at
+         FROM pairing_codes
+         WHERE bot_account_id = ? AND code_hash = ? AND consumed_at IS NULL`,
+      ).get(botAccountId, codeHash) as PairingCodeRecord | undefined;
+      if (row === undefined) return undefined;
+      this.db.prepare('UPDATE pairing_codes SET consumed_at = ? WHERE id = ?').run(consumedAt, row.id);
+      return { id: row.id, role: row.role, expiresAt: row.expires_at };
+    });
+    return run() as { id: string; role: OperatorRole; expiresAt: string } | undefined;
   }
 }
