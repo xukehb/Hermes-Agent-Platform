@@ -13,6 +13,7 @@
 
 import type { ResolvedAgent, ResolvedPaths } from '../config/resolved.js';
 import type { ControlExecutionContext } from '../control-plane/index.js';
+import type { TaskExecutionContext } from '../telemetry/index.js';
 import type { TokenUsage, ToolDefinition, TraceEvent } from '../domain/index.js';
 
 /** 工具执行的原始产出。isError 为 true 时仍然回灌给模型，由模型决定如何纠正。 */
@@ -59,6 +60,7 @@ export interface ToolContext {
   env: Record<string, string | undefined>;
   /** 来自已配对 Bot 的可信服务器控制上下文；只能由通道/GUI 后端注入。 */
   control?: ControlExecutionContext | undefined;
+  executionContext?: TaskExecutionContext | undefined;
   /** 子智能体派生器，未注入时 spawn_subagent 以可恢复错误回灌 */
   spawn?: SubagentSpawner;
   /** trace 回调（FR-TASK-005 的工具调用一栏） */
