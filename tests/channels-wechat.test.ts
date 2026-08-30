@@ -140,11 +140,30 @@ describe('WeChatChannel 基础测试', () => {
   test('个人微信模式缺少 Puppet 凭据时明确失败', async () => {
     const channel = new WeChatChannel({
       host: new StubHost(),
-      channels: channelsOf(),
+      channels: channelsOf({ personal: { ...BUILTIN_CHANNELS.wechat.personal, puppet: 'service' } }),
       limits,
       paths,
     });
     await expect(channel.start()).rejects.toThrow('WECHATY_PUPPET_SERVICE_TOKEN');
+  });
+
+  test('iLink Bot 模式复用个人微信扫码驱动且不需要 Puppet 凭据', async () => {
+    const host = new StubHost();
+    const channel = new WeChatChannel({
+      host,
+      channels: channelsOf({ mode: 'ilink_bot' }),
+      limits,
+      paths,
+      env: {},
+      personalDriverFactory: (_authDir, _log) => ({
+        start: async () => undefined,
+        stop: async () => undefined,
+        sendMessage: async () => undefined,
+      }),
+    });
+
+    await expect(channel.start()).resolves.toBeUndefined();
+    await channel.stop();
   });
 
   test('个人微信模式接收私聊消息并下发任务至编排层', async () => {

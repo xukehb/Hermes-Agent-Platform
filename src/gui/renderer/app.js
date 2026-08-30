@@ -2725,7 +2725,7 @@ async function renderWeChatView() {
     const wxConfig = await window.hap.getWeChatConfig();
     if (!wxConfig) return;
 
-    if ($('wxModeSelect')) $('wxModeSelect').value = wxConfig.mode || 'personal';
+    if ($('wxModeSelect')) $('wxModeSelect').value = wxConfig.mode || 'ilink_bot';
     if ($('wxAgentSelect')) {
       const agents = state.agents || [];
       if (agents.length > 0) {
@@ -2871,7 +2871,7 @@ $('wxModeSelect')?.addEventListener('change', (e) => {
 
 $('wxConfigForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const mode = $('wxModeSelect')?.value || 'personal';
+  const mode = $('wxModeSelect')?.value || 'ilink_bot';
   const defaultAgent = $('wxAgentSelect')?.value || 'coder';
   const workspace = $('wxWorkspaceInput')?.value.trim();
   const wecomCorpId = $('wxCorpIdInput')?.value.trim();
@@ -2922,7 +2922,7 @@ $('toggleWxServiceBtn')?.addEventListener('click', async () => {
     showToast('正在启动微信服务...', 'info');
     try {
       await window.hap.saveWeChatConfig({
-        mode: $('wxModeSelect')?.value || 'personal',
+        mode: $('wxModeSelect')?.value || 'ilink_bot',
         defaultAgent: $('wxAgentSelect')?.value || 'coder',
         workspace: $('wxWorkspaceInput')?.value.trim(),
         wecomCorpId: $('wxCorpIdInput')?.value.trim(),

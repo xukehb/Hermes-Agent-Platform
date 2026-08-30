@@ -321,7 +321,7 @@ const PROTOCOL_NAMES: readonly ProtocolName[] = ['hermes-native', 'openai-tools'
 const TOOL_PROFILE_NAMES: readonly ToolProfileName[] = ['minimal', 'standard', 'coding', 'research', 'full'];
 const RUNTIME_MODES: readonly RuntimeMode[] = ['oneshot', 'persistent'];
 const TELEGRAM_MODES: readonly ('polling' | 'webhook')[] = ['polling', 'webhook'];
-const WECHAT_MODES: readonly ('personal' | 'wecom' | 'official_account')[] = ['personal', 'wecom', 'official_account'];
+const WECHAT_MODES: readonly ('personal' | 'ilink_bot' | 'wecom' | 'official_account')[] = ['personal', 'ilink_bot', 'wecom', 'official_account'];
 
 /** webhook 监听地址与路径的内置兜底值（FR-CHAN-016）。 */
 const TELEGRAM_WEBHOOK_BIND = '127.0.0.1:8788';
@@ -1100,7 +1100,8 @@ export class ConfigResolver {
         authDir: expandHome(asString(this.read('channels.wechat.auth_dir', ctx)) ?? BUILTIN_CHANNELS.wechat.authDir),
         qrLog: asBoolean(this.read('channels.wechat.qr_log', ctx)) ?? BUILTIN_CHANNELS.wechat.qrLog,
         personal: {
-          puppet: 'service',
+          puppet: ctx.root.channels?.wechat?.personal?.puppet ?? BUILTIN_CHANNELS.wechat.personal.puppet,
+          ilinkAccountId: ctx.root.channels?.wechat?.personal?.ilink_account_id ?? BUILTIN_CHANNELS.wechat.personal.ilinkAccountId,
           puppetServiceTokenEnv: ctx.root.channels?.wechat?.personal?.puppet_service_token_env ?? BUILTIN_CHANNELS.wechat.personal.puppetServiceTokenEnv,
           puppetServiceEndpoint: ctx.root.channels?.wechat?.personal?.puppet_service_endpoint,
         },

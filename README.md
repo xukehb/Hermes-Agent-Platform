@@ -216,17 +216,23 @@ polling 适合本地和内网，开箱即用；webhook 适合有公网域名的�
 
 ## 手机端：微信与企业微信 (WeChat / WeCom)
 
-平台原生支持三种微信接入模式：**个人微信扫码登录**、**企业微信（WeCom）机器人与自建应用**、**微信公众号**。
+平台原生支持四种微信接入模式：**个人微信扫码绑定 iLink Bot**、**Wechaty Puppet Service**、**企业微信（WeCom）机器人与自建应用**、**微信公众号**。
 
 ```toml
 [channels.wechat]
 enabled = true
-mode = "personal"             # 可选 "personal" | "wecom" | "official_account"
+mode = "ilink_bot"            # 可选 "ilink_bot" | "personal" | "wecom" | "official_account"
 default_agent = "coder"
 mention_patterns = ["@hap"]
 message_char_limit = 2048
 auth_dir = "~/.hap/wechat-auth"
 qr_log = true                 # 启动时是否在终端打印扫码二维码
+
+# iLink Bot 模式不需要 WECHATY_PUPPET_SERVICE_TOKEN。
+# 手机微信扫码后绑定的是腾讯 iLink Chatbot 身份，不是把个人微信账号本身登录成自动回复客户端。
+[channels.wechat.personal]
+puppet = "ilink"
+ilink_account_id = "bot-local"
 
 # 企业微信 WeCom 模式可选配置
 [channels.wechat.wecom]
@@ -241,8 +247,9 @@ path = "/wecom"
 ```
 
 ### 使用方式：
-1. **个人微信扫码**：执行 `hap serve` 或在 GUI 控制台点选「微信 / 企微连接」→「启动微信服务」，使用手机微信扫码一次，凭据自动持久化，支持私聊指令与群聊 `@hap` 指令。
-2. **企业微信 WeCom**：在企业微信后台配置应用或群机器人 Webhook，支持富文本 Markdown 进度与代码输出，企业级稳定免封号。
+1. **个人微信扫码绑定 iLink Bot**：执行 `hap serve` 或在 GUI 控制台点选「微信 / 企微连接」→「启动微信服务」，使用手机微信扫码绑定机器人身份，凭据自动持久化，支持私聊指令。
+2. **Wechaty Puppet Service**：仅在显式配置 `mode = "personal"` 且 `[channels.wechat.personal].puppet = "service"` 时启用，需要供应商提供 `WECHATY_PUPPET_SERVICE_TOKEN`。
+3. **企业微信 WeCom**：在企业微信后台配置应用或群机器人 Webhook，支持富文本 Markdown 进度与代码输出，企业级稳定免封号。
 
 ## HTTP 通道
 

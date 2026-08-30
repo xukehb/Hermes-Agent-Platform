@@ -2363,6 +2363,11 @@ export class GuiService {
     if (config.mode !== undefined) hapConfig.channels.wechat.mode = config.mode;
     if (config.defaultAgent !== undefined) hapConfig.channels.wechat.default_agent = config.defaultAgent;
 
+    if (config.mode === 'ilink_bot') {
+      if (!hapConfig.channels.wechat.personal) hapConfig.channels.wechat.personal = {};
+      hapConfig.channels.wechat.personal.puppet = 'ilink';
+    }
+
     if (config.mode === 'wecom') {
       if (!hapConfig.channels.wechat.wecom) hapConfig.channels.wechat.wecom = {};
       if (config.wecomCorpId !== undefined) hapConfig.channels.wechat.wecom.corp_id = config.wecomCorpId;

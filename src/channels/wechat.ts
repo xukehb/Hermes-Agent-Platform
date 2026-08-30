@@ -1,20 +1,18 @@
 /**
  * 微信与企业微信通道（FR-CHAN-003）。
  *
- * 支持三种接入模式：
- * 1) personal: 个人微信扫码登录模式。
- *    凭据持久化至 authDir，断线指数退避自动重连；首次或登录失效时生成二维码打至日志与本地文件；
- *    支持私聊及群聊 @mention 派工。
- * 2) wecom: 企业微信（WeCom）模式。
+ * 支持四种接入模式：
+ * 1) ilink_bot: 个人微信扫码绑定腾讯 iLink Bot 身份。
+ * 2) personal: 兼容入口，默认同 ilink_bot；显式配置 service puppet 时走 Wechaty Puppet Service。
+ * 3) wecom: 企业微信（WeCom）模式。
  *    企业级免封号方案，支持 Hono 回调服务验证（msg_signature / echostr）与企业微信机器人/应用 API 下发。
- * 3) official_account: 微信公众号（服务号/订阅号）开发者模式。
+ * 4) official_account: 微信公众号（服务号/订阅号）开发者模式。
  *
  * 日期：2026-08-27  执行者：Codex
  */
 
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdirSync } from 'node:fs';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 
@@ -28,6 +26,7 @@ import type { ResolvedChannels, ResolvedLimits, ResolvedPaths, ResolvedWeChatCha
 import { ConfigError } from '../domain/index.js';
 import { parseBind } from './bind.js';
 import { WechatyPersonalDriver } from './wechat/wechaty-personal-driver.js';
+import { NativeIlinkPersonalDriver } from './wechat/ilink/index.js';
 
 /** 微信个人号驱动状态与事件回调。 */
 export interface WeChatPersonalDriver {
@@ -62,122 +61,6 @@ export interface WeChatChannelOptions {
   log?: (line: string) => void;
   /** 测试或自定义驱动注入 */
   personalDriverFactory?: PersonalDriverFactory;
-}
-
-/** 默认的内置个人微信驱动（基于会话凭据与二维码状态机）。 */
-class DefaultPersonalDriver implements WeChatPersonalDriver {
-  private readonly authDir: string;
-  private readonly log: (line: string) => void;
-  private running = false;
-  private timer: NodeJS.Timeout | undefined;
-
-  onQrCode?: (qrText: string, dataUrl?: string) => void;
-  onLogin?: (user: { id: string; name: string }) => void;
-  onLogout?: (reason?: string) => void;
-  onMessage?: (msg: {
-    id: string;
-    fromId: string;
-    fromName: string;
-    isRoom: boolean;
-    roomId?: string;
-    roomName?: string;
-    text: string;
-    attachments?: ChannelAttachments;
-  }) => Promise<void> | void;
-
-  constructor(authDir: string, log: (line: string) => void) {
-    this.authDir = authDir;
-    this.log = log;
-  }
-
-  async start(): Promise<void> {
-    this.running = true;
-    mkdirSync(this.authDir, { recursive: true });
-    const sessionFile = join(this.authDir, 'session.json');
-
-    if (existsSync(sessionFile)) {
-      try {
-        const data = JSON.parse(readFileSync(sessionFile, 'utf8')) as { userId: string; userName: string; token: string };
-        if (data.userId && data.token) {
-          this.log(`[WeChat] 恢复历史登录凭据：${data.userName} (${data.userId})`);
-          this.onLogin?.({ id: data.userId, name: data.userName || 'WeChat User' });
-          return;
-        }
-      } catch {
-        // 损坏则重新扫码
-      }
-    }
-
-    // 生成真实微信扫码票据
-    let qrText = `https://login.weixin.qq.com/l/${Date.now().toString(36)}`;
-    let uuid: string | undefined;
-    try {
-      const url = `https://login.wx.qq.com/jslogin?appid=wx782c26e4c19acffb&fun=new&lang=zh_CN&_=${Date.now()}`;
-      const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-      const body = await res.text();
-      const match = body.match(/window\.QRLogin\.uuid\s*=\s*"([^"]+)"/);
-      if (match && match[1]) {
-        uuid = match[1];
-        qrText = `https://login.weixin.qq.com/l/${uuid}`;
-      }
-    } catch {
-      // 离线回退
-    }
-
-    const qrFilePath = join(this.authDir, 'qr.txt');
-    writeFileSync(qrFilePath, qrText, 'utf8');
-
-    this.onQrCode?.(qrText);
-    this.log(`[WeChat] 请使用手机微信扫码登录：${qrText}`);
-
-    if (uuid) {
-      this.pollLogin(uuid);
-    }
-  }
-
-  private async pollLogin(uuid: string): Promise<void> {
-    let tip = 1;
-    while (this.running) {
-      try {
-        const url = `https://login.wx.qq.com/cgi-bin/mmwebwx-bin/login?loginicon=true&uuid=${uuid}&tip=${tip}&r=${Date.now()}&_=${Date.now()}`;
-        const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-        const text = await res.text();
-
-        if (text.includes('window.code=201')) {
-          tip = 0;
-          this.log(`[WeChat] 手机端已扫描二维码，请在微信中点击【确认登录】...`);
-        } else if (text.includes('window.code=200') || text.includes('window.redirect_uri')) {
-          this.log(`[WeChat] 登录成功：WeChat User`);
-          const sessionFile = join(this.authDir, 'session.json');
-          try {
-            writeFileSync(sessionFile, JSON.stringify({ userId: 'wx_user_self', userName: 'WeChat User', token: 'wx_token_' + Date.now() }), 'utf8');
-          } catch {}
-          this.onLogin?.({ id: 'wx_user_self', name: 'WeChat User' });
-          break;
-        } else if (text.includes('window.code=400')) {
-          this.log(`[WeChat] 二维码已失效，请重新刷新二维码`);
-          break;
-        }
-        await new Promise((r) => setTimeout(r, 1200));
-      } catch {
-        if (!this.running) break;
-        await new Promise((r) => setTimeout(r, 2000));
-      }
-    }
-  }
-
-  async stop(): Promise<void> {
-    this.running = false;
-    if (this.timer) clearTimeout(this.timer);
-    this.onLogout?.('channel_stopped');
-  }
-
-  async sendMessage(targetId: string, text: string): Promise<string | undefined> {
-    if (!this.running) return undefined;
-    // 实际下发
-    this.log(`[WeChat] 发送消息至 [${targetId}]: ${text.slice(0, 60)}...`);
-    return `wx_msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-  }
 }
 
 /** 微信通道实现。 */
@@ -229,7 +112,7 @@ export class WeChatChannel implements Channel {
 
     mkdirSync(this.config.authDir, { recursive: true });
 
-    if (this.config.mode === 'personal') {
+    if (this.config.mode === 'personal' || this.config.mode === 'ilink_bot') {
       await this.startPersonalMode();
     } else if (this.config.mode === 'wecom') {
       await this.startWeComMode();
@@ -258,6 +141,13 @@ export class WeChatChannel implements Channel {
   /** 个人微信模式启动。 */
   private async startPersonalMode(): Promise<void> {
     const factory = this.options.personalDriverFactory ?? ((_authDir, log) => {
+      if (this.config.personal.puppet === 'ilink') {
+        return new NativeIlinkPersonalDriver({
+          accountId: this.config.personal.ilinkAccountId,
+          rootDir: _authDir,
+          log,
+        });
+      }
       const opts: { tokenEnv: string; endpoint?: string; env?: Record<string, string | undefined>; log: (line: string) => void } = {
         tokenEnv: this.config.personal.puppetServiceTokenEnv,
         env: this.env,
