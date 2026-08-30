@@ -1,6 +1,13 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ControlPlaneStore, BotCredentialStore, type BotAccount, type BotPlatform } from '../control-plane/index.js';
+import {
+  BotAuthorizationService,
+  ControlPlaneStore,
+  BotCredentialStore,
+  type BotAccount,
+  type BotPlatform,
+  type ServerBotBinding,
+} from '../control-plane/index.js';
 import type { GuiBotInstance, GuiBotPlatform } from './shared.js';
 
 export interface BotControlFacadeOptions {
@@ -10,6 +17,13 @@ export interface BotControlFacadeOptions {
 }
 
 type SupportedGuiBotPlatform = Extract<GuiBotPlatform, 'telegram' | 'feishu' | 'wechat'>;
+
+export interface BotRuntimeDescriptor {
+  account: BotAccount;
+  binding: ServerBotBinding;
+  credentials: Record<string, string>;
+  authorization: BotAuthorizationService;
+}
 
 const secretFields = new Set(['token', 'appSecret', 'puppetToken', 'accessToken', 'secret']);
 
@@ -97,6 +111,25 @@ export class BotControlFacade {
       message: enabled ? `机器人 [${account.name}] 已标记为启用，运行时将在下一次启动时连接` : `机器人 [${account.name}] 已停止`,
       ...(bot === undefined ? {} : { bot }),
     };
+  }
+
+  runtimeBots(platform?: SupportedGuiBotPlatform): BotRuntimeDescriptor[] {
+    const bindings = new Map(this.store.listBindings().map((binding) => [binding.botAccountId, binding]));
+    const controlPlatform = platform === undefined ? undefined : toControlPlatform(platform);
+    return this.store.listAccounts()
+      .filter((account) => account.enabled)
+      .filter((account) => controlPlatform === undefined || account.platform === controlPlatform)
+      .flatMap((account) => {
+        const binding = bindings.get(account.id);
+        const credentials = this.credentials.read(account.credentialRef);
+        if (binding === undefined || credentials === undefined) return [];
+        return [{
+          account,
+          binding,
+          credentials,
+          authorization: new BotAuthorizationService(this.store),
+        }];
+      });
   }
 
   accountForTest(id: string): BotAccount | undefined {

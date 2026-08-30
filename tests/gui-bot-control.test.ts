@@ -108,4 +108,36 @@ describe('GUI bot control facade', () => {
       cleanup();
     }
   });
+
+  it('exposes startable runtime accounts with credentials and bindings for enabled bots only', () => {
+    const { facade, cleanup } = tempFacade();
+    try {
+      facade.upsertBot({
+        id: 'bot-enabled',
+        name: 'Enabled',
+        platform: 'telegram',
+        enabled: true,
+        boundServerId: 'srv-a',
+        defaultAgent: 'ops',
+        config: { token: 'secret-enabled' },
+      });
+      facade.upsertBot({
+        id: 'bot-disabled',
+        name: 'Disabled',
+        platform: 'telegram',
+        enabled: false,
+        boundServerId: 'srv-b',
+        defaultAgent: 'ops',
+        config: { token: 'secret-disabled' },
+      });
+
+      const runtimes = facade.runtimeBots('telegram');
+      expect(runtimes).toHaveLength(1);
+      expect(runtimes[0]?.account.id).toBe('bot-enabled');
+      expect(runtimes[0]?.binding.serverId).toBe('srv-a');
+      expect(runtimes[0]?.credentials.token).toBe('secret-enabled');
+    } finally {
+      cleanup();
+    }
+  });
 });

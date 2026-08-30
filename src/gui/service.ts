@@ -2089,6 +2089,7 @@ export class GuiService {
   }
 
   private telegramManager: ChannelManager | TelegramChannel | undefined;
+  private telegramManagers: TelegramChannel[] = [];
   private telegramRunning = false;
   private telegramBotInfo: { username: string; name: string } | undefined;
 
@@ -2176,6 +2177,47 @@ export class GuiService {
       return { ok: true, message: 'Telegram 机器人正在运行中', botUsername: this.telegramBotInfo?.username };
     }
 
+    const runtimeBots = this.botControl.runtimeBots('telegram');
+    if (runtimeBots.length > 0) {
+      const orchestrator = new AgentOrchestrator({ configPath: this.configPath });
+      await orchestrator.loadMcpTools();
+      const baseChannels = orchestrator.config.resolveChannels();
+      const limits = orchestrator.config.resolveLimits();
+      const paths = orchestrator.resolvedPaths;
+      const host = createChannelHost(orchestrator);
+      const managers: TelegramChannel[] = [];
+      for (const runtime of runtimeBots) {
+        const tokenEnv = `HAP_BOT_${runtime.account.id.toUpperCase().replace(/[^A-Z0-9]/g, '_')}_TOKEN`;
+        const manager = new TelegramChannel({
+          host,
+          channels: {
+            ...baseChannels,
+            telegram: {
+              ...baseChannels.telegram,
+              enabled: true,
+              tokenEnv,
+              mode: 'polling',
+              defaultAgent: runtime.account.defaultAgentId,
+            },
+          },
+          limits,
+          paths,
+          env: { ...process.env, [tokenEnv]: runtime.credentials.token },
+          log: (line) => this.info(`[Telegram:${runtime.account.id}] ${line}`),
+          control: { botAccountId: runtime.account.id, authorization: runtime.authorization },
+        });
+        await manager.start();
+        managers.push(manager);
+      }
+      this.telegramManagers = managers;
+      this.telegramRunning = true;
+      this.info(`Telegram 多机器人服务已启动：${managers.length} 个 Bot`);
+      return {
+        ok: true,
+        message: `Telegram 多机器人服务已启动：${managers.length} 个 Bot 正在监听消息。`,
+      };
+    }
+
     const config = await this.getTelegramConfig();
     if (!config.token) {
       throw new Error('未配置 TELEGRAM_BOT_TOKEN，请先填写 Bot Token');
@@ -2202,6 +2244,7 @@ export class GuiService {
 
     await manager.start();
     this.telegramManager = manager;
+    this.telegramManagers = [manager];
     this.telegramRunning = true;
     this.info(`Telegram 机器人服务已成功启动：@${test.username}`);
 
@@ -2213,14 +2256,20 @@ export class GuiService {
   }
 
   async stopTelegramService(): Promise<{ ok: boolean; message: string }> {
-    if (!this.telegramRunning || !this.telegramManager) {
+    if (!this.telegramRunning || (this.telegramManager === undefined && this.telegramManagers.length === 0)) {
       this.telegramRunning = false;
       return { ok: true, message: 'Telegram 机器人未处于运行状态' };
     }
 
     try {
-      await this.telegramManager.stop();
+      for (const manager of [...this.telegramManagers].reverse()) {
+        await manager.stop();
+      }
+      if (this.telegramManagers.length === 0) {
+        await this.telegramManager?.stop();
+      }
       this.telegramManager = undefined;
+      this.telegramManagers = [];
       this.telegramRunning = false;
       this.info('Telegram 机器人服务已停止');
       return { ok: true, message: 'Telegram 机器人服务已成功停止' };
