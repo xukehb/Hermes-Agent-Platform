@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 const rendererDir = resolve(process.cwd(), 'src/gui/renderer');
 const html = readFileSync(resolve(rendererDir, 'index.html'), 'utf8');
 const app = readFileSync(resolve(rendererDir, 'app.js'), 'utf8');
+const css = readFileSync(resolve(rendererDir, 'styles.css'), 'utf8');
 const preload = readFileSync(resolve(rendererDir, 'preload.cjs'), 'utf8');
 const main = readFileSync(resolve(process.cwd(), 'src/gui/main.ts'), 'utf8');
 
@@ -44,5 +45,13 @@ describe('agent role management GUI', () => {
     expect(controller).toContain('await window.hap.removeAgent(agentId)');
     expect(controller).toContain('配置与引用将被删除');
     expect(controller).toContain('工作目录、记忆和会话文件会保留');
+  });
+
+  it('keeps the create action readable in a constrained window', () => {
+    const view = section(html, '<section id="agents"', '<!-- 独立视图: 远程服务器');
+
+    expect(view).toContain('class="page-header-row agent-page-header"');
+    expect(css).toMatch(/\.agent-page-header \.btn\s*{[^}]*white-space:\s*nowrap/);
+    expect(css).toMatch(/@media \(max-width: 900px\)[\s\S]*?\.agent-page-header\s*{[^}]*flex-wrap:\s*wrap/);
   });
 });

@@ -1817,6 +1817,33 @@ body {
   margin-bottom: 22px;
 }
 
+.agent-page-header {
+  gap: 12px;
+}
+
+.agent-page-header > :first-child {
+  min-width: 0;
+}
+
+.agent-page-header .page-header-actions,
+.agent-page-header .btn {
+  flex-shrink: 0;
+}
+
+.agent-page-header .btn {
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .agent-page-header {
+    flex-wrap: wrap;
+  }
+
+  .agent-page-header > :first-child {
+    flex: 1 1 100%;
+  }
+}
+
 .page-title {
   font-size: 22px;
   font-weight: 700;
