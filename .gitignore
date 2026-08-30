@@ -12,3 +12,4 @@ coverage/
 .dbg/
 .codex/
 release/
+.worktrees/
