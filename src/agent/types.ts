@@ -145,6 +145,13 @@ export interface UsageRow {
   providerId: string;
   model: string;
   usage: TokenUsage;
+  eventId?: string;
+  taskId?: string;
+  sessionKey?: string;
+  serverId?: string;
+  botAccountId?: string;
+  source?: string;
+  parentTaskId?: string;
 }
 
 /** 用量聚合结果。 */
