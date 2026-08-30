@@ -240,24 +240,23 @@ function getTopProcesses(limit = 6): HostTopProcess[] {
       lastTopProcessesScanTime = now;
       return list.slice(0, limit);
     } else {
-      const output = execSync('ps -eo pid,comm,rss --sort=-rss | head -n 8', { timeout: 600, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
-      const rows = output.trim().split('\n').slice(1);
+      const output = execSync('ps -axo pid=,rss=,comm=', { timeout: 600, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
+      const rows = output.trim().split('\n');
       for (const row of rows) {
-        const parts = row.trim().split(/\s+/);
-        if (parts.length >= 3) {
-          const pid = parseInt(parts[0] || '0', 10);
-          const name = parts[1] || 'Unknown';
-          const rssKb = parseInt(parts[2] || '0', 10) || 0;
-          if (!isNaN(pid) && pid > 0) {
-            list.push({
-              pid,
-              name,
-              memoryBytes: rssKb * 1024,
-              memoryFormatted: formatBytes(rssKb * 1024),
-            });
-          }
-        }
+        const match = row.match(/^\s*(\d+)\s+(\d+)\s+(.+?)\s*$/);
+        if (!match) continue;
+        const pid = parseInt(match[1] || '0', 10);
+        const rssKb = parseInt(match[2] || '0', 10) || 0;
+        const name = match[3] || 'Unknown';
+        if (pid <= 0 || rssKb <= 0) continue;
+        list.push({
+          pid,
+          name,
+          memoryBytes: rssKb * 1024,
+          memoryFormatted: formatBytes(rssKb * 1024),
+        });
       }
+      list.sort((a, b) => b.memoryBytes - a.memoryBytes);
       cachedTopProcesses = list;
       lastTopProcessesScanTime = now;
       return list.slice(0, limit);

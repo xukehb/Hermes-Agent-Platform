@@ -1198,7 +1198,12 @@ function startNewChat() {
   show('chat');
   renderProjectsTree();
   renderCurrentSessionMessages();
-  $('chatInput').focus();
+  const chatInput = $('chatInput');
+  if (chatInput) chatInput.value = '';
+  currentAttachments = [];
+  renderComposerAttachments();
+  updateComposerState();
+  chatInput?.focus();
 }
 
 // 顶部 + New Conversation 按钮
@@ -1211,7 +1216,7 @@ $('globalHistoryBtn')?.addEventListener('click', () => {
 });
 
 $('scheduledTasksBtn')?.addEventListener('click', () => {
-  show('logs');
+  show('schedules');
   showToast('查看自动化与运行任务', 'info');
 });
 
@@ -4900,12 +4905,8 @@ function fmtHostUptime(seconds) {
 // 防止进入监控页、切换节点和手动刷新同时发起多个 IPC/SSH 请求。
 let hostRefreshInFlight = false;
 
-window.refreshHostView = async () => {
-  if (hostRefreshInFlight) return;
-  hostRefreshInFlight = true;
-  try {
-    const info = await window.hap.getHostSysInfo();
-    if (!info || !info.cpu || !info.memory) return;
+function renderLocalHostView(info) {
+  if (!info || !info.cpu || !info.memory) return;
 
     // 1. CPU 指标与负载
     const cpuPct = info.cpu.usagePercent || 0;
@@ -5040,34 +5041,59 @@ window.refreshHostView = async () => {
     }
 
     // 9. 公网出口与 IP 地理位置
-    loadHostIpGeo().catch(() => {});
-  } catch (err) {
-    console.error('刷新宿主机监控失败:', err);
-  } finally {
-    hostRefreshInFlight = false;
-  }
-};
+  loadHostIpGeo().catch(() => {});
+}
 
 let lastHostIpGeo = null;
-async function loadHostIpGeo() {
-  try {
-    const geo = await window.hap.getIpGeoInfo();
-    lastHostIpGeo = geo;
-    if ($('hostIpGeoBadge')) {
-      $('hostIpGeoBadge').textContent = geo.isPrivate ? '局域网环境' : '公网在线';
-      $('hostIpGeoBadge').className = `badge ${geo.isPrivate ? 'neutral' : 'success'}`;
-    }
-    if ($('hostIpGeoDetails')) {
-      const parts = [];
-      parts.push(`<div><strong>出口 IP 地址:</strong> <code class="md-inline-code">${esc(geo.ip)}</code> ${geo.isPrivate ? '(局域网私网)' : '(公网出口)'}</div>`);
-      parts.push(`<div><strong>地理归属地:</strong> ${esc(geo.formattedLocation)}</div>`);
-      if (geo.isp) parts.push(`<div><strong>网络运营商:</strong> ${esc(geo.isp)} ${geo.asn ? '(' + esc(geo.asn) + ')' : ''}</div>`);
-      if (geo.timezone) parts.push(`<div><strong>时区标识:</strong> ${esc(geo.timezone)}</div>`);
-      $('hostIpGeoDetails').innerHTML = parts.join('');
-    }
-  } catch (err) {
-    if ($('hostIpGeoBadge')) $('hostIpGeoBadge').textContent = '探测失败';
+let lastHostIpGeoAt = 0;
+let hostIpGeoInFlight = null;
+const HOST_IP_GEO_CACHE_MS = 5 * 60 * 1000;
+
+function renderHostIpGeo(geo) {
+  if ($('hostIpGeoBadge')) {
+    $('hostIpGeoBadge').textContent = geo.isPrivate ? '局域网环境' : '公网在线';
+    $('hostIpGeoBadge').className = `badge ${geo.isPrivate ? 'neutral' : 'success'}`;
   }
+  if ($('hostIpGeoDetails')) {
+    const parts = [];
+    parts.push(`<div><strong>出口 IP 地址:</strong> <code class="md-inline-code">${esc(geo.ip)}</code> ${geo.isPrivate ? '(局域网私网)' : '(公网出口)'}</div>`);
+    parts.push(`<div><strong>地理归属地:</strong> ${esc(geo.formattedLocation)}</div>`);
+    if (geo.isp) parts.push(`<div><strong>网络运营商:</strong> ${esc(geo.isp)} ${geo.asn ? '(' + esc(geo.asn) + ')' : ''}</div>`);
+    if (geo.timezone) parts.push(`<div><strong>时区标识:</strong> ${esc(geo.timezone)}</div>`);
+    $('hostIpGeoDetails').innerHTML = parts.join('');
+  }
+}
+
+async function loadHostIpGeo() {
+  if (lastHostIpGeo && Date.now() - lastHostIpGeoAt < HOST_IP_GEO_CACHE_MS) {
+    renderHostIpGeo(lastHostIpGeo);
+    return lastHostIpGeo;
+  }
+
+  if (hostIpGeoInFlight) return hostIpGeoInFlight;
+
+  hostIpGeoInFlight = (async () => {
+    try {
+      const geo = await window.hap.getIpGeoInfo();
+      lastHostIpGeo = geo;
+      lastHostIpGeoAt = Date.now();
+      renderHostIpGeo(geo);
+      return geo;
+    } catch (err) {
+      if ($('hostIpGeoBadge')) {
+        $('hostIpGeoBadge').textContent = '探测失败';
+        $('hostIpGeoBadge').className = 'badge danger';
+      }
+      if ($('hostIpGeoDetails')) {
+        $('hostIpGeoDetails').textContent = '暂时无法获取公网出口信息，请稍后重试。';
+      }
+      return null;
+    } finally {
+      hostIpGeoInFlight = null;
+    }
+  })();
+
+  return hostIpGeoInFlight;
 }
 
 // AI 智能全盘扫描与深度瘦身 (AI Smart Disk Scanner & Storage Analyzer)
@@ -5676,18 +5702,8 @@ $('serverOpsChatForm')?.addEventListener('submit', async (e) => {
 // 7. 综合设置中心 Tab 切换与数据分发 (Settings Hub Controller)
 // ============================================================================
 window.switchSettingsTab = (tabId) => {
-  document.querySelectorAll('.settings-tab-btn').forEach(btn => {
-    if (btn.dataset.tab === tabId) {
-      btn.style.background = 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)';
-      btn.style.color = '#0369a1';
-      btn.style.borderColor = '#7dd3fc';
-      btn.style.fontWeight = '600';
-    } else {
-      btn.style.background = '#ffffff';
-      btn.style.color = '#334155';
-      btn.style.borderColor = '#cbd5e1';
-      btn.style.fontWeight = '500';
-    }
+  document.querySelectorAll('.settings-nav-tabs .settings-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tabId);
   });
 
   ['providers', 'channels', 'projects', 'permissions', 'system'].forEach(t => {
@@ -7280,92 +7296,7 @@ window.refreshHostView = async () => {
     if (isLocal) {
       // 本机系统全景
       const info = await window.hap.getHostSysInfo();
-      if (!info || !info.cpu || !info.memory) return;
-
-      const cpuPct = info.cpu.usagePercent || 0;
-      if ($('hostCpuPercent')) $('hostCpuPercent').textContent = `${cpuPct}%`;
-      if ($('hostCpuSpeed')) $('hostCpuSpeed').textContent = `${info.cpu.speedMHz || 0} MHz`;
-      if ($('hostCpuCoresBadge')) $('hostCpuCoresBadge').textContent = `${info.cpu.cores} 核心`;
-      if ($('hostCpuCoreCountBadge')) $('hostCpuCoreCountBadge').textContent = `${info.cpu.cores} 逻辑核心`;
-      if ($('hostCpuModel')) $('hostCpuModel').textContent = info.cpu.model || 'CPU';
-      if ($('hostCpuBar')) {
-        $('hostCpuBar').style.width = `${cpuPct}%`;
-        $('hostCpuBar').style.background = cpuPct > 85 ? '#ef4444' : cpuPct > 60 ? '#f59e0b' : '#3b82f6';
-      }
-
-      const coreGrid = $('hostCoreGrid');
-      if (coreGrid && info.cpu.perCore) {
-        coreGrid.innerHTML = info.cpu.perCore.map(c => `
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:6px 8px; display:flex; flex-direction:column; gap:2px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; font-weight:600; color:var(--text-main);">
-              <span>Core #${c.coreIndex}</span>
-              <span style="color:#3b82f6; font-family:var(--font-mono);">${c.speedMHz}MHz</span>
-            </div>
-            <div style="font-size:10px; color:#64748b; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
-              ${esc(c.model.replace(/CPU @.*$/, '').trim())}
-            </div>
-          </div>
-        `).join('');
-      }
-
-      const memPct = info.memory.usedPercent || 0;
-      if ($('hostMemUsed')) $('hostMemUsed').textContent = fmtHostBytes(info.memory.usedBytes);
-      if ($('hostMemTotalBrief')) $('hostMemTotalBrief').textContent = `/ ${fmtHostBytes(info.memory.totalBytes)}`;
-      if ($('hostMemTotal')) $('hostMemTotal').textContent = `空闲: ${fmtHostBytes(info.memory.freeBytes)}`;
-      if ($('hostMemPercentBadge')) {
-        $('hostMemPercentBadge').textContent = `${memPct}%`;
-        $('hostMemPercentBadge').className = `badge ${memPct > 85 ? 'danger' : memPct > 60 ? 'warn' : 'success'}`;
-      }
-      if ($('hostMemBar')) {
-        $('hostMemBar').style.width = `${memPct}%`;
-        $('hostMemBar').style.background = memPct > 85 ? '#ef4444' : memPct > 60 ? '#f59e0b' : '#10b981';
-      }
-
-      if ($('hostProcessPidBadge')) $('hostProcessPidBadge').textContent = `PID: ${info.process?.pid || '--'}`;
-      if ($('hostProcessRss')) $('hostProcessRss').textContent = fmtHostBytes(info.memory.processRssBytes);
-      if ($('hostProcessHeap')) $('hostProcessHeap').textContent = `堆使用: ${fmtHostBytes(info.memory.heapUsedBytes)} / ${fmtHostBytes(info.memory.heapTotalBytes)}`;
-      if ($('hostHeapBar')) {
-        const heapPct = Math.round((info.memory.heapUsedBytes / (info.memory.heapTotalBytes || 1)) * 100);
-        $('hostHeapBar').style.width = `${Math.min(heapPct, 100)}%`;
-      }
-
-      if ($('hostLoadAvgBadge')) $('hostLoadAvgBadge').textContent = `负载: ${info.loadAvg?.map(n => typeof n === 'number' ? n.toFixed(2) : n).join(', ') || '--'}`;
-      if ($('hostSystemUptime')) $('hostSystemUptime').textContent = formatHostUptime(info.os.uptimeSeconds);
-      if ($('hostProcessUptime')) $('hostProcessUptime').textContent = `Codex 服务运行: ${formatHostUptime(info.os.processUptimeSeconds)}`;
-      if ($('hostTimestamp')) $('hostTimestamp').textContent = `更新于: ${new Date().toLocaleTimeString()}`;
-
-      const partList = $('hostPartitionList');
-      if (partList && info.disk.partitions) {
-        if ($('hostDiskPartCountBadge')) $('hostDiskPartCountBadge').textContent = `${info.disk.partitions.length} 个卷`;
-        partList.innerHTML = info.disk.partitions.map(p => {
-          const usedPct = p.usagePercent || 0;
-          return `
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; font-size:12px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                <strong>${esc(p.mount)} (${esc(p.filesystem || 'Local')})</strong>
-                <span style="font-family:var(--font-mono); font-weight:600; color:${usedPct > 85 ? '#ef4444' : '#0284c7'};">${usedPct}%</span>
-              </div>
-              <div style="width:100%; height:4px; background:#e2e8f0; border-radius:2px; overflow:hidden; margin-bottom:4px;">
-                <div style="width:${usedPct}%; height:100%; background:${usedPct > 85 ? '#ef4444' : '#0284c7'};"></div>
-              </div>
-              <div style="font-size:11px; color:#64748b; display:flex; justify-content:space-between;">
-                <span>已用: ${fmtHostBytes(p.usedBytes)}</span>
-                <span>总计: ${fmtHostBytes(p.totalBytes)}</span>
-              </div>
-            </div>
-          `;
-        }).join('');
-      }
-
-      if ($('hostPlatformBadge')) $('hostPlatformBadge').textContent = `${info.os.platform} ${info.os.arch}`;
-      if ($('hostHostname')) $('hostHostname').textContent = info.network.hostname;
-      if ($('hostUsername')) $('hostUsername').textContent = info.os.user || '-';
-      if ($('hostOsFull')) $('hostOsFull').textContent = `${info.os.type} ${info.os.release}`;
-      if ($('hostArch')) $('hostArch').textContent = `${info.os.arch} (${info.os.endianness})`;
-      if ($('hostNodeVersion')) $('hostNodeVersion').textContent = info.os.nodeVersion;
-      if ($('hostV8Version')) $('hostV8Version').textContent = info.os.versions?.v8 || '-';
-      if ($('hostUvVersion')) $('hostUvVersion').textContent = info.os.versions?.uv || '-';
-      if ($('hostCwd')) $('hostCwd').textContent = info.os.cwd || '-';
+      renderLocalHostView(info);
     } else {
       // 远端服务器节点全景
       const s = cachedServers.find(item => item.id === targetId);

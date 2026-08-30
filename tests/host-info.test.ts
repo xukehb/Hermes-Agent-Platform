@@ -34,6 +34,13 @@ describe('Host System Status & Diagnostics', () => {
     expect(info.network).toBeDefined();
     expect(info.network.hostname).toBeTruthy();
     expect(Array.isArray(info.network.ips)).toBe(true);
+
+    // Unix process collection must work on both GNU/Linux and BSD/macOS ps.
+    if (process.platform !== 'win32') {
+      expect(info.topProcesses.length).toBeGreaterThan(0);
+      expect(info.topProcesses[0]?.pid).toBeGreaterThan(0);
+      expect(info.topProcesses[0]?.memoryBytes).toBeGreaterThan(0);
+    }
   });
 
   it('formats bytes and uptime into human-readable strings', () => {
