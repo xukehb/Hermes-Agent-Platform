@@ -187,6 +187,12 @@ let state = {
   targets: [],
   logs: [],
   presets: [],
+  telemetry: {
+    status: 'ok',
+    totals: { promptTokens: 0, completionTokens: 0, totalTokens: 0, calls: 0 },
+    byServer: [],
+    byAgent: [],
+  },
 };
 
 const selectedProjectIds = new Set();
@@ -1544,6 +1550,7 @@ async function refresh() {
     renderProviders();
     renderModels();
     renderTargets();
+    renderTelemetry();
     renderTelegramView();
     renderWeChatView();
     renderLogs(currentLogFilter);
@@ -1561,6 +1568,32 @@ async function refresh() {
 $('configPathBtn')?.addEventListener('click', () => {
   if (state.configPath) copyText(state.configPath, '配置路径');
 });
+
+function formatTokenCount(value) {
+  const n = Number(value || 0);
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  return String(n);
+}
+
+function renderTelemetry() {
+  const telemetry = state.telemetry || {};
+  const totals = telemetry.totals || {};
+  const topServer = Array.isArray(telemetry.byServer) ? telemetry.byServer[0] : null;
+  const totalEl = $('tokenTelemetryTotal');
+  const serverEl = $('tokenTelemetryServer');
+  const pill = $('tokenTelemetryPill');
+  if (totalEl) totalEl.textContent = formatTokenCount(totals.totalTokens);
+  if (serverEl) {
+    serverEl.textContent = topServer
+      ? `${topServer.serverId} ${formatTokenCount(topServer.totalTokens)}`
+      : 'local 0';
+  }
+  if (pill) {
+    pill.classList.toggle('is-degraded', telemetry.status !== 'ok');
+    pill.title = telemetry.status === 'ok' ? '今日实时 Token 消耗' : 'Token 遥测降级，正在使用最近可用数据';
+  }
+}
 
 // ==========================================================================
 // 1. Skill 技能市场 (关联 GitHub 开源市场)

@@ -705,7 +705,7 @@ export class MemorySessionStore implements SessionStore {
 
   recordUsageEvent(event: UsageTelemetryEvent): boolean {
     if (this.usageRows.some((row) => row.eventId === event.eventId)) return false;
-    this.usageRows.push({
+    const row: UsageRow = {
       at: event.at,
       agentId: event.agentId,
       providerId: event.providerId,
@@ -719,10 +719,11 @@ export class MemorySessionStore implements SessionStore {
       taskId: event.taskId,
       sessionKey: event.sessionKey,
       serverId: event.serverId,
-      botAccountId: event.botAccountId,
       source: event.source,
-      parentTaskId: event.parentTaskId,
-    });
+    };
+    if (event.botAccountId !== undefined) row.botAccountId = event.botAccountId;
+    if (event.parentTaskId !== undefined) row.parentTaskId = event.parentTaskId;
+    this.usageRows.push(row);
     this.save();
     return true;
   }

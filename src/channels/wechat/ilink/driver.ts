@@ -39,8 +39,8 @@ export class NativeIlinkPersonalDriver {
     this.pollIntervalMs = options.pollIntervalMs ?? 1200;
     this.log = options.log ?? (() => undefined);
     this.apiFactory = options.apiFactory ?? ((account) => new IlinkApiClient({
-      token: account?.token,
-      baseUrl: account?.baseUrl,
+      ...(account?.token === undefined ? {} : { token: account.token }),
+      ...(account?.baseUrl === undefined ? {} : { baseUrl: account.baseUrl }),
     }));
     const account = this.store.loadAccount();
     this.api = this.apiFactory(account === undefined ? undefined : { token: account.botToken, baseUrl: account.baseUrl });

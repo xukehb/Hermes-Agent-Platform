@@ -42,7 +42,7 @@ export function validateIlinkBaseUrl(input: string): URL {
 
 export class IlinkApiClient {
   private readonly baseUrl: URL;
-  private readonly token?: string;
+  private readonly token: string | undefined;
   private readonly localTokens: string[];
   private readonly fetchImpl: IlinkFetch;
 
@@ -60,7 +60,7 @@ export class IlinkApiClient {
       label: 'get_bot_qrcode',
       authenticated: false,
       body: { local_token_list: this.localTokens },
-      signal,
+      ...(signal === undefined ? {} : { signal }),
       parse: parseQrCreation,
     });
   }
@@ -73,7 +73,7 @@ export class IlinkApiClient {
       path: 'ilink/bot/get_qrcode_status?' + params.toString(),
       label: 'get_qrcode_status',
       authenticated: false,
-      signal,
+      ...(signal === undefined ? {} : { signal }),
       parse: parseQrStatus,
     });
   }
@@ -93,7 +93,7 @@ export class IlinkApiClient {
       label: 'getupdates',
       authenticated: true,
       body: { get_updates_buf: cursor },
-      signal,
+      ...(signal === undefined ? {} : { signal }),
       parse: parseUpdateBatch,
     });
   }
@@ -109,13 +109,13 @@ export class IlinkApiClient {
   }
 
   private async retRequest(path: string, label: string, body: unknown, signal?: AbortSignal): Promise<void> {
-    const response = await this.request({
+    const response = await this.request<{ ret: number; errmsg?: string | undefined }>({
       method: 'POST',
       path,
       label,
       authenticated: true,
       body,
-      signal,
+      ...(signal === undefined ? {} : { signal }),
       parse: (raw) => {
         const parsed = sendMessageResponseSchema.safeParse(raw);
         if (!parsed.success) throw IlinkError.schema(label);
@@ -135,12 +135,13 @@ export class IlinkApiClient {
     parse: (raw: unknown) => T;
   }): Promise<T> {
     const url = new URL(spec.path, this.baseUrl);
-    const response = await this.fetchImpl(url, {
+    const init: RequestInit = {
       method: spec.method,
       headers: this.headers(spec.authenticated),
-      body: spec.body === undefined ? undefined : JSON.stringify(spec.body),
-      signal: spec.signal,
-    });
+    };
+    if (spec.body !== undefined) init.body = JSON.stringify(spec.body);
+    if (spec.signal !== undefined) init.signal = spec.signal;
+    const response = await this.fetchImpl(url, init);
     if (!response.ok) throw IlinkError.http(spec.label, response.status);
     let raw: unknown;
     try {

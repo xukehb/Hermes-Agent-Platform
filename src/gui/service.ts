@@ -11,6 +11,7 @@ import { describeError, type Attachment, type ProtocolName, type WireApi } from 
 import { planInjection, writeInjection, type InjectionTarget } from '../inject/index.js';
 import { ProviderRegistry } from '../providers/index.js';
 import { parseUnifiedDiff, type FileDiffItem } from '../tools/diff-parser.js';
+import { SqliteSessionStore } from '../storage/index.js';
 import {
   ScheduleStore,
   SchedulerEngine,
@@ -516,7 +517,51 @@ export class GuiService {
       targets: this.targetStates(models.map((model) => model.fullName)),
       logs: this.logs.slice(-80),
       servers: RemoteServerStore.getInstance().list(),
+      telemetry: this.usageSnapshot(resolver),
       presets: Object.keys(BUILTIN_PROVIDERS).filter((p) => !hiddenProviders.has(p)),
+    };
+  }
+
+  private usageSnapshot(resolver: ConfigResolver): object {
+    const since = new Date();
+    since.setHours(0, 0, 0, 0);
+    const totals = { promptTokens: 0, completionTokens: 0, totalTokens: 0, calls: 0 };
+    const byServer = new Map<string, { serverId: string; totalTokens: number; calls: number }>();
+    const byAgent = new Map<string, { agentId: string; totalTokens: number; calls: number }>();
+
+    for (const agentId of resolver.listAgentIds()) {
+      const agent = resolver.resolveAgent(agentId);
+      const store = new SqliteSessionStore(join(agent.agentDir, 'sessions.db'));
+      try {
+        const result = store.queryUsage?.({ since: since.toISOString() });
+        if (result === undefined) continue;
+        totals.promptTokens += result.totals.promptTokens;
+        totals.completionTokens += result.totals.completionTokens;
+        totals.totalTokens += result.totals.totalTokens;
+        totals.calls += result.totals.calls;
+        for (const item of result.byServer) {
+          const existing = byServer.get(item.serverId) ?? { serverId: item.serverId, totalTokens: 0, calls: 0 };
+          existing.totalTokens += item.totalTokens;
+          existing.calls += item.calls;
+          byServer.set(item.serverId, existing);
+        }
+        for (const item of result.byAgent) {
+          const existing = byAgent.get(item.agentId) ?? { agentId: item.agentId, totalTokens: 0, calls: 0 };
+          existing.totalTokens += item.totalTokens;
+          existing.calls += item.calls;
+          byAgent.set(item.agentId, existing);
+        }
+      } finally {
+        store.close();
+      }
+    }
+
+    return {
+      status: 'ok',
+      since: since.toISOString(),
+      totals,
+      byServer: [...byServer.values()].sort((left, right) => right.totalTokens - left.totalTokens),
+      byAgent: [...byAgent.values()].sort((left, right) => right.totalTokens - left.totalTokens),
     };
   }
 
