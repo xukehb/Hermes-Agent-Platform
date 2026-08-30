@@ -55,11 +55,13 @@ function atomicWriteJson(temp: string, target: string, value: unknown): void {
 }
 
 export class IlinkAccountStore {
+  readonly accountId: string;
   private readonly accountDir: string;
   private readonly now: () => number;
 
   constructor(root: string, accountId: string, options: { now?: () => number } = {}) {
     const id = accountIdSchema.parse(accountId);
+    this.accountId = id;
     this.accountDir = join(root, 'accounts', id);
     this.now = options.now ?? (() => Date.now());
     mkdirSync(this.accountDir, { recursive: true, mode: 0o700 });
