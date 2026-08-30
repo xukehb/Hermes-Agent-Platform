@@ -1100,7 +1100,8 @@ export class ConfigResolver {
         authDir: expandHome(asString(this.read('channels.wechat.auth_dir', ctx)) ?? BUILTIN_CHANNELS.wechat.authDir),
         qrLog: asBoolean(this.read('channels.wechat.qr_log', ctx)) ?? BUILTIN_CHANNELS.wechat.qrLog,
         personal: {
-          puppet: 'service',
+          puppet: ctx.root.channels?.wechat?.personal?.puppet ?? BUILTIN_CHANNELS.wechat.personal.puppet,
+          ilinkAccountId: ctx.root.channels?.wechat?.personal?.ilink_account_id ?? BUILTIN_CHANNELS.wechat.personal.ilinkAccountId,
           puppetServiceTokenEnv: ctx.root.channels?.wechat?.personal?.puppet_service_token_env ?? BUILTIN_CHANNELS.wechat.personal.puppetServiceTokenEnv,
           puppetServiceEndpoint: ctx.root.channels?.wechat?.personal?.puppet_service_endpoint,
         },
