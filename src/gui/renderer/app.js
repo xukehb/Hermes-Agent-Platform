@@ -2128,6 +2128,38 @@ $('batchDeleteProvidersBtn')?.addEventListener('click', async () => {
 // 5.5 智能体角色管理 (Agents)
 // ==========================================================================
 
+let agentFormMode = 'edit';
+
+function populateAgentModelOptions(selectedModel = '') {
+  const modelSelect = $('agentInputModel');
+  if (!modelSelect) return;
+
+  modelSelect.innerHTML = (state.models || []).map((model) => `
+    <option value="${esc(model.alias)}" ${model.alias === selectedModel ? 'selected' : ''}>
+      ${esc(model.alias)} (${esc(model.providerId || model.provider)})
+    </option>
+  `).join('');
+}
+
+function openCreateAgentDialog() {
+  agentFormMode = 'create';
+  $('agentForm').reset();
+
+  const agentIdInput = $('agentInputId');
+  agentIdInput.readOnly = false;
+  agentIdInput.value = '';
+  $('agentModalEmoji').textContent = '';
+  $('agentModalTitle').textContent = '新增智能体角色';
+  $('agentSubmitBtn').textContent = '创建角色';
+  $('agentInputToolTier').value = 'standard';
+  populateAgentModelOptions(state.models?.[0]?.alias || '');
+
+  $('agentModal').showModal();
+  agentIdInput.focus();
+}
+
+$('addAgentBtn')?.addEventListener('click', openCreateAgentDialog);
+
 function renderAgents() {
   const list = $('agentList');
   if (!list) return;
@@ -2181,27 +2213,23 @@ function renderAgents() {
 }
 
 window.openAgentDialog = (agentId) => {
-  const agent = (state.agents || []).find((a) => a.id === agentId);
+  const agent = (state.agents || []).find((item) => item.id === agentId);
   if (!agent) return;
 
-  $('agentInputId').value = agent.id;
+  agentFormMode = 'edit';
+  $('agentForm').reset();
+  const agentIdInput = $('agentInputId');
+  agentIdInput.value = agent.id;
+  agentIdInput.readOnly = true;
   $('agentInputDisplayName').value = agent.displayName || agent.name || agent.id;
   $('agentInputEmoji').value = agent.emoji || '';
   $('agentModalEmoji').textContent = agent.emoji || '';
   $('agentModalTitle').textContent = `配置智能体: ${agent.id}`;
+  $('agentSubmitBtn').textContent = '保存配置';
   $('agentInputWorkspace').value = agent.workspace || '';
   $('agentInputDescription').value = agent.description || '';
   $('agentInputToolTier').value = agent.toolTier || 'coding';
-
-  // 填充模型下拉选项
-  const modelSelect = $('agentInputModel');
-  if (modelSelect) {
-    modelSelect.innerHTML = (state.models || []).map((m) => `
-      <option value="${esc(m.alias)}" ${m.alias === agent.model ? 'selected' : ''}>
-        ${esc(m.alias)} (${esc(m.providerId || m.provider)})
-      </option>
-    `).join('');
-  }
+  populateAgentModelOptions(agent.model || '');
 
   $('agentModal').showModal();
 };
@@ -2227,10 +2255,17 @@ $('agentForm')?.addEventListener('submit', async (e) => {
   const workspace = $('agentInputWorkspace').value.trim();
   const description = $('agentInputDescription').value.trim();
   const toolTier = $('agentInputToolTier').value;
+  const isCreate = agentFormMode === 'create';
+
+  if (isCreate && (state.agents || []).some((agent) => agent.id === id)) {
+    showToast(`智能体 ID [${id}] 已存在`, 'error');
+    return;
+  }
 
   try {
     await window.hap.upsertAgent({
       id,
+      create: agentFormMode === 'create',
       displayName,
       emoji,
       model,
@@ -2239,10 +2274,10 @@ $('agentForm')?.addEventListener('submit', async (e) => {
       toolTier,
     });
     $('agentModal').close();
-    showToast(`智能体 [${id}] 配置已成功保存！`, 'success');
+    showToast(`智能体 [${id}] ${isCreate ? '已创建' : '配置已保存'}`, 'success');
     await refresh();
   } catch (error) {
-    showToast('更新智能体失败：' + error.message, 'error');
+    showToast(`${isCreate ? '创建' : '更新'}智能体失败：` + error.message, 'error');
   }
 });
 

@@ -371,6 +371,9 @@
               <h2 class="page-title">智能体角色管理</h2>
               <p class="page-subtitle">配置各个专项智能体（Coder、Researcher、Reviewer、Ops、Writer 等）的主模型、工作区与工具权限</p>
             </div>
+            <div class="page-header-actions">
+              <button type="button" class="btn primary" id="addAgentBtn">新增角色</button>
+            </div>
           </div>
 
           <div id="agentList" class="grid"></div>
@@ -2073,9 +2076,12 @@
           <button type="button" class="btn-close" id="closeAgentModalBtn" aria-label="关闭" title="关闭"></button>
         </div>
 
-        <input type="hidden" id="agentInputId" name="id" />
-
         <div class="form-grid">
+          <div class="form-group full-width" id="agentIdFormGroup">
+            <label for="agentInputId">角色 ID *</label>
+            <input id="agentInputId" name="id" autocomplete="off" placeholder="如：data-analyst" required />
+            <small style="font-size:11.5px;color:var(--text-muted);">创建后不可修改，用于对话、通道和自动化任务引用。</small>
+          </div>
           <div class="form-group">
             <label>显示名称 (Display Name)</label>
             <input id="agentInputDisplayName" name="displayName" placeholder="如：全栈开发专家" required />
@@ -2110,7 +2116,7 @@
 
         <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:14px;border-top:1px solid var(--border-default);margin-top:10px;">
           <button type="button" class="btn secondary" id="cancelAgentModalBtn">取消</button>
-          <button type="submit" class="btn primary">保存配置</button>
+          <button type="submit" class="btn primary" id="agentSubmitBtn">保存配置</button>
         </div>
       </form>
     </dialog>
