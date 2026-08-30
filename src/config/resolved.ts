@@ -198,7 +198,7 @@ export interface ResolvedWeChatPersonal {
 /** 解析后的微信通道配置。 */
 export interface ResolvedWeChatChannel {
   enabled: boolean;
-  mode: 'personal' | 'wecom' | 'official_account';
+  mode: 'personal' | 'ilink_bot' | 'wecom' | 'official_account';
   defaultAgent: string | undefined;
   mentionPatterns: string[];
   messageCharLimit: number;

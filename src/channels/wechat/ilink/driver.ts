@@ -38,10 +38,10 @@ export class NativeIlinkPersonalDriver {
     this.store = new IlinkAccountStore(options.rootDir, options.accountId);
     this.pollIntervalMs = options.pollIntervalMs ?? 1200;
     this.log = options.log ?? (() => undefined);
-    this.apiFactory = options.apiFactory ?? ((account) => new IlinkApiClient({
-      token: account?.token,
-      baseUrl: account?.baseUrl,
-    }));
+    this.apiFactory = options.apiFactory ?? ((account) => {
+      if (account === undefined) return new IlinkApiClient();
+      return new IlinkApiClient({ token: account.token, baseUrl: account.baseUrl });
+    });
     const account = this.store.loadAccount();
     this.api = this.apiFactory(account === undefined ? undefined : { token: account.botToken, baseUrl: account.baseUrl });
   }

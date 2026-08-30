@@ -321,7 +321,7 @@ const PROTOCOL_NAMES: readonly ProtocolName[] = ['hermes-native', 'openai-tools'
 const TOOL_PROFILE_NAMES: readonly ToolProfileName[] = ['minimal', 'standard', 'coding', 'research', 'full'];
 const RUNTIME_MODES: readonly RuntimeMode[] = ['oneshot', 'persistent'];
 const TELEGRAM_MODES: readonly ('polling' | 'webhook')[] = ['polling', 'webhook'];
-const WECHAT_MODES: readonly ('personal' | 'wecom' | 'official_account')[] = ['personal', 'wecom', 'official_account'];
+const WECHAT_MODES: readonly ('personal' | 'ilink_bot' | 'wecom' | 'official_account')[] = ['personal', 'ilink_bot', 'wecom', 'official_account'];
 
 /** webhook 监听地址与路径的内置兜底值（FR-CHAN-016）。 */
 const TELEGRAM_WEBHOOK_BIND = '127.0.0.1:8788';

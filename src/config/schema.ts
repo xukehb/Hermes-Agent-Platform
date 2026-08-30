@@ -204,7 +204,7 @@ export const wechatPersonalSchema = z.strictObject({
 /** 微信通道（支持个人微信扫码登录、企业微信 WeCom 机器人/应用、微信公众号多模式） */
 export const wechatChannelSchema = z.strictObject({
   enabled: z.boolean().optional(),
-  mode: z.enum(['personal', 'wecom', 'official_account']).optional(),
+  mode: z.enum(['personal', 'ilink_bot', 'wecom', 'official_account']).optional(),
   default_agent: z.string().min(1).optional(),
   mention_patterns: z.array(z.string().min(1)).optional(),
   message_char_limit: z.number().int().positive().optional(),

@@ -419,6 +419,13 @@ describe('通道解析（FR-CHAN-015 / FR-CHAN-016）', () => {
     expect(channels.editIntervalMs).toBe(1200);
   });
 
+  it('解析微信 iLink Bot 模式并默认使用 iLink puppet', () => {
+    const text = ['[channels.wechat]', 'enabled = true', 'mode = "ilink_bot"', ''].join('\n');
+    const channels = new ConfigResolver(loadedFrom(text), {}, {}).resolveChannels();
+    expect(channels.wechat.mode).toBe('ilink_bot');
+    expect(channels.wechat.personal.puppet).toBe('ilink');
+  });
+
   it('webhook 模式缺 url 时启动期即冲突', () => {
     expect(() => make({}, { HAP_TELEGRAM_MODE: 'webhook' }).resolveChannels()).toThrow(ConfigError);
   });
@@ -574,4 +581,3 @@ describe('模型引用清洗与容错 (sanitizeModelRef & findModel)', () => {
     expect(normalized).toBe('deepseek/deepseek-chat');
   });
 });
-

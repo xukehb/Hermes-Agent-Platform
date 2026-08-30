@@ -214,7 +214,7 @@ export interface GuiTelegramConfig {
 // 微信与企业微信通道可视化配置
 export interface GuiWeChatConfig {
   enabled: boolean;
-  mode: 'personal' | 'wecom' | 'official_account';
+  mode: 'personal' | 'ilink_bot' | 'wecom' | 'official_account';
   defaultAgent: string;
   workspace?: string | undefined;
   running: boolean;
@@ -277,4 +277,3 @@ export interface GuiDingTalkConfig {
   running: boolean;
   status: 'idle' | 'running' | 'error';
 }
-
