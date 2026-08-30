@@ -48,11 +48,13 @@ function prune(value: unknown): unknown {
   return value;
 }
 
-/** 把 patch 合并进基底：patch 里为 undefined 的键不参与覆盖，于是「没传的参数」不会清空既有值。 */
+/** 把 patch 合并进基底：undefined 表示未传，null 表示显式清空该键。 */
 function mergeDefined<T extends object>(base: T | undefined, patch: Partial<T>): T {
   const result: Record<string, unknown> = { ...((base ?? {}) as Record<string, unknown>) };
   for (const [key, value] of Object.entries(patch as Record<string, unknown>)) {
-    if (value !== undefined) {
+    if (value === null) {
+      delete result[key];
+    } else if (value !== undefined) {
       result[key] = value;
     }
   }

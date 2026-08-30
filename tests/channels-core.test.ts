@@ -344,6 +344,7 @@ describe('OutboundSender', () => {
     await expect(sender.send(failing, '始终失败', 4096)).rejects.toThrow();
 
     expect(await sender.flush('telegram', () => stubTarget({ failAll: true }), 4096)).toBe(0);
+    expect(sender.list()).toHaveLength(1);
     expect(sender.list()[0]?.attempts).toBe(1);
   });
 

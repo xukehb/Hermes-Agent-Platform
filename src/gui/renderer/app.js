@@ -2134,11 +2134,17 @@ function populateAgentModelOptions(selectedModel = '') {
   const modelSelect = $('agentInputModel');
   if (!modelSelect) return;
 
-  modelSelect.innerHTML = (state.models || []).map((model) => `
+  modelSelect.innerHTML = `
+    <option value="" ${selectedModel ? '' : 'selected'}>继承全局默认模型</option>
+  ` + (state.models || []).map((model) => `
     <option value="${esc(model.alias)}" ${model.alias === selectedModel ? 'selected' : ''}>
       ${esc(model.alias)} (${esc(model.providerId || model.provider)})
     </option>
   `).join('');
+}
+
+function joinAgentFieldList(value) {
+  return Array.isArray(value) ? value.join(', ') : (value || '');
 }
 
 function openCreateAgentDialog() {
@@ -2152,7 +2158,9 @@ function openCreateAgentDialog() {
   $('agentModalTitle').textContent = '新增智能体角色';
   $('agentSubmitBtn').textContent = '创建角色';
   $('agentInputToolTier').value = 'standard';
-  populateAgentModelOptions(state.models?.[0]?.alias || '');
+  $('agentInputRuntimeMode').value = 'persistent';
+  $('agentInputReasoningVisible').checked = false;
+  populateAgentModelOptions('');
 
   $('agentModal').showModal();
   agentIdInput.focus();
@@ -2195,10 +2203,10 @@ function renderAgents() {
         </div>
         <div class="card-props">
           <span class="prop-chip" style="background:#eff6ff;color:#2563eb;font-weight:600;">
-            模型：${esc(agent.model || '全局默认')}
+            模型：${esc(agent.resolvedModel || agent.model || '全局默认')}
           </span>
-          <span class="prop-chip" title="${esc(agent.workspace || '继承全局')}">
-            工作区：${esc(agent.workspace ? agent.workspace.split(/[/\\]/).pop() || agent.workspace : '继承全局')}
+          <span class="prop-chip" title="${esc(agent.resolvedWorkspace || agent.workspace || '继承全局')}">
+            工作区：${esc(agent.resolvedWorkspace ? agent.resolvedWorkspace.split(/[/\\]/).pop() || agent.resolvedWorkspace : '继承全局')}
           </span>
         </div>
       </div>
@@ -2227,7 +2235,17 @@ window.openAgentDialog = (agentId) => {
   $('agentModalEmoji').textContent = agent.emoji || '';
   $('agentModalTitle').textContent = `配置智能体: ${agent.id}`;
   $('agentSubmitBtn').textContent = '保存配置';
+  $('agentInputFallbackModels').value = joinAgentFieldList(agent.fallbackModels);
+  $('agentInputUtilityModel').value = agent.utilityModel || '';
+  $('agentInputProtocol').value = agent.protocol || '';
+  $('agentInputAllowTools').value = joinAgentFieldList(agent.allowTools);
+  $('agentInputDenyTools').value = joinAgentFieldList(agent.denyTools);
+  $('agentInputSubagents').value = joinAgentFieldList(agent.subagents);
+  $('agentInputRuntimeMode').value = agent.runtimeMode || 'persistent';
   $('agentInputWorkspace').value = agent.workspace || '';
+  $('agentInputReasoningVisible').checked = !!agent.reasoningVisible;
+  $('agentInputParamsJson').value = agent.paramsJson || '';
+  $('agentInputSystemPrompt').value = agent.systemPrompt || '';
   $('agentInputDescription').value = agent.description || '';
   $('agentInputToolTier').value = agent.toolTier || 'coding';
   populateAgentModelOptions(agent.model || '');
@@ -2274,9 +2292,19 @@ $('agentForm')?.addEventListener('submit', async (e) => {
   const displayName = $('agentInputDisplayName').value.trim();
   const emoji = $('agentInputEmoji').value.trim() || '';
   const model = $('agentInputModel').value.trim();
+  const fallbackModels = $('agentInputFallbackModels').value.trim();
+  const utilityModel = $('agentInputUtilityModel').value.trim();
+  const protocol = $('agentInputProtocol').value;
   const workspace = $('agentInputWorkspace').value.trim();
   const description = $('agentInputDescription').value.trim();
   const toolTier = $('agentInputToolTier').value;
+  const allowTools = $('agentInputAllowTools').value.trim();
+  const denyTools = $('agentInputDenyTools').value.trim();
+  const subagents = $('agentInputSubagents').value.trim();
+  const runtimeMode = $('agentInputRuntimeMode').value;
+  const reasoningVisible = $('agentInputReasoningVisible').checked;
+  const paramsJson = $('agentInputParamsJson').value.trim();
+  const systemPrompt = $('agentInputSystemPrompt').value.trim();
   const isCreate = agentFormMode === 'create';
 
   if (isCreate && (state.agents || []).some((agent) => agent.id === id)) {
@@ -2291,9 +2319,19 @@ $('agentForm')?.addEventListener('submit', async (e) => {
       displayName,
       emoji,
       model,
+      fallbackModels,
+      utilityModel,
+      protocol,
       workspace,
       description,
       toolTier,
+      allowTools,
+      denyTools,
+      subagents,
+      runtimeMode,
+      reasoningVisible,
+      paramsJson,
+      systemPrompt,
     });
     $('agentModal').close();
     showToast(`智能体 [${id}] ${isCreate ? '已创建' : '配置已保存'}`, 'success');

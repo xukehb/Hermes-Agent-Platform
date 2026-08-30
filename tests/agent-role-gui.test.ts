@@ -27,11 +27,21 @@ describe('agent role management GUI', () => {
     expect(dialog).toContain('id="agentInputId"');
     expect(dialog).not.toContain('type="hidden" id="agentInputId"');
     expect(dialog).toContain('id="agentSubmitBtn"');
+    expect(dialog).toContain('id="agentInputSystemPrompt"');
+    expect(dialog).toContain('id="agentInputParamsJson"');
+    expect(dialog).toContain('id="agentInputFallbackModels"');
+    expect(dialog).toContain('id="agentInputAllowTools"');
+    expect(dialog).toContain('id="agentInputDenyTools"');
+    expect(dialog).toContain('id="agentInputSubagents"');
+    expect(dialog).toContain('id="agentInputRuntimeMode"');
+    expect(dialog).toContain('id="agentInputReasoningVisible"');
     expect(controller).toContain("let agentFormMode = 'edit'");
     expect(controller).toContain("$('addAgentBtn')?.addEventListener");
     expect(controller).toContain('agentIdInput.readOnly = false');
     expect(controller).toContain('agentIdInput.readOnly = true');
     expect(controller).toContain("create: agentFormMode === 'create'");
+    expect(controller).toContain('fallbackModels,');
+    expect(controller).toContain('systemPrompt,');
   });
 
   it('routes confirmed agent deletion through the service boundary', () => {

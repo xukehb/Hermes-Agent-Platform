@@ -102,6 +102,10 @@ export class OutboundSender {
 
   /** 分片发送。limit<=0 时视为不限长度。 */
   async send(target: OutboundTarget, text: string, limit: number): Promise<string | undefined> {
+    return this.deliver(target, text, limit, true);
+  }
+
+  private async deliver(target: OutboundTarget, text: string, limit: number, spoolOnFailure: boolean): Promise<string | undefined> {
     const chunks = limit > 0 ? splitForChannel(text, limit) : text.length > 0 ? [text] : [];
     let lastId: string | undefined;
     for (let index = 0; index < chunks.length; index += 1) {
@@ -109,8 +113,10 @@ export class OutboundSender {
       try {
         lastId = await target.send(chunk);
       } catch (error) {
-        const remaining = chunks.slice(index).join('\n\n');
-        this.spool(target, remaining);
+        if (spoolOnFailure) {
+          const remaining = chunks.slice(index).join('\n\n');
+          this.spool(target, remaining);
+        }
         throw error;
       }
     }
@@ -171,7 +177,7 @@ export class OutboundSender {
         continue;
       }
       try {
-        await this.send(target, entry.text, limit);
+        await this.deliver(target, entry.text, limit, false);
         this.remove(entry.id);
         sent += 1;
       } catch {

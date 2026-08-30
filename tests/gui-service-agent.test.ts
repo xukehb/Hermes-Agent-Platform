@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -8,11 +8,16 @@ vi.mock('electron', () => ({
   shell: { openPath: vi.fn(), showItemInFolder: vi.fn() },
 }));
 
-import { loadConfig } from '../src/config/index.js';
+import { ConfigResolver, loadConfig } from '../src/config/index.js';
 import { GuiService } from '../src/gui/service.js';
 
 const initialConfig = [
   'default_agent = "helper"',
+  '',
+  '[agents.defaults]',
+  'model = { primary = "deepseek/deepseek-chat", fallbacks = ["anthropic/claude-sonnet-4-5"] }',
+  'workspace_root = "__WORKSPACE_ROOT__"',
+  'agent_dir_root = "__AGENT_DIR_ROOT__"',
   '',
   '[agents.entries.helper]',
   'description = "Temporary helper"',
@@ -32,7 +37,10 @@ describe('GuiService agent role management', () => {
   beforeEach(() => {
     testDir = mkdtempSync(join(tmpdir(), 'hap-gui-agent-'));
     configPath = join(testDir, 'config.toml');
-    writeFileSync(configPath, initialConfig, 'utf8');
+    const text = initialConfig
+      .replace('__WORKSPACE_ROOT__', join(testDir, 'workspaces'))
+      .replace('__AGENT_DIR_ROOT__', join(testDir, 'agents'));
+    writeFileSync(configPath, `${text}\n\n[paths]\ndata_dir = "${join(testDir, 'data')}"\n`, 'utf8');
   });
 
   afterEach(() => rmSync(testDir, { recursive: true, force: true }));
@@ -53,6 +61,69 @@ describe('GuiService agent role management', () => {
 
     expect(loadConfig({ path: configPath }).config.agents?.entries?.['data-analyst']?.description)
       .toBe('Analyze data');
+  });
+
+  it('creates a role with system prompt and advanced settings', () => {
+    const service = new GuiService(configPath);
+
+    service.upsertAgent({
+      id: 'planner',
+      create: true,
+      displayName: 'Planner',
+      model: 'openai/gpt-5',
+      fallbackModels: 'deepseek/deepseek-chat, anthropic/claude-sonnet-4-5',
+      workspace: join(testDir, 'workspace'),
+      description: 'Plan work',
+      toolTier: 'research',
+      runtimeMode: 'persistent',
+      reasoningVisible: true,
+      paramsJson: '{"temperature":0.2,"top_p":0.9}',
+      systemPrompt: '你负责拆解任务。',
+    });
+
+    const agent = loadConfig({ path: configPath }).config.agents?.entries?.planner;
+    expect(agent?.name).toBe('Planner');
+    expect(agent?.model).toEqual({
+      primary: 'openai/gpt-5',
+      fallbacks: ['deepseek/deepseek-chat', 'anthropic/claude-sonnet-4-5'],
+    });
+    expect(agent?.workspace).toBe(join(testDir, 'workspace'));
+    expect(agent?.tools?.profile).toBe('research');
+    expect(agent?.runtime?.mode).toBe('persistent');
+    expect(agent?.reasoning_visible).toBe(true);
+    expect(agent?.params).toEqual({ temperature: 0.2, top_p: 0.9 });
+    expect(agent?.system_prompt_file).toBeDefined();
+    expect(existsSync(agent!.system_prompt_file!)).toBe(true);
+    expect(readFileSync(agent!.system_prompt_file!, 'utf8')).toBe('你负责拆解任务。\n');
+  });
+
+  it('editing a role can clear model and workspace back to inherited defaults', () => {
+    const service = new GuiService(configPath);
+    service.upsertAgent({
+      id: 'helper',
+      model: 'openai/gpt-5',
+      workspace: join(testDir, 'custom-workspace'),
+      paramsJson: '{"temperature":0.4}',
+    });
+
+    service.upsertAgent({ id: 'helper', model: '', workspace: '', paramsJson: '' });
+
+    const agent = loadConfig({ path: configPath }).config.agents?.entries?.helper;
+    expect(agent?.model).toBeUndefined();
+    expect(agent?.workspace).toBeUndefined();
+    expect(agent?.params).toBeUndefined();
+  });
+
+  it('saving a primary model without fallback models preserves inherited fallbacks', () => {
+    const service = new GuiService(configPath);
+
+    service.upsertAgent({ id: 'helper', model: 'openai/gpt-5', fallbackModels: '' });
+
+    const loaded = loadConfig({ path: configPath });
+    const rawModel = loaded.config.agents?.entries?.helper?.model;
+    expect(rawModel).toBe('openai/gpt-5');
+    expect(new ConfigResolver(loaded, {}, {}).resolveAgent('helper').model.fallbacks)
+      .toEqual(['anthropic/claude-sonnet-4-5']);
   });
 
   it('removes a role and lets ConfigWriter clear its references', () => {

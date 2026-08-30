@@ -1,12 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join, resolve as resolvePath } from 'node:path';
+import { basename, dirname, isAbsolute, join, resolve as resolvePath } from 'node:path';
 import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { dialog, shell } from 'electron';
 import { execa } from 'execa';
 import { AgentOrchestrator } from '../agent/index.js';
 import { ChannelManager, TelegramChannel, createChannelHost, parseCommand, HELP_TEXT, ChannelContactStore, WeChatContactStore, FeishuChannel, QQChannel, type ChannelContact, type ChannelChatMessage, type ChannelName, type WeChatContact, type WeChatChatMessage } from '../channels/index.js';
-import { BUILTIN_PROVIDERS, ConfigResolver, ConfigWriter, loadConfig, resolveConfigPath, sanitizeModelRef, type ModelPatch, type ProviderPatch, type ResolvedAgent, type ResolvedProvider } from '../config/index.js';
+import { BUILTIN_PROVIDERS, ConfigResolver, ConfigWriter, loadConfig, resolveConfigPath, sanitizeModelRef, type AgentPatch, type ModelPatch, type ProviderPatch, type ResolvedAgent, type ResolvedProvider } from '../config/index.js';
 import { describeError, type Attachment, type ProtocolName, type WireApi } from '../domain/index.js';
 import { planInjection, writeInjection, type InjectionTarget } from '../inject/index.js';
 import { ProviderRegistry } from '../providers/index.js';
@@ -472,6 +472,42 @@ function targetPath(target: GuiTarget): string {
   return join(homedir(), '.openclaw', 'settings.json');
 }
 
+function parseCsv(value: string | string[] | undefined): string[] {
+  if (Array.isArray(value)) {
+    return value.map((item) => item.trim()).filter(Boolean);
+  }
+  if (value === undefined) {
+    return [];
+  }
+  return value.split(',').map((item) => item.trim()).filter(Boolean);
+}
+
+function parseParamsJson(raw: string): Record<string, unknown> | null {
+  const text = raw.trim();
+  if (!text) {
+    return null;
+  }
+  const parsed = JSON.parse(text) as unknown;
+  if (parsed === null || Array.isArray(parsed) || typeof parsed !== 'object') {
+    throw new Error('模型参数必须是 JSON 对象');
+  }
+  return parsed as Record<string, unknown>;
+}
+
+function readOptionalText(path: string | undefined): string {
+  if (!path || !existsSync(path)) {
+    return '';
+  }
+  return readFileSync(path, 'utf8');
+}
+
+function writeAgentPrompt(agentDir: string, body: string): string {
+  const target = isAbsolute(agentDir) ? resolvePath(agentDir, 'system.md') : resolvePath(process.cwd(), agentDir, 'system.md');
+  mkdirSync(dirname(target), { recursive: true });
+  writeFileSync(target, body.endsWith('\n') ? body : body + '\n', 'utf8');
+  return target;
+}
+
 export class GuiService {
   private readonly logs: GuiLogEntry[] = [];
 
@@ -480,7 +516,8 @@ export class GuiService {
   ) {}
 
   snapshot(): object {
-    const resolver = this.resolver();
+    const loaded = loadConfig({ path: this.configPath });
+    const resolver = new ConfigResolver(loaded, {}, process.env);
     const registry = new ProviderRegistry(resolver.resolveProviders(), { env: process.env });
     const state = readState();
     const hiddenProviders = new Set(state.hiddenProviders || []);
@@ -497,6 +534,7 @@ export class GuiService {
       .filter((model) => !hiddenModels.has(model.alias) && !hiddenProviders.has(model.providerId));
 
     const agents = resolver.listAgentIds().map((id) => resolver.resolveAgent(id));
+    const rawAgents = loaded.config.agents?.entries ?? {};
     return {
       configPath: this.configPath,
       projects: state.projects,
@@ -505,17 +543,36 @@ export class GuiService {
       skills: state.skills || DEFAULT_SKILLS,
       plugins: state.plugins || DEFAULT_PLUGINS,
       permissions: state.permissions || DEFAULT_PERMISSIONS,
-      agents: agents.map((agent) => ({
-        id: agent.id,
-        name: agent.name,
-        displayName: agent.identity?.displayName || agent.name,
-        emoji: agent.identity?.emoji || 'AI',
-        description: agent.description,
-        model: agent.model.primary,
-        workspace: agent.workspace,
-        toolTier: agent.tools.profile,
-        reasoningVisible: agent.reasoningVisible,
-      })),
+      agents: agents.map((agent) => {
+        const raw = rawAgents[agent.id] ?? {};
+        const rawModel = raw.model;
+        const rawPrimaryModel = typeof rawModel === 'string' ? rawModel : rawModel?.primary;
+        const rawFallbackModels = typeof rawModel === 'object' && rawModel !== null ? rawModel.fallbacks ?? [] : [];
+        const systemPromptFile = raw.system_prompt_file;
+        return {
+          id: agent.id,
+          name: agent.name,
+          displayName: raw.identity?.display_name || agent.identity?.displayName || agent.name,
+          emoji: raw.identity?.emoji || agent.identity?.emoji || 'AI',
+          description: raw.description ?? agent.description,
+          model: rawPrimaryModel ?? '',
+          resolvedModel: agent.model.primary,
+          fallbackModels: rawFallbackModels,
+          utilityModel: raw.utility_model ?? '',
+          protocol: raw.protocol ?? '',
+          workspace: raw.workspace ?? '',
+          resolvedWorkspace: agent.workspace,
+          toolTier: raw.tools?.profile ?? agent.tools.profile,
+          allowTools: raw.tools?.allow ?? [],
+          denyTools: raw.tools?.deny ?? [],
+          subagents: raw.subagents?.allow ?? [],
+          runtimeMode: raw.runtime?.mode ?? agent.runtime.mode,
+          reasoningVisible: raw.reasoning_visible ?? agent.reasoningVisible,
+          paramsJson: raw.params !== undefined ? JSON.stringify(raw.params) : '',
+          systemPromptFile: systemPromptFile ?? '',
+          systemPrompt: readOptionalText(systemPromptFile),
+        };
+      }),
       targets: this.targetStates(models.map((model) => model.fullName)),
       logs: this.logs.slice(-80),
       servers: RemoteServerStore.getInstance().list(),
@@ -783,9 +840,19 @@ export class GuiService {
     displayName?: string;
     emoji?: string;
     model?: string;
+    fallbackModels?: string | string[];
+    utilityModel?: string;
+    protocol?: 'openai-tools' | 'deepseek' | 'anthropic' | 'hermes-native' | '';
     workspace?: string;
     description?: string;
     toolTier?: 'minimal' | 'standard' | 'coding' | 'research' | 'full';
+    allowTools?: string | string[];
+    denyTools?: string | string[];
+    subagents?: string | string[];
+    runtimeMode?: 'oneshot' | 'persistent';
+    reasoningVisible?: boolean;
+    paramsJson?: string;
+    systemPrompt?: string;
   }): object {
     const id = input.id.trim();
     if (!id) throw new Error('智能体 ID 不能为空');
@@ -793,27 +860,69 @@ export class GuiService {
       throw new Error(`智能体 ID "${id}" 已存在`);
     }
     const writer = new ConfigWriter(this.configPath);
-    // @ts-expect-error patch mapping
     const patch: AgentPatch = {};
     if (input.displayName !== undefined || input.emoji !== undefined) {
+      if (input.displayName !== undefined) {
+        patch.name = input.displayName.trim();
+      }
       patch.identity = {
-        display_name: input.displayName,
-        emoji: input.emoji,
+        display_name: input.displayName?.trim(),
+        emoji: input.emoji?.trim(),
       };
     }
-    if (input.model !== undefined && input.model.trim()) {
-      patch.model = { primary: input.model.trim() };
+    if (input.model !== undefined) {
+      const primary = input.model.trim();
+      const fallbacks = parseCsv(input.fallbackModels);
+      patch.model = primary ? (fallbacks.length > 0 ? { primary, fallbacks } : primary) : null as never;
+    } else if (input.fallbackModels !== undefined) {
+      patch.model = { primary: this.resolver().resolveAgent(id).model.primary, fallbacks: parseCsv(input.fallbackModels) };
     }
-    if (input.workspace !== undefined && input.workspace.trim()) {
-      patch.workspace = input.workspace.trim();
+    if (input.utilityModel !== undefined) {
+      patch.utility_model = input.utilityModel.trim() || null as never;
+    }
+    if (input.protocol !== undefined) {
+      patch.protocol = input.protocol || null as never;
+    }
+    if (input.workspace !== undefined) {
+      patch.workspace = input.workspace.trim() || null as never;
     }
     if (input.description !== undefined) {
       patch.description = input.description.trim();
     }
     if (input.toolTier !== undefined) {
-      patch.tools = { profile: input.toolTier };
+      patch.tools = {
+        profile: input.toolTier,
+        allow: parseCsv(input.allowTools),
+        deny: parseCsv(input.denyTools),
+      };
+    } else if (input.allowTools !== undefined || input.denyTools !== undefined) {
+      patch.tools = {
+        allow: parseCsv(input.allowTools),
+        deny: parseCsv(input.denyTools),
+      };
+    }
+    if (input.subagents !== undefined) {
+      patch.subagents = { allow: parseCsv(input.subagents) };
+    }
+    if (input.runtimeMode !== undefined) {
+      patch.runtime = { mode: input.runtimeMode };
+    }
+    if (input.reasoningVisible !== undefined) {
+      patch.reasoning_visible = input.reasoningVisible;
+    }
+    if (input.paramsJson !== undefined) {
+      patch.params = parseParamsJson(input.paramsJson) as never;
     }
     writer.upsertAgent(id, patch);
+    if (input.systemPrompt !== undefined) {
+      const prompt = input.systemPrompt.trim();
+      if (prompt) {
+        const agent = this.resolver().resolveAgent(id);
+        writer.upsertAgent(id, { system_prompt_file: writeAgentPrompt(agent.agentDir, prompt) });
+      } else {
+        writer.upsertAgent(id, { system_prompt_file: null as never });
+      }
+    }
     this.info('已更新智能体配置：' + id);
     return { ok: true };
   }

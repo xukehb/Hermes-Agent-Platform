@@ -522,6 +522,16 @@ describe('配置写回（FR-CFG-007 / FR-PROV-005 / FR-MOD-002 / FR-AGT-004）',
     expect(agent?.model).toBe('mycorp-fast');
   });
 
+  it('agent update 可用 null 清空可继承字段', () => {
+    writer.upsertAgent('helper', { model: 'mycorp-fast', workspace: join(dir, 'custom-ws') }, 'writer');
+    writer.upsertAgent('helper', { model: null, workspace: null } as any);
+
+    const agent = writer.read().config.agents?.entries?.['helper'];
+    expect(agent?.model).toBeUndefined();
+    expect(agent?.workspace).toBeUndefined();
+    expect(agent?.name).toBe('写作智能体');
+  });
+
   it('agent create 从模板生成时收窄尚不存在的派生白名单', () => {
     const result = writer.upsertAgent('solo', {}, 'coder');
     const agent = writer.read().config.agents?.entries?.['solo'];
@@ -574,4 +584,3 @@ describe('模型引用清洗与容错 (sanitizeModelRef & findModel)', () => {
     expect(normalized).toBe('deepseek/deepseek-chat');
   });
 });
-

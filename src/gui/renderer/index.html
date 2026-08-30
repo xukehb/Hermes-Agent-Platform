@@ -2095,6 +2095,24 @@
             <select id="agentInputModel" name="model"></select>
           </div>
           <div class="form-group full-width">
+            <label>备选模型 (Fallback Models)</label>
+            <input id="agentInputFallbackModels" name="fallbackModels" placeholder="多个模型用逗号分隔" />
+          </div>
+          <div class="form-group">
+            <label>辅助模型 (Utility Model)</label>
+            <input id="agentInputUtilityModel" name="utilityModel" placeholder="留空则继承" />
+          </div>
+          <div class="form-group">
+            <label>协议 (Protocol)</label>
+            <select id="agentInputProtocol" name="protocol">
+              <option value="">继承/自动推断</option>
+              <option value="openai-tools">openai-tools</option>
+              <option value="deepseek">deepseek</option>
+              <option value="anthropic">anthropic</option>
+              <option value="hermes-native">hermes-native</option>
+            </select>
+          </div>
+          <div class="form-group full-width">
             <label>工具权限档位 (Tool Tier)</label>
             <select id="agentInputToolTier" name="toolTier">
               <option value="coding">coding (编码与审查工具)</option>
@@ -2104,9 +2122,42 @@
               <option value="minimal">minimal (最小安全工具集)</option>
             </select>
           </div>
+          <div class="form-group">
+            <label>允许工具 (Allow Tools)</label>
+            <input id="agentInputAllowTools" name="allowTools" placeholder="留空则使用档位全集" />
+          </div>
+          <div class="form-group">
+            <label>禁用工具 (Deny Tools)</label>
+            <input id="agentInputDenyTools" name="denyTools" placeholder="多个工具用逗号分隔" />
+          </div>
+          <div class="form-group">
+            <label>子智能体 (Subagents)</label>
+            <input id="agentInputSubagents" name="subagents" placeholder="多个 ID 用逗号分隔" />
+          </div>
+          <div class="form-group">
+            <label>运行模式 (Runtime)</label>
+            <select id="agentInputRuntimeMode" name="runtimeMode">
+              <option value="persistent">persistent</option>
+              <option value="oneshot">oneshot</option>
+            </select>
+          </div>
           <div class="form-group full-width">
             <label>默认工作区目录 (Workspace Path)</label>
             <input id="agentInputWorkspace" name="workspace" placeholder="留空则继承全局 workspace_root 规则" />
+          </div>
+          <div class="form-group full-width checkbox-row">
+            <label for="agentInputReasoningVisible">
+              <input id="agentInputReasoningVisible" name="reasoningVisible" type="checkbox" />
+              展示模型思考内容
+            </label>
+          </div>
+          <div class="form-group full-width">
+            <label>模型参数 JSON (Params)</label>
+            <textarea id="agentInputParamsJson" name="paramsJson" rows="3" placeholder='例如：{"temperature":0.2,"top_p":0.9}'></textarea>
+          </div>
+          <div class="form-group full-width">
+            <label>系统提示词 (System Prompt)</label>
+            <textarea id="agentInputSystemPrompt" name="systemPrompt" rows="5" placeholder="定义该角色的长期系统提示词..."></textarea>
           </div>
           <div class="form-group full-width">
             <label>角色描述与系统职责 (Description)</label>
