@@ -375,6 +375,10 @@ export class AgentLoop {
     };
     if (request.spawn !== undefined) ctx.spawn = request.spawn;
     if (request.onTrace !== undefined) ctx.onTrace = request.onTrace;
+    if (request.executionContext !== undefined) {
+      ctx.executionContext = request.executionContext;
+      if (request.executionContext.control !== undefined) ctx.control = request.executionContext.control;
+    }
 
     const results: ToolResult[] = [];
     for (const call of outcome.calls) {

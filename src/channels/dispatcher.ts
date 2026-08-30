@@ -497,6 +497,9 @@ export class ChannelDispatcher {
     if (message.attachments !== undefined && message.attachments.length > 0) {
       request.attachments = message.attachments;
     }
+    if (message.executionContext !== undefined) {
+      request.executionContext = message.executionContext;
+    }
 
     let outcome: TaskOutcome | undefined;
     let failure: unknown;
