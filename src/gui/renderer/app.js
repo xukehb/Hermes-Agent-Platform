@@ -5139,6 +5139,7 @@ async function handleScanDisk(server) {
   const progressText = $('diskScanProgressText');
   const emptyState = $('diskEmptyState');
   const resultContainer = $('diskScanResultContainer');
+  let stepTimer = null;
 
   try {
     if (scanBtn) scanBtn.disabled = true;
@@ -5156,13 +5157,12 @@ async function handleScanDisk(server) {
     ];
 
     let stepIdx = 0;
-    const stepTimer = setInterval(() => {
+    stepTimer = setInterval(() => {
       stepIdx = (stepIdx + 1) % steps.length;
       if (progressText) progressText.textContent = steps[stepIdx];
     }, 400);
 
     const report = await window.hap.scanDiskCleanable(server);
-    clearInterval(stepTimer);
 
     currentDiskScanReport = report;
     renderDiskScanResult(report);
@@ -5171,6 +5171,7 @@ async function handleScanDisk(server) {
     showToast('AI 磁盘扫描失败: ' + err.message, 'error');
     if (emptyState) emptyState.style.display = 'block';
   } finally {
+    if (stepTimer) clearInterval(stepTimer);
     if (progressBox) progressBox.style.display = 'none';
     if (scanBtn) scanBtn.disabled = false;
   }

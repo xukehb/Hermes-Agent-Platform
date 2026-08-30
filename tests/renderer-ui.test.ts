@@ -91,4 +91,11 @@ describe('Electron renderer UI contracts', () => {
     expect(app).toContain('hostIpGeoInFlight');
     expect(app).toContain('HOST_IP_GEO_CACHE_MS');
   });
+
+  it('clears disk scan progress timer on both success and failure paths', () => {
+    const scan = section(app, 'async function handleScanDisk(server)', 'function filterDiskItemsByCategory(category)');
+    expect(scan).toMatch(/let\s+stepTimer/);
+    const finallyBlock = section(scan, '} finally {', '}\n}\n');
+    expect(finallyBlock).toContain('clearInterval(stepTimer)');
+  });
 });
