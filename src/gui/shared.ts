@@ -183,6 +183,7 @@ export interface GuiBotInstance {
   defaultAgent?: string | undefined; // 默认调度的智能体 (如 "ops", "coder", "researcher")
   config: {
     token?: string; // Telegram / Discord / Slack
+    credentialsConfigured?: boolean; // GUI 只读摘要：真实 secret 存在独立凭据库时为 true
     botName?: string;
     adminUsers?: string[]; // 管理员 User ID 列表
     appId?: string; // 飞书 / 钉钉 / 微信
@@ -277,4 +278,3 @@ export interface GuiDingTalkConfig {
   running: boolean;
   status: 'idle' | 'running' | 'error';
 }
-

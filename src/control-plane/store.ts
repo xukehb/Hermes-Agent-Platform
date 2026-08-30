@@ -219,6 +219,24 @@ export class ControlPlaneStore {
     return row === undefined ? undefined : toAccount(row);
   }
 
+  listAccounts(): BotAccount[] {
+    const rows = this.db.prepare('SELECT * FROM bot_accounts ORDER BY created_at ASC, id ASC').all() as AccountRecord[];
+    return rows.map(toAccount);
+  }
+
+  setAccountEnabled(id: string, enabled: boolean): BotAccount {
+    const account = this.account(id);
+    if (account === undefined) {
+      throw new ControlPlaneError('BOT_ACCOUNT_NOT_FOUND', 'BOT_ACCOUNT_NOT_FOUND: ' + id);
+    }
+    this.db.prepare('UPDATE bot_accounts SET enabled = ?, updated_at = ? WHERE id = ?').run(enabled ? 1 : 0, nowIso(), id);
+    return this.account(id)!;
+  }
+
+  deleteAccount(id: string): void {
+    this.db.prepare('DELETE FROM bot_accounts WHERE id = ?').run(id);
+  }
+
   bind(input: ServerBotBindingInput): ServerBotBinding {
     const binding = serverBotBindingInputSchema.parse(input);
     if (this.account(binding.botAccountId) === undefined) {
@@ -270,6 +288,11 @@ export class ControlPlaneStore {
   bindingForAccount(accountId: string): ServerBotBinding | undefined {
     const row = this.db.prepare('SELECT * FROM server_bot_bindings WHERE bot_account_id = ?').get(accountId) as BindingRecord | undefined;
     return row === undefined ? undefined : toBinding(row);
+  }
+
+  listBindings(): ServerBotBinding[] {
+    const rows = this.db.prepare('SELECT * FROM server_bot_bindings ORDER BY created_at ASC, id ASC').all() as BindingRecord[];
+    return rows.map(toBinding);
   }
 
   upsertOperator(input: BotOperatorInput): BotOperator {

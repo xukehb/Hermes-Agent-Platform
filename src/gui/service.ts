@@ -41,6 +41,7 @@ import {
   type RemoteExecResult,
   type ServerBotConfig,
 } from '../remote/index.js';
+import { BotControlFacade } from './bot-control.js';
 import type {
   GuiChatInput,
   GuiGitStatus,
@@ -79,6 +80,8 @@ const DATA_DIR = join(homedir(), '.hap', 'gui');
 const STATE_PATH = join(DATA_DIR, 'state.json');
 const ENV_PATH = join(DATA_DIR, 'env.json');
 const IMAGES_DIR = join(DATA_DIR, 'generated_images');
+const BOT_CONTROL_DB_PATH = join(DATA_DIR, 'control-plane.db');
+const BOT_CREDENTIALS_DIR = join(DATA_DIR, 'bot-credentials');
 
 function ensureDataDir(): void {
   mkdirSync(DATA_DIR, { recursive: true });
@@ -476,6 +479,10 @@ function targetPath(target: GuiTarget): string {
 export class GuiService {
   private readonly configPath = resolveConfigPath(undefined, process.env);
   private readonly logs: GuiLogEntry[] = [];
+  private readonly botControl = new BotControlFacade({
+    dbPath: BOT_CONTROL_DB_PATH,
+    credentialsDir: BOT_CREDENTIALS_DIR,
+  });
 
   snapshot(): object {
     const resolver = this.resolver();
@@ -2806,59 +2813,32 @@ export class GuiService {
   // ==========================================
   // 多机器人实例管理中心 (Multi-Bot Instances Hub)
   // ==========================================
-  private getBotsStoragePath(): string {
-    const dir = join(homedir(), '.hap', 'gui');
-    if (!existsSync(dir)) {
-      mkdirSync(dir, { recursive: true });
-    }
-    return join(dir, 'bots.json');
-  }
-
   async listBots(): Promise<GuiBotInstance[]> {
-    const file = this.getBotsStoragePath();
-    if (!existsSync(file)) {
-      return [];
-    }
-    try {
-      const data = JSON.parse(readFileSync(file, 'utf-8'));
-      if (Array.isArray(data)) return data;
-      return [];
-    } catch {
-      return [];
-    }
+    return this.botControl.listBots();
   }
 
   async upsertBot(bot: GuiBotInstance): Promise<{ ok: boolean; bot: GuiBotInstance }> {
-    const bots = await this.listBots();
-    const idx = bots.findIndex(b => b.id === bot.id);
-    const updatedBot: GuiBotInstance = {
-      ...bot,
-      status: bot.status || (bot.enabled ? 'running' : 'stopped'),
-      lastActiveAt: new Date().toISOString(),
-    };
-    if (idx >= 0) {
-      bots[idx] = updatedBot;
-    } else {
-      bots.push(updatedBot);
-    }
-    writeFileSync(this.getBotsStoragePath(), JSON.stringify(bots, null, 2), 'utf-8');
+    const result = this.botControl.upsertBot(bot);
     this.info(`机器人实例 [${bot.name || bot.id}] 配置已保存并同步`);
 
-    // 若绑定了服务器，同步更新该服务器上的 boundBotId
-    if (bot.boundServerId) {
-      const serverStore = RemoteServerStore.getInstance();
+    // GUI 服务器列表保留 boundBotId 展示字段；真实一对一约束由控制平面 SQLite 保证。
+    const serverStore = RemoteServerStore.getInstance();
+    serverStore.list().forEach((server) => {
+      if (server.boundBotId === bot.id && server.id !== bot.boundServerId) {
+        serverStore.upsert({ ...server, boundBotId: undefined });
+      }
+    });
+    if (bot.boundServerId && bot.boundServerId !== 'local') {
       const server = serverStore.get(bot.boundServerId);
       if (server && server.boundBotId !== bot.id) {
         serverStore.upsert({ ...server, boundBotId: bot.id });
       }
     }
-    return { ok: true, bot: updatedBot };
+    return result;
   }
 
   async deleteBot(id: string): Promise<{ ok: boolean }> {
-    const bots = await this.listBots();
-    const filtered = bots.filter(b => b.id !== id);
-    writeFileSync(this.getBotsStoragePath(), JSON.stringify(filtered, null, 2), 'utf-8');
+    const result = this.botControl.deleteBot(id);
 
     // 解除相关服务器的绑定
     const serverStore = RemoteServerStore.getInstance();
@@ -2868,28 +2848,19 @@ export class GuiService {
       }
     });
     this.info(`机器人实例 [${id}] 已删除并解除服务器绑定`);
-    return { ok: true };
+    return result;
   }
 
   async toggleBotStatus(id: string, enabled: boolean): Promise<{ ok: boolean; message: string; bot?: GuiBotInstance }> {
-    const bots = await this.listBots();
-    const bot = bots.find(b => b.id === id);
-    if (!bot) throw new Error(`未找到机器人实例：${id}`);
-
-    bot.enabled = enabled;
-    bot.status = enabled ? 'running' : 'stopped';
-    bot.lastActiveAt = new Date().toISOString();
-    writeFileSync(this.getBotsStoragePath(), JSON.stringify(bots, null, 2), 'utf-8');
-
-    const msg = enabled ? `机器人 [${bot.name}] 服务已启动上线！` : `机器人 [${bot.name}] 服务已停止`;
-    this.info(msg);
-    return { ok: true, message: msg, bot };
+    const result = this.botControl.toggleBotStatus(id, enabled);
+    this.info(result.message);
+    return result;
   }
 
   async testBotConnection(bot: Partial<GuiBotInstance>): Promise<{ ok: boolean; message: string; details?: Record<string, unknown> }> {
     const platform = bot.platform || 'telegram';
     if (platform === 'telegram') {
-      const token = bot.config?.token;
+      const token = bot.config?.token || (bot.id ? this.botControl.readCredentialsForTest(bot.id)?.token : undefined);
       if (!token) return { ok: false, message: '请先输入 Telegram Bot Token' };
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000);
@@ -2908,13 +2879,16 @@ export class GuiService {
       return { ok: true, message: `已配置 OneBot 监听地址: ${wsUrl}，保存后平台将自动建立长连接` };
     } else if (platform === 'feishu') {
       const appId = bot.config?.appId;
-      const appSecret = bot.config?.appSecret;
+      const appSecret = bot.config?.appSecret || (bot.id ? this.botControl.readCredentialsForTest(bot.id)?.appSecret : undefined);
       if (!appId || !appSecret) return { ok: false, message: '飞书机器人需填写 App ID 和 App Secret' };
       return { ok: true, message: `飞书凭据就绪 (App ID: ${appId})，保存后将开启事件分发` };
     } else if (platform === 'dingtalk') {
       return { ok: true, message: '钉钉机器人凭据配置完成' };
     } else if (platform === 'wechat') {
-      return { ok: true, message: '微信机器人配置就绪' };
+      const configured = Boolean(bot.config?.puppetToken || (bot.id ? this.botControl.readCredentialsForTest(bot.id)?.botToken : undefined));
+      return configured
+        ? { ok: true, message: '微信 iLink 机器人凭据就绪，启动后将进入扫码登录流程' }
+        : { ok: false, message: '请先配置微信 iLink 本地令牌或扫码登录凭据' };
     }
     return { ok: true, message: `${platform} 机器人配置已就绪` };
   }

@@ -110,7 +110,7 @@ function registerIpc(): void {
   ipcMain.handle('gui:listBots', () => invoke(() => service.listBots()));
   ipcMain.handle('gui:upsertBot', (_event, bot) => invoke(() => service.upsertBot(bot)));
   ipcMain.handle('gui:deleteBot', (_event, id) => invoke(() => service.deleteBot(id)));
-  ipcMain.handle('gui:toggleBotStatus', (_event, id, enabled) => invoke(() => service.toggleBotStatus(id, enabled)));
+  ipcMain.handle('gui:toggleBotStatus', (_event, payload) => invoke(() => service.toggleBotStatus(payload.id, payload.enabled)));
   ipcMain.handle('gui:testBotConnection', (_event, bot) => invoke(() => service.testBotConnection(bot)));
   ipcMain.handle('gui:listServers', () => invoke(() => service.listServers()));
   ipcMain.handle('gui:upsertServer', (_event, input) => invoke(() => service.upsertServer(input)));

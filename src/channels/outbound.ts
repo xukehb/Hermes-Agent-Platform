@@ -171,7 +171,7 @@ export class OutboundSender {
         continue;
       }
       try {
-        await this.send(target, entry.text, limit);
+        await this.sendWithoutSpool(target, entry.text, limit);
         this.remove(entry.id);
         sent += 1;
       } catch {
@@ -192,6 +192,13 @@ export class OutboundSender {
   private bumpAttempts(entry: SpoolEntry): void {
     const next: SpoolEntry = { ...entry, attempts: entry.attempts + 1 };
     writeFileSync(this.file(entry.id), JSON.stringify(next), 'utf8');
+  }
+
+  private async sendWithoutSpool(target: OutboundTarget, text: string, limit: number): Promise<void> {
+    const chunks = limit > 0 ? splitForChannel(text, limit) : text.length > 0 ? [text] : [];
+    for (const chunk of chunks) {
+      await target.send(chunk);
+    }
   }
 
   private file(id: string): string {
