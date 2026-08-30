@@ -17,6 +17,7 @@ import type {
   TraceSummary,
   UsageAggregate,
 } from '../agent/index.js';
+import type { TaskExecutionContext } from '../telemetry/index.js';
 
 /** 已实现的通道种类。 */
 export type ChannelName = 'telegram' | 'whatsapp' | 'wechat' | 'feishu' | 'qq' | 'dingtalk' | 'http' | 'cli';
@@ -53,6 +54,8 @@ export interface InboundMessage {
   agentId?: string | undefined;
   /** 通道绑定的默认智能体，路由第二优先级 */
   defaultAgent?: string | undefined;
+  /** 已认证 Bot 操作者对应的可信执行上下文。 */
+  executionContext?: TaskExecutionContext | undefined;
 }
 
 /**

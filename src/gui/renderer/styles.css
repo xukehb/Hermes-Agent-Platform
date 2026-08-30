@@ -675,6 +675,43 @@ body {
   gap: 4px;
 }
 
+.token-telemetry-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  max-width: 220px;
+  padding: 0 10px;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.token-telemetry-label {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.token-telemetry-value {
+  color: var(--text-main);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.token-telemetry-server {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+.token-telemetry-pill.is-degraded {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+
 .git-capsule-btn {
   display: inline-flex;
   align-items: center;

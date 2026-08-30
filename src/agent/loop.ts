@@ -179,6 +179,12 @@ export class AgentLoop {
       plan = this.planAt(chain, planIndex);
       usage = addUsage(usage, turn.outcome.usage);
       if (turn.outcome.usage.totalTokens > 0) {
+        request.onUsage?.({
+          providerId: plan.providerId,
+          model: plan.fullName,
+          usage: turn.outcome.usage,
+          source: 'model_turn',
+        });
         request.onEvent?.({ type: 'usage', usage: turn.outcome.usage });
         request.onTrace?.({
           kind: 'usage',
@@ -375,6 +381,10 @@ export class AgentLoop {
     };
     if (request.spawn !== undefined) ctx.spawn = request.spawn;
     if (request.onTrace !== undefined) ctx.onTrace = request.onTrace;
+    if (request.executionContext !== undefined) {
+      ctx.executionContext = request.executionContext;
+      if (request.executionContext.control !== undefined) ctx.control = request.executionContext.control;
+    }
 
     const results: ToolResult[] = [];
     for (const call of outcome.calls) {

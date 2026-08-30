@@ -15,10 +15,11 @@
     "lint": "eslint .",
     "hap": "tsx src/cli/bin.ts",
     "rebuild": "npx -y @electron/rebuild -f -w better-sqlite3",
-    "gui": "npm run build && electron dist/src/gui/main.js",
-    "gui:dev": "npm run build && electron dist/src/gui/main.js",
-    "dist": "npm run build && npx electron-builder --win",
-    "dist:dir": "npm run build && npx electron-builder --win --dir"
+    "rebuild:electron": "npx -y @electron/rebuild -f -w better-sqlite3",
+    "gui": "npm run build && npm run rebuild:electron && electron dist/src/gui/main.js",
+    "gui:dev": "npm run build && npm run rebuild:electron && electron dist/src/gui/main.js",
+    "dist": "npm run build && npm run rebuild:electron && npx electron-builder --win",
+    "dist:dir": "npm run build && npm run rebuild:electron && npx electron-builder --win --dir"
   },
   "build": {
     "appId": "com.hermes.agent.platform",

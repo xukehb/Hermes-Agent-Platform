@@ -17,12 +17,13 @@ import { createDecipheriv, createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { ChannelDispatcher, describeError } from './dispatcher.js';
-import { extractMention, stripWakeWord } from './command-parser.js';
+import { extractMention, parseCommand, stripWakeWord } from './command-parser.js';
 import { OutboundSender } from './outbound.js';
 import { ChannelContactStore } from './contacts-store.js';
 import { parseBind } from './bind.js';
 import type { Channel, ChannelHost, InboundMessage, OutboundTarget } from './types.js';
 import type { ResolvedChannels, ResolvedLimits, ResolvedPaths } from '../config/index.js';
+import { BotAuthorizationService, ControlPlaneError, type ControlExecutionContext } from '../control-plane/index.js';
 
 export interface FeishuChannelConfig {
   enabled?: boolean | undefined;
@@ -49,6 +50,7 @@ export interface FeishuChannelOptions {
   channels?: ResolvedChannels | undefined;
   env?: NodeJS.ProcessEnv | undefined;
   contactStore?: ChannelContactStore | undefined;
+  control?: { botAccountId: string; authorization: BotAuthorizationService } | undefined;
 }
 
 interface FeishuTokenCache {
@@ -64,6 +66,7 @@ export class FeishuChannel implements Channel {
   private readonly sender: OutboundSender;
   private readonly env: NodeJS.ProcessEnv;
   private readonly contactStore: ChannelContactStore;
+  private readonly control?: { botAccountId: string; authorization: BotAuthorizationService } | undefined;
   private server?: Server | undefined;
   private tokenCache?: FeishuTokenCache | undefined;
 
@@ -78,6 +81,7 @@ export class FeishuChannel implements Channel {
     this.host = options.host;
     this.env = options.env ?? process.env;
     this.contactStore = options.contactStore ?? ChannelContactStore.getInstance();
+    this.control = options.control;
 
     this.sender = new OutboundSender(options.paths?.spoolDir ?? join(homedir(), '.hap', 'spool'));
 
@@ -345,6 +349,14 @@ export class FeishuChannel implements Channel {
 
     const assignedAgent = agentId || this.config.defaultAgent || 'coder';
     const sessionKey = isRoom ? `feishu:room:${chatId}` : `feishu:user:${senderId}`;
+    const control = await this.authorizeControl({
+      platformUserId: senderId,
+      text: cleanText,
+      receiveId: chatId,
+      isChatId: true,
+      requestId: String((payload.header as { event_id?: string } | undefined)?.event_id ?? message.message_id ?? Date.now()),
+    });
+    if (control === false) return;
 
     const target: OutboundTarget = {
       channel: 'feishu',
@@ -369,8 +381,57 @@ export class FeishuChannel implements Channel {
       ...(agentId !== undefined ? { agentId } : {}),
       ...(this.config.defaultAgent !== undefined ? { defaultAgent: this.config.defaultAgent } : {}),
     };
+    if (control !== undefined) {
+      inbound.executionContext = {
+        serverId: control.serverId,
+        botAccountId: control.accountId,
+        control,
+      };
+    }
 
     this.dispatcher.submit(inbound);
+  }
+
+  private async authorizeControl(input: {
+    platformUserId: string;
+    text: string;
+    receiveId: string;
+    isChatId: boolean;
+    requestId: string;
+  }): Promise<ControlExecutionContext | undefined | false> {
+    if (this.control === undefined) return undefined;
+    const pair = /^\/pair\s+([0-9]{6})\s*$/i.exec(input.text.trim());
+    if (pair !== null) {
+      try {
+        const operator = this.control.authorization.consumePairingCode({
+          botAccountId: this.control.botAccountId,
+          code: pair[1] ?? '',
+          platformUserId: input.platformUserId,
+        });
+        await this.sendFeishuMessage(input.receiveId, `✅ 已配对成功，当前权限：${operator.role}`, input.isChatId);
+      } catch {
+        await this.sendFeishuMessage(input.receiveId, '✗ 配对失败：验证码无效、过期或已使用。', input.isChatId);
+      }
+      return false;
+    }
+    try {
+      return this.control.authorization.authorizeInbound({
+        botAccountId: this.control.botAccountId,
+        platformUserId: input.platformUserId,
+        requestId: input.requestId,
+        commandKind: normalizeCommandKindForControl(parseCommand(input.text).kind),
+      });
+    } catch (error) {
+      if (error instanceof ControlPlaneError && error.code === 'CONTROL_FORBIDDEN') {
+        await this.sendFeishuMessage(
+          input.receiveId,
+          '⚠ 当前用户尚未配对，已拒绝执行。\n请先在桌面端为该 Bot 生成配对码，然后在此发送 /pair 123456 完成绑定。',
+          input.isChatId,
+        );
+        return false;
+      }
+      throw error;
+    }
   }
 
   /** 发送飞书消息（优先 OpenAPI 卡片消息，若未配置凭据则尝试自定义 Webhook） */
@@ -453,4 +514,8 @@ export class FeishuChannel implements Channel {
 
     return undefined;
   }
+}
+
+function normalizeCommandKindForControl(kind: ReturnType<typeof parseCommand>['kind']): string {
+  return kind === 'sh' ? 'shell' : kind;
 }

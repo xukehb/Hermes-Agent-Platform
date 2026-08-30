@@ -391,6 +391,7 @@ export class AgentOrchestrator {
         // 记忆检索失败不阻断主流程
       }
 
+      let recordedLiveUsage = false;
       const loopRequest: LoopRequest = {
         agent: effectiveAgent,
         history,
@@ -404,12 +405,29 @@ export class AgentOrchestrator {
         onTrace,
       };
       if (request.onEvent !== undefined) loopRequest.onEvent = request.onEvent;
+      loopRequest.executionContext = request.executionContext ?? { serverId: 'local' };
+      loopRequest.onUsage = (event) => {
+        recordedLiveUsage = true;
+        this.recordUsage(
+          store,
+          effectiveAgent,
+          taskId,
+          sessionKey,
+          event.model,
+          event.usage,
+          new Date().toISOString(),
+          loopRequest.executionContext ?? { serverId: 'local' },
+          event.source,
+        );
+      };
 
       const result = await this.loop.run(loopRequest);
       const finishedAt = new Date().toISOString();
 
       store.appendMessages(sessionKey, agent.id, result.messages);
-      this.recordUsage(store, effectiveAgent, result.model, result.usage, finishedAt);
+      if (!recordedLiveUsage) {
+        this.recordUsage(store, effectiveAgent, taskId, sessionKey, result.model, result.usage, finishedAt, loopRequest.executionContext);
+      }
       const tracePath = this.writeTrace(taskId, agent.id, sessionKey, startedAt, finishedAt, 'done', events);
       store.updateTask(taskId, {
         status: 'done',
@@ -518,13 +536,37 @@ export class AgentOrchestrator {
   private recordUsage(
     store: SessionStore,
     agent: ResolvedAgent,
+    taskId: string,
+    sessionKey: string,
     modelFullName: string,
     usage: TokenUsage,
     at: string,
+    executionContext: NonNullable<RunTaskRequest['executionContext']>,
+    source: 'model_turn' | 'compaction' = 'model_turn',
   ): void {
     if (usage.totalTokens <= 0 && usage.promptTokens <= 0 && usage.completionTokens <= 0) return;
     const slash = modelFullName.indexOf('/');
     const providerId = slash > 0 ? modelFullName.slice(0, slash) : modelFullName;
+    if (store.recordUsageEvent !== undefined) {
+      store.recordUsageEvent({
+        eventId: randomUUID(),
+        sequence: Date.now(),
+        at,
+        taskId,
+        ...(executionContext.parentTaskId === undefined ? {} : { parentTaskId: executionContext.parentTaskId }),
+        sessionKey,
+        agentId: agent.id,
+        serverId: executionContext.serverId,
+        ...(executionContext.botAccountId === undefined ? {} : { botAccountId: executionContext.botAccountId }),
+        providerId,
+        model: modelFullName,
+        source,
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        totalTokens: usage.totalTokens,
+      });
+      return;
+    }
     store.recordUsage({ at, agentId: agent.id, providerId, model: modelFullName, usage });
   }
   /**

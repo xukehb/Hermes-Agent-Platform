@@ -187,6 +187,12 @@ let state = {
   targets: [],
   logs: [],
   presets: [],
+  telemetry: {
+    status: 'ok',
+    totals: { promptTokens: 0, completionTokens: 0, totalTokens: 0, calls: 0 },
+    byServer: [],
+    byAgent: [],
+  },
 };
 
 const selectedProjectIds = new Set();
@@ -1544,6 +1550,7 @@ async function refresh() {
     renderProviders();
     renderModels();
     renderTargets();
+    renderTelemetry();
     renderTelegramView();
     renderWeChatView();
     renderLogs(currentLogFilter);
@@ -1561,6 +1568,32 @@ async function refresh() {
 $('configPathBtn')?.addEventListener('click', () => {
   if (state.configPath) copyText(state.configPath, '配置路径');
 });
+
+function formatTokenCount(value) {
+  const n = Number(value || 0);
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  return String(n);
+}
+
+function renderTelemetry() {
+  const telemetry = state.telemetry || {};
+  const totals = telemetry.totals || {};
+  const topServer = Array.isArray(telemetry.byServer) ? telemetry.byServer[0] : null;
+  const totalEl = $('tokenTelemetryTotal');
+  const serverEl = $('tokenTelemetryServer');
+  const pill = $('tokenTelemetryPill');
+  if (totalEl) totalEl.textContent = formatTokenCount(totals.totalTokens);
+  if (serverEl) {
+    serverEl.textContent = topServer
+      ? `${topServer.serverId} ${formatTokenCount(topServer.totalTokens)}`
+      : 'local 0';
+  }
+  if (pill) {
+    pill.classList.toggle('is-degraded', telemetry.status !== 'ok');
+    pill.title = telemetry.status === 'ok' ? '今日实时 Token 消耗' : 'Token 遥测降级，正在使用最近可用数据';
+  }
+}
 
 // ==========================================================================
 // 1. Skill 技能市场 (关联 GitHub 开源市场)
@@ -2061,8 +2094,8 @@ function renderProviders() {
             <div style="display:flex;align-items:center;gap:8px;">
               <strong style="font-size:15px;color:var(--text-main);">${esc(p.name || p.id)}</strong>
               <span class="prop-chip" style="font-size:11.5px;font-weight:600;">${esc(p.id)}</span>
-              <span class="badge ${p.hasCredential ? 'success' : 'warn'}" style="font-size:11px;">
-                ${p.hasCredential ? '凭据就绪' : '缺凭据'}
+              <span class="badge ${p.healthStatus === 'ok' ? 'success' : p.healthStatus === 'missing_credentials' ? 'warn' : 'neutral'}" style="font-size:11px;">
+                ${p.healthStatus === 'ok' ? '连通就绪' : p.healthStatus === 'missing_credentials' ? '缺凭据' : '待测试'}
               </span>
             </div>
             <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;word-break:break-all;font-family:var(--font-mono);">
@@ -2465,9 +2498,9 @@ function fillSelects() {
 
     modelPicker.innerHTML = (state.models || []).map((m) => {
       const p = providersMap.get(m.providerId);
-      const isReady = p && (Boolean(p.hasCredential) || p.id === 'ollama' || p.envKey === undefined);
-      const icon = isReady ? '🟢 ' : '⚪ ';
-      const statusText = isReady ? '就绪' : '需配置 Key';
+      const isReady = p && p.healthStatus === 'ok';
+      const icon = isReady ? '🟢 ' : (p?.healthStatus === 'missing_credentials' ? '⚪ ' : '🟡 ');
+      const statusText = isReady ? '就绪' : (p?.healthStatus === 'missing_credentials' ? '需配置 Key' : '需连通测试');
       return `<option value="${esc(m.fullName || m.alias)}">${icon}${esc(m.alias)} (${esc(p?.name || m.providerId)} · ${statusText})</option>`;
     }).join('');
 
@@ -2476,7 +2509,7 @@ function fillSelects() {
     } else {
       const firstReady = (state.models || []).find((m) => {
         const p = providersMap.get(m.providerId);
-        return p && (Boolean(p.hasCredential) || p.id === 'ollama' || p.envKey === undefined);
+        return p && p.healthStatus === 'ok';
       });
       if (firstReady) {
         modelPicker.value = firstReady.fullName || firstReady.alias;
@@ -5201,6 +5234,7 @@ async function handleScanDisk(server) {
   const progressText = $('diskScanProgressText');
   const emptyState = $('diskEmptyState');
   const resultContainer = $('diskScanResultContainer');
+  let stepTimer = null;
 
   try {
     if (scanBtn) scanBtn.disabled = true;
@@ -5218,13 +5252,12 @@ async function handleScanDisk(server) {
     ];
 
     let stepIdx = 0;
-    const stepTimer = setInterval(() => {
+    stepTimer = setInterval(() => {
       stepIdx = (stepIdx + 1) % steps.length;
       if (progressText) progressText.textContent = steps[stepIdx];
     }, 400);
 
     const report = await window.hap.scanDiskCleanable(server);
-    clearInterval(stepTimer);
 
     currentDiskScanReport = report;
     renderDiskScanResult(report);
@@ -5233,6 +5266,7 @@ async function handleScanDisk(server) {
     showToast('AI 磁盘扫描失败: ' + err.message, 'error');
     if (emptyState) emptyState.style.display = 'block';
   } finally {
+    if (stepTimer) clearInterval(stepTimer);
     if (progressBox) progressBox.style.display = 'none';
     if (scanBtn) scanBtn.disabled = false;
   }
@@ -7057,8 +7091,8 @@ function populateImageGenProviders() {
     return;
   }
   optGroup.innerHTML = providers.map(p => {
-    const isReady = p.hasCredential;
-    const label = `${p.name || p.id} (${isReady ? '🟢 凭据就绪' : '⚪ 需填Key'})`;
+    const isReady = p.healthStatus === 'ok';
+    const label = `${p.name || p.id} (${isReady ? '🟢 连通就绪' : p.healthStatus === 'missing_credentials' ? '⚪ 需填Key' : '🟡 待测试'})`;
     return `<option value="${esc(p.id)}:dall-e-3" data-provider="${esc(p.id)}" data-model="dall-e-3">${esc(label)} - DALL-E 3 / Flux</option>`;
   }).join('');
 }
@@ -7096,10 +7130,10 @@ function updateImageGenModelChip() {
     chip.innerHTML = '<span style="color:#10b981;">⚡ 免 Key · 即刻可用</span>';
   } else {
     const p = (state.providers || []).find(item => item.id === provider);
-    if (p && p.hasCredential) {
-      chip.innerHTML = `<span style="color:#10b981;">🟢 ${esc(p.name || p.id)} 凭据已就绪</span>`;
-    } else if (provider === 'openai' && (window.state?.env?.OPENAI_API_KEY || true)) {
-      chip.innerHTML = '<span style="color:#64748b;">🔑 使用全局 OPENAI_API_KEY</span>';
+    if (p && p.healthStatus === 'ok') {
+      chip.innerHTML = `<span style="color:#10b981;">🟢 ${esc(p.name || p.id)} 连通就绪</span>`;
+    } else if (p && p.healthStatus === 'unknown') {
+      chip.innerHTML = `<span style="color:#f59e0b;">🟡 ${esc(p.name || p.id)} 已配置，需先连通测试</span>`;
     } else {
       chip.innerHTML = `<span style="color:#f59e0b;">⚪ 需配置 ${esc(provider.toUpperCase())}_API_KEY</span>`;
     }

@@ -24,6 +24,7 @@ import type {
   UsageAggregate,
   UsageRow,
 } from '../agent/types.js';
+import { usageTelemetryEventSchema, type UsageQuery, type UsageQueryResult, type UsageTelemetryEvent } from '../telemetry/index.js';
 
 /** 建表语句。WAL 模式让读写不互相阻塞（通道与 CLI 可能同时访问同一个库）。 */
 const SCHEMA = [
@@ -119,6 +120,10 @@ interface UsageRecord {
   calls: number;
 }
 
+interface ColumnRecord {
+  name: string;
+}
+
 /** JSON 列的安全解析：坏数据不应让整个会话读取失败。 */
 function parseJson<T>(raw: string | null): T | undefined {
   if (raw === null || raw === '') return undefined;
@@ -172,6 +177,47 @@ export function usageDay(at: string): string {
   return at.slice(0, 10);
 }
 
+function usageWhere(query: UsageQuery): { where: string; values: unknown[] } {
+  const clauses = ['at >= ?'];
+  const values: unknown[] = [query.since];
+  if (query.until !== undefined) {
+    clauses.push('at <= ?');
+    values.push(query.until);
+  }
+  if (query.serverId !== undefined) {
+    clauses.push('server_id = ?');
+    values.push(query.serverId);
+  }
+  if (query.taskId !== undefined) {
+    clauses.push('task_id = ?');
+    values.push(query.taskId);
+  }
+  if (query.sessionKey !== undefined) {
+    clauses.push('session_key = ?');
+    values.push(query.sessionKey);
+  }
+  if (query.agentId !== undefined) {
+    clauses.push('agent_id = ?');
+    values.push(query.agentId);
+  }
+  return { where: 'WHERE ' + clauses.join(' AND '), values };
+}
+
+function aggregateUsageRows(rows: UsageRow[], field: 'agentId' | 'serverId'): Array<{ id: string; totalTokens: number; calls: number }> {
+  const merged = new Map<string, { id: string; totalTokens: number; calls: number }>();
+  for (const row of rows) {
+    const id = field === 'serverId' ? row.serverId ?? 'unknown' : row.agentId;
+    const existing = merged.get(id);
+    if (existing === undefined) {
+      merged.set(id, { id, totalTokens: row.usage.totalTokens, calls: 1 });
+    } else {
+      existing.totalTokens += row.usage.totalTokens;
+      existing.calls += 1;
+    }
+  }
+  return [...merged.values()].sort((left, right) => right.totalTokens - left.totalTokens);
+}
+
 export class SqliteSessionStore implements SessionStore {
   readonly path: string;
   private readonly db?: Database.Database;
@@ -183,9 +229,29 @@ export class SqliteSessionStore implements SessionStore {
       mkdirSync(dirname(path), { recursive: true });
       this.db = new Database(path);
       for (const statement of SCHEMA) this.db.exec(statement);
+      this.migrateUsageColumns();
     } catch {
       this.fallback = new MemorySessionStore(path);
     }
+  }
+
+  private migrateUsageColumns(): void {
+    const rows = this.db!.prepare('PRAGMA table_info(usage)').all() as ColumnRecord[];
+    const columns = new Set(rows.map((row) => row.name));
+    const add = (name: string, sql: string): void => {
+      if (!columns.has(name)) this.db!.exec(sql);
+    };
+    add('event_id', 'ALTER TABLE usage ADD COLUMN event_id TEXT');
+    add('task_id', 'ALTER TABLE usage ADD COLUMN task_id TEXT');
+    add('session_key', 'ALTER TABLE usage ADD COLUMN session_key TEXT');
+    add('server_id', "ALTER TABLE usage ADD COLUMN server_id TEXT NOT NULL DEFAULT 'unknown'");
+    add('bot_account_id', 'ALTER TABLE usage ADD COLUMN bot_account_id TEXT');
+    add('source', "ALTER TABLE usage ADD COLUMN source TEXT NOT NULL DEFAULT 'reconciliation'");
+    add('parent_task_id', 'ALTER TABLE usage ADD COLUMN parent_task_id TEXT');
+    this.db!.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_usage_event ON usage(event_id) WHERE event_id IS NOT NULL');
+    this.db!.exec('CREATE INDEX IF NOT EXISTS idx_usage_server_at ON usage(server_id, at)');
+    this.db!.exec('CREATE INDEX IF NOT EXISTS idx_usage_session_at ON usage(session_key, at)');
+    this.db!.exec('CREATE INDEX IF NOT EXISTS idx_usage_task ON usage(task_id)');
   }
 
   history(sessionKey: string, limit?: number): AgentMessage[] {
@@ -335,8 +401,8 @@ export class SqliteSessionStore implements SessionStore {
   recordUsage(row: UsageRow): void {
     if (this.fallback) return this.fallback.recordUsage(row);
     this.db!.prepare(
-      `INSERT INTO usage (at, day, agent_id, provider_id, model, prompt_tokens, completion_tokens, total_tokens)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO usage (at, day, agent_id, provider_id, model, prompt_tokens, completion_tokens, total_tokens, server_id, source)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unknown', 'reconciliation')`,
     ).run(
       row.at,
       usageDay(row.at),
@@ -347,6 +413,55 @@ export class SqliteSessionStore implements SessionStore {
       row.usage.completionTokens,
       row.usage.totalTokens,
     );
+  }
+
+  recordUsageEvent(event: UsageTelemetryEvent): boolean {
+    if (this.fallback) return this.fallback.recordUsageEvent(event);
+    const value = usageTelemetryEventSchema.parse(event);
+    const info = this.db!.prepare(
+      `INSERT OR IGNORE INTO usage
+        (event_id, at, day, agent_id, provider_id, model, prompt_tokens, completion_tokens, total_tokens,
+         task_id, session_key, server_id, bot_account_id, source, parent_task_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      value.eventId,
+      value.at,
+      usageDay(value.at),
+      value.agentId,
+      value.providerId,
+      value.model,
+      value.promptTokens,
+      value.completionTokens,
+      value.totalTokens,
+      value.taskId,
+      value.sessionKey,
+      value.serverId,
+      value.botAccountId ?? null,
+      value.source,
+      value.parentTaskId ?? null,
+    );
+    return info.changes > 0;
+  }
+
+  queryUsage(query: UsageQuery): UsageQueryResult {
+    if (this.fallback) return this.fallback.queryUsage(query);
+    const { where, values } = usageWhere(query);
+    const totals = this.db!.prepare(
+      `SELECT COALESCE(SUM(prompt_tokens), 0) AS promptTokens,
+              COALESCE(SUM(completion_tokens), 0) AS completionTokens,
+              COALESCE(SUM(total_tokens), 0) AS totalTokens,
+              COUNT(*) AS calls
+       FROM usage ${where}`,
+    ).get(...values) as UsageQueryResult['totals'];
+    const byAgent = this.db!.prepare(
+      `SELECT agent_id AS agentId, COALESCE(SUM(total_tokens), 0) AS totalTokens, COUNT(*) AS calls
+       FROM usage ${where} GROUP BY agent_id ORDER BY totalTokens DESC`,
+    ).all(...values) as UsageQueryResult['byAgent'];
+    const byServer = this.db!.prepare(
+      `SELECT server_id AS serverId, COALESCE(SUM(total_tokens), 0) AS totalTokens, COUNT(*) AS calls
+       FROM usage ${where} GROUP BY server_id ORDER BY totalTokens DESC`,
+    ).all(...values) as UsageQueryResult['byServer'];
+    return { totals, byAgent, byServer };
   }
 
   usageSince(since: string): UsageAggregate[] {
@@ -588,6 +703,31 @@ export class MemorySessionStore implements SessionStore {
     this.save();
   }
 
+  recordUsageEvent(event: UsageTelemetryEvent): boolean {
+    if (this.usageRows.some((row) => row.eventId === event.eventId)) return false;
+    const row: UsageRow = {
+      at: event.at,
+      agentId: event.agentId,
+      providerId: event.providerId,
+      model: event.model,
+      usage: {
+        promptTokens: event.promptTokens,
+        completionTokens: event.completionTokens,
+        totalTokens: event.totalTokens,
+      },
+      eventId: event.eventId,
+      taskId: event.taskId,
+      sessionKey: event.sessionKey,
+      serverId: event.serverId,
+      source: event.source,
+    };
+    if (event.botAccountId !== undefined) row.botAccountId = event.botAccountId;
+    if (event.parentTaskId !== undefined) row.parentTaskId = event.parentTaskId;
+    this.usageRows.push(row);
+    this.save();
+    return true;
+  }
+
   usageSince(since: string): UsageAggregate[] {
     const merged = new Map<string, UsageAggregate>();
     for (const row of this.usageRows) {
@@ -612,6 +752,30 @@ export class MemorySessionStore implements SessionStore {
       existing.calls += 1;
     }
     return [...merged.values()].sort((left, right) => right.totalTokens - left.totalTokens);
+  }
+
+  queryUsage(query: UsageQuery): UsageQueryResult {
+    const rows = this.usageRows.filter((row) => {
+      if (row.at < query.since) return false;
+      if (query.until !== undefined && row.at > query.until) return false;
+      if (query.serverId !== undefined && row.serverId !== query.serverId) return false;
+      if (query.taskId !== undefined && row.taskId !== query.taskId) return false;
+      if (query.sessionKey !== undefined && row.sessionKey !== query.sessionKey) return false;
+      if (query.agentId !== undefined && row.agentId !== query.agentId) return false;
+      return true;
+    });
+    const totals = rows.reduce((acc, row) => {
+      acc.promptTokens += row.usage.promptTokens;
+      acc.completionTokens += row.usage.completionTokens;
+      acc.totalTokens += row.usage.totalTokens;
+      acc.calls += 1;
+      return acc;
+    }, { promptTokens: 0, completionTokens: 0, totalTokens: 0, calls: 0 });
+    return {
+      totals,
+      byAgent: aggregateUsageRows(rows, 'agentId').map((row) => ({ agentId: row.id, totalTokens: row.totalTokens, calls: row.calls })),
+      byServer: aggregateUsageRows(rows, 'serverId').map((row) => ({ serverId: row.id, totalTokens: row.totalTokens, calls: row.calls })),
+    };
   }
 
   dailyTokens(agentId: string, day: string): number {
@@ -648,4 +812,3 @@ export class MemorySessionStore implements SessionStore {
 export function zeroUsage(): TokenUsage {
   return emptyUsage();
 }
-

@@ -13,6 +13,7 @@
 
 import { HapError, FatalError, describeError, digestArgs } from '../domain/index.js';
 import type { ToolCall, ToolResult, TraceEvent } from '../domain/index.js';
+import { scopeToolArgsForControl } from '../control-plane/index.js';
 import { truncateToolOutput } from './output.js';
 import type { ToolRegistry } from './registry.js';
 import type { ToolContext, ToolModule, ToolOutput } from './types.js';
@@ -71,7 +72,12 @@ export class ToolExecutor {
       return this.finish(call, ctx, { content: this.invalidArgsMessage(module, validated.issues), isError: true }, startedAt);
     }
 
-    const output = await this.runGuarded(module, validated.args, ctx, call);
+    const scoped = scopeToolArgsForControl(module.definition.name, validated.args, ctx.control);
+    if (!scoped.ok) {
+      return this.finish(call, ctx, { content: scoped.message, isError: true }, startedAt);
+    }
+
+    const output = await this.runGuarded(module, scoped.args, ctx, call);
     return this.finish(call, ctx, output, startedAt);
   }
 

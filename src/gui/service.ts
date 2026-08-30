@@ -11,6 +11,7 @@ import { describeError, type Attachment, type ProtocolName, type WireApi } from 
 import { planInjection, writeInjection, type InjectionTarget } from '../inject/index.js';
 import { ProviderRegistry } from '../providers/index.js';
 import { parseUnifiedDiff, type FileDiffItem } from '../tools/diff-parser.js';
+import { SqliteSessionStore } from '../storage/index.js';
 import {
   ScheduleStore,
   SchedulerEngine,
@@ -40,6 +41,7 @@ import {
   type RemoteExecResult,
   type ServerBotConfig,
 } from '../remote/index.js';
+import { BotControlFacade } from './bot-control.js';
 import type {
   GuiChatInput,
   GuiGitStatus,
@@ -78,6 +80,8 @@ const DATA_DIR = join(homedir(), '.hap', 'gui');
 const STATE_PATH = join(DATA_DIR, 'state.json');
 const ENV_PATH = join(DATA_DIR, 'env.json');
 const IMAGES_DIR = join(DATA_DIR, 'generated_images');
+const BOT_CONTROL_DB_PATH = join(DATA_DIR, 'control-plane.db');
+const BOT_CREDENTIALS_DIR = join(DATA_DIR, 'bot-credentials');
 
 function ensureDataDir(): void {
   mkdirSync(DATA_DIR, { recursive: true });
@@ -510,6 +514,11 @@ function writeAgentPrompt(agentDir: string, body: string): string {
 
 export class GuiService {
   private readonly logs: GuiLogEntry[] = [];
+  private readonly providerHealth = new Map<string, { reachable: boolean; checkedAt: number; error?: string }>();
+  private readonly botControl = new BotControlFacade({
+    dbPath: BOT_CONTROL_DB_PATH,
+    credentialsDir: BOT_CREDENTIALS_DIR,
+  });
 
   constructor(
     private readonly configPath = resolveConfigPath(undefined, process.env),
@@ -525,10 +534,18 @@ export class GuiService {
 
     const providers = [...resolver.resolveProviders().values()]
       .filter((provider) => !hiddenProviders.has(provider.id))
-      .map((provider) => ({
-        ...provider,
-        hasCredential: registry.hasCredential(provider),
-      }));
+      .map((provider) => {
+        const health = this.providerHealth.get(provider.id);
+        const fresh = health !== undefined && Date.now() - health.checkedAt <= 60_000;
+        const hasCredential = registry.hasCredential(provider);
+        return {
+          ...provider,
+          hasCredential,
+          healthStatus: fresh && health.reachable ? 'ok' : hasCredential ? 'unknown' : 'missing_credentials',
+          healthCheckedAt: fresh ? new Date(health.checkedAt).toISOString() : undefined,
+          healthError: fresh ? health.error : undefined,
+        };
+      });
 
     const models = [...resolver.resolveModels().values()]
       .filter((model) => !hiddenModels.has(model.alias) && !hiddenProviders.has(model.providerId));
@@ -576,7 +593,51 @@ export class GuiService {
       targets: this.targetStates(models.map((model) => model.fullName)),
       logs: this.logs.slice(-80),
       servers: RemoteServerStore.getInstance().list(),
+      telemetry: this.usageSnapshot(resolver),
       presets: Object.keys(BUILTIN_PROVIDERS).filter((p) => !hiddenProviders.has(p)),
+    };
+  }
+
+  private usageSnapshot(resolver: ConfigResolver): object {
+    const since = new Date();
+    since.setHours(0, 0, 0, 0);
+    const totals = { promptTokens: 0, completionTokens: 0, totalTokens: 0, calls: 0 };
+    const byServer = new Map<string, { serverId: string; totalTokens: number; calls: number }>();
+    const byAgent = new Map<string, { agentId: string; totalTokens: number; calls: number }>();
+
+    for (const agentId of resolver.listAgentIds()) {
+      const agent = resolver.resolveAgent(agentId);
+      const store = new SqliteSessionStore(join(agent.agentDir, 'sessions.db'));
+      try {
+        const result = store.queryUsage?.({ since: since.toISOString() });
+        if (result === undefined) continue;
+        totals.promptTokens += result.totals.promptTokens;
+        totals.completionTokens += result.totals.completionTokens;
+        totals.totalTokens += result.totals.totalTokens;
+        totals.calls += result.totals.calls;
+        for (const item of result.byServer) {
+          const existing = byServer.get(item.serverId) ?? { serverId: item.serverId, totalTokens: 0, calls: 0 };
+          existing.totalTokens += item.totalTokens;
+          existing.calls += item.calls;
+          byServer.set(item.serverId, existing);
+        }
+        for (const item of result.byAgent) {
+          const existing = byAgent.get(item.agentId) ?? { agentId: item.agentId, totalTokens: 0, calls: 0 };
+          existing.totalTokens += item.totalTokens;
+          existing.calls += item.calls;
+          byAgent.set(item.agentId, existing);
+        }
+      } finally {
+        store.close();
+      }
+    }
+
+    return {
+      status: 'ok',
+      since: since.toISOString(),
+      totals,
+      byServer: [...byServer.values()].sort((left, right) => right.totalTokens - left.totalTokens),
+      byAgent: [...byAgent.values()].sort((left, right) => right.totalTokens - left.totalTokens),
     };
   }
 
@@ -1068,6 +1129,7 @@ export class GuiService {
         const resolver = this.resolver();
         const registry = new ProviderRegistry(resolver.resolveProviders(), { env: process.env });
         const result = await registry.check(id, controller.signal);
+        this.providerHealth.set(id, { reachable: result.reachable, checkedAt: Date.now(), ...(result.error === undefined ? {} : { error: result.error }) });
         if (result.reachable) {
           this.info(`测试服务商 ${id}：可达`);
         } else {
@@ -1114,6 +1176,7 @@ export class GuiService {
       const tempMap = new Map<string, ResolvedProvider>([[id, tempProvider]]);
       const registry = new ProviderRegistry(tempMap, { env: tempEnv });
       const result = await registry.check(id, controller.signal);
+      this.providerHealth.set(id, { reachable: result.reachable, checkedAt: Date.now(), ...(result.error === undefined ? {} : { error: result.error }) });
       if (result.reachable) {
         this.info(`测试服务商 ${id} (实时动态参数)：可达`);
       } else {
@@ -2162,6 +2225,7 @@ export class GuiService {
   }
 
   private telegramManager: ChannelManager | TelegramChannel | undefined;
+  private telegramManagers: TelegramChannel[] = [];
   private telegramRunning = false;
   private telegramBotInfo: { username: string; name: string } | undefined;
 
@@ -2249,6 +2313,47 @@ export class GuiService {
       return { ok: true, message: 'Telegram 机器人正在运行中', botUsername: this.telegramBotInfo?.username };
     }
 
+    const runtimeBots = this.botControl.runtimeBots('telegram');
+    if (runtimeBots.length > 0) {
+      const orchestrator = new AgentOrchestrator({ configPath: this.configPath });
+      await orchestrator.loadMcpTools();
+      const baseChannels = orchestrator.config.resolveChannels();
+      const limits = orchestrator.config.resolveLimits();
+      const paths = orchestrator.resolvedPaths;
+      const host = createChannelHost(orchestrator);
+      const managers: TelegramChannel[] = [];
+      for (const runtime of runtimeBots) {
+        const tokenEnv = `HAP_BOT_${runtime.account.id.toUpperCase().replace(/[^A-Z0-9]/g, '_')}_TOKEN`;
+        const manager = new TelegramChannel({
+          host,
+          channels: {
+            ...baseChannels,
+            telegram: {
+              ...baseChannels.telegram,
+              enabled: true,
+              tokenEnv,
+              mode: 'polling',
+              defaultAgent: runtime.account.defaultAgentId,
+            },
+          },
+          limits,
+          paths,
+          env: { ...process.env, [tokenEnv]: runtime.credentials.token },
+          log: (line) => this.info(`[Telegram:${runtime.account.id}] ${line}`),
+          control: { botAccountId: runtime.account.id, authorization: runtime.authorization },
+        });
+        await manager.start();
+        managers.push(manager);
+      }
+      this.telegramManagers = managers;
+      this.telegramRunning = true;
+      this.info(`Telegram 多机器人服务已启动：${managers.length} 个 Bot`);
+      return {
+        ok: true,
+        message: `Telegram 多机器人服务已启动：${managers.length} 个 Bot 正在监听消息。`,
+      };
+    }
+
     const config = await this.getTelegramConfig();
     if (!config.token) {
       throw new Error('未配置 TELEGRAM_BOT_TOKEN，请先填写 Bot Token');
@@ -2275,6 +2380,7 @@ export class GuiService {
 
     await manager.start();
     this.telegramManager = manager;
+    this.telegramManagers = [manager];
     this.telegramRunning = true;
     this.info(`Telegram 机器人服务已成功启动：@${test.username}`);
 
@@ -2286,14 +2392,20 @@ export class GuiService {
   }
 
   async stopTelegramService(): Promise<{ ok: boolean; message: string }> {
-    if (!this.telegramRunning || !this.telegramManager) {
+    if (!this.telegramRunning || (this.telegramManager === undefined && this.telegramManagers.length === 0)) {
       this.telegramRunning = false;
       return { ok: true, message: 'Telegram 机器人未处于运行状态' };
     }
 
     try {
-      await this.telegramManager.stop();
+      for (const manager of [...this.telegramManagers].reverse()) {
+        await manager.stop();
+      }
+      if (this.telegramManagers.length === 0) {
+        await this.telegramManager?.stop();
+      }
       this.telegramManager = undefined;
+      this.telegramManagers = [];
       this.telegramRunning = false;
       this.info('Telegram 机器人服务已停止');
       return { ok: true, message: 'Telegram 机器人服务已成功停止' };
@@ -2891,59 +3003,32 @@ export class GuiService {
   // ==========================================
   // 多机器人实例管理中心 (Multi-Bot Instances Hub)
   // ==========================================
-  private getBotsStoragePath(): string {
-    const dir = join(homedir(), '.hap', 'gui');
-    if (!existsSync(dir)) {
-      mkdirSync(dir, { recursive: true });
-    }
-    return join(dir, 'bots.json');
-  }
-
   async listBots(): Promise<GuiBotInstance[]> {
-    const file = this.getBotsStoragePath();
-    if (!existsSync(file)) {
-      return [];
-    }
-    try {
-      const data = JSON.parse(readFileSync(file, 'utf-8'));
-      if (Array.isArray(data)) return data;
-      return [];
-    } catch {
-      return [];
-    }
+    return this.botControl.listBots();
   }
 
   async upsertBot(bot: GuiBotInstance): Promise<{ ok: boolean; bot: GuiBotInstance }> {
-    const bots = await this.listBots();
-    const idx = bots.findIndex(b => b.id === bot.id);
-    const updatedBot: GuiBotInstance = {
-      ...bot,
-      status: bot.status || (bot.enabled ? 'running' : 'stopped'),
-      lastActiveAt: new Date().toISOString(),
-    };
-    if (idx >= 0) {
-      bots[idx] = updatedBot;
-    } else {
-      bots.push(updatedBot);
-    }
-    writeFileSync(this.getBotsStoragePath(), JSON.stringify(bots, null, 2), 'utf-8');
+    const result = this.botControl.upsertBot(bot);
     this.info(`机器人实例 [${bot.name || bot.id}] 配置已保存并同步`);
 
-    // 若绑定了服务器，同步更新该服务器上的 boundBotId
-    if (bot.boundServerId) {
-      const serverStore = RemoteServerStore.getInstance();
+    // GUI 服务器列表保留 boundBotId 展示字段；真实一对一约束由控制平面 SQLite 保证。
+    const serverStore = RemoteServerStore.getInstance();
+    serverStore.list().forEach((server) => {
+      if (server.boundBotId === bot.id && server.id !== bot.boundServerId) {
+        serverStore.upsert({ ...server, boundBotId: undefined });
+      }
+    });
+    if (bot.boundServerId && bot.boundServerId !== 'local') {
       const server = serverStore.get(bot.boundServerId);
       if (server && server.boundBotId !== bot.id) {
         serverStore.upsert({ ...server, boundBotId: bot.id });
       }
     }
-    return { ok: true, bot: updatedBot };
+    return result;
   }
 
   async deleteBot(id: string): Promise<{ ok: boolean }> {
-    const bots = await this.listBots();
-    const filtered = bots.filter(b => b.id !== id);
-    writeFileSync(this.getBotsStoragePath(), JSON.stringify(filtered, null, 2), 'utf-8');
+    const result = this.botControl.deleteBot(id);
 
     // 解除相关服务器的绑定
     const serverStore = RemoteServerStore.getInstance();
@@ -2953,28 +3038,19 @@ export class GuiService {
       }
     });
     this.info(`机器人实例 [${id}] 已删除并解除服务器绑定`);
-    return { ok: true };
+    return result;
   }
 
   async toggleBotStatus(id: string, enabled: boolean): Promise<{ ok: boolean; message: string; bot?: GuiBotInstance }> {
-    const bots = await this.listBots();
-    const bot = bots.find(b => b.id === id);
-    if (!bot) throw new Error(`未找到机器人实例：${id}`);
-
-    bot.enabled = enabled;
-    bot.status = enabled ? 'running' : 'stopped';
-    bot.lastActiveAt = new Date().toISOString();
-    writeFileSync(this.getBotsStoragePath(), JSON.stringify(bots, null, 2), 'utf-8');
-
-    const msg = enabled ? `机器人 [${bot.name}] 服务已启动上线！` : `机器人 [${bot.name}] 服务已停止`;
-    this.info(msg);
-    return { ok: true, message: msg, bot };
+    const result = this.botControl.toggleBotStatus(id, enabled);
+    this.info(result.message);
+    return result;
   }
 
   async testBotConnection(bot: Partial<GuiBotInstance>): Promise<{ ok: boolean; message: string; details?: Record<string, unknown> }> {
     const platform = bot.platform || 'telegram';
     if (platform === 'telegram') {
-      const token = bot.config?.token;
+      const token = bot.config?.token || (bot.id ? this.botControl.readCredentialsForTest(bot.id)?.token : undefined);
       if (!token) return { ok: false, message: '请先输入 Telegram Bot Token' };
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000);
@@ -2993,13 +3069,16 @@ export class GuiService {
       return { ok: true, message: `已配置 OneBot 监听地址: ${wsUrl}，保存后平台将自动建立长连接` };
     } else if (platform === 'feishu') {
       const appId = bot.config?.appId;
-      const appSecret = bot.config?.appSecret;
+      const appSecret = bot.config?.appSecret || (bot.id ? this.botControl.readCredentialsForTest(bot.id)?.appSecret : undefined);
       if (!appId || !appSecret) return { ok: false, message: '飞书机器人需填写 App ID 和 App Secret' };
       return { ok: true, message: `飞书凭据就绪 (App ID: ${appId})，保存后将开启事件分发` };
     } else if (platform === 'dingtalk') {
       return { ok: true, message: '钉钉机器人凭据配置完成' };
     } else if (platform === 'wechat') {
-      return { ok: true, message: '微信机器人配置就绪' };
+      const configured = Boolean(bot.config?.puppetToken || (bot.id ? this.botControl.readCredentialsForTest(bot.id)?.botToken : undefined));
+      return configured
+        ? { ok: true, message: '微信 iLink 机器人凭据就绪，启动后将进入扫码登录流程' }
+        : { ok: false, message: '请先配置微信 iLink 本地令牌或扫码登录凭据' };
     }
     return { ok: true, message: `${platform} 机器人配置已就绪` };
   }

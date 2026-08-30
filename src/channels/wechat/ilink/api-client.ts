@@ -42,40 +42,40 @@ export function validateIlinkBaseUrl(input: string): URL {
 
 export class IlinkApiClient {
   private readonly baseUrl: URL;
-  private readonly token?: string;
+  private readonly token: string | undefined;
   private readonly localTokens: string[];
   private readonly fetchImpl: IlinkFetch;
 
   constructor(options: IlinkApiClientOptions = {}) {
     this.baseUrl = validateIlinkBaseUrl(options.baseUrl ?? DEFAULT_BASE_URL);
-    if (options.token !== undefined) {
-      this.token = options.token;
-    }
+    this.token = options.token;
     this.localTokens = (options.localTokens ?? []).slice(0, 10);
     this.fetchImpl = options.fetch ?? ((url, init) => fetch(url, init));
   }
 
   async createQr(signal?: AbortSignal): Promise<IlinkQrCreation> {
-    return this.request(this.withSignal({
+    return this.request({
       method: 'POST',
       path: 'ilink/bot/get_bot_qrcode?bot_type=3',
       label: 'get_bot_qrcode',
       authenticated: false,
       body: { local_token_list: this.localTokens },
+      ...(signal === undefined ? {} : { signal }),
       parse: parseQrCreation,
-    }, signal));
+    });
   }
 
   async qrStatus(qrcode: string, verifyCode?: string, signal?: AbortSignal): Promise<IlinkQrStatus> {
     const params = new URLSearchParams({ qrcode });
     if (verifyCode !== undefined) params.set('verify_code', verifyCode);
-    return this.request(this.withSignal({
+    return this.request({
       method: 'GET',
       path: 'ilink/bot/get_qrcode_status?' + params.toString(),
       label: 'get_qrcode_status',
       authenticated: false,
+      ...(signal === undefined ? {} : { signal }),
       parse: parseQrStatus,
-    }, signal));
+    });
   }
 
   async notifyStart(signal?: AbortSignal): Promise<void> {
@@ -87,14 +87,15 @@ export class IlinkApiClient {
   }
 
   async getUpdates(cursor: string, signal?: AbortSignal): Promise<IlinkUpdateBatch> {
-    return this.request(this.withSignal({
+    return this.request({
       method: 'POST',
       path: 'ilink/bot/getupdates',
       label: 'getupdates',
       authenticated: true,
       body: { get_updates_buf: cursor },
+      ...(signal === undefined ? {} : { signal }),
       parse: parseUpdateBatch,
-    }, signal));
+    });
   }
 
   async sendText(input: { toUserId: string; contextToken: string; text: string }, signal?: AbortSignal): Promise<void> {
@@ -108,37 +109,38 @@ export class IlinkApiClient {
   }
 
   private async retRequest(path: string, label: string, body: unknown, signal?: AbortSignal): Promise<void> {
-    const response = await this.request(this.withSignal({
+    const response = await this.request<{ ret: number; errmsg?: string | undefined }>({
       method: 'POST',
       path,
       label,
       authenticated: true,
       body,
+      ...(signal === undefined ? {} : { signal }),
       parse: (raw) => {
         const parsed = sendMessageResponseSchema.safeParse(raw);
         if (!parsed.success) throw IlinkError.schema(label);
         return parsed.data;
       },
-    }, signal));
+    });
     if (response.ret !== 0) throw new IlinkError('ILINK_RET', 'ILINK_RET: ' + label + ' returned ret=' + String(response.ret));
   }
 
-  private withSignal<T extends RequestSpec<unknown>>(spec: T, signal: AbortSignal | undefined): T | (T & { signal: AbortSignal }) {
-    return signal === undefined ? spec : { ...spec, signal };
-  }
-
-  private async request<T>(spec: RequestSpec<T>): Promise<T> {
+  private async request<T>(spec: {
+    method: 'GET' | 'POST';
+    path: string;
+    label: string;
+    authenticated: boolean;
+    body?: unknown;
+    signal?: AbortSignal;
+    parse: (raw: unknown) => T;
+  }): Promise<T> {
     const url = new URL(spec.path, this.baseUrl);
     const init: RequestInit = {
       method: spec.method,
       headers: this.headers(spec.authenticated),
     };
-    if (spec.body !== undefined) {
-      init.body = JSON.stringify(spec.body);
-    }
-    if (spec.signal !== undefined) {
-      init.signal = spec.signal;
-    }
+    if (spec.body !== undefined) init.body = JSON.stringify(spec.body);
+    if (spec.signal !== undefined) init.signal = spec.signal;
     const response = await this.fetchImpl(url, init);
     if (!response.ok) throw IlinkError.http(spec.label, response.status);
     let raw: unknown;
@@ -163,14 +165,4 @@ export class IlinkApiClient {
     }
     return headers;
   }
-}
-
-interface RequestSpec<T> {
-    method: 'GET' | 'POST';
-    path: string;
-    label: string;
-    authenticated: boolean;
-    body?: unknown;
-    signal?: AbortSignal;
-    parse: (raw: unknown) => T;
 }

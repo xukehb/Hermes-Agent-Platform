@@ -19,6 +19,7 @@ import type {
   TraceEvent,
 } from '../domain/index.js';
 import type { ResolvedAgent, ResolvedPaths } from '../config/index.js';
+import type { TaskExecutionContext, UsageQuery, UsageQueryResult, UsageTelemetryEvent } from '../telemetry/index.js';
 import type { SubagentSpawner } from '../tools/index.js';
 
 /** 任务状态。与 TaskTrace.status 保持同一套取值，避免两处枚举漂移。 */
@@ -44,6 +45,12 @@ export type TaskEvent =
   | { type: 'usage'; usage: TokenUsage };
 
 export type TaskEventSink = (event: TaskEvent) => void;
+export type UsageEventSink = (event: {
+  providerId: string;
+  model: string;
+  usage: TokenUsage;
+  source: 'model_turn' | 'compaction';
+}) => void;
 
 /** 一次循环的产出。messages 为本次新增的消息（不含入参历史），便于增量落库。 */
 export interface LoopResult {
@@ -80,7 +87,9 @@ export interface LoopRequest {
   /** 未注入时 spawn_subagent 会以工具错误拒绝（FR-ROUTE-008） */
   spawn?: SubagentSpawner;
   onEvent?: TaskEventSink;
+  onUsage?: UsageEventSink;
   onTrace?: (event: TraceEvent) => void;
+  executionContext?: TaskExecutionContext | undefined;
 }
 
 /** 任务运行请求（编排层入口）。 */
@@ -104,6 +113,7 @@ export interface RunTaskRequest {
   /** 外部取消信号，与内部任务信号联动（FR-TASK-003） */
   signal?: AbortSignal | undefined;
   onEvent?: TaskEventSink | undefined;
+  executionContext?: TaskExecutionContext | undefined;
 }
 
 /** 任务结果。 */
@@ -142,6 +152,13 @@ export interface UsageRow {
   providerId: string;
   model: string;
   usage: TokenUsage;
+  eventId?: string;
+  taskId?: string;
+  sessionKey?: string;
+  serverId?: string;
+  botAccountId?: string;
+  source?: string;
+  parentTaskId?: string;
 }
 
 /** 用量聚合结果。 */
@@ -176,7 +193,9 @@ export interface SessionStore {
   runningTasks(): TaskRow[];
 
   recordUsage(row: UsageRow): void;
+  recordUsageEvent?(event: UsageTelemetryEvent): boolean;
   usageSince(since: string): UsageAggregate[];
+  queryUsage?(query: UsageQuery): UsageQueryResult;
   /** 某智能体某日已消耗 token 总量，用于日预算闸门（FR-TASK-007） */
   dailyTokens(agentId: string, day: string): number;
 
