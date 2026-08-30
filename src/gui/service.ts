@@ -473,8 +473,11 @@ function targetPath(target: GuiTarget): string {
 }
 
 export class GuiService {
-  private readonly configPath = resolveConfigPath(undefined, process.env);
   private readonly logs: GuiLogEntry[] = [];
+
+  constructor(
+    private readonly configPath = resolveConfigPath(undefined, process.env),
+  ) {}
 
   snapshot(): object {
     const resolver = this.resolver();
@@ -776,6 +779,7 @@ export class GuiService {
 
   upsertAgent(input: {
     id: string;
+    create?: boolean;
     displayName?: string;
     emoji?: string;
     model?: string;
@@ -785,6 +789,9 @@ export class GuiService {
   }): object {
     const id = input.id.trim();
     if (!id) throw new Error('智能体 ID 不能为空');
+    if (input.create && this.resolver().listAgentIds().includes(id)) {
+      throw new Error(`智能体 ID "${id}" 已存在`);
+    }
     const writer = new ConfigWriter(this.configPath);
     // @ts-expect-error patch mapping
     const patch: AgentPatch = {};
@@ -808,6 +815,15 @@ export class GuiService {
     }
     writer.upsertAgent(id, patch);
     this.info('已更新智能体配置：' + id);
+    return { ok: true };
+  }
+
+  removeAgent(rawId: string): object {
+    const id = rawId.trim();
+    if (!id) throw new Error('智能体 ID 不能为空');
+    const writer = new ConfigWriter(this.configPath);
+    writer.removeAgent(id);
+    this.info('已删除智能体配置：' + id);
     return { ok: true };
   }
 
