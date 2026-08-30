@@ -34,6 +34,7 @@ function registerIpc(): void {
   ipcMain.handle('gui:removeModel', (_event, alias) => invoke(() => service.removeModel(alias)));
   ipcMain.handle('gui:batchRemoveModels', (_event, aliases) => invoke(() => service.batchRemoveModels(aliases)));
   ipcMain.handle('gui:upsertAgent', (_event, input) => invoke(() => service.upsertAgent(input)));
+  ipcMain.handle('gui:removeAgent', (_event, id) => invoke(() => service.removeAgent(id)));
   ipcMain.handle('gui:openInVsCode', (_event, path) => invoke(() => service.openInVsCode(path)));
   ipcMain.handle('gui:openInExplorer', (_event, path) => invoke(() => service.openInExplorer(path)));
   ipcMain.handle('gui:openInTerminal', (_event, path) => invoke(() => service.openInTerminal(path)));

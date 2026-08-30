@@ -2203,9 +2203,10 @@ function renderAgents() {
         </div>
       </div>
       <div class="card-footer">
-        <div style="display:flex;gap:6px;margin-left:auto;">
-          <button class="btn secondary" onclick="openAgentDialog('${esc(agent.id)}')">编辑配置</button>
-          <button class="btn primary" onclick="startChatWithAgent('${esc(agent.id)}')">开始对话</button>
+        <div style="display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;">
+          <button type="button" class="btn danger" onclick="deleteAgentRole('${escJs(agent.id)}')">删除</button>
+          <button type="button" class="btn secondary" onclick="openAgentDialog('${escJs(agent.id)}')">编辑配置</button>
+          <button type="button" class="btn primary" onclick="startChatWithAgent('${escJs(agent.id)}')">开始对话</button>
         </div>
       </div>
     </div>
@@ -2232,6 +2233,27 @@ window.openAgentDialog = (agentId) => {
   populateAgentModelOptions(agent.model || '');
 
   $('agentModal').showModal();
+};
+
+window.deleteAgentRole = async (agentId) => {
+  const agent = (state.agents || []).find((item) => item.id === agentId);
+  if (!agent) return;
+
+  const ok = await showConfirm({
+    title: '删除智能体角色',
+    message: `确定删除 <strong>${esc(agent.displayName || agent.name || agent.id)}</strong>（${esc(agent.id)}）吗？<br><br>配置与引用将被删除；工作目录、记忆和会话文件会保留。`,
+    okText: '确认删除',
+    isDanger: true,
+  });
+  if (!ok) return;
+
+  try {
+    await window.hap.removeAgent(agentId);
+    showToast(`智能体 [${agentId}] 已删除`, 'success');
+    await refresh();
+  } catch (error) {
+    showToast('删除智能体失败：' + error.message, 'error');
+  }
 };
 
 window.startChatWithAgent = (agentId) => {

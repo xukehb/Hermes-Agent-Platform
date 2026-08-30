@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest';
 const rendererDir = resolve(process.cwd(), 'src/gui/renderer');
 const html = readFileSync(resolve(rendererDir, 'index.html'), 'utf8');
 const app = readFileSync(resolve(rendererDir, 'app.js'), 'utf8');
+const preload = readFileSync(resolve(rendererDir, 'preload.cjs'), 'utf8');
+const main = readFileSync(resolve(process.cwd(), 'src/gui/main.ts'), 'utf8');
 
 function section(source: string, start: string, end: string): string {
   const startIndex = source.indexOf(start);
@@ -29,5 +31,18 @@ describe('agent role management GUI', () => {
     expect(controller).toContain('agentIdInput.readOnly = false');
     expect(controller).toContain('agentIdInput.readOnly = true');
     expect(controller).toContain("create: agentFormMode === 'create'");
+  });
+
+  it('routes confirmed agent deletion through the service boundary', () => {
+    const controller = section(app, '// 5.5 智能体角色管理', '// 6. 模型目录管理');
+
+    expect(preload).toContain("removeAgent: (id) => call('gui:removeAgent', id)");
+    expect(main).toContain("ipcMain.handle('gui:removeAgent'");
+    expect(main).toContain('service.removeAgent(id)');
+    expect(controller).toContain('window.deleteAgentRole = async');
+    expect(controller).toContain('await showConfirm({');
+    expect(controller).toContain('await window.hap.removeAgent(agentId)');
+    expect(controller).toContain('配置与引用将被删除');
+    expect(controller).toContain('工作目录、记忆和会话文件会保留');
   });
 });
