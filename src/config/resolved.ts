@@ -189,7 +189,8 @@ export interface ResolvedWeChatOfficialAccount {
 }
 
 export interface ResolvedWeChatPersonal {
-  puppet: 'service';
+  puppet: 'ilink' | 'service';
+  ilinkAccountId: string;
   puppetServiceTokenEnv: string;
   puppetServiceEndpoint: string | undefined;
 }

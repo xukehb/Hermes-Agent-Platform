@@ -140,7 +140,7 @@ describe('WeChatChannel 基础测试', () => {
   test('个人微信模式缺少 Puppet 凭据时明确失败', async () => {
     const channel = new WeChatChannel({
       host: new StubHost(),
-      channels: channelsOf(),
+      channels: channelsOf({ personal: { ...BUILTIN_CHANNELS.wechat.personal, puppet: 'service' } }),
       limits,
       paths,
     });

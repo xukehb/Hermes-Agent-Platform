@@ -195,7 +195,8 @@ export const wechatOfficialAccountSchema = z.strictObject({
 });
 
 export const wechatPersonalSchema = z.strictObject({
-  puppet: z.literal('service').optional(),
+  puppet: z.enum(['ilink', 'service']).optional(),
+  ilink_account_id: z.string().min(3).optional(),
   puppet_service_token_env: z.string().min(1).optional(),
   puppet_service_endpoint: z.string().url().optional(),
 });

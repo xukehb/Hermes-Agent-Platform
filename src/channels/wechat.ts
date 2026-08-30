@@ -28,6 +28,7 @@ import type { ResolvedChannels, ResolvedLimits, ResolvedPaths, ResolvedWeChatCha
 import { ConfigError } from '../domain/index.js';
 import { parseBind } from './bind.js';
 import { WechatyPersonalDriver } from './wechat/wechaty-personal-driver.js';
+import { NativeIlinkPersonalDriver } from './wechat/ilink/index.js';
 
 /** 微信个人号驱动状态与事件回调。 */
 export interface WeChatPersonalDriver {
@@ -258,6 +259,13 @@ export class WeChatChannel implements Channel {
   /** 个人微信模式启动。 */
   private async startPersonalMode(): Promise<void> {
     const factory = this.options.personalDriverFactory ?? ((_authDir, log) => {
+      if (this.config.personal.puppet === 'ilink') {
+        return new NativeIlinkPersonalDriver({
+          accountId: this.config.personal.ilinkAccountId,
+          rootDir: _authDir,
+          log,
+        });
+      }
       const opts: { tokenEnv: string; endpoint?: string; env?: Record<string, string | undefined>; log: (line: string) => void } = {
         tokenEnv: this.config.personal.puppetServiceTokenEnv,
         env: this.env,
