@@ -432,6 +432,53 @@ describe('工具执行器', () => {
     expect(results.map((item) => item.callId)).toEqual(['c1', 'c2']);
     expect(results[1]?.content).toBe('first');
   });
+
+  it('control context pins remote tools to the bound server', async () => {
+    const harness = makeHarness('exec-control-pin');
+    harness.ctx.control = {
+      accountId: 'bot-a',
+      bindingId: 'bind-a',
+      serverId: 'local',
+      operatorId: 'op-a',
+      role: 'operator',
+      capabilityProfile: 'operate',
+      requestId: 'req-1',
+    };
+    const registry = new ToolRegistry();
+    registry.register(defineTool({
+      name: 'remote_exec',
+      description: 'remote',
+      schema: z.object({ command: z.string(), server: z.string().optional() }),
+      source: 'test',
+      run: async (args) => ({ content: String(args.server) }),
+    }));
+
+    const result = await new ToolExecutor(registry).execute(
+      call('remote_exec', { command: 'uptime', server: 'remote-2' }),
+      harness.ctx,
+    );
+
+    expect(result.isError).toBe(false);
+    expect(result.content).toBe('local');
+  });
+
+  it('control context blocks mutating remote tools for observe-only users', async () => {
+    const harness = makeHarness('exec-control-block');
+    harness.ctx.control = {
+      accountId: 'bot-a',
+      bindingId: 'bind-a',
+      serverId: 'local',
+      operatorId: 'op-a',
+      role: 'viewer',
+      capabilityProfile: 'observe',
+      requestId: 'req-1',
+    };
+    const executor = new ToolExecutor(ToolRegistry.builtin());
+    const result = await executor.execute(call('remote_exec', { command: 'uptime' }), harness.ctx);
+
+    expect(result.isError).toBe(true);
+    expect(result.content).toContain('CONTROL_FORBIDDEN');
+  });
 });
 
 describe('内置文件工具', () => {
