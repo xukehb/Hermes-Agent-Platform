@@ -21,6 +21,7 @@ import type { ChannelHost } from '../src/channels/index.js';
 import { BUILTIN_CHANNELS, BUILTIN_LIMITS } from '../src/config/index.js';
 import type { ResolvedChannels, ResolvedLimits, ResolvedPaths } from '../src/config/index.js';
 import type { RunTaskRequest, SessionStatus, TaskOutcome, TraceSummary, UsageAggregate } from '../src/agent/index.js';
+import { BotAuthorizationService, ControlPlaneStore } from '../src/control-plane/index.js';
 
 const root = mkdtempSync(join(tmpdir(), 'hap-tg-'));
 
@@ -262,6 +263,84 @@ describe('TelegramChannel 收发闭环', () => {
     const sends = calls.filter((call) => call.method === 'sendMessage');
     expect(sends.length).toBeGreaterThan(0);
     expect(String(sends[0]?.payload['chat_id'])).toBe('777');
+  });
+
+  it('启用控制平面后默认拒绝未配对用户', async () => {
+    const db = new ControlPlaneStore(join(root, 'control-unpaired.sqlite'));
+    db.upsertAccount({
+      id: 'bot-tg',
+      platform: 'telegram',
+      name: 'Ops Telegram',
+      enabled: true,
+      credentialRef: 'bot-tg',
+      transport: 'polling',
+      defaultAgentId: 'ops',
+    });
+    db.bind({
+      id: 'bind-tg',
+      serverId: 'srv-a',
+      botAccountId: 'bot-tg',
+      capabilityProfile: 'operate',
+      approvalPolicy: 'dangerous_local',
+      alertPolicy: {},
+    });
+    const host = new StubHost();
+    const channel = new TelegramChannel({
+      host,
+      channels: channelsOf(),
+      limits,
+      paths,
+      env: { TG_TEST_TOKEN: '12345:fake-token' },
+      control: { botAccountId: 'bot-tg', authorization: new BotAuthorizationService(db) },
+    });
+    const calls: ApiCall[] = [];
+    installFakeApi(channel, calls);
+
+    await feed(channel, updateOf('重启服务器'));
+
+    expect(host.requests).toHaveLength(0);
+    expect(sentTexts(calls).join('\n')).toContain('尚未配对');
+    db.close();
+  });
+
+  it('已配对用户的请求携带服务器绑定执行上下文', async () => {
+    const db = new ControlPlaneStore(join(root, 'control-paired.sqlite'));
+    db.upsertAccount({
+      id: 'bot-tg2',
+      platform: 'telegram',
+      name: 'Ops Telegram',
+      enabled: true,
+      credentialRef: 'bot-tg2',
+      transport: 'polling',
+      defaultAgentId: 'ops',
+    });
+    db.bind({
+      id: 'bind-tg2',
+      serverId: 'srv-bound',
+      botAccountId: 'bot-tg2',
+      capabilityProfile: 'operate',
+      approvalPolicy: 'dangerous_local',
+      alertPolicy: {},
+    });
+    db.upsertOperator({ id: 'op-tg', botAccountId: 'bot-tg2', platformUserId: '42', role: 'operator' });
+    const host = new StubHost();
+    const channel = new TelegramChannel({
+      host,
+      channels: channelsOf(),
+      limits,
+      paths,
+      env: { TG_TEST_TOKEN: '12345:fake-token' },
+      control: { botAccountId: 'bot-tg2', authorization: new BotAuthorizationService(db) },
+    });
+    const calls: ApiCall[] = [];
+    installFakeApi(channel, calls);
+
+    await feed(channel, updateOf('检查磁盘空间'));
+
+    expect(host.requests[0]?.executionContext?.serverId).toBe('srv-bound');
+    expect(host.requests[0]?.executionContext?.botAccountId).toBe('bot-tg2');
+    expect(host.requests[0]?.executionContext?.control?.operatorId).toBe('op-tg');
+    db.close();
   });
 
   it('唤起词被剥离并解析为显式智能体路由', async () => {

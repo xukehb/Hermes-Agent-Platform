@@ -19,13 +19,14 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { ChannelDispatcher, describeError } from './dispatcher.js';
-import { extractMention, stripWakeWord } from './command-parser.js';
+import { extractMention, parseCommand, stripWakeWord } from './command-parser.js';
 import { OutboundSender } from './outbound.js';
 import type { Channel, ChannelAttachments, ChannelHost, InboundMessage, OutboundTarget } from './types.js';
 import type { AttachmentKind } from '../domain/index.js';
 import type { ResolvedChannels, ResolvedLimits, ResolvedPaths } from '../config/index.js';
 import { ConfigError } from '../domain/index.js';
 import { parseBind } from './bind.js';
+import { BotAuthorizationService, ControlPlaneError, type ControlExecutionContext } from '../control-plane/index.js';
 
 /** Telegram 通道依赖。 */
 export interface TelegramChannelOptions {
@@ -36,6 +37,8 @@ export interface TelegramChannelOptions {
   env: Record<string, string | undefined>;
   /** 日志回调；不注入则静默 */
   log?: (line: string) => void;
+  /** 可选控制平面授权；启用后默认拒绝未配对的平台用户。 */
+  control?: { botAccountId: string; authorization: BotAuthorizationService } | undefined;
 }
 
 /** Telegram 编辑失败中可以当成成功的错误文案。 */
@@ -178,6 +181,9 @@ export class TelegramChannel implements Channel {
       body = stripWakeWord(raw, mentionPatterns, known).text;
     }
     this.chatIds.add(chatId);
+    const platformUserId = ctx.from?.id === undefined ? chatId : String(ctx.from.id);
+    const control = await this.authorizeControl(platformUserId, body, chatId);
+    if (control === false) return;
     const mention = extractMention(body, known);
     const message: InboundMessage = {
       channel: 'telegram',
@@ -192,6 +198,13 @@ export class TelegramChannel implements Channel {
     if (defaultAgent !== undefined) {
       message.defaultAgent = defaultAgent;
     }
+    if (control !== undefined) {
+      message.executionContext = {
+        serverId: control.serverId,
+        botAccountId: control.accountId,
+        control,
+      };
+    }
     try {
       const attachments = await this.downloadAttachments(ctx);
       if (attachments.length > 0) {
@@ -201,6 +214,43 @@ export class TelegramChannel implements Channel {
       this.log('Telegram 附件下载失败：' + describeError(error));
     }
     this.dispatcher.submit(message);
+  }
+
+  private async authorizeControl(platformUserId: string, body: string, chatId: string): Promise<ControlExecutionContext | undefined | false> {
+    const control = this.options.control;
+    if (control === undefined) return undefined;
+    const pair = /^\/pair\s+([0-9]{6})\s*$/i.exec(body.trim());
+    if (pair !== null) {
+      try {
+        const operator = control.authorization.consumePairingCode({
+          botAccountId: control.botAccountId,
+          code: pair[1] ?? '',
+          platformUserId,
+        });
+        await this.sender.send(this.target(chatId), `✅ 已配对成功，当前权限：${operator.role}`, this.charLimit);
+      } catch (error) {
+        await this.sender.send(this.target(chatId), '✗ 配对失败：验证码无效、过期或已使用。', this.charLimit);
+      }
+      return false;
+    }
+    try {
+      return control.authorization.authorizeInbound({
+        botAccountId: control.botAccountId,
+        platformUserId,
+        requestId: `${control.botAccountId}:${chatId}:${Date.now()}`,
+        commandKind: normalizeCommandKindForControl(parseCommand(body).kind),
+      });
+    } catch (error) {
+      if (error instanceof ControlPlaneError && error.code === 'CONTROL_FORBIDDEN') {
+        await this.sender.send(
+          this.target(chatId),
+          '⚠ 当前用户尚未配对，已拒绝执行。\n请先在桌面端为该 Bot 生成配对码，然后在此发送 /pair 123456 完成绑定。',
+          this.charLimit,
+        );
+        return false;
+      }
+      throw error;
+    }
   }
 
   /**
@@ -295,6 +345,10 @@ export class TelegramChannel implements Channel {
   private log(line: string): void {
     this.options.log?.(line);
   }
+}
+
+function normalizeCommandKindForControl(kind: ReturnType<typeof parseCommand>['kind']): string {
+  return kind === 'sh' ? 'shell' : kind;
 }
 
 /**
