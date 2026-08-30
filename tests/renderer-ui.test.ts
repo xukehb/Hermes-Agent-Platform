@@ -98,4 +98,10 @@ describe('Electron renderer UI contracts', () => {
     const finallyBlock = section(scan, '} finally {', '}\n}\n');
     expect(finallyBlock).toContain('clearInterval(stepTimer)');
   });
+
+  it('does not show providers as ready based only on stored credentials', () => {
+    expect(app).toContain('healthStatus');
+    expect(app).not.toContain("Boolean(p.hasCredential) || p.id === 'ollama' || p.envKey === undefined");
+    expect(app).not.toContain("p.hasCredential;");
+  });
 });

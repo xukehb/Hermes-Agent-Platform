@@ -479,6 +479,7 @@ function targetPath(target: GuiTarget): string {
 export class GuiService {
   private readonly configPath = resolveConfigPath(undefined, process.env);
   private readonly logs: GuiLogEntry[] = [];
+  private readonly providerHealth = new Map<string, { reachable: boolean; checkedAt: number; error?: string }>();
   private readonly botControl = new BotControlFacade({
     dbPath: BOT_CONTROL_DB_PATH,
     credentialsDir: BOT_CREDENTIALS_DIR,
@@ -493,10 +494,18 @@ export class GuiService {
 
     const providers = [...resolver.resolveProviders().values()]
       .filter((provider) => !hiddenProviders.has(provider.id))
-      .map((provider) => ({
-        ...provider,
-        hasCredential: registry.hasCredential(provider),
-      }));
+      .map((provider) => {
+        const health = this.providerHealth.get(provider.id);
+        const fresh = health !== undefined && Date.now() - health.checkedAt <= 60_000;
+        const hasCredential = registry.hasCredential(provider);
+        return {
+          ...provider,
+          hasCredential,
+          healthStatus: fresh && health.reachable ? 'ok' : hasCredential ? 'unknown' : 'missing_credentials',
+          healthCheckedAt: fresh ? new Date(health.checkedAt).toISOString() : undefined,
+          healthError: fresh ? health.error : undefined,
+        };
+      });
 
     const models = [...resolver.resolveModels().values()]
       .filter((model) => !hiddenModels.has(model.alias) && !hiddenProviders.has(model.providerId));
@@ -995,6 +1004,7 @@ export class GuiService {
         const resolver = this.resolver();
         const registry = new ProviderRegistry(resolver.resolveProviders(), { env: process.env });
         const result = await registry.check(id, controller.signal);
+        this.providerHealth.set(id, { reachable: result.reachable, checkedAt: Date.now(), ...(result.error === undefined ? {} : { error: result.error }) });
         if (result.reachable) {
           this.info(`测试服务商 ${id}：可达`);
         } else {
@@ -1041,6 +1051,7 @@ export class GuiService {
       const tempMap = new Map<string, ResolvedProvider>([[id, tempProvider]]);
       const registry = new ProviderRegistry(tempMap, { env: tempEnv });
       const result = await registry.check(id, controller.signal);
+      this.providerHealth.set(id, { reachable: result.reachable, checkedAt: Date.now(), ...(result.error === undefined ? {} : { error: result.error }) });
       if (result.reachable) {
         this.info(`测试服务商 ${id} (实时动态参数)：可达`);
       } else {
