@@ -13,12 +13,13 @@ export function generateRemoteDaemonScript(options: { port: number; token: strin
 import http from 'node:http';
 import os from 'node:os';
 import fs from 'node:fs';
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 
 const PORT = ${options.port};
 const AUTH_TOKEN = ${JSON.stringify(options.token)};
 const START_TIME = Date.now();
+const PROTECTED_PIDS = new Set([process.pid, 1]);
 
 function getCpuUsage() {
   const cpus = os.cpus();
@@ -67,8 +68,35 @@ function getSystemInfo() {
     usedMemPercent,
     loadAvg: os.loadavg().map(n => Number(n.toFixed(2))),
     nodeVersion: process.version,
+    ...getDiskInfo(),
     timestamp: Date.now(),
   };
+}
+
+function getDiskInfo() {
+  try {
+    const line = execFileSync('df', ['-kP', '/'], { encoding: 'utf8' }).trim().split(/\\r?\\n/).pop() || '';
+    const m = line.match(/^\\S+\\s+(\\d+)\\s+(\\d+)\\s+(\\d+)\\s+(\\d+)%\\s+(.+)$/);
+    if (m) {
+      const total = Number(m[1]) * 1024;
+      const used = Number(m[2]) * 1024;
+      const free = Number(m[3]) * 1024;
+      return { diskTotalBytes: total, diskFreeBytes: free, diskUsedBytes: used, diskUsedPercent: Number(m[4]), diskMount: m[5] };
+    }
+  } catch {}
+  return { diskTotalBytes: 0, diskFreeBytes: 0, diskUsedBytes: 0, diskUsedPercent: 0 };
+}
+
+function listProcesses(limit) {
+  const n = Math.max(1, Math.min(500, Number(limit) || 100));
+  try {
+    const text = execFileSync('ps', ['-eo', 'pid=,ppid=,user=,%cpu=,%mem=,lstart=,etimes=,args='], { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 });
+    const processes = text.split(/\\r?\\n/).filter(Boolean).slice(0, n).map(line => {
+      const m = line.trim().match(/^(\\d+)\\s+(\\d+)\\s+(\\S+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+(.{24})\\s+(\\d+)\\s+(.*)$/);
+      return m ? { pid: Number(m[1]), ppid: Number(m[2]), user: m[3], cpuPercent: Number(m[4]), memPercent: Number(m[5]), startTime: m[6].trim(), elapsedSeconds: Number(m[7]), command: m[8] || '' } : null;
+    }).filter(Boolean);
+    return { processes, limit: n, timestamp: Date.now() };
+  } catch { return { processes: [], limit: n, timestamp: Date.now() }; }
 }
 
 process.on('uncaughtException', (err) => {
@@ -112,6 +140,57 @@ const server = http.createServer(async (req, res) => {
   if (req.url === '/api/sysinfo' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: true, data: getSystemInfo() }));
+    return;
+  }
+
+  if (req.method === 'GET' && req.url?.startsWith('/api/processes')) {
+    const query = new URL(req.url, 'http://localhost').searchParams;
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, data: listProcesses(query.get('limit')) }));
+    return;
+  }
+
+  if (req.method === 'POST' && req.url?.match(/^\\/api\\/processes\\/[^/]+\\/kill$/)) {
+    const pidText = req.url.split('/')[3] || '';
+    const pid = Number(pidText);
+    if (!Number.isInteger(pid) || pid <= 0) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, error: 'Invalid PID' }));
+      return;
+    }
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      let payload = {};
+      try { payload = JSON.parse(body || '{}'); } catch {}
+      const signal = payload.signal;
+      if (signal !== 'TERM' && signal !== 'KILL') {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'Invalid signal' }));
+        return;
+      }
+      if (PROTECTED_PIDS.has(pid)) {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'Protected PID' }));
+        return;
+      }
+      if (payload.expectedStartTime) {
+        const current = listProcesses(500).processes.find(p => p && p.pid === pid);
+        if (!current || current.startTime !== payload.expectedStartTime) {
+          res.writeHead(409, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: 'Process start time mismatch' }));
+          return;
+        }
+      }
+      try {
+        process.kill(pid, signal === 'KILL' ? 'SIGKILL' : 'SIGTERM');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, data: { pid, signal, killed: true } }));
+      } catch (err) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: err.message }));
+      }
+    });
     return;
   }
 

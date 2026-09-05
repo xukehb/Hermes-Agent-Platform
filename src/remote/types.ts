@@ -16,7 +16,36 @@ export interface RemoteSystemInfo {
   nodeVersion?: string | undefined;
   diskFreeBytes?: number | undefined;
   diskTotalBytes?: number | undefined;
+  diskUsedBytes?: number | undefined;
+  diskUsedPercent?: number | undefined;
   timestamp: number;
+}
+
+export interface RemoteProcess {
+  pid: number;
+  ppid?: number;
+  user?: string;
+  cpuPercent: number;
+  memPercent: number;
+  startTime?: string;
+  elapsedSeconds?: number;
+  command: string;
+}
+
+export interface RemoteProcessList {
+  processes: RemoteProcess[];
+  limit: number;
+  timestamp: number;
+}
+
+export type RemoteProcessSignal = 'TERM' | 'KILL';
+
+export interface RemoteProcessKillResult {
+  pid: number;
+  signal: RemoteProcessSignal;
+  killed: boolean;
+  protected?: boolean;
+  message?: string;
 }
 
 export interface ServerBotConfig {
