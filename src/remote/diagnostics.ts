@@ -8,13 +8,13 @@ export const REMOTE_CLEANUP_COMMANDS = Object.freeze({
 export function parseRemoteProcessOutput(output: string, limit = 100): RemoteProcessList {
   const bounded = Math.max(1, Math.min(500, Math.floor(limit) || 100));
   const processes: RemoteProcess[] = [];
-  for (const line of output.split(/\r?\n/).slice(1)) {
-    const match = line.trim().match(/^(\d+)\s+(\d+)\s+(\S+)\s+([\d.]+)\s+([\d.]+)\s+(\S+)\s+(\d+)\s+(.*)$/);
+  for (const line of output.split(/\r?\n/)) {
+    const match = line.trim().match(/^(\d+)\s+(\d+)\s+(\S+)\s+([\d.]+)\s+([\d.]+)\s+(\d+)\s+(.*)$/);
     if (!match) continue;
     processes.push({
       pid: Number(match[1]), ppid: Number(match[2]), user: match[3]!,
-      cpuPercent: Number(match[4]), memPercent: Number(match[5]), startTime: match[6]!,
-      elapsedSeconds: Number(match[7]), command: match[8] || '',
+      cpuPercent: Number(match[4]), memPercent: Number(match[5]),
+      elapsedSeconds: Number(match[6]), startTime: new Date(Date.now() - Number(match[6]) * 1000).toISOString(), command: match[7] || '',
     });
     if (processes.length >= bounded) break;
   }

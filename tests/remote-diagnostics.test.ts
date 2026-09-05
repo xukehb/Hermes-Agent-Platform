@@ -1,4 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { spawn } from 'node:child_process';
+import http from 'node:http';
 import {
   parseRemoteProcessOutput,
   parseRemoteDiskOutput,
@@ -9,15 +14,14 @@ import { generateRemoteDaemonScript } from '../src/remote/daemon-script.js';
 describe('remote diagnostics parsers', () => {
   it('parses ps output with process fields and bounded limit', () => {
     const output = [
-      'PID PPID USER %CPU %MEM START ELAPSED COMMAND',
-      '123 1 root 12.5 3.2 2026-09-05T01:02:03Z 99 node server.js',
-      '456 123 app 0.1 0.4 2026-09-05T01:03:00Z 42 /usr/bin/worker --once',
+      '123 1 root 12.5 3.2 99 node server.js',
+      '456 123 app 0.1 0.4 42 /usr/bin/worker --once',
     ].join('\n');
     const result = parseRemoteProcessOutput(output, 1);
     expect(result.processes).toHaveLength(1);
     expect(result.processes[0]).toMatchObject({
       pid: 123, ppid: 1, user: 'root', cpuPercent: 12.5, memPercent: 3.2,
-      startTime: '2026-09-05T01:02:03Z', elapsedSeconds: 99, command: 'node server.js',
+      elapsedSeconds: 99, command: 'node server.js',
     });
     expect(result.limit).toBe(1);
   });
@@ -50,5 +54,24 @@ describe('generated daemon diagnostics contract', () => {
     expect(script).toContain('Invalid PID');
     expect(script).toContain('PROTECTED_PIDS');
     expect(script).toContain('Unauthorized');
+  });
+
+  it('enforces auth, PID protections, signal validation, and successful TERM', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'hap-daemon-'));
+    const scriptPath = join(dir, 'daemon.mjs');
+    const port = 39871 + Math.floor(Math.random() * 500);
+    writeFileSync(scriptPath, generateRemoteDaemonScript({ port, token: 'secret' }));
+    const child = spawn(process.execPath, [scriptPath]);
+    try {
+      await new Promise<void>((resolve, reject) => { const t = setTimeout(() => reject(new Error('daemon start timeout')), 3000); child.stdout.on('data', d => { if (String(d).includes('Server running')) { clearTimeout(t); resolve(); } }); child.on('error', reject); });
+    const request = (method: string, path: string, body?: unknown, token?: string) => new Promise<{ status: number; data: any }>((resolve, reject) => { const payload = body === undefined ? undefined : JSON.stringify(body); const req = http.request({ hostname: '127.0.0.1', port, path, method, headers: { ...(payload ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } : {}), ...(token ? { 'X-HAP-Token': token } : {}) } }, res => { let text = ''; res.on('data', c => text += c); res.on('end', () => resolve({ status: res.statusCode || 0, data: JSON.parse(text || '{}') })); }); req.on('error', reject); if (payload) req.write(payload); req.end(); });
+    expect((await request('GET', '/api/processes')).status).toBe(401);
+    expect((await request('GET', '/api/processes?limit=2', undefined, 'secret')).status).toBe(200);
+    expect((await request('POST', '/api/processes/nope/kill', { signal: 'TERM' }, 'secret')).status).toBe(400);
+    expect((await request('POST', '/api/processes/1/kill', { signal: 'TERM' }, 'secret')).status).toBe(403);
+    expect((await request('POST', `/api/processes/${child.pid}/kill`, { signal: 'TERM' }, 'secret')).status).toBe(403);
+    expect((await request('POST', '/api/processes/1/kill', { signal: 'BOGUS' }, 'secret')).status).toBe(400);
+      expect((await request('POST', '/api/processes/1/kill', { signal: 'TERM', expectedStartTime: 'wrong' }, 'secret')).status).toBe(403);
+    } finally { child.kill('SIGKILL'); rmSync(dir, { recursive: true, force: true }); }
   });
 });

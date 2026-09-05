@@ -90,11 +90,11 @@ function getDiskInfo() {
 function listProcesses(limit) {
   const n = Math.max(1, Math.min(500, Number(limit) || 100));
   try {
-    const text = execFileSync('ps', ['-eo', 'pid=,ppid=,user=,%cpu=,%mem=,lstart=,etimes=,args='], { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 });
-    const processes = text.split(/\\r?\\n/).filter(Boolean).slice(0, n).map(line => {
-      const m = line.trim().match(/^(\\d+)\\s+(\\d+)\\s+(\\S+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+(.{24})\\s+(\\d+)\\s+(.*)$/);
-      return m ? { pid: Number(m[1]), ppid: Number(m[2]), user: m[3], cpuPercent: Number(m[4]), memPercent: Number(m[5]), startTime: m[6].trim(), elapsedSeconds: Number(m[7]), command: m[8] || '' } : null;
-    }).filter(Boolean);
+    const text = execFileSync('ps', ['-eo', 'pid=,ppid=,user=,%cpu=,%mem=,etimes=,args='], { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 });
+    const processes = text.split(/\\r?\\n/).filter(Boolean).map(line => {
+      const m = line.trim().match(/^(\\d+)\\s+(\\d+)\\s+(\\S+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+(\\d+)\\s+(.*)$/);
+      return m ? { pid: Number(m[1]), ppid: Number(m[2]), user: m[3], cpuPercent: Number(m[4]), memPercent: Number(m[5]), elapsedSeconds: Number(m[6]), startTime: new Date(Date.now() - Number(m[6]) * 1000).toISOString(), command: m[7] || '' } : null;
+    }).filter(Boolean).slice(0, n);
     return { processes, limit: n, timestamp: Date.now() };
   } catch { return { processes: [], limit: n, timestamp: Date.now() }; }
 }
