@@ -72,6 +72,11 @@ describe('generated daemon diagnostics contract', () => {
     expect((await request('POST', `/api/processes/${child.pid}/kill`, { signal: 'TERM' }, 'secret')).status).toBe(403);
     expect((await request('POST', '/api/processes/1/kill', { signal: 'BOGUS' }, 'secret')).status).toBe(400);
       expect((await request('POST', '/api/processes/1/kill', { signal: 'TERM', expectedStartTime: 'wrong' }, 'secret')).status).toBe(403);
+      const target = spawn('sleep', ['30']);
+      expect((await request('POST', `/api/processes/${target.pid}/kill`, { signal: 'TERM' }, 'secret')).status).toBe(200);
+      target.kill('SIGKILL');
+      const targetKill = spawn('sleep', ['30']);
+      expect((await request('POST', `/api/processes/${targetKill.pid}/kill`, { signal: 'KILL' }, 'secret')).status).toBe(200);
     } finally { child.kill('SIGKILL'); rmSync(dir, { recursive: true, force: true }); }
   });
 });
