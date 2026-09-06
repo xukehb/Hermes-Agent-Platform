@@ -21,6 +21,7 @@ import { join } from 'node:path';
 import { ChannelDispatcher, describeError } from './dispatcher.js';
 import { extractMention, parseCommand, stripWakeWord } from './command-parser.js';
 import { OutboundSender } from './outbound.js';
+import { formatTelegramHtml } from './telegram-formatter.js';
 import type { Channel, ChannelAttachments, ChannelHost, InboundMessage, OutboundTarget } from './types.js';
 import type { AttachmentKind } from '../domain/index.js';
 import type { ResolvedChannels, ResolvedLimits, ResolvedPaths } from '../config/index.js';
@@ -310,16 +311,46 @@ export class TelegramChannel implements Channel {
     this.log('Telegram webhook 已注册：' + webhook.url + '（监听 ' + webhook.bind + webhook.path + '）');
   }
 
-  /** 构造回写目标：send 走 sendMessage，edit 吞掉幂等错误。 */
+  /** 构造回写目标：默认采用富文本 HTML 格式发送，失败时自动降级为纯文本，edit 吞掉幂等错误。 */
   private target(chatId: string): OutboundTarget {
     return {
       channel: 'telegram',
       targetId: chatId,
       send: async (text: string) => {
+        const html = formatTelegramHtml(text);
+        const useHtml = this.charLimit <= 0 || html.length <= this.charLimit;
+        if (useHtml) {
+          try {
+            const sent = await this.bot.api.sendMessage(chatId, html, {
+              parse_mode: 'HTML',
+              link_preview_options: { is_disabled: true },
+            });
+            return String(sent.message_id);
+          } catch (error) {
+            this.log('Telegram HTML 发送失败，降级为纯文本：' + describeError(error));
+          }
+        }
         const sent = await this.bot.api.sendMessage(chatId, text);
         return String(sent.message_id);
       },
       edit: async (messageId: string, text: string) => {
+        const html = formatTelegramHtml(text);
+        const useHtml = this.charLimit <= 0 || html.length <= this.charLimit;
+        if (useHtml) {
+          try {
+            await this.bot.api.editMessageText(chatId, Number(messageId), html, {
+              parse_mode: 'HTML',
+              link_preview_options: { is_disabled: true },
+            });
+            return true;
+          } catch (error) {
+            const description = describeError(error).toLowerCase();
+            if (IDEMPOTENT_EDIT_HINTS.some((hint) => description.includes(hint))) {
+              return true;
+            }
+            this.log('Telegram HTML 编辑失败，尝试纯文本兜底：' + describeError(error));
+          }
+        }
         try {
           await this.bot.api.editMessageText(chatId, Number(messageId), text);
           return true;

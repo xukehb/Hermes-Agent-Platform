@@ -38,6 +38,7 @@ import { join } from 'node:path';
 import { ChannelDispatcher, describeError } from './dispatcher.js';
 import { extractMention, stripWakeWord } from './command-parser.js';
 import { OutboundSender } from './outbound.js';
+import { formatWhatsAppText } from './whatsapp-formatter.js';
 import type { Channel, ChannelAttachments, ChannelHost, InboundMessage, OutboundTarget } from './types.js';
 import type { AttachmentKind } from '../domain/index.js';
 import type { ResolvedChannels, ResolvedLimits, ResolvedPaths } from '../config/index.js';
@@ -405,7 +406,8 @@ export class WhatsAppChannel implements Channel {
         if (sock === undefined) {
           throw new Error('WhatsApp 连接尚未建立');
         }
-        const sent = await sock.sendMessage(jid, { text });
+        const formatted = formatWhatsAppText(text);
+        const sent = await sock.sendMessage(jid, { text: formatted });
         return sent?.key.id ?? undefined;
       },
     };

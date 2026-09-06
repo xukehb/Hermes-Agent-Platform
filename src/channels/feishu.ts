@@ -21,6 +21,7 @@ import { extractMention, parseCommand, stripWakeWord } from './command-parser.js
 import { OutboundSender } from './outbound.js';
 import { ChannelContactStore } from './contacts-store.js';
 import { parseBind } from './bind.js';
+import { buildFeishuCard, formatFeishuMarkdown } from './feishu-formatter.js';
 import type { Channel, ChannelHost, InboundMessage, OutboundTarget } from './types.js';
 import type { ResolvedChannels, ResolvedLimits, ResolvedPaths } from '../config/index.js';
 import { BotAuthorizationService, ControlPlaneError, type ControlExecutionContext } from '../control-plane/index.js';
@@ -442,32 +443,8 @@ export class FeishuChannel implements Channel {
         const receiveIdType = isChatId ? 'chat_id' : 'open_id';
         const url = `https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=${receiveIdType}`;
 
-        // 构造飞书 Markdown 交互卡片
-        const cardContent = {
-          config: { wide_screen_mode: true },
-          header: {
-            template: 'blue',
-            title: { tag: 'plain_text', content: 'HAP 智能体协同回执' },
-          },
-          elements: [
-            {
-              tag: 'markdown',
-              content: text,
-            },
-            {
-              tag: 'hr',
-            },
-            {
-              tag: 'note',
-              elements: [
-                {
-                  tag: 'plain_text',
-                  content: `Hermes Agent Platform · ${new Date().toLocaleTimeString()}`,
-                },
-              ],
-            },
-          ],
-        };
+        // 构造飞书 Markdown 交互卡片（根据消息状态自动适配主题配色与标题）
+        const cardContent = buildFeishuCard(text);
 
         const resp = await fetch(url, {
           method: 'POST',
@@ -496,14 +473,13 @@ export class FeishuChannel implements Channel {
     const webhookUrl = this.getWebhookUrl();
     if (webhookUrl) {
       try {
+        const cardContent = buildFeishuCard(text);
         await fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             msg_type: 'interactive',
-            card: {
-              elements: [{ tag: 'markdown', content: text }],
-            },
+            card: cardContent,
           }),
         });
         return `feishu_hook_${Date.now()}`;

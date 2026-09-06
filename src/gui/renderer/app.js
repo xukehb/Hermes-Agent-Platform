@@ -491,15 +491,15 @@ function renderMarkdownContent(rawText) {
   safe = safe.replace(/^---+$/gim, '<hr style="border:none;border-top:1px solid var(--border-default);margin:14px 0;" />');
 
   // 引用块 (Blockquote)
-  safe = safe.replace(/^\> (.*$)/gim, '<blockquote style="margin:8px 0;padding:6px 12px;border-left:3px solid #38bdf8;background:#f0f9ff;color:#0369a1;border-radius:0 6px 6px 0;font-size:12.5px;">$1</blockquote>');
+  safe = safe.replace(/^\> (.*$)/gim, '<blockquote class="md-quote">$1</blockquote>');
 
   // 任务复选框
-  safe = safe.replace(/^[\*\-] \[ \] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:center;gap:6px;margin:3px 0;"><span style="color:#94a3b8;font-size:14px;">☐</span><span>$1</span></div>');
-  safe = safe.replace(/^[\*\-] \[x\] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:center;gap:6px;margin:3px 0;"><span style="color:#16a34a;font-weight:700;font-size:14px;">☑</span><span style="text-decoration:line-through;color:var(--text-muted);">$1</span></div>');
+  safe = safe.replace(/^[\*\-] \[ \] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:center;gap:6px;margin:3px 0;"><span style="color:var(--text-muted);font-size:14px;">☐</span><span>$1</span></div>');
+  safe = safe.replace(/^[\*\-] \[x\] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:center;gap:6px;margin:3px 0;"><span style="color:var(--success);font-weight:700;font-size:14px;">☑</span><span style="text-decoration:line-through;color:var(--text-muted);">$1</span></div>');
 
   // 无序列表与有序列表
-  safe = safe.replace(/^[*-] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:baseline;gap:6px;margin:3px 0;"><span class="md-bullet" style="color:#0284c7;font-weight:bold;">•</span><span>$1</span></div>');
-  safe = safe.replace(/^(\d+)\. (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:baseline;gap:6px;margin:3px 0;"><span class="md-number" style="color:#64748b;font-weight:600;font-family:var(--font-mono);font-size:12px;">$1.</span><span>$2</span></div>');
+  safe = safe.replace(/^[*-] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:baseline;gap:6px;margin:3px 0;"><span class="md-bullet" style="color:var(--primary);font-weight:bold;">•</span><span>$1</span></div>');
+  safe = safe.replace(/^(\d+)\. (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:baseline;gap:6px;margin:3px 0;"><span class="md-number" style="color:var(--text-muted);font-weight:600;font-family:var(--font-mono);font-size:12px;">$1.</span><span>$2</span></div>');
 
   // 行内元素解析 (图片、加粗、代码)
   safe = parseInlineMarkdown(safe, false);
@@ -563,7 +563,7 @@ function parseInlineMarkdown(text, doEscape = true) {
   s = s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
   // 行内代码
-  s = s.replace(/`([^\`]+)`/g, '<code class="md-inline-code" style="background:#f1f5f9;color:#0f172a;padding:2px 6px;border-radius:4px;font-size:11.5px;font-family:var(--font-mono);border:1px solid #e2e8f0;">$1</code>');
+  s = s.replace(/`([^\`]+)`/g, '<code class="md-inline-code">$1</code>');
 
   return s;
 }
@@ -582,13 +582,30 @@ window.viewCodeSnippet = (lang, encoded) => {
 // 树形项目与会话导航系统 (Tree View Navigation · 100% 稳定显示)
 // ==========================================================================
 
-function renderProjectsTree() {
+function renderProjectsTree(filterQuery = '') {
   const container = $('projectsTreeContainer');
   if (!container) return;
 
-  const projects = state.projects || [];
+  const query = (filterQuery || '').toLowerCase().trim();
+  const allProjects = state.projects || [];
+  const projects = query
+    ? allProjects.filter((p) => {
+        if (p.name.toLowerCase().includes(query) || (p.path || '').toLowerCase().includes(query)) return true;
+        const pNorm = normPath(p.path);
+        return sessions.some((s) => normPath(s.projectPath) === pNorm && (s.title || '').toLowerCase().includes(query));
+      })
+    : allProjects;
 
   if (projects.length === 0) {
+    if (query) {
+      container.innerHTML = `
+        <div style="padding:16px 12px;text-align:center;color:var(--text-muted);font-size:12px;">
+          未搜索到匹配的项目或会话
+        </div>
+      `;
+      return;
+    }
+
     // 渲染通用会话
     const genericSessions = sessions.map((s) => {
       const isActive = s.id === currentSessionId;
@@ -627,7 +644,10 @@ function renderProjectsTree() {
 
     const projectSessions = sessions.filter((s) => {
       const sNorm = normPath(s.projectPath);
-      return sNorm === pNorm || (!sNorm && pNorm === activeNorm);
+      const matchesProject = sNorm === pNorm || (!sNorm && pNorm === activeNorm);
+      if (!matchesProject) return false;
+      if (!query) return true;
+      return (s.title || '').toLowerCase().includes(query);
     });
 
     const MAX_VISIBLE = 5;
@@ -1219,8 +1239,7 @@ $('newChatBtn')?.addEventListener('click', startNewChat);
 
 // 全局辅助按钮
 $('globalHistoryBtn')?.addEventListener('click', () => {
-  show('chat');
-  showToast('已显示全部工程对话列表', 'info');
+  openGlobalHistoryModal();
 });
 
 $('scheduledTasksBtn')?.addEventListener('click', () => {
@@ -1241,6 +1260,209 @@ $('importProjectQuickBtn')?.addEventListener('click', async () => {
     showToast('导入目录失败：' + error.message, 'error');
   }
 });
+
+// ==========================================================================
+// 全局历史会话检索与项目过滤
+// ==========================================================================
+
+function openGlobalHistoryModal() {
+  const modal = $('globalHistoryModal');
+  if (!modal) return;
+  modal.showModal();
+  renderGlobalHistoryList();
+  const input = $('globalHistorySearchInput');
+  if (input) {
+    input.value = '';
+    setTimeout(() => input.focus(), 50);
+  }
+}
+
+function renderGlobalHistoryList(query = '') {
+  const container = $('globalHistoryListContainer');
+  if (!container) return;
+
+  const q = query.toLowerCase().trim();
+  const allSessions = [...sessions].sort((a, b) => {
+    const tA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+    const tB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+    return tB - tA;
+  });
+
+  const filtered = q ? allSessions.filter((s) => {
+    if ((s.title || '').toLowerCase().includes(q)) return true;
+    return s.messages && s.messages.some((m) => (m.content || '').toLowerCase().includes(q));
+  }) : allSessions;
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;">
+        ${q ? '没有找到匹配的会话记录' : '暂无任何历史会话'}
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = filtered.map((s) => {
+    const proj = state.projects.find((p) => normPath(p.path) === normPath(s.projectPath));
+    const projName = proj?.name || (s.projectPath ? s.projectPath.split(/[\\/]/).pop() : '默认工程');
+    const msgCount = (s.messages || []).length;
+    const timeStr = getRelativeTimeStr(s.updatedAt || s.createdAt);
+    const lastMsg = s.messages && s.messages.length > 0 ? (s.messages[s.messages.length - 1].content || '') : '';
+    const safeTitle = esc(s.title || '新对话');
+    const safeSnippet = esc(lastMsg.slice(0, 80));
+
+    return `
+      <div class="history-search-card" onclick="window.selectAndOpenSession('${esc(s.id)}')">
+        <div class="history-search-header">
+          <span class="history-search-title">${safeTitle}</span>
+          <span class="history-search-time">${esc(timeStr)}</span>
+        </div>
+        ${safeSnippet ? `<div class="history-search-preview">${safeSnippet}</div>` : ''}
+        <div class="history-search-meta">
+          <span class="history-search-badge project">${esc(projName)}</span>
+          <span class="history-search-badge">${msgCount} 条消息</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+window.selectAndOpenSession = (sessionId) => {
+  $('globalHistoryModal')?.close();
+  show('chat');
+  window.switchSession(sessionId);
+};
+
+$('closeGlobalHistoryModalBtn')?.addEventListener('click', () => {
+  $('globalHistoryModal')?.close();
+});
+
+$('globalHistorySearchInput')?.addEventListener('input', (e) => {
+  renderGlobalHistoryList(e.target.value);
+});
+
+$('filterProjectsBtn')?.addEventListener('click', () => {
+  const bar = $('projectsFilterBar');
+  if (!bar) return;
+  const isHidden = bar.style.display === 'none';
+  bar.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) {
+    $('projectsFilterInput')?.focus();
+  } else {
+    if ($('projectsFilterInput')) $('projectsFilterInput').value = '';
+    renderProjectsTree('');
+  }
+});
+
+$('projectsFilterInput')?.addEventListener('input', (e) => {
+  renderProjectsTree(e.target.value);
+});
+
+// ==========================================================================
+// 会话导出 Markdown 功能
+// ==========================================================================
+
+function exportCurrentSessionToMarkdown() {
+  const session = currentSession();
+  if (!session || !session.messages || session.messages.length === 0) {
+    showToast('当前会话暂无消息可导出', 'info');
+    return;
+  }
+
+  const proj = state.projects.find((p) => normPath(p.path) === normPath(session.projectPath));
+  const projName = proj?.name || (session.projectPath ? session.projectPath.split(/[\\/]/).pop() : '默认工程');
+
+  let md = `# ${session.title || '会话记录'}\n\n`;
+  md += `- **导出时间**: ${new Date().toLocaleString()}\n`;
+  md += `- **所属项目**: ${projName}\n`;
+  md += `- **消息总数**: ${session.messages.length} 条\n\n`;
+  md += `---\n\n`;
+
+  session.messages.forEach((m) => {
+    const time = m.timestamp ? new Date(m.timestamp).toLocaleString() : '';
+    if (m.role === 'user') {
+      md += `### 👤 User (${time || '提问'})\n\n`;
+      if (m.content) md += `${m.content}\n\n`;
+      if (m.attachments && m.attachments.length > 0) {
+        md += `*附件清单*:\n`;
+        m.attachments.forEach(a => {
+          md += `- [${a.fileName || '附件'}] (${formatFileSize(a.bytes)})\n`;
+        });
+        md += `\n`;
+      }
+    } else {
+      md += `### 🤖 Assistant (${time || '回答'})\n\n`;
+      if (m.reasoning && m.reasoning.trim()) {
+        md += `<details><summary><b>💭 深度思考过程</b></summary>\n\n${m.reasoning.trim()}\n\n</details>\n\n`;
+      }
+      if (m.content) md += `${m.content}\n\n`;
+    }
+    md += `---\n\n`;
+  });
+
+  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const safeFilename = (session.title || 'conversation').replace(/[\\/:*?"<>|]/g, '_').slice(0, 30);
+  a.download = `${safeFilename}_${Date.now()}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('已成功导出当前会话为 Markdown 文档', 'success');
+}
+
+$('exportChatMarkdownBtn')?.addEventListener('click', exportCurrentSessionToMarkdown);
+
+// ==========================================================================
+// 主题切换管理 (Dark / Light Theme System)
+// ==========================================================================
+
+function initTheme() {
+  const saved = localStorage.getItem('hap_theme');
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const theme = saved || (prefersDark ? 'dark' : 'light');
+  applyTheme(theme);
+
+  try {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      if (!localStorage.getItem('hap_theme')) {
+        applyTheme(e.matches ? 'dark' : 'light');
+      }
+    });
+  } catch {}
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('hap_theme', theme);
+  updateThemeIcons(theme);
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  const next = current === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  showToast(next === 'dark' ? '已切换至深色极客暗黑主题' : '已切换至高质感浅色主题', 'info');
+}
+
+function updateThemeIcons(theme) {
+  const darkIcon = document.querySelector('.theme-icon-dark');
+  const lightIcon = document.querySelector('.theme-icon-light');
+  if (darkIcon && lightIcon) {
+    if (theme === 'dark') {
+      darkIcon.style.display = 'none';
+      lightIcon.style.display = 'block';
+    } else {
+      darkIcon.style.display = 'block';
+      lightIcon.style.display = 'none';
+    }
+  }
+}
+
+$('themeToggleBtn')?.addEventListener('click', toggleTheme);
+
+// 启动时初始化主题
+initTheme();
 
 // 侧边栏折叠/展开与快捷键支持 (Cmd/Ctrl + B)
 function toggleSidebar() {

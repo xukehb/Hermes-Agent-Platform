@@ -27,6 +27,11 @@ export {
 } from './dispatcher.js';
 export { parseBind, type BindAddress } from './bind.js';
 export { TelegramChannel, describeAttachments, type AttachmentSpec, type TelegramChannelOptions } from './telegram.js';
+export { formatTelegramHtml, escapeTelegramHtml, balanceHtmlTags } from './telegram-formatter.js';
+export { formatWhatsAppText } from './whatsapp-formatter.js';
+export { formatWeChatText, formatWeComMarkdown } from './wechat-formatter.js';
+export { formatFeishuMarkdown, buildFeishuCard, type FeishuCardContent } from './feishu-formatter.js';
+export { formatQQText } from './qq-formatter.js';
 export {
   WhatsAppChannel,
   type SocketFactory,

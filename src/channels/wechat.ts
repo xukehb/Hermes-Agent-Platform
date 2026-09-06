@@ -20,6 +20,7 @@ import { ChannelDispatcher, describeError } from './dispatcher.js';
 import { extractMention, stripWakeWord } from './command-parser.js';
 import { OutboundSender } from './outbound.js';
 import { WeChatContactStore } from './wechat-contacts.js';
+import { formatWeChatText, formatWeComMarkdown } from './wechat-formatter.js';
 import type { Channel, ChannelAttachments, ChannelHost, InboundMessage, OutboundTarget } from './types.js';
 import type { AttachmentKind } from '../domain/index.js';
 import type { ResolvedChannels, ResolvedLimits, ResolvedPaths, ResolvedWeChatChannel } from '../config/index.js';
@@ -257,13 +258,14 @@ export class WeChatChannel implements Channel {
       channel: 'wechat',
       targetId,
       send: async (text: string) => {
+        const formatted = formatWeChatText(text);
         contactStore.recordOutgoingMessage({
           contactId: targetId,
           agentId: assignedAgent,
-          text,
+          text: formatted,
         });
         if (!this.personalDriver) return undefined;
-        return this.personalDriver.sendMessage(targetId, text);
+        return this.personalDriver.sendMessage(targetId, formatted);
       },
     };
 
@@ -412,12 +414,13 @@ export class WeChatChannel implements Channel {
       send: async (text: string) => {
         if (webhookUrl) {
           try {
+            const formatted = formatWeComMarkdown(text);
             await fetch(webhookUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 msgtype: 'markdown',
-                markdown: { content: text },
+                markdown: { content: formatted },
               }),
             });
           } catch (err) {
@@ -454,7 +457,8 @@ export class WeChatChannel implements Channel {
       channel: 'wechat',
       targetId: fromUser,
       send: async (text: string) => {
-        this.log(`[WeChat OA] 回复用户 [${fromUser}]: ${text.slice(0, 50)}...`);
+        const formatted = formatWeChatText(text);
+        this.log(`[WeChat OA] 回复用户 [${fromUser}]: ${formatted.slice(0, 50)}...`);
         return `oa_${Date.now()}`;
       },
     };

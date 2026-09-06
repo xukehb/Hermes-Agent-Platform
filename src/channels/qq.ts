@@ -21,6 +21,7 @@ import { extractMention, stripWakeWord } from './command-parser.js';
 import { OutboundSender } from './outbound.js';
 import { ChannelContactStore } from './contacts-store.js';
 import { parseBind } from './bind.js';
+import { formatQQText } from './qq-formatter.js';
 import type { Channel, ChannelHost, InboundMessage, OutboundTarget } from './types.js';
 import type { ResolvedChannels, ResolvedLimits, ResolvedPaths } from '../config/index.js';
 
@@ -262,13 +263,14 @@ export class QQChannel implements Channel {
       channel: 'qq',
       targetId: contactId,
       send: async (replyText: string) => {
+        const formatted = formatQQText(replyText);
         contactStore.recordOutgoingMessage({
           channel: 'qq',
           contactId,
           agentId: assignedAgent,
-          text: replyText,
+          text: formatted,
         });
-        return this.sendQQMessage(isRoom ? groupId! : userId, replyText, isRoom);
+        return this.sendQQMessage(isRoom ? groupId! : userId, formatted, isRoom);
       },
     };
 

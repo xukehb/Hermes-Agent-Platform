@@ -429,6 +429,102 @@ describe('TelegramChannel 回写容错', () => {
 
     await expect(target.edit(messageId, '第二版')).rejects.toThrow('chat not found');
   });
+
+  it('发送与编辑时附带 parse_mode HTML 且转换代码块', async () => {
+    const host = new StubHost();
+    const channel = new TelegramChannel({
+      host,
+      channels: channelsOf(),
+      limits,
+      paths,
+      env: { TG_TEST_TOKEN: '12345:fake-token' },
+    });
+    const calls: ApiCall[] = [];
+    installFakeApi(channel, calls);
+
+    const target = (channel as unknown as { target: (id: string) => { send: (t: string) => Promise<string>; edit: (id: string, t: string) => Promise<boolean> } }).target('777');
+    const msgId = await target.send('```js\nconsole.log(1);\n```');
+
+    const sendCall = calls.find((c) => c.method === 'sendMessage');
+    expect(sendCall).toBeDefined();
+    expect(sendCall?.payload['parse_mode']).toBe('HTML');
+    expect(String(sendCall?.payload['text'])).toContain('<pre><code class="language-js">console.log(1);</code></pre>');
+    expect(sendCall?.payload['link_preview_options']).toEqual({ is_disabled: true });
+
+    await target.edit(msgId, '**粗体** 内容');
+    const editCall = calls.find((c) => c.method === 'editMessageText');
+    expect(editCall).toBeDefined();
+    expect(editCall?.payload['parse_mode']).toBe('HTML');
+    expect(String(editCall?.payload['text'])).toContain('<b>粗体</b> 内容');
+  });
+
+  it('HTML 发送失败时自动降级为纯文本发送', async () => {
+    const host = new StubHost();
+    const channel = new TelegramChannel({
+      host,
+      channels: channelsOf(),
+      limits,
+      paths,
+      env: { TG_TEST_TOKEN: '12345:fake-token' },
+    });
+    const calls: ApiCall[] = [];
+    let messageId = 200;
+    const bot = (channel as unknown as { bot: { api: { config: { use: (fn: unknown) => void } } } }).bot;
+    bot.api.config.use(async (_prev: unknown, method: string, payload: Record<string, unknown>) => {
+      calls.push({ method, payload });
+      if (method === 'sendMessage') {
+        if (payload['parse_mode'] === 'HTML') {
+          throw new Error("Bad Request: can't parse entities in message");
+        }
+        messageId += 1;
+        return { ok: true, result: { message_id: messageId, chat: { id: payload['chat_id'] }, text: payload['text'] } };
+      }
+      return { ok: true, result: true };
+    });
+
+    const target = (channel as unknown as { target: (id: string) => { send: (t: string) => Promise<string> } }).target('777');
+    const id = await target.send('**有未识别标签的内容**');
+
+    expect(id).toBe('201');
+    const sends = calls.filter((c) => c.method === 'sendMessage');
+    expect(sends).toHaveLength(2);
+    expect(sends[0]?.payload['parse_mode']).toBe('HTML');
+    expect(sends[1]?.payload['parse_mode']).toBeUndefined();
+    expect(sends[1]?.payload['text']).toBe('**有未识别标签的内容**');
+  });
+
+  it('HTML 编辑失败时自动降级为纯文本编辑', async () => {
+    const host = new StubHost();
+    const channel = new TelegramChannel({
+      host,
+      channels: channelsOf(),
+      limits,
+      paths,
+      env: { TG_TEST_TOKEN: '12345:fake-token' },
+    });
+    const calls: ApiCall[] = [];
+    const bot = (channel as unknown as { bot: { api: { config: { use: (fn: unknown) => void } } } }).bot;
+    bot.api.config.use(async (_prev: unknown, method: string, payload: Record<string, unknown>) => {
+      calls.push({ method, payload });
+      if (method === 'editMessageText') {
+        if (payload['parse_mode'] === 'HTML') {
+          throw new Error("Bad Request: can't parse entities");
+        }
+        return { ok: true, result: true };
+      }
+      return { ok: true, result: { message_id: 101, chat: { id: 777 } } };
+    });
+
+    const target = (channel as unknown as { target: (id: string) => { edit: (id: string, t: string) => Promise<boolean> } }).target('777');
+    const res = await target.edit('101', '```bad\ncode\n```');
+
+    expect(res).toBe(true);
+    const edits = calls.filter((c) => c.method === 'editMessageText');
+    expect(edits).toHaveLength(2);
+    expect(edits[0]?.payload['parse_mode']).toBe('HTML');
+    expect(edits[1]?.payload['parse_mode']).toBeUndefined();
+    expect(edits[1]?.payload['text']).toBe('```bad\ncode\n```');
+  });
 });
 
 describe('describeAttachments 附件识别', () => {
