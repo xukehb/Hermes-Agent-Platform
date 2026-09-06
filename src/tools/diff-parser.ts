@@ -156,3 +156,23 @@ export function parseUnifiedDiff(diffText: string): FileDiffItem[] {
 
   return files;
 }
+
+/**
+ * 将单个 DiffHunk 构造成标准 git apply unified diff 补丁文本。
+ */
+export function buildHunkPatch(filePath: string, hunk: DiffHunk): string {
+  const normPath = filePath.replace(/\\/g, '/').replace(/^\/+/, '');
+  const lines: string[] = [
+    `diff --git a/${normPath} b/${normPath}`,
+    `--- a/${normPath}`,
+    `+++ b/${normPath}`,
+    `@@ -${hunk.oldStart},${hunk.oldLines} +${hunk.newStart},${hunk.newLines} @@${hunk.header ? ' ' + hunk.header : ''}`,
+  ];
+
+  for (const line of hunk.lines) {
+    const prefix = line.type === 'add' ? '+' : line.type === 'delete' ? '-' : ' ';
+    lines.push(prefix + line.content);
+  }
+
+  return lines.join('\n') + '\n';
+}

@@ -311,6 +311,10 @@
                 </div>
 
                 <div class="composer-bottom-right">
+                  <button type="button" class="stop-generate-btn" id="stopChatBtn" title="停止生成任务 (ESC)" style="display:none;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+                    <span>停止生成</span>
+                  </button>
                   <button type="submit" class="send-circle-btn" id="sendChatBtn" title="发送指令 (Enter)">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                       <line x1="12" y1="19" x2="12" y2="5"/>
@@ -340,6 +344,9 @@
               </div>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button id="openMcpPlaygroundBtn" class="btn primary" style="font-size:12.5px;padding:6px 14px;background:linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);color:#fff;border:none;">
+                ⚡ MCP 调试台
+              </button>
               <button id="openPresetMcpModalBtn" class="btn secondary" style="font-size:12.5px;padding:6px 14px;">
                 热门 MCP 插件库
               </button>
@@ -375,6 +382,10 @@
                 <span>仅看已启用</span>
                 <span class="market-tab-badge" id="tabCountActive">0</span>
               </button>
+              <button type="button" class="market-tab-btn" data-market-tab="playground">
+                <span>⚡ MCP 调试台</span>
+                <span class="market-tab-badge" id="tabCountMcpTools" style="background:#e0e7ff;color:#4338ca;">0</span>
+              </button>
             </div>
 
             <div style="display:flex;align-items:center;gap:8px;min-width:280px;flex:1;max-width:420px;">
@@ -385,6 +396,110 @@
           <!-- 统一网格列表 -->
           <div id="marketEcoGrid" class="market-eco-grid">
             <!-- 动态渲染现代化卡片 -->
+          </div>
+
+          <!-- MCP 可视化调试台 (Playground) 面板 -->
+          <div id="mcpPlaygroundPanel" class="mcp-playground-container" style="display:none;">
+            <!-- 左侧：MCP 工具目录清单 -->
+            <div class="mcp-sidebar-pane">
+              <div class="mcp-sidebar-head">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span style="font-weight:700;font-size:12.5px;">MCP 工具清单</span>
+                  <span class="mcp-tool-badge" id="mcpToolTotalCount">0 个</span>
+                </div>
+                <button type="button" class="btn text-btn" id="refreshMcpPlaygroundBtn" style="font-size:11.5px;padding:3px 6px;" title="重新连接与扫描 MCP 服务器暴露的工具">
+                  🔄 刷新
+                </button>
+              </div>
+              <div class="mcp-search-wrap">
+                <input type="text" id="mcpPlaygroundSearchInput" placeholder="按工具名或服务商搜索..." style="width:100%;font-size:12px;padding:6px 10px;" />
+              </div>
+              <div id="mcpPlaygroundToolsList" class="mcp-tools-list">
+                <div style="padding:16px;text-align:center;color:var(--text-muted);font-size:12px;">
+                  正在加载 MCP 服务器工具...
+                </div>
+              </div>
+            </div>
+
+            <!-- 右侧：交互式参数配置与调试台 -->
+            <div class="mcp-main-pane">
+              <!-- 空状态 -->
+              <div id="mcpPlaygroundEmptyState" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;color:var(--text-muted);text-align:center;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.4;margin-bottom:12px;">
+                  <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                </svg>
+                <div style="font-size:14px;font-weight:600;color:var(--text-main);margin-bottom:4px;">请在左侧选择 MCP 工具</div>
+                <div style="font-size:12px;max-width:360px;">点击任意 MCP 工具可浏览其 JSON Schema 参数定义并进行一键填参与在线执行测试</div>
+              </div>
+
+              <!-- 调试工作区 -->
+              <div id="mcpPlaygroundActiveWorkbench" style="display:none;flex-direction:column;height:100%;">
+                <div class="mcp-workbench-head">
+                  <div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <span id="mcpActiveToolName" style="font-family:var(--font-mono);font-size:15px;font-weight:700;color:var(--primary);">tool_name</span>
+                      <span id="mcpActiveToolServer" class="mcp-tool-badge">server</span>
+                    </div>
+                    <div id="mcpActiveToolDesc" style="font-size:12px;color:var(--text-muted);margin-top:6px;line-height:1.5;"></div>
+                  </div>
+                </div>
+
+                <div class="mcp-workbench-body">
+                  <!-- Schema 参数说明表 -->
+                  <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                      <span style="font-size:12.5px;font-weight:700;">参数定义 (Parameter Schema)</span>
+                      <span style="font-size:11px;color:var(--text-muted);">JSON Schema 标准定义</span>
+                    </div>
+                    <div id="mcpActiveToolSchemaTableWrap" style="overflow-x:auto;border-radius:var(--radius-sm);border:1px solid var(--border-default);">
+                      <table class="mcp-schema-table">
+                        <thead>
+                          <tr>
+                            <th style="width:160px;">字段名 (Field)</th>
+                            <th style="width:100px;">类型 (Type)</th>
+                            <th style="width:80px;">必填</th>
+                            <th>说明与约束 (Description)</th>
+                          </tr>
+                        </thead>
+                        <tbody id="mcpActiveToolSchemaBody">
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <!-- 调用输入实参 (Arguments Payload) -->
+                  <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                      <label style="font-size:12.5px;font-weight:700;">执行入参 (JSON Payload)</label>
+                      <div style="display:flex;gap:6px;">
+                        <button type="button" class="btn text-btn" id="mcpFormatJsonBtn" style="font-size:11.5px;padding:2px 6px;">格式化 JSON</button>
+                        <button type="button" class="btn text-btn" id="mcpResetArgsBtn" style="font-size:11.5px;padding:2px 6px;">填充模板</button>
+                      </div>
+                    </div>
+                    <textarea id="mcpToolArgsEditor" class="mcp-json-editor" rows="6" placeholder="{&#10;  // 请输入工具调用参数 JSON&#10;}"></textarea>
+                    
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+                      <div id="mcpExecutionStatusTag" style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
+                        <span>就绪</span>
+                      </div>
+                      <button type="button" class="btn primary" id="executeMcpToolBtn" style="display:inline-flex;align-items:center;gap:6px;padding:7px 18px;font-weight:600;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        <span>发起测试调用</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- 执行返回结果 (Execution Output) -->
+                  <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                      <span style="font-size:12.5px;font-weight:700;">响应输出 (Response Result)</span>
+                      <button type="button" class="btn text-btn" id="copyMcpOutputBtn" style="font-size:11.5px;padding:2px 6px;">复制结果</button>
+                    </div>
+                    <pre class="mcp-output-pre" id="mcpToolOutputPre"><code>（点击【发起测试调用】运行当前工具）</code></pre>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

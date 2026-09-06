@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseUnifiedDiff } from '../src/tools/diff-parser.js';
+import { parseUnifiedDiff, buildHunkPatch } from '../src/tools/diff-parser.js';
 
 describe('Unified Diff Parser', () => {
   it('parses empty diff', () => {
@@ -70,5 +70,26 @@ deleted file mode 100644
     expect(result[1]!.status).toBe('deleted');
     expect(result[1]!.additions).toBe(0);
     expect(result[1]!.deletions).toBe(2);
+  });
+
+  it('buildHunkPatch 生成标准且可用于 git apply 的补丁块', () => {
+    const rawDiff = `
+diff --git a/src/test.ts b/src/test.ts
+--- a/src/test.ts
++++ b/src/test.ts
+@@ -10,3 +10,4 @@
+ line 1
+-line 2
++line 2 mod
++line 3 new
+    `.trim();
+
+    const [file] = parseUnifiedDiff(rawDiff);
+    expect(file?.hunks).toHaveLength(1);
+    const patch = buildHunkPatch('src/test.ts', file!.hunks[0]!);
+    expect(patch).toContain('diff --git a/src/test.ts b/src/test.ts');
+    expect(patch).toContain('@@ -10,3 +10,4 @@');
+    expect(patch).toContain('+line 2 mod');
+    expect(patch).toContain('-line 2');
   });
 });

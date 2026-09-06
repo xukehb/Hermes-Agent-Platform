@@ -48,6 +48,8 @@ contextBridge.exposeInMainWorld('hap', {
   getVisualDiff: (projectPath, file) => call('gui:getVisualDiff', { projectPath, file }),
   revertFileDiff: (projectPath, file) => call('gui:revertFileDiff', { projectPath, file }),
   stageFileDiff: (projectPath, file) => call('gui:stageFileDiff', { projectPath, file }),
+  stageHunk: (projectPath, file, patch) => call('gui:stageHunk', { projectPath, file, patch }),
+  revertHunk: (projectPath, file, patch) => call('gui:revertHunk', { projectPath, file, patch }),
   listSchedules: () => call('gui:listSchedules'),
   upsertSchedule: (input) => call('gui:upsertSchedule', input),
   removeSchedule: (id) => call('gui:removeSchedule', id),
@@ -119,6 +121,15 @@ contextBridge.exposeInMainWorld('hap', {
   execServerCommand: (payload) => call('gui:execServerCommand', payload),
   syncTarget: (input) => call('gui:syncTarget', input),
   chat: (input) => call('gui:chat', input),
+  abortChat: () => call('gui:chat:abort'),
+  onChatStream: (callback) => {
+    ipcRenderer.on('gui:chat:stream', (_event, data) => callback(data));
+  },
+  removeChatStreamListeners: () => {
+    ipcRenderer.removeAllListeners('gui:chat:stream');
+  },
+  listMcpTools: (refresh) => call('gui:mcp:listTools', { refresh }),
+  callMcpTool: (payload) => call('gui:mcp:callTool', payload),
   logs: () => call('gui:logs'),
   clearLogs: () => call('gui:clearLogs'),
   toggleDevTools: () => call('gui:toggleDevTools'),

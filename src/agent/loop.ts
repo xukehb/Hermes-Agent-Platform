@@ -459,7 +459,15 @@ export class AgentLoop {
         const parser = adapter.createParser();
         const events: ProtocolEvent[] = [];
         for await (const wire of client.send(wireRequest, request.signal)) {
-          events.push(...parser.push(wire));
+          const parsed = parser.push(wire);
+          events.push(...parsed);
+          for (const pe of parsed) {
+            if (pe.type === 'text' && pe.text !== '') {
+              request.onEvent?.({ type: 'token_delta', text: pe.text });
+            } else if (pe.type === 'reasoning' && pe.text !== '') {
+              request.onEvent?.({ type: 'reasoning_delta', text: pe.text });
+            }
+          }
         }
         events.push(...parser.end());
         const outcome = foldTurn(events);

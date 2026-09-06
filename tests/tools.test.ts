@@ -277,6 +277,7 @@ describe('工具注册表', () => {
       'disk_cleanup',
       'ip_lookup',
       'generate_image',
+      'web_search',
     ]);
   });
 

@@ -38,6 +38,8 @@ export type TaskEvent =
   | { type: 'iteration'; index: number }
   | { type: 'text'; text: string }
   | { type: 'reasoning'; text: string }
+  | { type: 'token_delta'; text: string }
+  | { type: 'reasoning_delta'; text: string }
   | { type: 'tool_start'; name: string; args: Record<string, unknown> }
   | { type: 'tool_end'; result: ToolResult }
   | { type: 'model_switch'; from: string; to: string; reason: string }

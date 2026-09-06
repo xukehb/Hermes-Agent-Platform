@@ -39,6 +39,7 @@ export const BUILTIN_TOOL_NAMES = [
   'disk_cleanup',
   'ip_lookup',
   'generate_image',
+  'web_search',
 ] as const;
 
 export type BuiltinToolName = (typeof BUILTIN_TOOL_NAMES)[number];
@@ -49,9 +50,9 @@ export type BuiltinToolName = (typeof BUILTIN_TOOL_NAMES)[number];
  */
 export const TOOL_PROFILES: Record<ToolProfileName, readonly BuiltinToolName[]> = {
   minimal: ['read_file', 'list_dir'],
-  standard: ['read_file', 'write_file', 'list_dir', 'search', 'http_fetch', 'open_external', 'remote_list_servers', 'find_definition', 'find_references', 'list_symbols', 'host_sysinfo', 'disk_cleanup', 'ip_lookup', 'generate_image'],
+  standard: ['read_file', 'write_file', 'list_dir', 'search', 'http_fetch', 'web_search', 'open_external', 'remote_list_servers', 'find_definition', 'find_references', 'list_symbols', 'host_sysinfo', 'disk_cleanup', 'ip_lookup', 'generate_image'],
   coding: ['read_file', 'write_file', 'list_dir', 'search', 'shell', 'open_external', 'apply_patch', 'spawn_subagent', 'remote_exec', 'remote_sysinfo', 'remote_list_servers', 'remote_upgrade_daemon', 'find_definition', 'find_references', 'list_symbols', 'host_sysinfo', 'disk_cleanup', 'ip_lookup', 'generate_image'],
-  research: ['read_file', 'write_file', 'list_dir', 'search', 'http_fetch', 'open_external', 'spawn_subagent', 'remote_list_servers', 'find_definition', 'find_references', 'list_symbols', 'host_sysinfo', 'disk_cleanup', 'ip_lookup', 'generate_image'],
+  research: ['read_file', 'write_file', 'list_dir', 'search', 'http_fetch', 'web_search', 'open_external', 'spawn_subagent', 'remote_list_servers', 'find_definition', 'find_references', 'list_symbols', 'host_sysinfo', 'disk_cleanup', 'ip_lookup', 'generate_image'],
   full: [...BUILTIN_TOOL_NAMES],
 };
 

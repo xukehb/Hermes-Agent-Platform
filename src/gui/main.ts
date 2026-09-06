@@ -63,6 +63,8 @@ function registerIpc(): void {
   ipcMain.handle('gui:getVisualDiff', (_event, payload) => invoke(() => service.getVisualDiff(payload.projectPath, payload.file)));
   ipcMain.handle('gui:revertFileDiff', (_event, payload) => invoke(() => service.revertFileDiff(payload.projectPath, payload.file)));
   ipcMain.handle('gui:stageFileDiff', (_event, payload) => invoke(() => service.stageFileDiff(payload.projectPath, payload.file)));
+  ipcMain.handle('gui:stageHunk', (_event, payload) => invoke(() => service.stageHunk(payload.projectPath, payload.file, payload.patch)));
+  ipcMain.handle('gui:revertHunk', (_event, payload) => invoke(() => service.revertHunk(payload.projectPath, payload.file, payload.patch)));
   ipcMain.handle('gui:listSchedules', () => invoke(() => service.listSchedules()));
   ipcMain.handle('gui:upsertSchedule', (_event, input) => invoke(() => service.upsertSchedule(input)));
   ipcMain.handle('gui:removeSchedule', (_event, id) => invoke(() => service.removeSchedule(id)));
@@ -129,7 +131,12 @@ function registerIpc(): void {
   ipcMain.handle('gui:executeDiskCleanup', (_event, payload) => invoke(() => service.executeDiskCleanup(payload)));
   ipcMain.handle('gui:getIpGeoInfo', (_event, ip) => invoke(() => service.getIpGeoInfo(ip)));
   ipcMain.handle('gui:syncTarget', (_event, input) => invoke(() => service.syncTarget(input)));
-  ipcMain.handle('gui:chat', (_event, input) => invoke(() => service.chat(input)));
+  ipcMain.handle('gui:chat', (event, input) => invoke(() => service.chat(input, (streamEvent) => {
+    event.sender.send('gui:chat:stream', streamEvent);
+  })));
+  ipcMain.handle('gui:chat:abort', () => invoke(() => service.abortChat()));
+  ipcMain.handle('gui:mcp:listTools', (_event, payload) => invoke(() => service.listMcpPlaygroundTools(payload?.refresh)));
+  ipcMain.handle('gui:mcp:callTool', (_event, payload) => invoke(() => service.callMcpPlaygroundTool(payload)));
   ipcMain.handle('gui:logs', () => invoke(() => service.logsSnapshot()));
   ipcMain.handle('gui:clearLogs', () => invoke(() => service.clearLogs()));
   ipcMain.handle('gui:toggleDevTools', (event) => {

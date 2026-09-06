@@ -1181,8 +1181,11 @@ function renderCurrentSessionMessages() {
   }).join('');
 
   if (session.isGenerating) {
+    const hasLiveThinking = Boolean(session.liveReasoning);
+    const hasLiveText = Boolean(session.liveContent);
+
     messagesHtml += `
-      <div class="msg-row assistant waiting-row">
+      <div class="msg-row assistant waiting-row" id="activeStreamingRow">
         <div class="assistant-container">
           <div class="assistant-avatar">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
@@ -1190,9 +1193,29 @@ function renderCurrentSessionMessages() {
             </svg>
           </div>
           <div class="assistant-content">
-            <div class="thinking-loading-pill">
-              <span class="thinking-pulse-dot"></span>
-              <span>正在深度思考与执行中...</span>
+            <div id="streamingReasoningBox" style="${hasLiveThinking ? '' : 'display:none;'}">
+              <details class="thinking-box" open>
+                <summary class="thinking-header">
+                  <div class="thinking-title-row">
+                    <span class="thinking-pulse-dot" style="margin-right:6px;"></span>
+                    <span>深度思考中...</span>
+                  </div>
+                  <svg class="thinking-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </summary>
+                <div class="thinking-content" id="streamingReasoningContent">
+                  ${renderMarkdownContent(session.liveReasoning || '')}
+                </div>
+              </details>
+            </div>
+            <div id="streamingContentText">
+              ${hasLiveText ? renderMarkdownContent(session.liveContent) + '<span class="streaming-cursor"></span>' : `
+                <div class="thinking-loading-pill">
+                  <span class="thinking-pulse-dot"></span>
+                  <span>正在深度思考与执行中...</span>
+                </div>
+              `}
             </div>
           </div>
         </div>
@@ -1527,27 +1550,122 @@ async function updateGitStatus(projectPath) {
   }
 }
 
-function formatGitDiffToHtml(rawDiff) {
-  if (!rawDiff) return '<div class="git-diff-line normal">（无差异内容）</div>';
+let currentInlineDiffHunksMap = {};
 
-  const lines = rawDiff.split('\n');
-  return lines.map((line) => {
-    const escaped = esc(line);
-    if (line.startsWith('+++') || line.startsWith('---') || line.startsWith('diff ') || line.startsWith('index ')) {
-      return `<div class="git-diff-line meta">${escaped}</div>`;
-    }
-    if (line.startsWith('@@')) {
-      return `<div class="git-diff-line chunk">${escaped}</div>`;
-    }
-    if (line.startsWith('+')) {
-      return `<div class="git-diff-line add">${escaped}</div>`;
-    }
-    if (line.startsWith('-')) {
-      return `<div class="git-diff-line del">${escaped}</div>`;
-    }
-    return `<div class="git-diff-line normal">${escaped}</div>`;
+function buildHunkPatchString(filePath, hunk) {
+  const cleanPath = filePath.replace(/^[ab]\//, '');
+  const lines = [
+    `--- a/${cleanPath}`,
+    `+++ b/${cleanPath}`,
+    hunk.header,
+    ...hunk.lines,
+    '',
+  ];
+  return lines.join('\n');
+}
+
+function formatGitDiffToHtml(rawDiff, filePath, hunks) {
+  if (!rawDiff && (!hunks || hunks.length === 0)) return '<div class="git-diff-line normal">（无差异内容）</div>';
+
+  if (!hunks || hunks.length === 0) {
+    const lines = (rawDiff || '').split('\n');
+    return lines.map((line) => {
+      const escaped = esc(line);
+      if (line.startsWith('+++') || line.startsWith('---') || line.startsWith('diff ') || line.startsWith('index ')) {
+        return `<div class="git-diff-line meta">${escaped}</div>`;
+      }
+      if (line.startsWith('@@')) {
+        return `<div class="git-diff-line chunk">${escaped}</div>`;
+      }
+      if (line.startsWith('+')) {
+        return `<div class="git-diff-line add">${escaped}</div>`;
+      }
+      if (line.startsWith('-')) {
+        return `<div class="git-diff-line del">${escaped}</div>`;
+      }
+      return `<div class="git-diff-line normal">${escaped}</div>`;
+    }).join('');
+  }
+
+  return hunks.map((hunk, hunkIdx) => {
+    const linesHtml = hunk.lines.map((line) => {
+      const escaped = esc(line);
+      if (line.startsWith('+')) {
+        return `<div class="git-diff-line add">${escaped}</div>`;
+      }
+      if (line.startsWith('-')) {
+        return `<div class="git-diff-line del">${escaped}</div>`;
+      }
+      return `<div class="git-diff-line normal">${escaped}</div>`;
+    }).join('');
+
+    return `
+      <div class="git-hunk-card">
+        <div class="git-hunk-toolbar">
+          <span class="git-hunk-badge">${esc(hunk.header)}</span>
+          <div class="git-hunk-actions">
+            <button type="button" class="btn-hunk-action stage" onclick="handleStageHunk('${esc(filePath || currentInlineDiffFile)}', ${hunkIdx})" title="仅将该代码块加入 Git 暂存区 (git apply --cached)">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>暂存块</span>
+            </button>
+            <button type="button" class="btn-hunk-action revert" onclick="handleRevertHunk('${esc(filePath || currentInlineDiffFile)}', ${hunkIdx})" title="仅撤销放弃该代码块的修改 (git apply --reverse)">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+              <span>回滚块</span>
+            </button>
+          </div>
+        </div>
+        <div class="git-hunk-lines">
+          ${linesHtml}
+        </div>
+      </div>
+    `;
   }).join('');
 }
+
+window.handleStageHunk = async (filePath, hunkIdx) => {
+  if (!currentActiveProject) return;
+  const targetFile = filePath || currentInlineDiffFile;
+  const hunks = currentInlineDiffHunksMap[targetFile];
+  const hunk = hunks?.[hunkIdx];
+  if (!hunk) {
+    showToast('找不到指定的 Diff 代码块', 'error');
+    return;
+  }
+  const patch = buildHunkPatchString(targetFile, hunk);
+  try {
+    showToast('正在暂存代码块...', 'info');
+    const res = await window.hap.stageHunk(currentActiveProject, targetFile, patch);
+    showToast(res.message || '代码块已成功暂存！', 'success');
+    await loadInlineDiff(currentInlineDiffFile);
+    await updateGitStatus(currentActiveProject);
+  } catch (err) {
+    showToast('暂存代码块失败: ' + err.message, 'error');
+  }
+};
+
+window.handleRevertHunk = async (filePath, hunkIdx) => {
+  if (!currentActiveProject) return;
+  const targetFile = filePath || currentInlineDiffFile;
+  const hunks = currentInlineDiffHunksMap[targetFile];
+  const hunk = hunks?.[hunkIdx];
+  if (!hunk) {
+    showToast('找不到指定的 Diff 代码块', 'error');
+    return;
+  }
+  if (!confirm(`确定要回滚还原【${targetFile}】该代码块的修改吗？此操作将丢弃该块的本地修改。`)) {
+    return;
+  }
+  const patch = buildHunkPatchString(targetFile, hunk);
+  try {
+    showToast('正在回滚代码块...', 'info');
+    const res = await window.hap.revertHunk(currentActiveProject, targetFile, patch);
+    showToast(res.message || '代码块已成功还原！', 'success');
+    await loadInlineDiff(currentInlineDiffFile);
+    await updateGitStatus(currentActiveProject);
+  } catch (err) {
+    showToast('回滚代码块失败: ' + err.message, 'error');
+  }
+};
 
 let currentInlineDiffRaw = '';
 let currentInlineDiffFile = '';
@@ -1572,8 +1690,43 @@ async function loadInlineDiff(file) {
   });
 
   try {
-    const res = await window.hap.gitDiff(currentActiveProject, file);
-    currentInlineDiffRaw = res.diff || '（暂无代码差异）';
+    const visualRes = await window.hap.getVisualDiff(currentActiveProject, file || undefined);
+    currentInlineDiffRaw = visualRes.rawDiff || '（暂无代码差异）';
+    currentInlineDiffHunksMap = {};
+
+    if (visualRes.files && visualRes.files.length > 0) {
+      if (file) {
+        const cleanReq = file.replace(/^[ab]\//, '');
+        const matched = visualRes.files.find(f => {
+          const np = (f.newPath || '').replace(/^[ab]\//, '');
+          const op = (f.oldPath || '').replace(/^[ab]\//, '');
+          return np === cleanReq || op === cleanReq || np.endsWith(cleanReq) || op.endsWith(cleanReq);
+        }) || visualRes.files[0];
+
+        if (matched) {
+          const matchedPath = (matched.newPath || matched.oldPath || file).replace(/^[ab]\//, '');
+          currentInlineDiffHunksMap[matchedPath] = matched.hunks;
+          currentInlineDiffHunksMap[file] = matched.hunks;
+          if (contentEl) {
+            contentEl.innerHTML = formatGitDiffToHtml(currentInlineDiffRaw, matchedPath, matched.hunks);
+          }
+          return;
+        }
+      } else {
+        let allHtml = '';
+        for (const f of visualRes.files) {
+          const fPath = (f.newPath || f.oldPath || '').replace(/^[ab]\//, '');
+          currentInlineDiffHunksMap[fPath] = f.hunks;
+          allHtml += `<div style="padding:6px 10px;font-weight:700;font-family:var(--font-mono);font-size:12px;color:#e1e4e8;background:#252526;margin:8px 0 4px 0;border-radius:4px;">📄 ${esc(fPath)}</div>`;
+          allHtml += formatGitDiffToHtml('', fPath, f.hunks);
+        }
+        if (contentEl) {
+          contentEl.innerHTML = allHtml || formatGitDiffToHtml(currentInlineDiffRaw);
+        }
+        return;
+      }
+    }
+
     if (contentEl) {
       contentEl.innerHTML = formatGitDiffToHtml(currentInlineDiffRaw);
     }
@@ -4714,6 +4867,55 @@ chatInput?.addEventListener('keydown', (e) => {
   }
 });
 
+function setChatGenerating(isGen) {
+  const session = currentSession();
+  session.isGenerating = isGen;
+  const stopBtn = $('stopChatBtn');
+  const sendBtn = $('sendChatBtn');
+  if (stopBtn) stopBtn.style.display = isGen ? 'inline-flex' : 'none';
+  if (sendBtn) sendBtn.style.display = isGen ? 'none' : 'inline-flex';
+}
+
+window.hap?.onChatStream?.((data) => {
+  const session = currentSession();
+  if (!session || !session.isGenerating) return;
+
+  if (data.type === 'reasoning_delta' || data.type === 'thinking') {
+    session.liveReasoning = (session.liveReasoning || '') + (data.text || '');
+    const box = $('streamingReasoningBox');
+    const content = $('streamingReasoningContent');
+    if (box) box.style.display = '';
+    if (content) content.innerHTML = renderMarkdownContent(session.liveReasoning);
+  } else if (data.type === 'token_delta' || data.type === 'token') {
+    session.liveContent = (session.liveContent || '') + (data.text || '');
+    const contentText = $('streamingContentText');
+    if (contentText) {
+      contentText.innerHTML = renderMarkdownContent(session.liveContent) + '<span class="streaming-cursor"></span>';
+    }
+  }
+
+  const threadContainer = $('chatThreadContainer');
+  if (threadContainer) {
+    threadContainer.scrollTop = threadContainer.scrollHeight;
+  }
+});
+
+$('stopChatBtn')?.addEventListener('click', async () => {
+  try {
+    showToast('正在中断当前任务...', 'info');
+    await window.hap.abortChat();
+  } catch (err) {
+    showToast('中断请求失败: ' + err.message, 'error');
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && currentSession()?.isGenerating) {
+    e.preventDefault();
+    $('stopChatBtn')?.click();
+  }
+});
+
 $('chatForm')?.addEventListener('submit', async (event) => {
   event.preventDefault();
   const text = chatInput.value.trim();
@@ -4727,7 +4929,9 @@ $('chatForm')?.addEventListener('submit', async (event) => {
 
   const session = currentSession();
   const targetSessionId = session.id;
-  session.isGenerating = true;
+  session.liveContent = '';
+  session.liveReasoning = '';
+  setChatGenerating(true);
   if (session.messages.length === 0) {
     session.title = text ? text.slice(0, 22) : (attachmentsToSend[0]?.fileName || '图片分析');
   }
@@ -4790,12 +4994,16 @@ $('chatForm')?.addEventListener('submit', async (event) => {
       }
     }
 
-    if (!reasoningText && Array.isArray(result.events)) {
+    if (!reasoningText && session.liveReasoning) {
+      reasoningText = session.liveReasoning.trim();
+    } else if (!reasoningText && Array.isArray(result.events)) {
       const reasoningEvents = result.events.filter((e) => e.type === 'reasoning' && e.text).map((e) => e.text);
       if (reasoningEvents.length > 0) reasoningText = reasoningEvents.join('');
     }
 
-    if (!reply && Array.isArray(result.events)) {
+    if (!reply && session.liveContent) {
+      reply = session.liveContent.trim();
+    } else if (!reply && Array.isArray(result.events)) {
       const textEvents = result.events.filter((e) => e.type === 'text' && e.text).map((e) => e.text);
       if (textEvents.length > 0) reply = textEvents.join('');
     }
@@ -4803,7 +5011,9 @@ $('chatForm')?.addEventListener('submit', async (event) => {
     if (!reply) {
       reply = '智能体已执行完毕。';
     }
-    session.isGenerating = false;
+    setChatGenerating(false);
+    session.liveContent = '';
+    session.liveReasoning = '';
     session.messages.push({
       role: 'assistant',
       content: reply,
@@ -4813,15 +5023,18 @@ $('chatForm')?.addEventListener('submit', async (event) => {
     session.updatedAt = new Date().toISOString();
     saveSessionsToStorage();
   } catch (error) {
-    session.isGenerating = false;
+    setChatGenerating(false);
+    const partialReply = session.liveContent ? session.liveContent + '\n\n' : '';
+    session.liveContent = '';
+    session.liveReasoning = '';
     session.messages.push({
       role: 'assistant',
-      content: `**执行失败：** ${error.message}`,
+      content: `${partialReply}**执行提示：** ${error.message}`,
       timestamp: new Date().toISOString(),
     });
     session.updatedAt = new Date().toISOString();
     saveSessionsToStorage();
-    showToast('对话执行失败：' + error.message, 'error');
+    showToast('对话执行已结束：' + error.message, 'info');
   }
 
   if (currentSessionId === targetSessionId) {
@@ -7624,6 +7837,16 @@ function renderMarket(query = '', tab = activeMarketTab) {
   const container = $('marketEcoGrid');
   if (!container) return;
 
+  if (tab === 'playground') {
+    if ($('marketEcoGrid')) $('marketEcoGrid').style.display = 'none';
+    if ($('mcpPlaygroundPanel')) $('mcpPlaygroundPanel').style.display = 'grid';
+    loadMcpPlaygroundTools();
+    return;
+  } else {
+    if ($('marketEcoGrid')) $('marketEcoGrid').style.display = 'grid';
+    if ($('mcpPlaygroundPanel')) $('mcpPlaygroundPanel').style.display = 'none';
+  }
+
   const skills = state.skills || [];
   const plugins = state.plugins || [];
   const q = (query || $('marketSearchInput')?.value || '').toLowerCase().trim();
@@ -7805,6 +8028,257 @@ $('marketSearchInput')?.addEventListener('input', (e) => {
 // Market aliases
 window.renderSkillsMarket = () => renderMarket();
 window.renderPluginsMarket = () => renderMarket();
+
+// ==========================================================================
+// MCP 可视化调试台 (Playground) 控制器
+// ==========================================================================
+
+$('openMcpPlaygroundBtn')?.addEventListener('click', () => {
+  const btn = document.querySelector('[data-market-tab="playground"]');
+  if (btn) btn.click();
+});
+
+let mcpPlaygroundToolsCache = [];
+let selectedMcpTool = null;
+
+async function loadMcpPlaygroundTools(refresh = false) {
+  const listEl = $('mcpPlaygroundToolsList');
+  if (!listEl) return;
+
+  if (refresh || mcpPlaygroundToolsCache.length === 0) {
+    listEl.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:12px;">正在扫描 MCP 服务器暴露的工具...</div>';
+    try {
+      const res = await window.hap.listMcpTools(refresh);
+      mcpPlaygroundToolsCache = res.tools || [];
+      const count = mcpPlaygroundToolsCache.length;
+      if ($('mcpToolTotalCount')) $('mcpToolTotalCount').textContent = `${count} 个`;
+      if ($('tabCountMcpTools')) $('tabCountMcpTools').textContent = String(count);
+    } catch (err) {
+      listEl.innerHTML = `<div style="padding:14px;color:var(--danger);font-size:12px;">扫描失败: ${esc(err.message)}</div>`;
+      return;
+    }
+  }
+
+  renderMcpToolsList($('mcpPlaygroundSearchInput')?.value || '');
+}
+
+function renderMcpToolsList(query = '') {
+  const listEl = $('mcpPlaygroundToolsList');
+  if (!listEl) return;
+
+  const q = query.trim().toLowerCase();
+  const filtered = mcpPlaygroundToolsCache.filter(t => {
+    if (!q) return true;
+    return t.name.toLowerCase().includes(q) ||
+           t.rawName.toLowerCase().includes(q) ||
+           (t.description && t.description.toLowerCase().includes(q)) ||
+           t.source.toLowerCase().includes(q);
+  });
+
+  if (filtered.length === 0) {
+    listEl.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:12px;">未匹配到任何工具</div>';
+    return;
+  }
+
+  listEl.innerHTML = filtered.map((tool) => {
+    const isSelected = selectedMcpTool && selectedMcpTool.name === tool.name;
+    return `
+      <div class="mcp-tool-item ${isSelected ? 'active' : ''}" onclick="selectMcpPlaygroundTool('${esc(tool.name)}')">
+        <div class="mcp-tool-item-name">
+          <span style="font-family:var(--font-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(tool.rawName || tool.name)}</span>
+          <span class="mcp-tool-badge">${esc(tool.source || 'mcp')}</span>
+        </div>
+        <div class="mcp-tool-desc">${esc(tool.description || '无详细描述说明')}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+window.selectMcpPlaygroundTool = (toolName) => {
+  const tool = mcpPlaygroundToolsCache.find(t => t.name === toolName);
+  if (!tool) return;
+  selectedMcpTool = tool;
+
+  renderMcpToolsList($('mcpPlaygroundSearchInput')?.value || '');
+
+  if ($('mcpPlaygroundEmptyState')) $('mcpPlaygroundEmptyState').style.display = 'none';
+  const workbench = $('mcpPlaygroundActiveWorkbench');
+  if (workbench) workbench.style.display = 'flex';
+
+  if ($('mcpActiveToolName')) $('mcpActiveToolName').textContent = tool.name;
+  if ($('mcpActiveToolServer')) $('mcpActiveToolServer').textContent = tool.source || 'mcp';
+  if ($('mcpActiveToolDesc')) $('mcpActiveToolDesc').textContent = tool.description || '无描述说明';
+
+  renderMcpSchemaTable(tool.parameters);
+
+  const templateObj = buildArgsTemplate(tool.parameters);
+  if ($('mcpToolArgsEditor')) {
+    $('mcpToolArgsEditor').value = JSON.stringify(templateObj, null, 2);
+  }
+
+  if ($('mcpExecutionStatusTag')) $('mcpExecutionStatusTag').innerHTML = '<span>就绪</span>';
+  if ($('mcpToolOutputPre')) $('mcpToolOutputPre').innerHTML = '<code>（点击【发起测试调用】运行当前工具）</code>';
+};
+
+function renderMcpSchemaTable(schema) {
+  const tbody = $('mcpActiveToolSchemaBody');
+  if (!tbody) return;
+
+  const props = schema?.properties || {};
+  const requiredList = new Set(schema?.required || []);
+  const entries = Object.entries(props);
+
+  if (entries.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:14px;">该工具无需任何入参</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = entries.map(([key, def]) => {
+    const isReq = requiredList.has(key);
+    const typeStr = def.type || (def.enum ? `enum(${def.enum.join('|')})` : 'any');
+    const desc = def.description || '—';
+    return `
+      <tr>
+        <td style="font-family:var(--font-mono);font-weight:600;color:var(--text-main);">${esc(key)}</td>
+        <td style="font-family:var(--font-mono);color:#0284c7;">${esc(typeStr)}</td>
+        <td>
+          <span class="badge ${isReq ? 'danger' : 'neutral'}" style="font-size:10.5px;">${isReq ? '必填' : '可选'}</span>
+        </td>
+        <td style="color:var(--text-secondary);">${esc(desc)}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function buildArgsTemplate(schema) {
+  const props = schema?.properties || {};
+  const template = {};
+  for (const [key, def] of Object.entries(props)) {
+    if (def.default !== undefined) {
+      template[key] = def.default;
+    } else if (def.type === 'string') {
+      template[key] = '';
+    } else if (def.type === 'number' || def.type === 'integer') {
+      template[key] = 0;
+    } else if (def.type === 'boolean') {
+      template[key] = false;
+    } else if (def.type === 'array') {
+      template[key] = [];
+    } else if (def.type === 'object') {
+      template[key] = {};
+    } else {
+      template[key] = '';
+    }
+  }
+  return template;
+}
+
+$('refreshMcpPlaygroundBtn')?.addEventListener('click', () => {
+  loadMcpPlaygroundTools(true);
+});
+
+$('mcpPlaygroundSearchInput')?.addEventListener('input', (e) => {
+  renderMcpToolsList(e.target.value);
+});
+
+$('mcpFormatJsonBtn')?.addEventListener('click', () => {
+  const editor = $('mcpToolArgsEditor');
+  if (!editor) return;
+  try {
+    const parsed = JSON.parse(editor.value || '{}');
+    editor.value = JSON.stringify(parsed, null, 2);
+  } catch (err) {
+    showToast('JSON 格式不合法: ' + err.message, 'error');
+  }
+});
+
+$('mcpResetArgsBtn')?.addEventListener('click', () => {
+  if (!selectedMcpTool) return;
+  const templateObj = buildArgsTemplate(selectedMcpTool.parameters);
+  if ($('mcpToolArgsEditor')) {
+    $('mcpToolArgsEditor').value = JSON.stringify(templateObj, null, 2);
+    showToast('已重置并填充默认参数模板', 'info');
+  }
+});
+
+$('copyMcpOutputBtn')?.addEventListener('click', () => {
+  const codeEl = $('mcpToolOutputPre')?.querySelector('code');
+  if (codeEl && codeEl.textContent) {
+    copyText(codeEl.textContent, 'MCP 执行响应');
+  }
+});
+
+$('executeMcpToolBtn')?.addEventListener('click', async () => {
+  if (!selectedMcpTool) {
+    showToast('请先选择要测试的 MCP 工具', 'info');
+    return;
+  }
+
+  let args = {};
+  const rawText = $('mcpToolArgsEditor')?.value?.trim() || '{}';
+  try {
+    args = JSON.parse(rawText);
+  } catch (err) {
+    showToast('入参 JSON 语法错误: ' + err.message, 'error');
+    return;
+  }
+
+  const statusTag = $('mcpExecutionStatusTag');
+  const outputPre = $('mcpToolOutputPre');
+  const execBtn = $('executeMcpToolBtn');
+
+  if (statusTag) {
+    statusTag.innerHTML = `
+      <span class="thinking-pulse-dot"></span>
+      <span style="color:var(--primary);font-weight:600;">正在执行 MCP 进程通信...</span>
+    `;
+  }
+  if (outputPre) {
+    outputPre.innerHTML = '<code>（正在等待子进程响应...）</code>';
+  }
+  if (execBtn) execBtn.disabled = true;
+
+  try {
+    const res = await window.hap.callMcpTool({
+      toolName: selectedMcpTool.name,
+      args,
+    });
+
+    const isSuccess = res.ok && !res.isError;
+    const duration = res.durationMs ?? 0;
+
+    if (statusTag) {
+      statusTag.innerHTML = `
+        <span class="badge ${isSuccess ? 'success' : 'danger'}" style="font-size:11px;">${isSuccess ? '200 OK' : 'TOOL_ERROR'}</span>
+        <span style="font-size:11.5px;color:var(--text-muted);">耗时: ${duration}ms</span>
+      `;
+    }
+
+    let formattedOutput = res.output || '（执行完成，无输出文本）';
+    try {
+      const parsed = JSON.parse(formattedOutput);
+      formattedOutput = JSON.stringify(parsed, null, 2);
+    } catch {
+      // plain text
+    }
+
+    if (outputPre) {
+      outputPre.innerHTML = `<code>${esc(formattedOutput)}</code>`;
+    }
+  } catch (err) {
+    if (statusTag) {
+      statusTag.innerHTML = `
+        <span class="badge danger" style="font-size:11px;">FAILED</span>
+        <span style="font-size:11.5px;color:var(--danger);">执行异常</span>
+      `;
+    }
+    if (outputPre) {
+      outputPre.innerHTML = `<code style="color:#f87171;">调用异常: ${esc(err.message)}</code>`;
+    }
+  } finally {
+    if (execBtn) execBtn.disabled = false;
+  }
+});
 
 // 预设 MCP 市场对话框
 function renderPresetMcpModal() {

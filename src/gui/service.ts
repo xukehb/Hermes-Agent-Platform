@@ -11,7 +11,8 @@ import { BUILTIN_PROVIDERS, ConfigResolver, ConfigWriter, loadConfig, resolveCon
 import { describeError, type Attachment, type ProtocolName, type WireApi } from '../domain/index.js';
 import { planInjection, writeInjection, type InjectionTarget } from '../inject/index.js';
 import { ProviderRegistry } from '../providers/index.js';
-import { parseUnifiedDiff, type FileDiffItem } from '../tools/diff-parser.js';
+import { parseUnifiedDiff, buildHunkPatch, type FileDiffItem } from '../tools/diff-parser.js';
+import { McpManager, resolveMcpServers, type ToolModule, type ToolContext } from '../tools/index.js';
 import { SqliteSessionStore } from '../storage/index.js';
 import {
   ScheduleStore,
@@ -449,14 +450,14 @@ function toolsForPermissions(config: GuiPermissionConfig): ResolvedAgent['tools'
     return {
       profile: 'minimal',
       allow: ['read_file', 'list_dir', 'search'],
-      deny: ['shell', 'open_external', 'write_file', 'apply_patch', 'http_fetch', 'spawn_subagent'],
+      deny: ['shell', 'open_external', 'write_file', 'apply_patch', 'http_fetch', 'web_search', 'spawn_subagent'],
     };
   }
 
   const deny: string[] = [];
   if (!config.allowShell) deny.push('shell', 'open_external');
   if (!config.allowFsWrite) deny.push('write_file', 'apply_patch');
-  if (!config.allowNetwork) deny.push('http_fetch');
+  if (!config.allowNetwork) deny.push('http_fetch', 'web_search');
   if (!config.allowSpawnSubagent) deny.push('spawn_subagent');
 
   return { profile: 'full', allow: ['*'], deny };
@@ -495,6 +496,13 @@ export class GuiService {
     dbPath: BOT_CONTROL_DB_PATH,
     credentialsDir: BOT_CREDENTIALS_DIR,
   });
+  private activeChatTask: {
+    taskId: string;
+    controller: AbortController;
+    orchestrator: AgentOrchestrator;
+  } | null = null;
+  private mcpPlaygroundManager?: McpManager;
+  private mcpPlaygroundModules?: Map<string, ToolModule>;
 
   constructor(
     private readonly configPath = resolveConfigPath(undefined, process.env),
@@ -1714,6 +1722,52 @@ export class GuiService {
     return { ok: true, message: `已成功暂存 ${file}` };
   }
 
+  async stageHunk(projectPath: string, file: string, patch: string): Promise<{ ok: boolean; message: string }> {
+    if (!projectPath || !patch) throw new Error('参数缺失：项目路径或 Diff 补丁内容为空');
+    try {
+      await execa('git', ['apply', '--cached', '--unidiff-zero', '--whitespace=nowarn', '-'], {
+        cwd: projectPath,
+        input: patch,
+      });
+      this.info(`已成功暂存代码块: ${file}`);
+      return { ok: true, message: `已成功暂存 ${file} 该代码块` };
+    } catch {
+      try {
+        await execa('git', ['apply', '--cached', '--whitespace=nowarn', '-'], {
+          cwd: projectPath,
+          input: patch,
+        });
+        this.info(`已成功暂存代码块: ${file}`);
+        return { ok: true, message: `已成功暂存 ${file} 该代码块` };
+      } catch (err) {
+        throw new Error(`暂存代码块失败: ${describeError(err)}`);
+      }
+    }
+  }
+
+  async revertHunk(projectPath: string, file: string, patch: string): Promise<{ ok: boolean; message: string }> {
+    if (!projectPath || !patch) throw new Error('参数缺失：项目路径或 Diff 补丁内容为空');
+    try {
+      await execa('git', ['apply', '--reverse', '--unidiff-zero', '--whitespace=nowarn', '-'], {
+        cwd: projectPath,
+        input: patch,
+      });
+      this.info(`已成功还原代码块: ${file}`);
+      return { ok: true, message: `已成功还原 ${file} 该代码块` };
+    } catch {
+      try {
+        await execa('git', ['apply', '--reverse', '--whitespace=nowarn', '-'], {
+          cwd: projectPath,
+          input: patch,
+        });
+        this.info(`已成功还原代码块: ${file}`);
+        return { ok: true, message: `已成功还原 ${file} 该代码块` };
+      } catch (err) {
+        throw new Error(`还原代码块失败: ${describeError(err)}`);
+      }
+    }
+  }
+
   listSchedules(): ScheduleJobConfig[] {
     return ScheduleStore.getInstance().listJobs();
   }
@@ -1815,7 +1869,7 @@ export class GuiService {
     return plan;
   }
 
-  async chat(input: GuiChatInput): Promise<object> {
+  async chat(input: GuiChatInput, onStream?: (event: Record<string, unknown>) => void): Promise<object> {
     const rawInput = input.input.trim();
     const resolver = this.resolver();
     const availableModels = [...resolver.resolveModels().values()];
@@ -2020,6 +2074,9 @@ export class GuiService {
 
     const orchestrator = new AgentOrchestrator({ configPath: this.configPath, historyLimit: 20 });
     const events: Array<Record<string, unknown>> = [];
+    const chatController = new AbortController();
+    const taskId = randomUUID();
+    this.activeChatTask = { taskId, controller: chatController, orchestrator };
     try {
       const permissions = this.getPermissions();
       const projectPath = input.projectPath?.trim();
@@ -2074,7 +2131,18 @@ export class GuiService {
         input: prefix + input.input,
         sessionKey: input.sessionKey ?? 'gui:default',
         tools: toolsForPermissions(permissions),
-        onEvent: (event) => events.push(event as unknown as Record<string, unknown>),
+        signal: chatController.signal,
+        onEvent: (event) => {
+          const evRecord = event as unknown as Record<string, unknown>;
+          events.push(evRecord);
+          if (onStream) {
+            try {
+              onStream(evRecord);
+            } catch {
+              // ignore stream error
+            }
+          }
+        },
       };
       if (attachments.length > 0) {
         request.attachments = attachments;
@@ -2092,23 +2160,158 @@ export class GuiService {
       try {
         outcome = await orchestrator.runTask(request);
         this.info('聊天完成：' + outcome.taskId);
-        if (outcome.status === 'failed' || outcome.finishReason === 'error' || (!outcome.text && outcome.error)) {
+        if (chatController.signal.aborted || outcome.finishReason === 'abort') {
+          outcome = {
+            taskId,
+            text: (outcome?.text ? outcome.text + '\n\n' : '') + '*(⏹️ 用户已手动中断本次生成)*',
+            finishReason: 'abort',
+            iterations: outcome?.iterations ?? 0,
+            model: targetModel || 'default',
+          };
+        } else if (outcome.status === 'failed' || outcome.finishReason === 'error' || (!outcome.text && outcome.error)) {
           const reason = outcome.error || '大模型接口未返回有效回复';
           outcome.text = `⚠️ **智能体回复提示：**\n\n\`${reason}\`\n\n> 💡 **解决建议：**\n> 1. 请前往左侧导航 **【⚙️ 设置中心 -> AI 服务商与模型】**，检查对应服务商的 **API 基础地址 (Base URL)** 与 **API Key** 是否填写正确；\n> 2. 点击服务商卡片上的 **【连通测试】** 验证网络与 Key 有效性；\n> 3. 您也可以点击顶部模型下拉框，切换到其它已就绪的模型（如 DeepSeek、OpenAI 或本地免费的 Ollama）。\n> 4. 支持本地斜杠系统指令，例如发送 \`/models\` 查看所有已配置模型。\n`;
         }
       } catch (taskErr) {
-        const errMsg = describeError(taskErr);
-        this.error('智能体对话执行异常：' + errMsg);
-        outcome = {
-          taskId: 'err_' + Date.now(),
-          text: `⚠️ **智能体回复提示：**\n\n\`${errMsg}\`\n\n> 💡 **解决建议：**\n> 1. 请前往左侧导航 **【⚙️ 设置中心 -> AI 服务商与模型】**，检查对应服务商的 **API 基础地址 (Base URL)** 与 **API Key** 是否填写正确；\n> 2. 点击服务商卡片上的 **【连通测试】** 验证连通性；\n> 3. 您也可以点击顶部模型下拉框，切换到其它已就绪的模型直接对话。\n> 4. 支持本地斜杠系统指令（如 \`/models\`、\`/help\`）。\n`,
-          iterations: 0,
-          model: targetModel || 'default',
-        };
+        if (chatController.signal.aborted) {
+          outcome = {
+            taskId,
+            text: '*(⏹️ 用户已手动中断本次生成)*',
+            finishReason: 'abort',
+            iterations: 0,
+            model: targetModel || 'default',
+          };
+        } else {
+          const errMsg = describeError(taskErr);
+          this.error('智能体对话执行异常：' + errMsg);
+          outcome = {
+            taskId: 'err_' + Date.now(),
+            text: `⚠️ **智能体回复提示：**\n\n\`${errMsg}\`\n\n> 💡 **解决建议：**\n> 1. 请前往左侧导航 **【⚙️ 设置中心 -> AI 服务商与模型】**，检查对应服务商的 **API 基础地址 (Base URL)** 与 **API Key** 是否填写正确；\n> 2. 点击服务商卡片上的 **【连通测试】** 验证连通性；\n> 3. 您也可以点击顶部模型下拉框，切换到其它已就绪的模型直接对话。\n> 4. 支持本地斜杠系统指令（如 \`/models\`、\`/help\`）。\n`,
+            iterations: 0,
+            model: targetModel || 'default',
+          };
+        }
       }
       return { outcome, events };
     } finally {
+      if (this.activeChatTask?.taskId === taskId) {
+        this.activeChatTask = null;
+      }
       await orchestrator.close();
+    }
+  }
+
+  abortChat(): { ok: boolean; message: string } {
+    if (!this.activeChatTask) {
+      return { ok: false, message: '当前没有正在执行的生成任务' };
+    }
+    try {
+      this.activeChatTask.controller.abort();
+      this.activeChatTask.orchestrator.abort(this.activeChatTask.taskId);
+      this.info(`已接收中断指令，已成功中止任务: ${this.activeChatTask.taskId}`);
+      this.activeChatTask = null;
+      return { ok: true, message: '已成功中止对话生成' };
+    } catch (err) {
+      return { ok: false, message: `中止生成失败: ${describeError(err)}` };
+    }
+  }
+
+  async listMcpPlaygroundTools(refresh = false): Promise<{
+    tools: Array<{
+      name: string;
+      rawName: string;
+      description: string;
+      parameters: Record<string, unknown>;
+      source: string;
+    }>;
+    failures: Array<{ serverId: string; message: string }>;
+    serverCount: number;
+  }> {
+    if (refresh || !this.mcpPlaygroundManager) {
+      if (this.mcpPlaygroundManager) {
+        await this.mcpPlaygroundManager.close().catch(() => {});
+      }
+      const loaded = loadConfig({ path: this.configPath });
+      const specs = resolveMcpServers(loaded.config);
+      this.mcpPlaygroundManager = new McpManager(specs, process.env);
+      const res = await this.mcpPlaygroundManager.listAll();
+      this.mcpPlaygroundModules = new Map(res.modules.map((m) => [m.definition.name, m]));
+      return {
+        tools: res.modules.map((m) => ({
+          name: m.definition.name,
+          rawName: m.renamedFrom || m.definition.name,
+          description: m.definition.description,
+          parameters: m.definition.parameters,
+          source: m.definition.source,
+        })),
+        failures: res.failures,
+        serverCount: specs.length,
+      };
+    }
+
+    const loaded = loadConfig({ path: this.configPath });
+    const specs = resolveMcpServers(loaded.config);
+    const tools = [...(this.mcpPlaygroundModules?.values() || [])].map((m) => ({
+      name: m.definition.name,
+      rawName: m.renamedFrom || m.definition.name,
+      description: m.definition.description,
+      parameters: m.definition.parameters,
+      source: m.definition.source,
+    }));
+    return {
+      tools,
+      failures: [],
+      serverCount: specs.length,
+    };
+  }
+
+  async callMcpPlaygroundTool(payload: { toolName: string; args: Record<string, unknown> }): Promise<{
+    ok: boolean;
+    output: string;
+    durationMs: number;
+    isError?: boolean;
+  }> {
+    if (!payload.toolName) throw new Error('未指定工具名称');
+    if (!this.mcpPlaygroundModules || !this.mcpPlaygroundModules.has(payload.toolName)) {
+      await this.listMcpPlaygroundTools(true);
+    }
+    const module = this.mcpPlaygroundModules?.get(payload.toolName);
+    if (!module) {
+      throw new Error(`找不到 MCP 工具: ${payload.toolName}`);
+    }
+
+    const resolver = this.resolver();
+    const agentIds = resolver.listAgentIds();
+    const defaultAgent = resolver.resolveAgent(agentIds[0] ?? 'default');
+
+    const ctx: ToolContext = {
+      agent: defaultAgent,
+      paths: resolver.resolvePaths(),
+      taskId: 'mcp_playground_' + Date.now(),
+      signal: new AbortController().signal,
+      depth: 0,
+      env: process.env,
+    };
+
+    const start = Date.now();
+    try {
+      const output = await module.handler(payload.args || {}, ctx);
+      const durationMs = Date.now() - start;
+      const res: { ok: boolean; output: string; durationMs: number; isError?: boolean } = {
+        ok: !output.isError,
+        output: output.content,
+        durationMs,
+      };
+      if (output.isError) res.isError = true;
+      return res;
+    } catch (err) {
+      const durationMs = Date.now() - start;
+      return {
+        ok: false,
+        output: describeError(err),
+        durationMs,
+        isError: true,
+      };
     }
   }
 
