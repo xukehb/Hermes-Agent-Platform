@@ -243,6 +243,10 @@ export interface ResolvedHttpChannel {
   enabled: boolean;
   bind: string;
   defaultAgent: string | undefined;
+  /** Optional bearer token, normally supplied through HAP_HTTP_AUTH_TOKEN. */
+  authToken?: string | undefined;
+  /** Maximum JSON request body size in bytes. */
+  maxBodyBytes?: number | undefined;
 }
 
 export interface ResolvedCliChannel {

@@ -7,12 +7,12 @@ export function registerWebCommands(root: Command, globals: () => GlobalOptions)
     .command('web')
     .description('启动局域网 Web 工作台 (Headless Web Workbench)')
     .option('-p, --port <port>', '监听端口', '3000')
-    .option('-b, --bind <host>', '绑定地址 (0.0.0.0 支持局域网连接)', '0.0.0.0')
+    .option('-b, --bind <host>', '绑定地址 (默认仅本机；公网监听需配合 --auth)', '127.0.0.1')
     .option('--auth <token>', '开启访问凭据 Token 鉴权保护')
     .action(async (opts) => {
       const g = globals();
       const port = parseInt(opts.port, 10) || 3000;
-      const bind = opts.bind || '0.0.0.0';
+      const bind = opts.bind || '127.0.0.1';
       const auth = opts.auth;
 
       const options: WebServerOptions = {

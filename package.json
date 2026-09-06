@@ -14,8 +14,9 @@
     "test": "vitest run tests/",
     "lint": "eslint .",
     "hap": "tsx src/cli/bin.ts",
-    "rebuild": "npx -y @electron/rebuild -f -w better-sqlite3",
-    "rebuild:electron": "npx -y @electron/rebuild -f -w better-sqlite3",
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "rebuild:electron": "electron-rebuild -f -w better-sqlite3",
+    "rebuild:node": "npm rebuild better-sqlite3 --build-from-source",
     "gui": "npm run build && npm run rebuild:electron && electron dist/src/gui/main.js",
     "gui:dev": "npm run build && npm run rebuild:electron && electron dist/src/gui/main.js",
     "dist": "npm run build && npm run rebuild:electron && npx electron-builder --win",
@@ -69,6 +70,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.2.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.15.0",
     "@types/ssh2": "^1.15.5",

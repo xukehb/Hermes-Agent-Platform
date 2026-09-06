@@ -9,8 +9,26 @@ import {
 } from './types.js';
 import type { ControlPlaneStore } from './store.js';
 
-const observeCommands = new Set(['help', 'status', 'trace', 'usage', 'models', 'agents', 'projects', 'prompt']);
-const operateCommands = new Set(['shell', 'git', 'diff', 'commit', 'push', 'project', 'model', 'stop', 'new']);
+const readOnlyCommands = new Set([
+  'help', 'status', 'trace', 'usage', 'models', 'agents', 'projects',
+  'skills', 'plugins', 'agent', 'git', 'diff', 'model',
+]);
+const operateCommands = new Set(['prompt', 'shell', 'commit', 'push', 'project', 'model_switch', 'stop', 'new', 'reload']);
+
+/**
+ * Control-plane policy is intentionally default-deny.  The capability profile
+ * is an upper bound even for admins, so an observe binding cannot be upgraded
+ * by changing the paired operator's role.
+ */
+export function isCommandAllowed(
+  role: OperatorRole,
+  profile: 'observe' | 'operate',
+  commandKind: string,
+): boolean {
+  if (readOnlyCommands.has(commandKind)) return true;
+  if (!operateCommands.has(commandKind)) return false;
+  return profile === 'operate' && role !== 'viewer';
+}
 
 export interface PairingCodeIssue {
   id: string;
@@ -81,7 +99,7 @@ export class BotAuthorizationService {
     if (binding === undefined || operator === undefined) {
       throw new ControlPlaneError('CONTROL_FORBIDDEN', 'CONTROL_FORBIDDEN: bot user is not paired with this server');
     }
-    if (!this.canRun(operator.role, binding.capabilityProfile, input.commandKind)) {
+    if (!isCommandAllowed(operator.role, binding.capabilityProfile, input.commandKind)) {
       throw new ControlPlaneError('CONTROL_FORBIDDEN', 'CONTROL_FORBIDDEN: command is not allowed for this operator or binding');
     }
     return {
@@ -92,14 +110,8 @@ export class BotAuthorizationService {
       role: operator.role,
       capabilityProfile: binding.capabilityProfile,
       requestId: input.requestId,
+      approvalPolicy: binding.approvalPolicy,
     };
-  }
-
-  private canRun(role: OperatorRole, profile: 'observe' | 'operate', commandKind: string): boolean {
-    if (role === 'admin') return true;
-    if (observeCommands.has(commandKind)) return true;
-    if (!operateCommands.has(commandKind)) return role !== 'viewer' && profile === 'operate';
-    return role === 'operator' && profile === 'operate';
   }
 
   private generateCode(): string {

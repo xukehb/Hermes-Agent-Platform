@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   BotAuthorizationService,
   ControlPlaneStore,
+  isCommandAllowed,
   type BotAccountInput,
   type ServerBotBindingInput,
 } from '../src/control-plane/index.js';
@@ -45,6 +46,19 @@ afterEach(() => {
 });
 
 describe('BotAuthorizationService', () => {
+  it('uses the intersection of role and capability profile with default deny', () => {
+    expect(isCommandAllowed('viewer', 'observe', 'status')).toBe(true);
+    expect(isCommandAllowed('admin', 'observe', 'status')).toBe(true);
+    expect(isCommandAllowed('viewer', 'observe', 'model')).toBe(true);
+    expect(isCommandAllowed('viewer', 'observe', 'model_switch')).toBe(false);
+    expect(isCommandAllowed('admin', 'observe', 'prompt')).toBe(false);
+    expect(isCommandAllowed('operator', 'observe', 'prompt')).toBe(false);
+    expect(isCommandAllowed('viewer', 'operate', 'prompt')).toBe(false);
+    expect(isCommandAllowed('operator', 'operate', 'prompt')).toBe(true);
+    expect(isCommandAllowed('admin', 'operate', 'shell')).toBe(true);
+    expect(isCommandAllowed('admin', 'operate', 'unknown-command')).toBe(false);
+  });
+
   it('rejects unpaired platform users by default', () => {
     const store = new ControlPlaneStore(tempDb());
     store.upsertAccount(account('bot-a'));

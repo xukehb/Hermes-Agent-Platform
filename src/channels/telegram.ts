@@ -238,7 +238,7 @@ export class TelegramChannel implements Channel {
         botAccountId: control.botAccountId,
         platformUserId,
         requestId: `${control.botAccountId}:${chatId}:${Date.now()}`,
-        commandKind: normalizeCommandKindForControl(parseCommand(body).kind),
+        commandKind: normalizeCommandKindForControl(parseCommand(body)),
       });
     } catch (error) {
       if (error instanceof ControlPlaneError && error.code === 'CONTROL_FORBIDDEN') {
@@ -347,8 +347,10 @@ export class TelegramChannel implements Channel {
   }
 }
 
-function normalizeCommandKindForControl(kind: ReturnType<typeof parseCommand>['kind']): string {
-  return kind === 'sh' ? 'shell' : kind;
+function normalizeCommandKindForControl(command: ReturnType<typeof parseCommand>): string {
+  if (command.kind === 'sh') return 'shell';
+  if (command.kind === 'model' && command.modelName !== undefined) return 'model_switch';
+  return command.kind;
 }
 
 /**

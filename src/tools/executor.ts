@@ -11,9 +11,10 @@
  * 日期：2026-08-24  执行者：Codex
  */
 
+import { randomUUID } from 'node:crypto';
 import { HapError, FatalError, describeError, digestArgs } from '../domain/index.js';
 import type { ToolCall, ToolResult, TraceEvent } from '../domain/index.js';
-import { scopeToolArgsForControl } from '../control-plane/index.js';
+import { evaluateToolPolicy, scopeToolArgsForControl } from '../control-plane/index.js';
 import { truncateToolOutput } from './output.js';
 import type { ToolRegistry } from './registry.js';
 import type { ToolContext, ToolModule, ToolOutput } from './types.js';
@@ -77,7 +78,30 @@ export class ToolExecutor {
       return this.finish(call, ctx, { content: scoped.message, isError: true }, startedAt);
     }
 
+    const policy = evaluateToolPolicy(module.definition.name, scoped.args, ctx);
+    if (policy.decision !== 'allow') {
+      ctx.audit?.recordAudit({
+        id: randomUUID(),
+        bindingId: ctx.control?.bindingId,
+        operatorId: ctx.control?.operatorId,
+        requestId: ctx.control?.requestId,
+        tool: module.definition.name,
+        decision: policy.decision,
+        detail: policy.reason,
+      });
+      return this.finish(call, ctx, { content: policy.reason, isError: true }, startedAt);
+    }
+
     const output = await this.runGuarded(module, scoped.args, ctx, call);
+    ctx.audit?.recordAudit({
+      id: randomUUID(),
+      bindingId: ctx.control?.bindingId,
+      operatorId: ctx.control?.operatorId,
+      requestId: ctx.control?.requestId,
+      tool: module.definition.name,
+      decision: output.isError === true ? 'execution_error' : 'executed',
+      detail: output.content.slice(0, 500),
+    });
     return this.finish(call, ctx, output, startedAt);
   }
 

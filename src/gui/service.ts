@@ -6,7 +6,7 @@ import { dialog, shell } from 'electron';
 import { execa } from 'execa';
 import { AgentOrchestrator } from '../agent/index.js';
 import { ChannelManager, TelegramChannel, createChannelHost, parseCommand, HELP_TEXT, ChannelContactStore, WeChatContactStore, FeishuChannel, QQChannel, type ChannelContact, type ChannelChatMessage, type ChannelName, type WeChatContact, type WeChatChatMessage } from '../channels/index.js';
-import { BUILTIN_PROVIDERS, ConfigResolver, ConfigWriter, loadConfig, resolveConfigPath, sanitizeModelRef, type AgentPatch, type ModelPatch, type ProviderPatch, type ResolvedAgent, type ResolvedProvider } from '../config/index.js';
+import { BUILTIN_PROVIDERS, ConfigResolver, ConfigWriter, loadConfig, resolveConfigPath, sanitizeModelRef, type ModelPatch, type ProviderPatch, type ResolvedAgent, type ResolvedProvider } from '../config/index.js';
 import { describeError, type Attachment, type ProtocolName, type WireApi } from '../domain/index.js';
 import { planInjection, writeInjection, type InjectionTarget } from '../inject/index.js';
 import { ProviderRegistry } from '../providers/index.js';
@@ -39,9 +39,13 @@ import {
   type InstallProgressEvent,
   type RemoteSystemInfo,
   type RemoteExecResult,
+  type RemoteProcessList,
+  type RemoteProcessSignal,
+  type RemoteProcessKillResult,
   type ServerBotConfig,
 } from '../remote/index.js';
 import { BotControlFacade } from './bot-control.js';
+import { removeAgent as removeGuiAgent, upsertAgent as upsertGuiAgent, type GuiAgentInput } from './agent-operations.js';
 import type {
   GuiChatInput,
   GuiGitStatus,
@@ -476,40 +480,11 @@ function targetPath(target: GuiTarget): string {
   return join(homedir(), '.openclaw', 'settings.json');
 }
 
-function parseCsv(value: string | string[] | undefined): string[] {
-  if (Array.isArray(value)) {
-    return value.map((item) => item.trim()).filter(Boolean);
-  }
-  if (value === undefined) {
-    return [];
-  }
-  return value.split(',').map((item) => item.trim()).filter(Boolean);
-}
-
-function parseParamsJson(raw: string): Record<string, unknown> | null {
-  const text = raw.trim();
-  if (!text) {
-    return null;
-  }
-  const parsed = JSON.parse(text) as unknown;
-  if (parsed === null || Array.isArray(parsed) || typeof parsed !== 'object') {
-    throw new Error('模型参数必须是 JSON 对象');
-  }
-  return parsed as Record<string, unknown>;
-}
-
 function readOptionalText(path: string | undefined): string {
   if (!path || !existsSync(path)) {
     return '';
   }
   return readFileSync(path, 'utf8');
-}
-
-function writeAgentPrompt(agentDir: string, body: string): string {
-  const target = isAbsolute(agentDir) ? resolvePath(agentDir, 'system.md') : resolvePath(process.cwd(), agentDir, 'system.md');
-  mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, body.endsWith('\n') ? body : body + '\n', 'utf8');
-  return target;
 }
 
 export class GuiService {
@@ -895,106 +870,18 @@ export class GuiService {
     return { ok: true, count: aliases.length };
   }
 
-  upsertAgent(input: {
-    id: string;
-    create?: boolean;
-    displayName?: string;
-    emoji?: string;
-    model?: string;
-    fallbackModels?: string | string[];
-    utilityModel?: string;
-    protocol?: 'openai-tools' | 'deepseek' | 'anthropic' | 'hermes-native' | '';
-    workspace?: string;
-    description?: string;
-    toolTier?: 'minimal' | 'standard' | 'coding' | 'research' | 'full';
-    allowTools?: string | string[];
-    denyTools?: string | string[];
-    subagents?: string | string[];
-    runtimeMode?: 'oneshot' | 'persistent';
-    reasoningVisible?: boolean;
-    paramsJson?: string;
-    systemPrompt?: string;
-  }): object {
+  upsertAgent(input: GuiAgentInput): object {
+    const result = upsertGuiAgent(this.configPath, input);
     const id = input.id.trim();
-    if (!id) throw new Error('智能体 ID 不能为空');
-    if (input.create && this.resolver().listAgentIds().includes(id)) {
-      throw new Error(`智能体 ID "${id}" 已存在`);
-    }
-    const writer = new ConfigWriter(this.configPath);
-    const patch: AgentPatch = {};
-    if (input.displayName !== undefined || input.emoji !== undefined) {
-      if (input.displayName !== undefined) {
-        patch.name = input.displayName.trim();
-      }
-      patch.identity = {
-        display_name: input.displayName?.trim(),
-        emoji: input.emoji?.trim(),
-      };
-    }
-    if (input.model !== undefined) {
-      const primary = input.model.trim();
-      const fallbacks = parseCsv(input.fallbackModels);
-      patch.model = primary ? (fallbacks.length > 0 ? { primary, fallbacks } : primary) : null as never;
-    } else if (input.fallbackModels !== undefined) {
-      patch.model = { primary: this.resolver().resolveAgent(id).model.primary, fallbacks: parseCsv(input.fallbackModels) };
-    }
-    if (input.utilityModel !== undefined) {
-      patch.utility_model = input.utilityModel.trim() || null as never;
-    }
-    if (input.protocol !== undefined) {
-      patch.protocol = input.protocol || null as never;
-    }
-    if (input.workspace !== undefined) {
-      patch.workspace = input.workspace.trim() || null as never;
-    }
-    if (input.description !== undefined) {
-      patch.description = input.description.trim();
-    }
-    if (input.toolTier !== undefined) {
-      patch.tools = {
-        profile: input.toolTier,
-        allow: parseCsv(input.allowTools),
-        deny: parseCsv(input.denyTools),
-      };
-    } else if (input.allowTools !== undefined || input.denyTools !== undefined) {
-      patch.tools = {
-        allow: parseCsv(input.allowTools),
-        deny: parseCsv(input.denyTools),
-      };
-    }
-    if (input.subagents !== undefined) {
-      patch.subagents = { allow: parseCsv(input.subagents) };
-    }
-    if (input.runtimeMode !== undefined) {
-      patch.runtime = { mode: input.runtimeMode };
-    }
-    if (input.reasoningVisible !== undefined) {
-      patch.reasoning_visible = input.reasoningVisible;
-    }
-    if (input.paramsJson !== undefined) {
-      patch.params = parseParamsJson(input.paramsJson) as never;
-    }
-    writer.upsertAgent(id, patch);
-    if (input.systemPrompt !== undefined) {
-      const prompt = input.systemPrompt.trim();
-      if (prompt) {
-        const agent = this.resolver().resolveAgent(id);
-        writer.upsertAgent(id, { system_prompt_file: writeAgentPrompt(agent.agentDir, prompt) });
-      } else {
-        writer.upsertAgent(id, { system_prompt_file: null as never });
-      }
-    }
     this.info('已更新智能体配置：' + id);
-    return { ok: true };
+    return result;
   }
 
   removeAgent(rawId: string): object {
     const id = rawId.trim();
-    if (!id) throw new Error('智能体 ID 不能为空');
-    const writer = new ConfigWriter(this.configPath);
-    writer.removeAgent(id);
+    const result = removeGuiAgent(this.configPath, id);
     this.info('已删除智能体配置：' + id);
-    return { ok: true };
+    return result;
   }
 
   getEnvVars(): { list: GuiEnvVarItem[]; totalSet: number } {
@@ -3062,7 +2949,11 @@ export class GuiService {
         }
         return { ok: false, message: 'Telegram Token 校验失败：凭据无效或被封禁' };
       } catch (err) {
-        return { ok: false, message: `网络连接失败或超时：${describeError(err)}` };
+        const errorDesc = describeError(err);
+        return {
+          ok: false,
+          message: `网络连接失败或超时（${errorDesc}）。提示：Telegram 官方接口 api.telegram.org 需在已启用代理的网络环境下访问，请检查本地代理工具是否开启系统代理/TUN模式。`,
+        };
       }
     } else if (platform === 'qq') {
       const wsUrl = bot.config?.wsEndpoint || 'ws://127.0.0.1:3001';
@@ -3076,9 +2967,10 @@ export class GuiService {
       return { ok: true, message: '钉钉机器人凭据配置完成' };
     } else if (platform === 'wechat') {
       const configured = Boolean(bot.config?.puppetToken || (bot.id ? this.botControl.readCredentialsForTest(bot.id)?.botToken : undefined));
-      return configured
-        ? { ok: true, message: '微信 iLink 机器人凭据就绪，启动后将进入扫码登录流程' }
-        : { ok: false, message: '请先配置微信 iLink 本地令牌或扫码登录凭据' };
+      if (configured) {
+        return { ok: true, message: '已检测到 Wechaty Puppet 凭据，保存后将通过 Puppet 服务连接' };
+      }
+      return { ok: true, message: '个人微信扫码模式就绪，保存后请点击【立即弹出扫码面板】或前往微信通道扫码登录' };
     }
     return { ok: true, message: `${platform} 机器人配置已就绪` };
   }
@@ -3173,13 +3065,26 @@ export class GuiService {
     } else if (channel === 'telegram') {
       const token = webhookUrl || process.env.TELEGRAM_BOT_TOKEN;
       if (!token) return { ok: false, message: '请填写 Telegram Bot Token 或在环境变量中设置' };
-      if (!targetId) return { ok: false, message: '请填写接收告警的 Telegram Chat ID' };
+      const chatId = targetId?.trim() || '';
+      if (!chatId) return { ok: false, message: '请填写接收告警的 Telegram Chat ID' };
+      if (chatId === payload.serverId.trim()) {
+        return {
+          ok: false,
+          message: 'Telegram Chat ID 不能填写服务器编号。请先私聊 Bot 发送 /start（群聊则把 Bot 加入群并发送一条消息），再填写真实 Chat ID。',
+        };
+      }
+      if (!/^-?\d+$/.test(chatId) && !/^@[A-Za-z0-9_]{5,}$/.test(chatId)) {
+        return {
+          ok: false,
+          message: 'Telegram Chat ID 格式无效，请填写数字 ID（群聊通常以 -100 开头）或 @用户名。',
+        };
+      }
       try {
         const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            chat_id: targetId,
+            chat_id: chatId,
             text: `${title}\n\n${content}`,
           }),
         });
@@ -3187,7 +3092,20 @@ export class GuiService {
         if (data.ok) {
           return { ok: true, message: '🎉 Telegram 告警消息已成功发送至指定 Chat！' };
         }
-        return { ok: false, message: `Telegram 发送失败：${data.description || JSON.stringify(data)}` };
+        const description = String(data.description || '');
+        if (description.toLowerCase().includes('chat not found')) {
+          return {
+            ok: false,
+            message: 'Telegram 找不到这个 Chat ID。请先在 Telegram 中私聊 Bot 发送 /start；如果是群聊，请把 Bot 加入群并发送一条消息，再填写真实 Chat ID。',
+          };
+        }
+        if (description.toLowerCase().includes('bot is not a member') || description.toLowerCase().includes('forbidden')) {
+          return {
+            ok: false,
+            message: 'Telegram 拒绝发送：请确认 Bot 已加入目标群聊且拥有发消息权限，并检查 Chat ID。',
+          };
+        }
+        return { ok: false, message: `Telegram 发送失败：${description || JSON.stringify(data)}` };
       } catch (err: any) {
         return { ok: false, message: `Telegram 请求失败：${err.message}` };
       }
@@ -3308,74 +3226,89 @@ export class GuiService {
     return RemoteClientManager.getInstance().execCommand(server, payload.command);
   }
 
-  async scanDiskCleanable(server?: string): Promise<DiskScanReport> {
-    if (server) {
-      const s = RemoteServerStore.getInstance().get(server) ||
-        RemoteServerStore.getInstance().list().find(item => item.name === server || item.host === server);
-      if (!s) throw new Error(`未找到远程服务器：${server}`);
-      // 远程扫描
-      const cmd = 'df -h / && du -sh /var/log /tmp ~/.cache ~/.npm 2>/dev/null || true';
-      const res = await RemoteClientManager.getInstance().execCommand(s, cmd);
+  private resolveRemoteServer(reference: string): RemoteServerConfig {
+    const trimmed = reference.trim();
+    const store = RemoteServerStore.getInstance();
+    const server = store.get(trimmed) || store.list().find((item) => item.name === trimmed || item.host === trimmed);
+    if (!server) throw new Error(`未找到远程服务器：${reference}`);
+    return server;
+  }
+
+  async getServerProcesses(id: string, options?: { limit?: number }): Promise<RemoteProcessList> {
+    const server = this.resolveRemoteServer(id);
+    return RemoteClientManager.getInstance().listProcesses(server, options);
+  }
+
+  async killLocalProcess(pid: number, signal: RemoteProcessSignal = 'KILL'): Promise<RemoteProcessKillResult> {
+    const normalizedPid = Number(pid);
+    if (!Number.isSafeInteger(normalizedPid) || normalizedPid <= 1) {
+      throw new Error('禁止终止系统受保护的核心进程 (PID <= 1)');
+    }
+    if (normalizedPid === process.pid || normalizedPid === process.ppid) {
+      throw new Error('禁止终止当前平台管理服务进程');
+    }
+    if (signal !== 'TERM' && signal !== 'KILL') {
+      throw new Error('无效的信号，仅支持 TERM 或 KILL');
+    }
+
+    try {
+      process.kill(normalizedPid, signal === 'KILL' ? 'SIGKILL' : 'SIGTERM');
+      this.info(`[LocalProcess] 已向本地进程 PID ${normalizedPid} 发送 ${signal} 信号`);
       return {
-        target: s.name,
-        totalCleanableBytes: 1024 * 1024 * 350,
-        safeCleanableBytes: 1024 * 1024 * 200,
-        reviewCleanableBytes: 1024 * 1024 * 150,
-        healthScore: 88,
-        aiDiagnosis: '远程 Linux 宿主运行良好，建议清理过期系统日志与临时缓存文件',
-        scannedRoots: ['/var/log', '/tmp'],
-        items: [
-          {
-            id: 'remote_logs',
-            category: 'temp_logs',
-            name: '系统与服务日志 (/var/log)',
-            path: '/var/log',
-            description: 'systemd journal 与过期应用服务日志',
-            sizeBytes: 1024 * 1024 * 120,
-            safety: 'safe',
-            type: 'dir',
-          },
-          {
-            id: 'remote_tmp',
-            category: 'temp_logs',
-            name: '系统临时目录 (/tmp)',
-            path: '/tmp',
-            description: 'Linux 系统运行时临时文件与残留 socket',
-            sizeBytes: 1024 * 1024 * 80,
-            safety: 'safe',
-            type: 'dir',
-          },
-          {
-            id: 'remote_docker',
-            category: 'docker_prune',
-            name: 'Docker 镜像与容器缓存',
-            path: 'docker://system',
-            description: '未使用的悬空镜像与构建缓存',
-            sizeBytes: 1024 * 1024 * 150,
-            safety: 'review',
-            type: 'docker',
-          },
-        ],
-        scannedAt: Date.now(),
+        pid: normalizedPid,
+        signal,
+        killed: true,
       };
+    } catch (error: any) {
+      if (error?.code === 'ESRCH') {
+        return {
+          pid: normalizedPid,
+          signal,
+          killed: true,
+          message: `进程 PID ${normalizedPid} 已不存在`,
+        };
+      }
+      if (error?.code === 'EPERM') {
+        throw new Error(`权限不足：无法终止进程 PID ${normalizedPid} (EPERM)`);
+      }
+      throw new Error(`终止本地进程 PID ${normalizedPid} 失败：${error?.message || error}`);
+    }
+  }
+
+  async killServerProcess(payload: {
+    id?: string;
+    serverId?: string;
+    server?: string;
+    pid: number;
+    signal: RemoteProcessSignal;
+    expectedStartTime?: string;
+  }): Promise<RemoteProcessKillResult> {
+    const reference = payload.id || payload.serverId || payload.server;
+    if (!reference) throw new Error('服务器编号不能为空');
+    if (reference === 'local' || reference === 'host') {
+      return this.killLocalProcess(payload.pid, payload.signal);
+    }
+    const server = this.resolveRemoteServer(reference);
+    return RemoteClientManager.getInstance().killProcess(
+      server,
+      payload.pid,
+      payload.signal,
+      payload.expectedStartTime,
+    );
+  }
+
+  async scanDiskCleanable(server?: string): Promise<DiskScanReport> {
+    if (server && server !== 'local' && server !== 'host') {
+      const remoteServer = this.resolveRemoteServer(server);
+      return RemoteClientManager.getInstance().scanDisk(remoteServer);
     }
     return scanLocalDisk();
   }
 
   async executeDiskCleanup(payload: { server?: string; itemIds?: string[] }): Promise<DiskCleanResult> {
-    if (payload.server) {
-      const s = RemoteServerStore.getInstance().get(payload.server) ||
-        RemoteServerStore.getInstance().list().find(item => item.name === payload.server || item.host === payload.server);
-      if (!s) throw new Error(`未找到远程服务器：${payload.server}`);
-      const cleanCmd = 'sudo apt-get clean -y 2>/dev/null; sudo journalctl --vacuum-size=100M 2>/dev/null; sudo docker system prune -f 2>/dev/null; rm -rf /tmp/* 2>/dev/null; df -h /';
-      const res = await RemoteClientManager.getInstance().execCommand(s, cleanCmd);
-      return {
-        target: s.name,
-        cleanedBytes: 1024 * 1024 * 250,
-        deletedItems: ['系统 APT 包缓存', 'Journal 日志缩容至 100M', 'Docker 悬空构建层', '临时目录 /tmp'],
-        errors: [],
-        cleanedAt: Date.now(),
-      };
+    if (payload.server && payload.server !== 'local' && payload.server !== 'host') {
+      const remoteServer = this.resolveRemoteServer(payload.server);
+      return RemoteClientManager.getInstance().cleanDisk(remoteServer, payload.itemIds || ['all']);
     }
     const report = await scanLocalDisk();
     return cleanLocalDisk(payload.itemIds || ['all'], report);

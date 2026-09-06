@@ -1,6 +1,6 @@
 import type { ControlExecutionContext } from './types.js';
 
-const remoteToolNames = new Set(['remote_exec', 'remote_sysinfo', 'remote_upgrade_daemon']);
+const remoteToolNames = new Set(['remote_exec', 'remote_sysinfo', 'remote_upgrade_daemon', 'remote_list_servers']);
 const mutatingRemoteToolNames = new Set(['remote_exec', 'remote_upgrade_daemon']);
 
 export function scopeToolArgsForControl(

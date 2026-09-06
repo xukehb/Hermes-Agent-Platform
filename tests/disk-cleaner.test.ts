@@ -31,6 +31,10 @@ describe('Smart Disk Cleaner Engine', () => {
     expect(report.healthScore).toBeGreaterThanOrEqual(0);
     expect(typeof report.aiDiagnosis).toBe('string');
     expect(report.aiDiagnosis.length).toBeGreaterThan(5);
+    expect(report.platform).toBe(process.platform);
+    expect(report.platformLabel).toBe(
+      process.platform === 'darwin' ? 'macOS' : process.platform === 'win32' ? 'Windows' : process.platform === 'linux' ? 'Linux' : '当前系统',
+    );
   }, 20000);
 
   it('diskCleanupTool executes dryRun successfully with markdown report', async () => {

@@ -348,7 +348,15 @@ export class ChannelManager {
       this.channels.push(qq);
     }
     if (channels.http.enabled) {
-      this.channels.push(new HttpChannel({ host: this.host, channels, limits, paths, log: this.log }));
+      this.channels.push(new HttpChannel({
+        host: this.host,
+        channels,
+        limits,
+        paths,
+        authToken: channels.http.authToken,
+        maxBodyBytes: channels.http.maxBodyBytes,
+        log: this.log,
+      }));
     }
     if (this.includeCli && channels.cli.enabled) {
       this.channels.push(new CliChannel({ host: this.host, channels, limits, paths }));

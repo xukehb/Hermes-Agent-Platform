@@ -11,6 +11,7 @@ Close the highest-risk security gaps identified in the current platform without 
 - Default `hap web` and `startWebServer` to loopback binding.
 - Reject non-loopback binds unless an explicit authentication token is supplied.
 - Apply authentication to the workbench HTML and static assets as well as `/api/*`.
+- Add a minimal `/login` and `/auth/login` bootstrap that exchanges the user-entered token for an HttpOnly same-origin session cookie.
 - Stop injecting the bearer token into HTML and stop printing it to logs.
 - Remove query-string token authentication; accept only the `Authorization: Bearer` header.
 - Configure CORS from an explicit allowlist. The default is same-origin/no cross-origin access.

@@ -1,13 +1,35 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { RemoteServerConfig } from './types.js';
 
 const CONFIG_DIR = path.resolve(process.cwd(), '.codex');
 const SERVERS_FILE = path.join(CONFIG_DIR, 'servers.json');
 
-function ensureDir() {
-  if (!fs.existsSync(CONFIG_DIR)) {
-    fs.mkdirSync(CONFIG_DIR, { recursive: true });
+function ensureDir(directory: string): void {
+  fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+  try { fs.chmodSync(directory, 0o700); } catch { /* best effort on Windows */ }
+}
+
+function writeAtomic(filePath: string, content: string): void {
+  const directory = path.dirname(filePath);
+  ensureDir(directory);
+  const temporary = path.join(directory, `.${path.basename(filePath)}.${crypto.randomUUID()}.tmp`);
+  let descriptor: number | undefined;
+  try {
+    descriptor = fs.openSync(temporary, 'wx', 0o600);
+    fs.writeFileSync(descriptor, content, 'utf8');
+    fs.fsyncSync(descriptor);
+    fs.closeSync(descriptor);
+    descriptor = undefined;
+    try { fs.chmodSync(temporary, 0o600); } catch { /* best effort on Windows */ }
+    fs.renameSync(temporary, filePath);
+    try { fs.chmodSync(filePath, 0o600); } catch { /* best effort on Windows */ }
+  } finally {
+    if (descriptor !== undefined) {
+      try { fs.closeSync(descriptor); } catch { /* ignore cleanup errors */ }
+    }
+    try { fs.unlinkSync(temporary); } catch { /* already renamed */ }
   }
 }
 
@@ -43,7 +65,7 @@ export class RemoteServerStore {
   }
 
   upsert(config: Partial<RemoteServerConfig> & { id: string; host: string }): RemoteServerConfig {
-    ensureDir();
+    ensureDir(path.dirname(this.filePath));
     const servers = this.list();
     const existingIndex = servers.findIndex(s => s.id === config.id);
     const now = Date.now();
@@ -78,12 +100,12 @@ export class RemoteServerStore {
       servers.push(fullConfig);
     }
 
-    fs.writeFileSync(this.filePath, JSON.stringify(servers, null, 2) + '\n', 'utf-8');
+    writeAtomic(this.filePath, JSON.stringify(servers, null, 2) + '\n');
     return fullConfig;
   }
 
   updateStatus(id: string, updates: Partial<RemoteServerConfig>): RemoteServerConfig | undefined {
-    ensureDir();
+    ensureDir(path.dirname(this.filePath));
     const servers = this.list();
     const index = servers.findIndex(s => s.id === id);
     if (index === -1) return undefined;
@@ -98,16 +120,16 @@ export class RemoteServerStore {
     };
     servers[index] = updated;
 
-    fs.writeFileSync(this.filePath, JSON.stringify(servers, null, 2) + '\n', 'utf-8');
+    writeAtomic(this.filePath, JSON.stringify(servers, null, 2) + '\n');
     return updated;
   }
 
   remove(id: string): boolean {
-    ensureDir();
+    ensureDir(path.dirname(this.filePath));
     const servers = this.list();
     const filtered = servers.filter(s => s.id !== id);
     if (filtered.length !== servers.length) {
-      fs.writeFileSync(this.filePath, JSON.stringify(filtered, null, 2) + '\n', 'utf-8');
+      writeAtomic(this.filePath, JSON.stringify(filtered, null, 2) + '\n');
       return true;
     }
     return false;

@@ -77,4 +77,34 @@ describe('ControlPlaneStore', () => {
     expect(second.bindingForServer('local')?.botAccountId).toBe('bot-a');
     second.close();
   });
+
+  it('binds approvals to the full request identity and consumes them once', () => {
+    const store = new ControlPlaneStore(tempDb());
+    store.upsertAccount(account('bot-a'));
+    store.bind(binding('bind-a', 'local', 'bot-a'));
+    store.upsertOperator({ id: 'op-a', botAccountId: 'bot-a', platformUserId: 'u1', role: 'operator' });
+    store.createApprovalRequest({
+      id: 'approval-1',
+      bindingId: 'bind-a',
+      operatorId: 'op-a',
+      requestId: 'req-1',
+      commandKind: 'shell',
+      argsDigest: 'digest-1',
+      risk: 'dangerous_local',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+    });
+    expect(store.decideApproval('approval-1', true, '2026-09-05T00:00:00.000Z')).toBe(true);
+    expect(store.consumeApproval({
+      id: 'approval-1', bindingId: 'bind-a', operatorId: 'op-a', requestId: 'req-1',
+      commandKind: 'shell', argsDigest: 'wrong', consumedAt: '2026-09-05T00:00:01.000Z',
+    })).toBe(false);
+    const input = {
+      id: 'approval-1', bindingId: 'bind-a', operatorId: 'op-a', requestId: 'req-1',
+      commandKind: 'shell', argsDigest: 'digest-1', consumedAt: '2026-09-05T00:00:01.000Z',
+    };
+    expect(store.consumeApproval(input)).toBe(true);
+    expect(store.consumeApproval(input)).toBe(false);
+    expect(store.approval('approval-1')?.status).toBe('consumed');
+    store.close();
+  });
 });

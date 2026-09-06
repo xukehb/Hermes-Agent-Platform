@@ -780,6 +780,16 @@ function channelSpecs(): KeySpec[] {
       defaults: { extract: (ctx) => ctx.root.channels?.http?.default_agent, source: 'channels.http.default_agent' },
       builtin: { extract: () => undefined, source: '留空则回落到 default_agent' },
     }),
+    makeSpec('channels.http.auth_token', 'global', {
+      env: { extract: (ctx) => envString(ctx.env, 'HAP_HTTP_AUTH_TOKEN'), source: 'HAP_HTTP_AUTH_TOKEN' },
+      defaults: { extract: () => undefined, source: '仅支持环境变量 HAP_HTTP_AUTH_TOKEN' },
+      builtin: { extract: () => undefined, source: '未配置' },
+    }),
+    makeSpec('channels.http.max_body_bytes', 'global', {
+      env: { extract: (ctx) => envNumber(ctx.env, 'HAP_HTTP_MAX_BODY_BYTES'), source: 'HAP_HTTP_MAX_BODY_BYTES' },
+      defaults: { extract: () => undefined, source: '使用 HTTP 通道默认上限' },
+      builtin: { extract: () => undefined, source: '使用 HTTP 通道默认上限' },
+    }),
     makeSpec('channels.cli.enabled', 'global', {
       env: { extract: (ctx) => envBoolean(ctx.env, 'HAP_CLI_ENABLED'), source: 'HAP_CLI_ENABLED' },
       defaults: { extract: (ctx) => ctx.root.channels?.cli?.enabled, source: 'channels.cli.enabled' },
@@ -1132,6 +1142,11 @@ export class ConfigResolver {
         enabled: asBoolean(this.read('channels.http.enabled', ctx)) ?? BUILTIN_CHANNELS.http.enabled,
         bind: asString(this.read('channels.http.bind', ctx)) ?? BUILTIN_CHANNELS.http.bind,
         defaultAgent: asString(this.read('channels.http.default_agent', ctx)),
+        authToken: asString(this.read('channels.http.auth_token', ctx)),
+        maxBodyBytes: (() => {
+          const value = this.read('channels.http.max_body_bytes', ctx);
+          return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : undefined;
+        })(),
       },
       cli: {
         enabled: asBoolean(this.read('channels.cli.enabled', ctx)) ?? BUILTIN_CHANNELS.cli.enabled,
@@ -1258,9 +1273,15 @@ export class ConfigResolver {
       if (entry.fullName.toLowerCase() === cleanLower) return entry;
     }
 
-    // 5. 模型名后缀匹配 (例如输入 gpt-4o 匹配 openrouter/gpt-4o 或 openai/gpt-4o)
+    // 5. 模型名后缀匹配 (例如输入 gpt-4o 匹配 openrouter/gpt-4o 或 openai/gpt-4o，或输入 openai/gpt-5-codex 匹配 alias 为 gpt-5-codex 的条目)
     for (const entry of models.values()) {
-      if (entry.model === clean || entry.model.toLowerCase() === cleanLower || entry.fullName.endsWith('/' + clean)) {
+      if (
+        entry.model === clean ||
+        entry.model.toLowerCase() === cleanLower ||
+        entry.fullName.endsWith('/' + clean) ||
+        clean === `${entry.providerId}/${entry.alias}` ||
+        cleanLower === `${entry.providerId.toLowerCase()}/${entry.alias.toLowerCase()}`
+      ) {
         return entry;
       }
     }

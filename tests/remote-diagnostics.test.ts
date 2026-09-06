@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, rmSync, chmodSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
@@ -10,6 +10,8 @@ import {
   REMOTE_CLEANUP_COMMANDS,
 } from '../src/remote/diagnostics.js';
 import { generateRemoteDaemonScript } from '../src/remote/daemon-script.js';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 describe('remote diagnostics parsers', () => {
   it('parses ps output with process fields and bounded limit', () => {
@@ -24,6 +26,24 @@ describe('remote diagnostics parsers', () => {
       elapsedSeconds: 99, command: 'node server.js',
     });
     expect(result.limit).toBe(1);
+  });
+
+  it('does not mistake a long legacy etimes command for an lstart timestamp', () => {
+    const result = parseRemoteProcessOutput('42 1 root 1.5 2.0 10 /usr/bin/long command with spaces here', 10);
+    expect(result.processes[0]).toMatchObject({
+      pid: 42,
+      elapsedSeconds: 10,
+      command: '/usr/bin/long command with spaces here',
+    });
+    expect(result.processes[0]?.startTime).toBeUndefined();
+  });
+
+  it('keeps the canonical lstart token stable for process identity checks', () => {
+    const line = '42 1 root 1.5 2.0 Wed Sep  2 20:38:53 2026 node worker.js';
+    const first = parseRemoteProcessOutput(line).processes[0];
+    const second = parseRemoteProcessOutput(line).processes[0];
+    expect(first?.startTime).toBe('Wed Sep 2 20:38:53 2026');
+    expect(second?.startTime).toBe(first?.startTime);
   });
 
   it('parses df and du output into byte values', () => {
@@ -42,6 +62,12 @@ describe('remote diagnostics parsers', () => {
     expect(REMOTE_CLEANUP_COMMANDS.safe).toContain('rm');
     expect(REMOTE_CLEANUP_COMMANDS.safe).not.toContain('${');
     expect(Object.keys(REMOTE_CLEANUP_COMMANDS)).toEqual(expect.arrayContaining(['safe', 'all']));
+  });
+
+  it('keeps remote disk scans alive when one optional directory is unreadable', () => {
+    const sourcePath = fileURLToPath(new URL('../src/remote/diagnostics.ts', import.meta.url));
+    const source = readFileSync(sourcePath, 'utf8');
+    expect(source).toContain('du -sk "$p" 2>/dev/null || true');
   });
 });
 
@@ -73,10 +99,178 @@ describe('generated daemon diagnostics contract', () => {
     expect((await request('POST', '/api/processes/1/kill', { signal: 'BOGUS' }, 'secret')).status).toBe(400);
       expect((await request('POST', '/api/processes/1/kill', { signal: 'TERM', expectedStartTime: 'wrong' }, 'secret')).status).toBe(403);
       const target = spawn('sleep', ['30']);
-      expect((await request('POST', `/api/processes/${target.pid}/kill`, { signal: 'TERM' }, 'secret')).status).toBe(200);
+      const processSnapshot = await request('GET', '/api/processes?limit=500', undefined, 'secret');
+      let targetRecord = processSnapshot.data?.data?.processes?.find((item: any) => item.pid === target.pid);
+      if (!targetRecord) {
+        const pidSnapshot = await request('GET', `/api/processes?pid=${target.pid}`, undefined, 'secret');
+        targetRecord = pidSnapshot.data?.data?.processes?.find((item: any) => item.pid === target.pid);
+      }
+      expect(targetRecord?.startTime).toBeTruthy();
+      expect((await request('POST', `/api/processes/${target.pid}/kill`, { signal: 'TERM', expectedStartTime: targetRecord.startTime }, 'secret')).status).toBe(200);
       target.kill('SIGKILL');
       const targetKill = spawn('sleep', ['30']);
       expect((await request('POST', `/api/processes/${targetKill.pid}/kill`, { signal: 'KILL' }, 'secret')).status).toBe(200);
     } finally { child.kill('SIGKILL'); rmSync(dir, { recursive: true, force: true }); }
+  });
+
+  it('returns elapsed seconds and rejects invalid process limits', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'hap-daemon-limit-'));
+    const scriptPath = join(dir, 'daemon.mjs');
+    const port = 40371 + Math.floor(Math.random() * 400);
+    writeFileSync(scriptPath, generateRemoteDaemonScript({ port, token: 'secret' }));
+    const child = spawn(process.execPath, [scriptPath]);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('daemon start timeout')), 3000);
+        child.stdout.on('data', (data) => {
+          if (String(data).includes('Server running')) {
+            clearTimeout(timer);
+            resolve();
+          }
+        });
+        child.on('error', reject);
+      });
+
+      const request = (path: string) => new Promise<{ status: number; data: any }>((resolve, reject) => {
+        const req = http.request({
+          hostname: '127.0.0.1',
+          port,
+          path,
+          method: 'GET',
+          headers: { 'X-HAP-Token': 'secret' },
+        }, (res) => {
+          let text = '';
+          res.on('data', (chunk) => { text += chunk; });
+          res.on('end', () => resolve({ status: res.statusCode || 0, data: JSON.parse(text || '{}') }));
+        });
+        req.on('error', reject);
+        req.end();
+      });
+
+      expect((await request('/api/processes?limit=0')).status).toBe(400);
+      const response = await request('/api/processes?limit=2');
+      expect(response.status).toBe(200);
+      const first = response.data?.data?.processes?.[0];
+      expect(first?.startTime).toBeTruthy();
+      expect(typeof first?.elapsedSeconds).toBe('number');
+    } finally {
+      child.kill('SIGKILL');
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('falls back to etimes when the remote ps lacks lstart', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'hap-daemon-ps-fallback-'));
+    const fakePs = join(dir, 'ps');
+    writeFileSync(fakePs, `#!/bin/sh
+case "$*" in
+  *lstart*) exit 1 ;;
+  *) printf '4242 1 root 1.0 2.0 123 worker --fallback\\n' ;;
+esac
+`);
+    chmodSync(fakePs, 0o755);
+    const scriptPath = join(dir, 'daemon.mjs');
+    const port = 40771 + Math.floor(Math.random() * 400);
+    writeFileSync(scriptPath, generateRemoteDaemonScript({ port, token: 'secret' }));
+    const child = spawn(process.execPath, [scriptPath], {
+      env: { ...process.env, PATH: `${dir}:${process.env.PATH || ''}` },
+    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('daemon start timeout')), 3000);
+        child.stdout.on('data', (data) => {
+          if (String(data).includes('Server running')) {
+            clearTimeout(timer);
+            resolve();
+          }
+        });
+        child.on('error', reject);
+      });
+
+      const response = await new Promise<{ status: number; data: any }>((resolve, reject) => {
+        const req = http.request({
+          hostname: '127.0.0.1',
+          port,
+          path: '/api/processes?limit=10',
+          method: 'GET',
+          headers: { 'X-HAP-Token': 'secret' },
+        }, (res) => {
+          let text = '';
+          res.on('data', (chunk) => { text += chunk; });
+          res.on('end', () => resolve({ status: res.statusCode || 0, data: JSON.parse(text || '{}') }));
+        });
+        req.on('error', reject);
+        req.end();
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.data?.data?.processes).toEqual([
+        expect.objectContaining({ pid: 4242, elapsedSeconds: 123, command: 'worker --fallback' }),
+      ]);
+      expect(response.data?.data?.processes?.[0]?.startTime).toBeUndefined();
+    } finally {
+      child.kill('SIGKILL');
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not make the generated daemon credential script world-readable', () => {
+    const sourcePath = fileURLToPath(new URL('../src/remote/ssh-installer.ts', import.meta.url));
+    const source = readFileSync(sourcePath, 'utf8');
+    expect(source).toContain('chmod 700 "$HAP_DIR"');
+    expect(source).toContain('chmod 600 "$HAP_DIR/daemon.mjs"');
+    expect(source).toContain('chmod 700 /opt/hap-daemon');
+    expect(source).toContain('chmod 600 /opt/hap-daemon/daemon.mjs');
+  });
+
+  it('returns a validation error instead of hanging on a null kill payload', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'hap-daemon-null-kill-'));
+    const scriptPath = join(dir, 'daemon.mjs');
+    const port = 41171 + Math.floor(Math.random() * 300);
+    writeFileSync(scriptPath, generateRemoteDaemonScript({ port, token: 'secret' }));
+    const child = spawn(process.execPath, [scriptPath]);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('daemon start timeout')), 3000);
+        child.stdout.on('data', (data) => {
+          if (String(data).includes('Server running')) {
+            clearTimeout(timer);
+            resolve();
+          }
+        });
+        child.on('error', reject);
+      });
+
+      const response = await new Promise<{ status: number; data: any }>((resolve, reject) => {
+        const payload = 'null';
+        const req = http.request({
+          hostname: '127.0.0.1',
+          port,
+          path: '/api/processes/1/kill',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(payload),
+            'X-HAP-Token': 'secret',
+          },
+        }, (res) => {
+          let text = '';
+          res.on('data', (chunk) => { text += chunk; });
+          res.on('end', () => resolve({ status: res.statusCode || 0, data: JSON.parse(text || '{}') }));
+        });
+        req.setTimeout(1000, () => {
+          req.destroy(new Error('request timeout'));
+        });
+        req.on('error', reject);
+        req.write(payload);
+        req.end();
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.data.error).toMatch(/payload|signal/i);
+    } finally {
+      child.kill('SIGKILL');
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

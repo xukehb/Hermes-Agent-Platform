@@ -46,13 +46,18 @@ export const remoteListServersTool = defineTool({
   name: 'remote_list_servers',
   description: '列出所有已配置的远程服务器节点及其在线状态、IP 与硬件资源信息。在操控未知服务器前可先调用此工具探查。',
   schema: z.object({}),
-  run: async () => {
+  run: async (_args, ctx) => {
     const store = RemoteServerStore.getInstance();
-    const servers = store.list();
+    const allServers = store.list();
+    const servers = ctx.control === undefined
+      ? allServers
+      : allServers.filter((server) => server.id === ctx.control?.serverId);
 
     if (servers.length === 0) {
       return {
-        content: '当前未配置任何远程服务器节点。',
+        content: ctx.control === undefined
+          ? '当前未配置任何远程服务器节点。'
+          : '当前绑定的远程服务器未配置或不可见。',
       };
     }
 

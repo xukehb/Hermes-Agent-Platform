@@ -34,6 +34,7 @@ import {
   truncateToolOutput,
 } from '../src/tools/index.js';
 import type { ToolContext, ToolModule } from '../src/tools/index.js';
+import { assertFetchTarget } from '../src/security/network-policy.js';
 
 const ROOT = mkdtempSync(join(tmpdir(), 'hap-tools-test-'));
 
@@ -479,6 +480,50 @@ describe('工具执行器', () => {
     expect(result.isError).toBe(true);
     expect(result.content).toContain('CONTROL_FORBIDDEN');
   });
+
+  it('enforces observe policy at the final executor boundary for local, network and MCP tools', async () => {
+    const harness = makeHarness('exec-control-local-block');
+    harness.ctx.control = {
+      accountId: 'bot-a', bindingId: 'bind-a', serverId: 'local', operatorId: 'op-a',
+      role: 'admin', capabilityProfile: 'observe', requestId: 'req-1', approvalPolicy: 'none',
+    };
+    const registry = new ToolRegistry();
+    registry.register(defineTool({
+      name: 'mcp__mutate', description: 'mcp', schema: z.object({}), source: 'mcp',
+      run: async () => ({ content: 'must not run' }),
+    }));
+    const executor = new ToolExecutor(ToolRegistry.builtin());
+    const shell = await executor.execute(call('shell', { command: 'echo nope' }), harness.ctx);
+    const write = await executor.execute(call('write_file', { path: 'x', content: 'nope' }), harness.ctx);
+    const fetch = await executor.execute(call('http_fetch', { url: 'https://example.com' }), harness.ctx);
+    expect(shell.content).toContain('CONTROL_FORBIDDEN');
+    expect(write.content).toContain('CONTROL_FORBIDDEN');
+    expect(fetch.content).toContain('CONTROL_FORBIDDEN');
+    expect(shell.isError && write.isError && fetch.isError).toBe(true);
+  });
+
+  it('consumes an approved request exactly once before invoking a mutating tool', async () => {
+    const harness = makeHarness('exec-control-approval');
+    harness.ctx.control = {
+      accountId: 'bot-a', bindingId: 'bind-a', serverId: 'local', operatorId: 'op-a',
+      role: 'operator', capabilityProfile: 'operate', requestId: 'req-1', approvalPolicy: 'all_local',
+    };
+    let consumed = 0;
+    harness.ctx.approvedRequestId = 'approval-1';
+    harness.ctx.approvalStore = { consumeApproval: () => { consumed += 1; return consumed === 1; } };
+    const result = await new ToolExecutor(ToolRegistry.builtin()).execute(
+      call('shell', { command: 'printf approved' }),
+      harness.ctx,
+    );
+    expect(result.isError).toBe(false);
+    expect(result.content).toContain('approved');
+    const second = await new ToolExecutor(ToolRegistry.builtin()).execute(
+      call('shell', { command: 'printf denied' }),
+      harness.ctx,
+    );
+    expect(second.isError).toBe(true);
+    expect(second.content).toContain('APPROVAL_REQUIRED');
+  });
 });
 
 describe('内置文件工具', () => {
@@ -647,6 +692,7 @@ describe('shell 与 http_fetch', () => {
 
   it('http_fetch 抓取本地服务并按状态判定错误', async () => {
     const harness = makeHarness('http');
+    harness.ctx.env.HAP_HTTP_FETCH_ALLOW_HOSTS = '127.0.0.1';
     const server = createServer((request, response) => {
       if (request.url === '/miss') {
         response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
@@ -667,6 +713,32 @@ describe('shell 与 http_fetch', () => {
       const miss = await executor.execute(call('http_fetch', { url: base + '/miss' }), harness.ctx);
       expect(miss.isError).toBe(true);
       expect(miss.content).toContain('404');
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  it('http_fetch 默认拒绝回环、私网与元数据地址', async () => {
+    await expect(assertFetchTarget('http://127.0.0.1:80')).rejects.toThrow(/拒绝/);
+    await expect(assertFetchTarget('http://10.0.0.1')).rejects.toThrow(/拒绝/);
+    await expect(assertFetchTarget('http://169.254.169.254/latest/meta-data')).rejects.toThrow(/拒绝|元数据/);
+    await expect(assertFetchTarget('http://127.0.0.1:80', ['127.0.0.1'])).resolves.toMatchObject({ address: '127.0.0.1' });
+  });
+
+  it('http_fetch 不跟随重定向进入未放行的内网目标', async () => {
+    const harness = makeHarness('http-redirect');
+    harness.ctx.env.HAP_HTTP_FETCH_ALLOW_HOSTS = 'localhost';
+    const server = createServer((_request, response) => {
+      response.writeHead(302, { location: 'http://127.0.0.1:1/private' });
+      response.end();
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as AddressInfo).port;
+    try {
+      const executor = new ToolExecutor(ToolRegistry.builtin());
+      const result = await executor.execute(call('http_fetch', { url: `http://localhost:${port}/redirect` }), harness.ctx);
+      expect(result.isError).toBe(true);
+      expect(result.content).toContain('已拒绝');
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }

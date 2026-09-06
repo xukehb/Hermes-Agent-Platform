@@ -419,7 +419,7 @@ export class FeishuChannel implements Channel {
         botAccountId: this.control.botAccountId,
         platformUserId: input.platformUserId,
         requestId: input.requestId,
-        commandKind: normalizeCommandKindForControl(parseCommand(input.text).kind),
+        commandKind: normalizeCommandKindForControl(parseCommand(input.text)),
       });
     } catch (error) {
       if (error instanceof ControlPlaneError && error.code === 'CONTROL_FORBIDDEN') {
@@ -516,6 +516,8 @@ export class FeishuChannel implements Channel {
   }
 }
 
-function normalizeCommandKindForControl(kind: ReturnType<typeof parseCommand>['kind']): string {
-  return kind === 'sh' ? 'shell' : kind;
+function normalizeCommandKindForControl(command: ReturnType<typeof parseCommand>): string {
+  if (command.kind === 'sh') return 'shell';
+  if (command.kind === 'model' && command.modelName !== undefined) return 'model_switch';
+  return command.kind;
 }

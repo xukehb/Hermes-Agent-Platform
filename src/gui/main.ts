@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, shell } from 'electron';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GuiService } from './service.js';
@@ -122,6 +122,8 @@ function registerIpc(): void {
     event.sender.send('gui:installProgress', progress);
   })));
   ipcMain.handle('gui:getServerInfo', (_event, id) => invoke(() => service.getServerInfo(id)));
+  ipcMain.handle('gui:getServerProcesses', (_event, id, options) => invoke(() => service.getServerProcesses(id, options)));
+  ipcMain.handle('gui:killServerProcess', (_event, payload) => invoke(() => service.killServerProcess(payload)));
   ipcMain.handle('gui:execServerCommand', (_event, payload) => invoke(() => service.execServerCommand(payload)));
   ipcMain.handle('gui:scanDiskCleanable', (_event, server) => invoke(() => service.scanDiskCleanable(server)));
   ipcMain.handle('gui:executeDiskCleanup', (_event, payload) => invoke(() => service.executeDiskCleanup(payload)));
@@ -133,6 +135,13 @@ function registerIpc(): void {
   ipcMain.handle('gui:toggleDevTools', (event) => {
     event.sender.toggleDevTools();
     return { ok: true, data: undefined };
+  });
+  ipcMain.handle('gui:openExternal', async (_event, url: unknown) => {
+    if (typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://'))) {
+      await shell.openExternal(url);
+      return { ok: true, data: true };
+    }
+    return { ok: false, error: '非法 URL 地址' };
   });
 }
 

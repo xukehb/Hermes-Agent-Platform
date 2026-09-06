@@ -1,7 +1,7 @@
 import { describe, it, expect, afterAll, beforeAll } from 'vitest';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import http from 'node:http';
 import {
@@ -10,6 +10,7 @@ import {
   RemoteClientManager,
   type RemoteServerConfig,
 } from '../src/remote/index.js';
+
 
 describe('Remote Server Management & Protocol', () => {
   const roots: string[] = [];
@@ -43,6 +44,14 @@ describe('Remote Server Management & Protocol', () => {
     expect(installerSource).toContain('PID_FILE="$HAP_DIR/daemon.pid"');
     expect(installerSource).not.toContain('pkill -9 -f');
     expect(installerSource).toContain('if (startRes.code !== 0)');
+  });
+
+  it('omits an undefined bind when constructing daemon script options', () => {
+    const installerPath = fileURLToPath(new URL('../src/remote/ssh-installer.ts', import.meta.url));
+    const installerSource = readFileSync(installerPath, 'utf-8');
+
+    expect(installerSource).toContain('...(options.bind !== undefined ? { bind: options.bind } : {})');
+    expect(installerSource).not.toContain('generateRemoteDaemonScript({ port: daemonPort, token, bind: options.bind })');
   });
 
   it('performs CRUD on RemoteServerStore in isolation', () => {
@@ -106,6 +115,13 @@ describe('Remote Server Management & Protocol', () => {
     const removed = store.remove('srv-1');
     expect(removed).toBe(true);
     expect(store.list().length).toBe(0);
+
+    const fileMode = statSync(storeFile).mode & 0o777;
+    const dirMode = statSync(dirname(storeFile)).mode & 0o777;
+    if (process.platform !== 'win32') {
+      expect(fileMode).toBe(0o600);
+      expect(dirMode).toBe(0o700);
+    }
   });
 
   describe('Remote Daemon RPC Simulation', () => {

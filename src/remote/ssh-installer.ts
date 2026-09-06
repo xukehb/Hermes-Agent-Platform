@@ -127,7 +127,8 @@ export async function testSshConnection(
 
 export async function installRemoteDaemon(
   config: RemoteServerConfig,
-  onProgress?: (event: InstallProgressEvent) => void
+  onProgress?: (event: InstallProgressEvent) => void,
+  options: { bind?: string } = {},
 ): Promise<{ ok: boolean; token: string; daemonPort: number; error?: string }> {
   const token = config.token || crypto.randomBytes(24).toString('hex');
   const daemonPort = config.daemonPort || 9527;
@@ -288,23 +289,30 @@ export async function installRemoteDaemon(
 
     // 步骤 4: 下发守护脚本 (写入当前用户家目录 ~/.hap-daemon，100% 免 sudo 权限)
     report(4, 'running', '正在部署 HAP 守护进程脚本到远端家目录 (~/.hap-daemon)...');
-    const daemonScriptContent = generateRemoteDaemonScript({ port: daemonPort, token });
+    const daemonScriptContent = generateRemoteDaemonScript({
+      port: daemonPort,
+      token,
+      ...(options.bind !== undefined ? { bind: options.bind } : {}),
+    });
     const b64Content = Buffer.from(daemonScriptContent, 'utf-8').toString('base64');
     const b64Pass = config.password ? Buffer.from(config.password, 'utf-8').toString('base64') : '';
 
     const deployCmd = `
       HAP_DIR="$HOME/.hap-daemon"
       mkdir -p "$HAP_DIR"
+      chmod 700 "$HAP_DIR"
       PID_FILE="$HAP_DIR/daemon.pid"
       echo "${b64Content}" | base64 -d > "$HAP_DIR/daemon.mjs"
-      chmod +x "$HAP_DIR/daemon.mjs"
+      chmod 600 "$HAP_DIR/daemon.mjs"
 
       # 如果有 /opt 写权限或免密 sudo，同步一份到 /opt/hap-daemon
       if [ -w "/opt" ]; then
         mkdir -p /opt/hap-daemon
         cp -f "$HAP_DIR/daemon.mjs" /opt/hap-daemon/daemon.mjs 2>/dev/null || true
+        chmod 700 /opt/hap-daemon 2>/dev/null || true
+        chmod 600 /opt/hap-daemon/daemon.mjs 2>/dev/null || true
       elif [ -n "${b64Pass}" ]; then
-        echo "${b64Pass}" | base64 -d | sudo -S sh -c "mkdir -p /opt/hap-daemon && cp -f '$HAP_DIR/daemon.mjs' /opt/hap-daemon/daemon.mjs" 2>/dev/null || true
+        echo "${b64Pass}" | base64 -d | sudo -S sh -c "mkdir -p /opt/hap-daemon && cp -f '$HAP_DIR/daemon.mjs' /opt/hap-daemon/daemon.mjs && chmod 700 /opt/hap-daemon && chmod 600 /opt/hap-daemon/daemon.mjs" 2>/dev/null || true
       fi
     `;
     const deployRes = await execSshCommand(config, deployCmd);

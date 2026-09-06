@@ -140,6 +140,9 @@
       <section id="chat" class="view active">
         <header class="chat-header">
           <div class="header-left-tools">
+            <button type="button" class="icon-tool-btn sidebar-toggle-btn" id="sidebarToggleBtn" title="折叠/展开侧边栏 (Ctrl/Cmd+B)" aria-label="切换侧边栏">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+            </button>
             <div class="model-switch-pill" title="切换当前对话模型">
               <span class="model-brand-badge">HAP</span>
               <select id="chatModelPickerSelect" class="model-switch-select"></select>
@@ -277,7 +280,7 @@
                   <input type="file" id="chatFileInput" multiple accept="image/*,.txt,.md,.json,.ts,.js,.py,.pdf,.log,.html,.css,.sql" style="display:none;" />
 
                   <button type="button" class="composer-attach-btn" id="aiGenImageBtn" title="一键生成 AI 图像 (插画、架构概念图、UI 设计图、壁纸等)" style="color:#0284c7;background:#f0f9ff;border-color:#bae6fd;">
-                    <span style="font-size:13px;">🎨</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"></circle><circle cx="17.5" cy="10.5" r=".5"></circle><circle cx="8.5" cy="7.5" r=".5"></circle><circle cx="6.5" cy="12.5" r=".5"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path></svg>
                     <span style="font-weight:600;">AI 生图</span>
                   </button>
 
@@ -311,7 +314,7 @@
           <div class="market-header-banner">
             <div>
               <div style="display:flex;align-items:center;gap:10px;">
-                <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg, #6366f1 0%, #a855f7 100%);color:#fff;display:grid;place-items:center;font-size:16px;box-shadow:0 3px 10px rgba(99,102,241,0.25);">⚡</div>
+                <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg, #6366f1 0%, #a855f7 100%);color:#fff;display:grid;place-items:center;box-shadow:0 3px 10px rgba(99,102,241,0.25);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></div>
                 <div>
                   <h2 class="page-title" style="margin:0;font-size:18px;">Skill & MCP 扩展生态市场</h2>
                   <p class="page-subtitle" style="margin:2px 0 0 0;font-size:12px;">融合 GitHub 专家技能包与 Model Context Protocol (MCP) 标准插件，赋予智能体任意外部能力</p>
@@ -320,7 +323,7 @@
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
               <button id="openPresetMcpModalBtn" class="btn secondary" style="font-size:12.5px;padding:6px 14px;">
-                📦 热门 MCP 插件库
+                热门 MCP 插件库
               </button>
               <button id="openAddPluginModalBtn" class="btn secondary" style="font-size:12.5px;padding:6px 14px;">
                 + 添加自定义 MCP
@@ -335,29 +338,29 @@
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:14px;">
             <div class="market-tabs-bar" id="marketTabsBar">
               <button type="button" class="market-tab-btn active" data-market-tab="all">
-                <span>🔥 全部生态</span>
+                <span>全部生态</span>
                 <span class="market-tab-badge" id="tabCountAll">0</span>
               </button>
               <button type="button" class="market-tab-btn" data-market-tab="mcp">
-                <span>🧩 MCP 插件</span>
+                <span>MCP 插件</span>
                 <span class="market-tab-badge" id="tabCountMcp">0</span>
               </button>
               <button type="button" class="market-tab-btn" data-market-tab="skill">
-                <span>⚡ Skills 技能</span>
+                <span>Skills 技能</span>
                 <span class="market-tab-badge" id="tabCountSkill">0</span>
               </button>
               <button type="button" class="market-tab-btn" data-market-tab="builtin">
-                <span>🛠️ 内置工具</span>
+                <span>内置工具</span>
                 <span class="market-tab-badge" id="tabCountBuiltin">0</span>
               </button>
               <button type="button" class="market-tab-btn" data-market-tab="active">
-                <span>✅ 仅看已启用</span>
+                <span>仅看已启用</span>
                 <span class="market-tab-badge" id="tabCountActive">0</span>
               </button>
             </div>
 
             <div style="display:flex;align-items:center;gap:8px;min-width:280px;flex:1;max-width:420px;">
-              <input type="text" id="marketSearchInput" placeholder="🔍 搜索生态插件 (如 GitHub, Docker, Postgres, React)..." style="width:100%;font-size:12.5px;padding:7px 12px;" />
+              <input type="text" id="marketSearchInput" placeholder="搜索生态插件 (如 GitHub, Docker, Postgres, React)..." style="width:100%;font-size:12.5px;padding:7px 12px;" />
             </div>
           </div>
 
@@ -394,7 +397,7 @@
           <div class="page-header-row" style="margin-bottom:16px;flex-wrap:wrap;gap:12px;">
             <div>
               <div style="display:flex;align-items:center;gap:10px;">
-                <div class="agent-avatar-badge" style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;font-size:16px;font-weight:700;box-shadow:0 3px 10px rgba(14,165,233,0.25);">🖥️</div>
+                <div class="agent-avatar-badge" style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;box-shadow:0 3px 10px rgba(14,165,233,0.25);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
                 <div>
                   <h2 class="page-title" style="font-size:18px;margin:0;" id="panoramaMainTitle">计算节点全景监控大盘 (Node Panorama)</h2>
                   <p class="page-subtitle" style="margin:2px 0 0 0;font-size:12.5px;" id="panoramaMainSub">多机硬件指标全景看板 · 支持本机宿主与所有远程服务器节点无缝切换与毫秒级监控</p>
@@ -406,13 +409,13 @@
               <div style="display:flex;align-items:center;gap:6px;background:#ffffff;padding:5px 12px;border-radius:8px;border:1px solid #cbd5e1;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
                 <span style="font-size:12px;font-weight:600;color:var(--text-secondary);">监控节点:</span>
                 <select id="panoramaNodeSelect" style="border:none;background:transparent;font-size:12.5px;font-weight:700;color:#0284c7;outline:none;cursor:pointer;min-width:180px;">
-                  <option value="local">🖥️ 本机宿主环境 (Local Host)</option>
+                  <option value="local">本机宿主环境 (Local Host)</option>
                 </select>
               </div>
 
               <!-- 节点机器人配置入口 -->
               <button type="button" class="btn primary" onclick="window.openNodeBotConfigModal()" style="font-size:12.5px;padding:6px 14px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);display:flex;align-items:center;gap:6px;">
-                <span>🤖 节点机器人与告警设置</span>
+                <span>节点机器人与告警设置</span>
               </button>
 
               <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-secondary);cursor:pointer;background:#f8fafc;padding:5px 10px;border-radius:8px;border:1px solid #e2e8f0;">
@@ -420,7 +423,7 @@
                 <span>自动轮询 (3s)</span>
               </label>
               <button id="refreshHostBtn" class="btn primary" style="font-size:12.5px;padding:6px 14px;">
-                🔄 立即刷新
+                立即刷新
               </button>
             </div>
           </div>
@@ -430,9 +433,7 @@
           <div class="card" id="panoramaBotCard" style="margin-bottom:18px;background:linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);border:1px solid #bbf7d0;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(16,185,129,0.06);">
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
               <div style="display:flex;align-items:center;gap:12px;">
-                <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:#fff;display:grid;place-items:center;font-size:20px;box-shadow:0 2px 6px rgba(16,185,129,0.3);">
-                  🤖
-                </div>
+                <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:#fff;display:grid;place-items:center;box-shadow:0 2px 6px rgba(16,185,129,0.3);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg></div>
                 <div>
                   <div style="display:flex;align-items:center;gap:8px;">
                     <strong style="font-size:14.5px;color:var(--text-main);" id="panoramaBotTitle">节点专属智能体与告警机器人</strong>
@@ -445,13 +446,13 @@
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <button type="button" class="btn primary" onclick="window.openNodeBotConfigModal()" style="font-size:12px;padding:6px 14px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                  ⚙️ 机器人设置
+                  机器人设置
                 </button>
                 <button type="button" class="btn secondary" onclick="window.testNodeBotAlert()" style="font-size:12px;padding:6px 12px;">
-                  🔔 测试推送
+                  测试推送
                 </button>
                 <button type="button" class="btn secondary" onclick="window.chatWithNodeAgent()" style="font-size:12px;padding:6px 12px;">
-                  💬 呼叫专属 Agent
+                  呼叫专属 Agent
                 </button>
               </div>
             </div>
@@ -462,7 +463,7 @@
             <!-- CPU 指标卡 -->
             <div class="card" style="padding: 16px; display:flex; flex-direction:column; gap:8px;">
               <div style="font-size: 12px; color: var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
-                <span>⚡ CPU 整体负载</span>
+                <span>CPU 整体负载</span>
                 <span id="hostCpuCoresBadge" class="badge info">-- 核心</span>
               </div>
               <div style="display:flex;align-items:baseline;gap:8px;">
@@ -478,7 +479,7 @@
             <!-- 物理内存指标卡 -->
             <div class="card" style="padding: 16px; display:flex; flex-direction:column; gap:8px;">
               <div style="font-size: 12px; color: var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
-                <span>💾 物理内存 (RAM)</span>
+                <span>物理内存 (RAM)</span>
                 <span id="hostMemPercentBadge" class="badge">--%</span>
               </div>
               <div style="display:flex;align-items:baseline;gap:8px;">
@@ -494,7 +495,7 @@
             <!-- 进程与虚拟机内存指标卡 -->
             <div class="card" style="padding: 16px; display:flex; flex-direction:column; gap:8px;">
               <div style="font-size: 12px; color: var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
-                <span>🚀 Node.js 进程 RSS 内存</span>
+                <span>Node.js 进程 RSS 内存</span>
                 <span id="hostProcessPidBadge" class="badge neutral">PID: --</span>
               </div>
               <div style="font-size: 28px; font-weight: 700; color: var(--text-main); font-family:var(--font-mono);" id="hostProcessRss">-- MB</div>
@@ -522,7 +523,7 @@
             <div class="card" style="padding: 18px; display:flex; flex-direction:column; gap:12px;">
               <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-default); padding-bottom: 8px;">
                 <div style="font-weight: 700; font-size: 14px; color: var(--text-main); display:flex; align-items:center; gap:6px;">
-                  <span>⚡ CPU 多核负载图谱</span>
+                  <span>CPU 多核负载图谱</span>
                 </div>
                 <span id="hostCpuCoreCountBadge" class="badge info">-- 逻辑核心</span>
               </div>
@@ -535,7 +536,7 @@
             <div class="card" style="padding: 18px; display:flex; flex-direction:column; gap:12px;">
               <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-default); padding-bottom: 8px;">
                 <div style="font-weight: 700; font-size: 14px; color: var(--text-main); display:flex; align-items:center; gap:6px;">
-                  <span>💾 磁盘驱动器与分区卷</span>
+                  <span>磁盘驱动器与分区卷</span>
                 </div>
                 <span id="hostDiskPartCountBadge" class="badge neutral">-- 个卷</span>
               </div>
@@ -551,11 +552,14 @@
             <div class="card" style="padding: 18px; display:flex; flex-direction:column; gap:12px;">
               <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-default); padding-bottom: 8px;">
                 <div style="font-weight: 700; font-size: 14px; color: var(--text-main); display:flex; align-items:center; gap:6px;">
-                  <span>🚀 本机内存占用 Top 活跃进程</span>
+                  <span id="hostProcessListTitle">本机内存占用 Top 活跃进程</span>
                 </div>
-                <span class="badge info">实时抓取</span>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span id="hostProcessModeBadge" class="badge success">本机 · 可控</span>
+                  <button type="button" id="hostProcessRefreshBtn" class="btn secondary" style="font-size:11px;padding:3px 8px;" title="刷新进程列表">刷新</button>
+                </div>
               </div>
-              <div id="hostTopProcessList" style="display:flex; flex-direction:column; gap:6px; max-height:240px; overflow-y:auto;">
+              <div id="hostTopProcessList" style="display:flex; flex-direction:column; gap:6px; max-height:290px; overflow-y:auto;">
                 <!-- 动态渲染进程列表 -->
               </div>
             </div>
@@ -564,7 +568,7 @@
             <div class="card" style="padding: 18px; display:flex; flex-direction:column; gap:12px;">
               <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-default); padding-bottom: 8px;">
                 <div style="font-weight: 700; font-size: 14px; color: var(--text-main); display:flex; align-items:center; gap:6px;">
-                  <span>🌐 公网出口与 IP 地理位置</span>
+                  <span>公网出口与 IP 地理位置</span>
                 </div>
                 <span id="hostIpGeoBadge" class="badge success">探测中...</span>
               </div>
@@ -583,7 +587,7 @@
           <!-- 第四行: 操作系统与 Node.js 底层规格 -->
           <div class="card" style="padding: 18px; display:flex; flex-direction:column; gap:12px; margin-bottom: 18px;">
             <div style="font-weight: 700; font-size: 14px; color: var(--text-main); border-bottom: 1px solid var(--border-default); padding-bottom: 8px; display:flex; justify-content:space-between; align-items:center;">
-              <span>⚙️ 操作系统与运行时底层环境规格 (System & Runtime Specs)</span>
+              <span>操作系统与运行时底层环境规格 (System & Runtime Specs)</span>
               <span id="hostPlatformBadge" class="badge neutral">--</span>
             </div>
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; font-size: 12.5px;">
@@ -606,32 +610,30 @@
           <div class="card" style="padding: 22px; display:flex; flex-direction:column; gap:16px; margin-bottom: 24px; border: 1px solid #cbd5e1; background: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-bottom: 1px solid var(--border-default); padding-bottom: 14px;">
               <div style="display:flex; align-items:center; gap:12px;">
-                <div style="width:40px; height:40px; border-radius:10px; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); color:#fff; display:grid; place-items:center; font-size:20px; box-shadow: 0 2px 8px rgba(99,102,241,0.3);">
-                  🤖
-                </div>
+                <div style="width:40px; height:40px; border-radius:10px; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); color:#fff; display:grid; place-items:center; box-shadow: 0 2px 8px rgba(99,102,241,0.3);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg></div>
                 <div>
                   <div style="font-size: 16px; font-weight: 700; color: var(--text-main); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                     <span>AI 智能全盘扫描与深度瘦身 (AI Smart Disk Scanner)</span>
                     <span id="diskCleanableTotalBadge" class="badge warning" style="display:none; font-size:12px;">发现可释放: --</span>
-                    <span id="diskRootsBadge" class="badge success" style="display:none; font-size:11.5px;">覆盖根目录: C:\</span>
+                    <span id="diskRootsBadge" class="badge success" style="display:none; font-size:11.5px;">系统: 当前系统 · 根目录: 自动识别</span>
                   </div>
                   <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
-                    从全盘根目录 (C:\, D:\, /tmp 等) 深度扫描系统临时文件、包管理器缓存 (npm/pip/cargo)、工程构建残留与应用日志
+                    <span id="diskScannerScopeText">当前系统 · 根目录: 自动识别</span>，深度扫描系统临时文件、包管理器缓存 (npm/pip/cargo)、工程构建残留与应用日志
                   </div>
                 </div>
               </div>
               <div style="display:flex; gap:8px; flex-wrap:wrap;">
                 <button id="scanDiskBtn" class="btn primary" style="background:linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border:none; font-size:12.5px; padding:6px 16px; box-shadow: 0 2px 6px rgba(79,70,229,0.25);">
-                  ⚡ 从根目录开始全盘扫描
+                  从根目录开始全盘扫描
                 </button>
                 <button id="safeCleanDiskBtn" class="btn primary" style="background:#16a34a; border-color:#16a34a; font-size:12.5px; display:none;">
-                  🟢 仅清理安全项 (Safe)
+                  仅清理安全项 (Safe)
                 </button>
                 <button id="allCleanDiskBtn" class="btn danger" style="font-size:12.5px; display:none;">
-                  🧹 深度全量清理 (All)
+                  深度全量清理 (All)
                 </button>
                 <button id="askAiDiskPlanBtn" class="btn secondary" style="font-size:12.5px;" title="将全盘扫描报告发送给 AI 智能体生成专业清理建议">
-                  🤖 咨询 AI 智能体建议
+                  咨询 AI 智能体建议
                 </button>
               </div>
             </div>
@@ -657,11 +659,11 @@
                 <div style="text-align:center; padding: 6px 14px; background:#ffffff; border-radius:8px; border:1px solid #cbd5e1; flex-shrink:0;">
                   <div style="font-size:11px; color:#64748b; font-weight:600;">全盘健康分</div>
                   <div id="diskHealthScore" style="font-size:26px; font-weight:800; color:#16a34a; font-family:var(--font-mono);">95</div>
-                  <div id="diskHealthLevel" class="badge success" style="font-size:10px;">🟢 空间充裕</div>
+                  <div id="diskHealthLevel" class="badge success" style="font-size:10px;">空间充裕</div>
                 </div>
                 <div style="flex:1;">
                   <div style="font-size:13px; font-weight:700; color:#0f172a; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
-                    <span>🧠 AI 智能诊断结论与清理策略</span>
+                    <span>AI 智能诊断结论与清理策略</span>
                   </div>
                   <div id="diskAiDiagnosisText" style="font-size:12.5px; color:#475569; line-height:1.55;">
                     正在生成 AI 诊断分析...
@@ -672,12 +674,12 @@
               <!-- 2 栏容量指标 -->
               <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 14px;">
                 <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 14px;">
-                  <div style="font-size:12px; color:#166534; font-weight:600;">🟢 安全可清 (零副作用):</div>
+                  <div style="font-size:12px; color:#166534; font-weight:600;">安全可清 (零副作用):</div>
                   <div style="font-size:18px; font-weight:700; color:#15803d; font-family:var(--font-mono);" id="diskSafeSize">0 MB</div>
                   <div style="font-size:11px; color:#16a34a; margin-top:2px;">根目录 Temp、包管理器缓存、系统临时日志、浏览器静态缓存</div>
                 </div>
                 <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:10px 14px;">
-                  <div style="font-size:12px; color:#92400e; font-weight:600;">🟡 建议确认 (工程与容器):</div>
+                  <div style="font-size:12px; color:#92400e; font-weight:600;">建议确认 (工程与容器):</div>
                   <div style="font-size:18px; font-weight:700; color:#b45309; font-family:var(--font-mono);" id="diskReviewSize">0 MB</div>
                   <div style="font-size:11px; color:#d97706; margin-top:2px;">工程构建产物 (dist/target/.next)、Docker 悬空镜像</div>
                 </div>
@@ -686,12 +688,12 @@
               <!-- 分类过滤栏 (Category Filter Tabs) -->
               <div class="disk-filter-tabs-row" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">
                 <button type="button" class="btn text-btn disk-cat-btn active" data-cat="all" style="font-size:12px; padding:4px 10px; border-radius:6px; background:#e0f2fe; color:#0369a1; font-weight:600;">全部 (<span id="catCount_all">0</span>)</button>
-                <button type="button" class="btn text-btn disk-cat-btn" data-cat="system_root" style="font-size:12px; padding:4px 10px; border-radius:6px; background:#f1f5f9; color:#475569;">🏛️ 根目录与系统 (<span id="catCount_system_root">0</span>)</button>
-                <button type="button" class="btn text-btn disk-cat-btn" data-cat="package_cache" style="font-size:12px; padding:4px 10px; border-radius:6px; background:#f1f5f9; color:#475569;">📦 开发依赖缓存 (<span id="catCount_package_cache">0</span>)</button>
-                <button type="button" class="btn text-btn disk-cat-btn" data-cat="build_artifact" style="font-size:12px; padding:4px 10px; border-radius:6px; background:#f1f5f9; color:#475569;">🏗️ 工程构建产物 (<span id="catCount_build_artifact">0</span>)</button>
-                <button type="button" class="btn text-btn disk-cat-btn" data-cat="browser_app" style="font-size:12px; padding:4px 10px; border-radius:6px; background:#f1f5f9; color:#475569;">🌐 应用与浏览器 (<span id="catCount_browser_app">0</span>)</button>
-                <button type="button" class="btn text-btn disk-cat-btn" data-cat="temp_logs" style="font-size:12px; padding:4px 10px; border-radius:6px; background:#f1f5f9; color:#475569;">📝 崩溃与日志 (<span id="catCount_temp_logs">0</span>)</button>
-                <button type="button" class="btn text-btn disk-cat-btn" data-cat="docker_prune" style="font-size:12px; padding:4px 10px; border-radius:6px; background:#f1f5f9; color:#475569;">🐳 Docker (<span id="catCount_docker_prune">0</span>)</button>
+                <button type="button" class="btn text-btn disk-cat-btn" data-cat="system_root" style="font-size:12px; padding:4px 10px; border-radius:6px; background:#f1f5f9; color:#475569;">根目录与系统 (<span id="catCount_system_root">0</span>)</button>
+                <button type="button" class="btn text-btn disk-cat-btn" data-cat="package_cache" style="font-size:12px; padding:4px 10px; border-radius:6px; background:#f1f5f9; color:#475569;">开发依赖缓存 (<span id="catCount_package_cache">0</span>)</button>
+                <button type="button" class="btn text-btn disk-cat-btn" data-cat="build_artifact" style="font-size:12px; padding:4px 10px; border-radius:6px; background:#f1f5f9; color:#475569;">工程构建产物 (<span id="catCount_build_artifact">0</span>)</button>
+                <button type="button" class="btn text-btn disk-cat-btn" data-cat="browser_app" style="font-size:12px; padding:4px 10px; border-radius:6px; background:#f1f5f9; color:#475569;">应用与浏览器 (<span id="catCount_browser_app">0</span>)</button>
+                <button type="button" class="btn text-btn disk-cat-btn" data-cat="temp_logs" style="font-size:12px; padding:4px 10px; border-radius:6px; background:#f1f5f9; color:#475569;">崩溃与日志 (<span id="catCount_temp_logs">0</span>)</button>
+                <button type="button" class="btn text-btn disk-cat-btn" data-cat="docker_prune" style="font-size:12px; padding:4px 10px; border-radius:6px; background:#f1f5f9; color:#475569;">Docker (<span id="catCount_docker_prune">0</span>)</button>
               </div>
 
               <!-- 交互式清单操作栏 -->
@@ -705,7 +707,7 @@
                   <span id="diskSelectedSummary" style="margin-left:8px; font-weight:600; color:var(--text-main);">已选择 0 项</span>
                 </div>
                 <button type="button" class="btn primary" id="cleanSelectedBtn" style="font-size:12px; padding:4px 14px;">
-                  🚀 一键清理选中项
+                  一键清理选中项
                 </button>
               </div>
 
@@ -717,10 +719,10 @@
 
             <!-- 空状态提示 -->
             <div id="diskEmptyState" style="text-align:center; padding: 30px 20px; background:#f8fafc; border-radius:8px; border:1px dashed #cbd5e1;">
-              <div style="font-size:32px; margin-bottom:8px;">🔍</div>
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);margin-bottom:8px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
               <div style="font-size:14px; font-weight:600; color:var(--text-main);">尚未进行 AI 智能全盘体检</div>
               <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
-                点击右上角「⚡ 从根目录开始全盘扫描」全面排查系统根目录、包管理器缓存、构建残留与临时日志
+                <span id="diskEmptyStateScopeText">点击右上角「从根目录开始全盘扫描」排查当前系统下的系统根目录、包管理器缓存、构建残留与临时日志</span>
               </div>
             </div>
           </div>
@@ -957,19 +959,19 @@
             <!-- 顶部分类导航与全局快捷入口 -->
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
               <div class="market-tabs-bar" style="margin-bottom:0;">
-                <button type="button" class="market-tab-btn active" data-script-tab="all" onclick="window.filterOpsScripts('all')">🔥 全部工具 (20+)</button>
-                <button type="button" class="market-tab-btn" data-script-tab="web" onclick="window.filterOpsScripts('web')">🌐 SSL与Web代理</button>
-                <button type="button" class="market-tab-btn" data-script-tab="env" onclick="window.filterOpsScripts('env')">🚀 运行环境一键安装</button>
-                <button type="button" class="market-tab-btn" data-script-tab="sec" onclick="window.filterOpsScripts('sec')">🔒 安全与网络加速</button>
-                <button type="button" class="market-tab-btn" data-script-tab="clean" onclick="window.filterOpsScripts('clean')">🧹 系统清理与排查</button>
+                <button type="button" class="market-tab-btn active" data-script-tab="all" onclick="window.filterOpsScripts('all')">全部工具 (20+)</button>
+                <button type="button" class="market-tab-btn" data-script-tab="web" onclick="window.filterOpsScripts('web')">SSL与Web代理</button>
+                <button type="button" class="market-tab-btn" data-script-tab="env" onclick="window.filterOpsScripts('env')">运行环境一键安装</button>
+                <button type="button" class="market-tab-btn" data-script-tab="sec" onclick="window.filterOpsScripts('sec')">安全与网络加速</button>
+                <button type="button" class="market-tab-btn" data-script-tab="clean" onclick="window.filterOpsScripts('clean')">系统清理与排查</button>
               </div>
 
               <div style="display:flex;gap:8px;">
                 <button type="button" class="btn primary" onclick="window.openSslCertModal()" style="font-size:12px;padding:6px 14px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                  🔒 申请 SSL 证书向导
+                  申请 SSL 证书向导
                 </button>
                 <button type="button" class="btn primary" onclick="window.openNginxProxyModal()" style="font-size:12px;padding:6px 14px;">
-                  🌐 配置 Nginx 反代
+                  配置 Nginx 反代
                 </button>
               </div>
             </div>
@@ -982,13 +984,13 @@
             <!-- 底部自定义 Shell 指令下发栏 -->
             <div class="card" style="padding:16px;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;">
               <div style="font-weight:700;font-size:13.5px;margin-bottom:4px;color:var(--text-main);display:flex;align-items:center;gap:6px;">
-                <span>💻 下发自定义远程 Shell 指令</span>
+                <span>下发自定义远程 Shell 指令</span>
                 <span style="font-size:11.5px;color:var(--text-muted);font-weight:normal;">(在当前选中的目标节点免密执行)</span>
               </div>
               <div style="display:flex;gap:8px;margin-top:10px;">
                 <input id="sdCustomCommandInput" placeholder="输入任意 Linux Shell 命令，例如: uptime, uname -a, systemctl status nginx, free -h..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;font-family:var(--font-mono);" />
                 <button type="button" class="btn primary" onclick="window.sdRunCustomCommand()" style="padding:8px 18px;font-size:13px;">
-                  下发执行 ⚡
+                  下发执行
                 </button>
               </div>
             </div>
@@ -1018,53 +1020,65 @@
       
       <!-- 独立视图: 自动化定时任务 (Schedules) -->
       <section id="schedules" class="view">
-        <div class="card" style="margin-bottom:16px;">
-          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <div class="page-container">
+          <div class="page-header-row">
             <div>
-              <div style="font-weight:700;font-size:14px;">自动化定时任务与 Cron 编排</div>
-              <div style="font-size:11.5px;color:var(--text-muted);">设定周期性任务，由智能体自动拉取代码、生成每日复盘、健康巡检或发送多渠道通知</div>
+              <h2 class="page-title">自动化定时任务与 Cron 编排</h2>
+              <p class="page-subtitle">设定周期性任务，由智能体自动拉取代码、生成每日复盘、健康巡检或发送多渠道通知</p>
             </div>
-            <button type="button" class="btn primary" onclick="window.openAddScheduleDialog()">+ 新建定时任务</button>
-          </div>
-          <div class="card-body" style="padding:16px;">
-            <div id="schedulesGrid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:12px;margin-bottom:16px;">
-              <!-- 动态渲染定时任务列表 -->
+            <div class="page-header-actions">
+              <button type="button" class="btn primary" onclick="window.openAddScheduleDialog()">+ 新建定时任务</button>
             </div>
           </div>
-        </div>
 
-        <div class="card">
-          <div class="card-header">
-            <span style="font-weight:700;font-size:13.5px;">最近定时任务执行记录</span>
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header">
+              <span style="font-weight:700;font-size:14px;color:var(--text-main);">活跃定时任务列表</span>
+            </div>
+            <div class="card-body" style="padding:16px;">
+              <div id="schedulesGrid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:12px;">
+                <!-- 动态渲染定时任务列表 -->
+              </div>
+            </div>
           </div>
-          <div class="card-body" style="padding:14px;">
-            <div id="scheduleHistoryList" style="font-size:12.5px;color:var(--text-secondary);max-height:240px;overflow-y:auto;">
-              暂无执行记录
+
+          <div class="card">
+            <div class="card-header">
+              <span style="font-weight:700;font-size:14px;color:var(--text-main);">最近定时任务执行记录</span>
+            </div>
+            <div class="card-body" style="padding:14px;">
+              <div id="scheduleHistoryList" style="font-size:12.5px;color:var(--text-secondary);max-height:240px;overflow-y:auto;">
+                暂无执行记录
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      
       <!-- 独立视图: 智能体记忆库 (Memory) -->
       <section id="memory" class="view">
-        <div class="card">
-          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <div class="page-container">
+          <div class="page-header-row">
             <div>
-              <div style="font-weight:700;font-size:14px;">智能体持久化多层记忆库</div>
-              <div style="font-size:11.5px;color:var(--text-muted);">跨会话沉淀用户开发习惯、架构约束、工程规范与重要偏好</div>
+              <h2 class="page-title">智能体持久化多层记忆库</h2>
+              <p class="page-subtitle">跨会话沉淀用户开发习惯、架构约束、工程规范与重要偏好</p>
             </div>
-            <button type="button" class="btn primary" onclick="window.openAddMemoryDialog()">+ 添加记忆条目</button>
+            <div class="page-header-actions">
+              <button type="button" class="btn primary" onclick="window.openAddMemoryDialog()">+ 添加记忆条目</button>
+            </div>
           </div>
-          <div class="card-body" style="padding:16px;">
-            <div style="margin-bottom:12px;display:flex;gap:8px;">
-              <input id="memorySearchInput" placeholder="按关键字搜索记忆条目..." style="flex:1;" />
-              <select id="memoryAgentFilter" style="width:150px;">
-                <option value="">全部智能体</option>
-              </select>
-            </div>
-            <div id="memoryList" style="display:flex;flex-direction:column;gap:8px;">
-              <!-- 动态渲染记忆卡片 -->
+
+          <div class="card">
+            <div class="card-body" style="padding:16px;">
+              <div style="margin-bottom:12px;display:flex;gap:8px;">
+                <input id="memorySearchInput" placeholder="按关键字搜索记忆条目..." style="flex:1;" />
+                <select id="memoryAgentFilter" style="width:150px;">
+                  <option value="">全部智能体</option>
+                </select>
+              </div>
+              <div id="memoryList" style="display:flex;flex-direction:column;gap:8px;">
+                <!-- 动态渲染记忆卡片 -->
+              </div>
             </div>
           </div>
         </div>
@@ -1108,7 +1122,7 @@
               模型与服务商
             </button>
             <button type="button" class="settings-tab-btn" data-tab="channels" onclick="window.switchSettingsTab('channels')">
-              🤖 机器人与消息通道
+              机器人与消息通道
             </button>
             <button type="button" class="settings-tab-btn" data-tab="projects" onclick="window.switchSettingsTab('projects')">
               工作区项目库
@@ -1130,7 +1144,7 @@
                   <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">统一管理 OpenAI、Anthropic、DeepSeek 等服务商及其下属 AI 模型，支持一键在线拉取或手动录入</div>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                  <button type="button" class="btn secondary" id="openEnvManagerBtn" onclick="window.openEnvManagerModal()">🔑 全局环境变量管理</button>
+                  <button type="button" class="btn secondary" id="openEnvManagerBtn" onclick="window.openEnvManagerModal()">全局环境变量管理</button>
                   <button type="button" class="btn primary" onclick="window.openProviderDialog()">+ 添加 AI 服务商与模型</button>
                 </div>
               </div>
@@ -1147,7 +1161,7 @@
               <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;flex-wrap:wrap;gap:8px;">
                 <div>
                   <h3 style="margin:0;font-size:14.5px;font-weight:700;display:flex;align-items:center;gap:6px;">
-                    <span>🤖</span> 机器人实例管理中心 (Multi-Bot Instances Hub)
+                    机器人实例管理中心 (Multi-Bot Instances Hub)
                   </h3>
                   <p style="margin:4px 0 0 0;font-size:12px;color:var(--text-muted);">
                     支持创建多个不同平台的机器人实例（Telegram、QQ、飞书、微信、钉钉等），每个远程服务器可独立绑定专属机器人进行远程操控。
@@ -1155,7 +1169,7 @@
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;">
                   <button type="button" class="btn secondary" onclick="window.loadBotInstances()" style="font-size:12px;padding:5px 10px;">
-                    🔄 刷新列表
+                    刷新列表
                   </button>
                   <button type="button" class="btn primary" onclick="window.openBotDialog()" style="font-size:12px;padding:5px 12px;">
                     + 添加机器人实例
@@ -1174,19 +1188,19 @@
             </div>
             <div class="channel-subtabs-row">
               <button type="button" class="channel-subtab-btn active" data-subtab="wechat" onclick="window.switchSettingsSubTab('wechat')">
-                <span>🟢</span> 微信 / 企业微信
+                微信 / 企业微信
               </button>
               <button type="button" class="channel-subtab-btn" data-subtab="tg" onclick="window.switchSettingsSubTab('tg')">
-                <span>✈️</span> Telegram 机器人
+                Telegram 机器人
               </button>
               <button type="button" class="channel-subtab-btn" data-subtab="feishu" onclick="window.switchSettingsSubTab('feishu')">
-                <span>🕊️</span> 飞书 (Feishu/Lark)
+                飞书 (Feishu/Lark)
               </button>
               <button type="button" class="channel-subtab-btn" data-subtab="qq" onclick="window.switchSettingsSubTab('qq')">
-                <span>🐧</span> QQ / OneBot
+                QQ / OneBot
               </button>
               <button type="button" class="channel-subtab-btn" data-subtab="dingtalk" onclick="window.switchSettingsSubTab('dingtalk')">
-                <span>📌</span> 钉钉 (DingTalk)
+                钉钉 (DingTalk)
               </button>
             </div>
 
@@ -1195,9 +1209,7 @@
               <!-- 微信状态 Hero 顶部横幅 -->
               <div class="channel-status-hero">
                 <div class="channel-hero-left">
-                  <div class="channel-hero-icon" style="background:linear-gradient(135deg, #22c55e 0%, #16a34a 100%);color:#fff;">
-                    💬
-                  </div>
+                  <div class="channel-hero-icon" style="background:linear-gradient(135deg, #22c55e 0%, #16a34a 100%);color:#fff;display:grid;place-items:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg></div>
                   <div>
                     <div style="display:flex;align-items:center;gap:8px;">
                       <h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text-main);" id="wxDisplayName">微信智能体网关</h3>
@@ -1209,11 +1221,14 @@
                   </div>
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;">
+                  <button type="button" class="btn secondary" id="openWechatModalBtn" style="font-size:12px;">
+                    ⛶ 弹出独立扫码窗口
+                  </button>
                   <button type="button" class="btn secondary" id="refreshWxQrBtn" style="font-size:12px;">
-                    🔄 同步联系人与群
+                    同步联系人与群
                   </button>
                   <button type="button" class="btn primary" id="toggleWxServiceBtn" style="font-size:12px;">
-                    🚀 启动微信服务
+                    启动微信服务
                   </button>
                 </div>
               </div>
@@ -1223,7 +1238,7 @@
                 <!-- 左侧配置表单 -->
                 <div class="card" style="padding:16px;">
                   <div style="font-weight:700;font-size:13.5px;margin-bottom:12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
-                    <span>⚙️ 微信通道通信与授权参数</span>
+                    <span>微信通道通信与授权参数</span>
                   </div>
                   <form id="wxConfigForm" style="display:flex;flex-direction:column;gap:12px;">
                     <div class="form-group">
@@ -1254,7 +1269,7 @@
                     <!-- 语音转录与卡片审批高级特性 -->
                     <div class="voice-approval-switch-row">
                       <div>
-                        <div style="font-size:12px;font-weight:600;color:var(--text-main);">🎤 微信语音智能转录</div>
+                        <div style="font-size:12px;font-weight:600;color:var(--text-main);">微信语音智能转录</div>
                         <div style="font-size:11px;color:var(--text-muted);">自动识别用户发送的语音消息并转录为文本派发给智能体</div>
                       </div>
                       <label class="switch">
@@ -1265,7 +1280,7 @@
 
                     <div class="voice-approval-switch-row">
                       <div>
-                        <div style="font-size:12px;font-weight:600;color:var(--text-main);">📋 卡片式双向确认与审批</div>
+                        <div style="font-size:12px;font-weight:600;color:var(--text-main);">卡片式双向确认与审批</div>
                         <div style="font-size:11px;color:var(--text-muted);">智能体执行高危写盘与命令前，在微信推送一键审批卡片</div>
                       </div>
                       <label class="switch">
@@ -1288,7 +1303,7 @@
                     </div>
 
                     <button type="submit" class="btn primary" id="saveWxConfigBtn" style="font-size:12.5px;font-weight:600;margin-top:4px;">
-                      💾 保存微信通道配置
+                      保存微信通道配置
                     </button>
                   </form>
                 </div>
@@ -1296,20 +1311,20 @@
                 <!-- 右侧扫码与实时消息卡片 -->
                 <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
                   <div style="font-weight:700;font-size:13.5px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
-                    <span>📱 扫码登录与交互面板</span>
+                    <span>扫码登录与交互面板</span>
                     <button type="button" class="btn secondary" id="openAddWxContactDialogBtn" style="font-size:11.5px;padding:2px 8px;">+ 添加微信路由规则</button>
                   </div>
 
                   <!-- 二维码展示区 -->
                   <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:180px;background:#f8fafc;border-radius:10px;border:1px dashed #cbd5e1;padding:16px;">
                     <div id="wxQrPlaceholder" style="text-align:center;color:var(--text-muted);font-size:12px;">
-                      <div style="font-size:32px;margin-bottom:6px;">📲</div>
+                      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);margin-bottom:6px;"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
                       <div>点击上方【启动微信服务】后，将在此实时生成微信登录二维码</div>
                     </div>
                     <div id="wxQrBox" style="display:none;"></div>
                     <div id="wxConfirmActionBox" style="display:none;margin-top:10px;text-align:center;">
                       <button type="button" class="btn primary" id="confirmWxLoginBtn" style="font-size:12px;padding:5px 14px;">
-                        ✅ 手机已确认登录，点击同步状态
+                        手机已确认登录，点击同步状态
                       </button>
                     </div>
                   </div>
@@ -1340,9 +1355,7 @@
               <!-- TG 状态 Hero 顶部横幅 -->
               <div class="channel-status-hero">
                 <div class="channel-hero-left">
-                  <div class="channel-hero-icon" style="background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%);color:#fff;">
-                    ✈️
-                  </div>
+                  <div class="channel-hero-icon" style="background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%);color:#fff;display:grid;place-items:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></div>
                   <div>
                     <div style="display:flex;align-items:center;gap:8px;">
                       <h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text-main);" id="tgBotDisplayName">Telegram 智能体机器人</h3>
@@ -1356,10 +1369,10 @@
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;">
                   <button type="button" class="btn secondary" id="testTgBotBtn" style="font-size:12px;">
-                    🔍 连通性测试
+                    连通性测试
                   </button>
                   <button type="button" class="btn primary" id="toggleTgServiceBtn" style="font-size:12px;">
-                    🚀 启动 Telegram 机器人
+                    启动 Telegram 机器人
                   </button>
                 </div>
               </div>
@@ -1369,7 +1382,7 @@
                 <!-- 左侧配置表单 -->
                 <div class="card" style="padding:16px;">
                   <div style="font-weight:700;font-size:13.5px;margin-bottom:12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
-                    <span>🤖 Telegram 机器人通信凭据</span>
+                    <span>Telegram 机器人通信凭据</span>
                   </div>
                   <form id="tgConfigForm" style="display:flex;flex-direction:column;gap:12px;">
                     <div class="form-group">
@@ -1408,7 +1421,7 @@
                     </div>
 
                     <button type="submit" class="btn primary" id="saveTgConfigBtn" style="font-size:12.5px;font-weight:600;margin-top:4px;">
-                      💾 保存 Telegram 配置
+                      保存 Telegram 配置
                     </button>
                   </form>
                 </div>
@@ -1416,7 +1429,7 @@
                 <!-- 右侧指令指南与消息监控 -->
                 <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
                   <div style="font-weight:700;font-size:13.5px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
-                    <span>📖 Telegram 常用指令与协同手册</span>
+                    <span>Telegram 常用指令与协同手册</span>
                   </div>
 
                   <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:12px;">
@@ -1456,9 +1469,7 @@
             <div id="channelSubPane_feishu" class="channel-subpane" style="display:none;">
               <div class="channel-status-hero">
                 <div class="channel-hero-left">
-                  <div class="channel-hero-icon" style="background:linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);color:#fff;">
-                    🕊️
-                  </div>
+                  <div class="channel-hero-icon" style="background:linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);color:#fff;display:grid;place-items:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path><line x1="16" y1="8" x2="2" y2="22"></line><line x1="17.5" y1="15" x2="9" y2="15"></line></svg></div>
                   <div>
                     <h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text-main);">飞书企业协同机器人 (Feishu / Lark)</h3>
                     <p style="margin:4px 0 0 0;font-size:12px;color:var(--text-muted);">
@@ -1471,7 +1482,7 @@
               <div class="channel-split-grid">
                 <div class="card" style="padding:16px;">
                   <div style="font-weight:700;font-size:13.5px;margin-bottom:12px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
-                    <span>🔑 飞书开放平台应用凭据</span>
+                    <span>飞书开放平台应用凭据</span>
                   </div>
                   <form id="feishuConfigForm" style="display:flex;flex-direction:column;gap:12px;">
                     <div class="form-group">
@@ -1495,14 +1506,14 @@
                       <select id="feishuAgentSelect"></select>
                     </div>
                     <button type="submit" class="btn primary" id="saveFeishuConfigBtn" style="font-size:12.5px;font-weight:600;margin-top:4px;">
-                      💾 保存飞书配置
+                      保存飞书配置
                     </button>
                   </form>
                 </div>
 
                 <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
                   <div style="font-weight:700;font-size:13.5px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
-                    <span>🌐 飞书事件订阅与 Webhook 回调地址</span>
+                    <span>飞书事件订阅与 Webhook 回调地址</span>
                   </div>
                   <div style="background:#f8fafc;padding:12px;border-radius:8px;border:1px solid #e2e8f0;font-size:12px;line-height:1.6;">
                     <div style="color:var(--text-secondary);font-weight:600;">事件请求网址 (Request URL):</div>
@@ -1522,9 +1533,7 @@
             <div id="channelSubPane_qq" class="channel-subpane" style="display:none;">
               <div class="channel-status-hero">
                 <div class="channel-hero-left">
-                  <div class="channel-hero-icon" style="background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);color:#fff;">
-                    🐧
-                  </div>
+                  <div class="channel-hero-icon" style="background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);color:#fff;display:grid;place-items:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>
                   <div>
                     <h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text-main);">QQ / OneBot (NapCat / LLOneBot) 协议网关</h3>
                     <p style="margin:4px 0 0 0;font-size:12px;color:var(--text-muted);">
@@ -1537,7 +1546,7 @@
               <div class="channel-split-grid">
                 <div class="card" style="padding:16px;">
                   <div style="font-weight:700;font-size:13.5px;margin-bottom:12px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
-                    <span>⚙️ OneBot 协议连接配置</span>
+                    <span>OneBot 协议连接配置</span>
                   </div>
                   <form id="qqConfigForm" style="display:flex;flex-direction:column;gap:12px;">
                     <div class="form-group">
@@ -1557,14 +1566,14 @@
                       <select id="qqAgentSelect"></select>
                     </div>
                     <button type="submit" class="btn primary" id="saveQQConfigBtn" style="font-size:12.5px;font-weight:600;margin-top:4px;">
-                      💾 保存 QQ 配置
+                      保存 QQ 配置
                     </button>
                   </form>
                 </div>
 
                 <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
                   <div style="font-weight:700;font-size:13.5px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
-                    <span>🐧 QQ 实时消息流与测试</span>
+                    <span>QQ 实时消息流与测试</span>
                   </div>
                   <div id="qqMsgFeed" style="min-height:180px;max-height:240px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px;background:#f8fafc;font-size:11.5px;">
                     <div style="color:var(--text-muted);text-align:center;padding:24px 0;">连接 OneBot 服务后，QQ 消息与群聊指令将在此实时输出</div>
@@ -1581,9 +1590,7 @@
             <div id="channelSubPane_dingtalk" class="channel-subpane" style="display:none;">
               <div class="channel-status-hero">
                 <div class="channel-hero-left">
-                  <div class="channel-hero-icon" style="background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;">
-                    📌
-                  </div>
+                  <div class="channel-hero-icon" style="background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></div>
                   <div>
                     <h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text-main);">钉钉企业应用机器人 (DingTalk)</h3>
                     <p style="margin:4px 0 0 0;font-size:12px;color:var(--text-muted);">
@@ -1596,7 +1603,7 @@
               <div class="channel-split-grid">
                 <div class="card" style="padding:16px;">
                   <div style="font-weight:700;font-size:13.5px;margin-bottom:12px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
-                    <span>🔑 钉钉应用凭据</span>
+                    <span>钉钉应用凭据</span>
                   </div>
                   <form id="dingtalkConfigForm" style="display:flex;flex-direction:column;gap:12px;">
                     <div class="form-group">
@@ -1616,14 +1623,14 @@
                       <select id="dingAgentSelect"></select>
                     </div>
                     <button type="submit" class="btn primary" id="saveDingConfigBtn" style="font-size:12.5px;font-weight:600;margin-top:4px;">
-                      💾 保存钉钉配置
+                      保存钉钉配置
                     </button>
                   </form>
                 </div>
 
                 <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
                   <div style="font-weight:700;font-size:13.5px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
-                    <span>📌 钉钉回调与互动卡片</span>
+                    <span>钉钉回调与互动卡片</span>
                   </div>
                   <div style="background:#f8fafc;padding:12px;border-radius:8px;border:1px solid #e2e8f0;font-size:12px;line-height:1.6;">
                     <div style="color:var(--text-secondary);font-weight:600;">钉钉 HTTP 回调地址:</div>
@@ -1643,12 +1650,15 @@
           <!-- Tab 3 内容: 工作区项目库 -->
           <div id="settingsPane_projects" class="settings-pane" style="display:none;">
             <div class="card">
-              <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+              <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
                 <div>
                   <div style="font-weight:700;font-size:14px;">工作区项目工程库</div>
                   <div style="font-size:11.5px;color:var(--text-muted);">注册本地代码仓库，为每个工程绑定专属智能体角色与 Git 状态</div>
                 </div>
-                <div style="display:flex;gap:8px;">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button type="button" class="btn secondary" onclick="window.openCommitRulesModal()" style="font-size:12px;display:inline-flex;align-items:center;gap:4px;">
+                    <span>⚙️</span> Git Commit 规则设置
+                  </button>
                   <button type="button" class="btn secondary" id="importProjectBtn">+ 导入已有项目</button>
                   <button type="button" class="btn primary" onclick="window.openProjectDialog()">+ 手动添加项目</button>
                 </div>
@@ -1987,7 +1997,12 @@
 
           <!-- 当前已添加模型列表 -->
           <div>
-            <div style="font-size:11.5px;font-weight:600;color:#475569;margin-bottom:4px;">当前已包含的模型列表：</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+              <div style="font-size:11.5px;font-weight:600;color:#475569;">当前已包含的模型列表 (<span id="currentDialogModelsCount">0</span>)：</div>
+              <button type="button" class="btn text-btn" id="clearAllProviderModelsBtn" style="font-size:11.5px;color:#ef4444;padding:2px 6px;cursor:pointer;background:none;border:none;display:none;align-items:center;gap:3px;" title="一键清除当前列表中所有已包含的模型">
+                一键清除全部模型
+              </button>
+            </div>
             <div id="currentProviderModelsList" style="display:flex;flex-wrap:wrap;gap:6px;min-height:30px;align-items:center;background:#ffffff;padding:6px 8px;border-radius:6px;border:1px solid #e2e8f0;"></div>
           </div>
         </div>
@@ -2255,6 +2270,18 @@
         </div>
 
         <div id="gitRepoState" style="display:flex;flex-direction:column;flex:1;min-height:0;margin-top:10px;">
+          <!-- 冲突预警提示横幅 -->
+          <div id="gitConflictAlertBanner" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-size:14px;">⚠️</span>
+              <span><strong>检测到代码合并冲突！</strong>存在未合并的冲突文件，请查看下方标有「冲突」的文件。</span>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <button type="button" class="btn secondary" onclick="window.openVsCodeForProject?.()" style="font-size:11px;padding:2px 8px;">VS Code 解决冲突</button>
+              <button type="button" class="btn primary" onclick="window.askAiResolveConflicts?.()" style="font-size:11px;padding:2px 8px;background:#e11d48;border-color:#be123c;">🤖 唤醒 AI 智能解决</button>
+            </div>
+          </div>
+
           <!-- 左右分栏：左侧文件列表，右侧 Diff 代码对比 -->
           <div class="git-split-container" style="display:grid;grid-template-columns:290px 1fr;gap:12px;flex:1;min-height:280px;max-height:420px;border:1px solid var(--border-default);border-radius:var(--radius-sm);overflow:hidden;background:#ffffff;">
             <!-- 左侧：改动文件清单 -->
@@ -2287,19 +2314,25 @@
 
           <!-- 提交说明与操作栏 -->
           <div style="margin-top:12px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px;">
               <label style="font-size:12px;font-weight:600;">提交信息 (Commit Message)</label>
-              <button type="button" class="btn text-btn" id="aiGenerateCommitBtn" style="font-size:11.5px;padding:2px 6px;color:var(--accent);">
-                 AI 智能生成 Commit 说明
-              </button>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <button type="button" class="btn primary" id="aiGenerateCommitBtn" style="font-size:11.5px;padding:3px 10px;font-weight:600;display:inline-flex;align-items:center;gap:4px;">
+                  <span>✨</span> AI 智能生成 Commit 说明
+                </button>
+                <button type="button" class="btn secondary" id="openCommitRulesModalBtn" title="配置 Commit 说明生成规则与团队规范" style="font-size:11.5px;padding:3px 8px;display:inline-flex;align-items:center;gap:4px;">
+                  <span>⚙️</span> 规则设置
+                  <span id="currentCommitRuleBadge" style="font-size:10px;background:#e2e8f0;color:#334155;padding:1px 5px;border-radius:3px;margin-left:2px;font-weight:500;">Conventional · 中文</span>
+                </button>
+              </div>
             </div>
-            <textarea id="gitCommitMessageInput" rows="2" placeholder="输入提交说明，例如: feat: 完善项目树形导航与 Git 提交协同" style="width:100%;padding:6px 10px;border:1px solid var(--border-default);border-radius:var(--radius-sm);font-size:12px;font-family:var(--font-sans);resize:none;"></textarea>
+            <textarea id="gitCommitMessageInput" rows="5" placeholder="输入提交说明，例如:&#10;refactor(gui): 重构聊天界面和主机监控功能&#10;&#10;- 重构聊天输入框初始化逻辑，清空输入内容并重置附件状态&#10;- 将 scheduledTasksBtn 点击事件的目标页面从 logs 改为 schedules" style="width:100%;padding:8px 10px;border:1px solid var(--border-default);border-radius:var(--radius-sm);font-size:12px;font-family:var(--font-mono);resize:vertical;min-height:90px;line-height:1.55;"></textarea>
           </div>
 
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-default);gap:8px;">
             <div style="display:flex;gap:8px;">
-              <button type="button" class="btn secondary" id="gitPullBtn" title="拉取远端最新代码">⬇️ Git Pull 拉取</button>
-              <button type="button" class="btn secondary" id="gitPushBtn" title="推送提交到远端仓库">⬆️ Git Push 推送</button>
+              <button type="button" class="btn secondary" id="gitPullBtn" title="拉取远端最新代码">Git Pull 拉取</button>
+              <button type="button" class="btn secondary" id="gitPushBtn" title="推送提交到远端仓库">Git Push 推送</button>
             </div>
             <div style="display:flex;gap:8px;">
               <button type="button" class="btn secondary" id="cancelGitModalBtn">关闭</button>
@@ -2419,7 +2452,7 @@
           </div>
 
           <div class="form-group full-width">
-            <label>🤖 绑定专属控制机器人 (Bound Bot)</label>
+            <label>绑定专属控制机器人 (Bound Bot)</label>
             <select name="boundBotId" id="serverInputBoundBot" style="font-size:12.5px;">
               <option value="">-- 未绑定机器人 (点击下方选择或前往机器人中心新增) --</option>
             </select>
@@ -2441,7 +2474,7 @@
       <div class="modal-form-wrap" style="max-height:88vh;display:flex;flex-direction:column;padding:20px 24px;">
         <div class="modal-header-row" style="margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:12px;">
-            <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:#fff;display:grid;place-items:center;font-size:16px;">🌐</div>
+            <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></div>
             <div>
               <div style="display:flex;align-items:center;gap:8px;">
                 <h2 id="serverDetailsTitle" style="font-size:16px;margin:0;font-weight:700;">服务器节点详情</h2>
@@ -2451,7 +2484,7 @@
             </div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
-            <button type="button" class="btn secondary" id="refreshServerDetailsBtn" style="font-size:12px;padding:4px 10px;">🔄 刷新数据</button>
+            <button type="button" class="btn secondary" id="refreshServerDetailsBtn" style="font-size:12px;padding:4px 10px;">刷新数据</button>
             <button type="button" class="btn-close" id="closeServerDetailsBtn" aria-label="关闭" title="关闭"></button>
           </div>
         </div>
@@ -2509,7 +2542,7 @@
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
             <div class="card" style="padding:14px;">
               <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--text-main);display:flex;align-items:center;gap:6px;">
-                <span>⚙️ 操作系统与内核参数</span>
+                <span>操作系统与内核参数</span>
               </div>
               <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;">
                 <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">操作系统发行版:</span><strong id="serverDetailsOsFull">--</strong></div>
@@ -2521,7 +2554,7 @@
 
             <div class="card" style="padding:14px;">
               <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--text-main);display:flex;align-items:center;gap:6px;">
-                <span>🚀 HAP 守护进程与通讯连接</span>
+                <span>HAP 守护进程与通讯连接</span>
               </div>
               <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;">
                 <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">守护进程端口:</span><strong id="serverDetailsDaemonPort" style="color:#10b981;font-family:var(--font-mono);">9527</strong></div>
@@ -2535,19 +2568,19 @@
           <!-- 快捷操作栏 -->
           <div style="display:flex;flex-wrap:wrap;gap:8px;padding-top:6px;">
             <button type="button" class="btn primary" id="serverDetailsPanoramaBtn" style="font-size:12.5px;padding:6px 14px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);">
-              🖥️ 进入节点全景监控大盘 ↗
+              进入节点全景监控大盘 ↗
             </button>
             <button type="button" class="btn secondary" id="serverDetailsTerminalBtn" style="font-size:12.5px;padding:6px 14px;">
-              💻 切换至终端操作此节点
+              切换至终端操作此节点
             </button>
             <button type="button" class="btn secondary" id="serverDetailsOpsBtn" style="font-size:12.5px;padding:6px 14px;">
-              🤖 唤起智能体专属运维助理
+              唤起智能体专属运维助理
             </button>
             <button type="button" class="btn secondary" id="serverDetailsInstallBtn" style="font-size:12.5px;padding:6px 14px;">
-              🚀 重新部署守护进程
+              重新部署守护进程
             </button>
             <button type="button" class="btn secondary" id="serverDetailsEditBtn" style="font-size:12.5px;padding:6px 14px;">
-              ⚙️ 编辑节点配置
+              编辑节点配置
             </button>
           </div>
         </div>
@@ -2559,7 +2592,7 @@
       <div class="modal-form-wrap" style="max-height:88vh;display:flex;flex-direction:column;padding:20px 24px;">
         <div class="modal-header-row" style="margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:12px;">
-            <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;font-size:16px;">🖥️</div>
+            <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
             <div>
               <div style="display:flex;align-items:center;gap:8px;">
                 <h2 style="font-size:16px;margin:0;font-weight:700;">本机宿主系统完整指标与硬件画像</h2>
@@ -2569,7 +2602,7 @@
             </div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
-            <button type="button" class="btn secondary" id="refreshHostDetailsModalBtn" style="font-size:12px;padding:4px 10px;">🔄 刷新数据</button>
+            <button type="button" class="btn secondary" id="refreshHostDetailsModalBtn" style="font-size:12px;padding:4px 10px;">刷新数据</button>
             <button type="button" class="btn-close" id="closeHostDetailsModalBtn" aria-label="关闭" title="关闭"></button>
           </div>
         </div>
@@ -2626,7 +2659,7 @@
           <!-- 系统硬件与环境参数 -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
             <div class="card" style="padding:14px;">
-              <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--text-main);">🖥️ 操作系统与机器参数</div>
+              <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--text-main);">操作系统与机器参数</div>
               <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;">
                 <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">操作系统版本:</span><strong id="hostModalOs">--</strong></div>
                 <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">硬件架构:</span><span id="hostModalArch" style="font-family:var(--font-mono);">--</span></div>
@@ -2636,7 +2669,7 @@
             </div>
 
             <div class="card" style="padding:14px;">
-              <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--text-main);">📦 Node.js 运行时与网络接口</div>
+              <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--text-main);">Node.js 运行时与网络接口</div>
               <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;">
                 <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">Node.js 版本:</span><strong id="hostModalNodeVer" style="color:#10b981;font-family:var(--font-mono);">--</strong></div>
                 <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">V8 引擎 / libuv:</span><span id="hostModalV8Ver">--</span></div>
@@ -2654,7 +2687,7 @@
       <div class="modal-form-wrap" style="max-height:85vh;display:flex;flex-direction:column;padding:22px 24px;">
         <div class="modal-header-row" style="margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:12px;">
-            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);color:#fff;display:grid;place-items:center;font-size:18px;">🧩</div>
+            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.439 7.85c0-1.571-1.277-2.85-2.852-2.85a2.85 2.85 0 0 0-2.85 2.85V9H10V7.85C10 6.279 8.723 5 7.148 5 5.572 5 4.296 6.279 4.296 7.85v1.299a2.85 2.85 0 0 0 2.852 2.851h.704V14H6.57a2.85 2.85 0 0 0-2.851 2.85v1.299c0 1.571 1.276 2.851 2.851 2.851h1.299a2.85 2.85 0 0 0 2.85-2.851v-.704H13.73v.704a2.85 2.85 0 0 0 2.851 2.851h1.306c1.575 0 2.852-1.28 2.852-2.851V16.85a2.85 2.85 0 0 0-2.852-2.85h-.704V12h.704a2.85 2.85 0 0 0 2.852-2.851V7.85z"></path></svg></div>
             <div>
               <h2 style="margin:0;font-size:16px;font-weight:700;">热门官方与社区 MCP 扩展库</h2>
               <p style="margin:2px 0 0 0;font-size:12px;color:var(--text-muted);">一键快捷安装标准 Model Context Protocol 插件，无须手动编写命令行与 JSON 参数</p>
@@ -2733,7 +2766,7 @@
       <div class="modal-form-wrap" style="max-width:880px;background:#ffffff;">
         <div class="modal-header-row" style="margin-bottom:14px;">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff;display:grid;place-items:center;font-size:16px;">🎨</div>
+            <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"></circle><circle cx="17.5" cy="10.5" r=".5"></circle><circle cx="8.5" cy="7.5" r=".5"></circle><circle cx="6.5" cy="12.5" r=".5"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path></svg></div>
             <div>
               <h2 style="margin:0;font-size:16px;font-weight:700;">AI 生图与视觉创作中心 (AI Image Studio)</h2>
               <p style="margin:2px 0 0 0;font-size:12px;color:var(--text-muted);">支持 DALL-E 3、OpenAI 兼容生图以及高画质免 Key Flux / SDXL 生图引擎，一键生成插画、架构图与设计图</p>
@@ -2755,14 +2788,14 @@
 
             <!-- 预置灵感标签 -->
             <div>
-              <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:6px;">✨ 灵感预置标签（点击快速填入）：</div>
+              <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:6px;">灵感预置标签（点击快速填入）：</div>
               <div style="display:flex;flex-wrap:wrap;gap:6px;" id="imagePromptPresets">
-                <button type="button" class="btn secondary img-preset-tag" style="font-size:11px;padding:3px 8px;border-radius:12px;" data-prompt="软件微服务系统架构拓扑图，现代化渐变配色，科技感发光连线，极简专业">💻 系统架构图</button>
-                <button type="button" class="btn secondary img-preset-tag" style="font-size:11px;padding:3px 8px;border-radius:12px;" data-prompt="极简几何科技感 App Logo 图标，渐变霓虹紫蓝，居中对称，矢量质感，白色纯净背景">🔷 科技感 Logo</button>
-                <button type="button" class="btn secondary img-preset-tag" style="font-size:11px;padding:3px 8px;border-radius:12px;" data-prompt="未来赛博朋克科幻城市夜景，雨夜霓虹倒影，高科技飞行器与摩天大楼，电影级虚幻5光影，8k超清壁纸">🌃 赛博朋克壁纸</button>
-                <button type="button" class="btn secondary img-preset-tag" style="font-size:11px;padding:3px 8px;border-radius:12px;" data-prompt="现代极简移动端 App UI 界面设计，毛玻璃卡片风格，精致图标排版，柔和优雅光影">📱 现代 UI 设计</button>
-                <button type="button" class="btn secondary img-preset-tag" style="font-size:11px;padding:3px 8px;border-radius:12px;" data-prompt="可爱科技感 3D 机器人吉祥物，圆润柔和粘土质感，盲盒手办风格，柔和影棚布光">🤖 3D 机器人手办</button>
-                <button type="button" class="btn secondary img-preset-tag" style="font-size:11px;padding:3px 8px;border-radius:12px;" data-prompt="现代扁平商业插画，程序员在多屏工作台前协作开发，明快活力配色，极简线条">🎨 现代扁平插画</button>
+                <button type="button" class="btn secondary img-preset-tag" style="font-size:11px;padding:3px 8px;border-radius:12px;" data-prompt="软件微服务系统架构拓扑图，现代化渐变配色，科技感发光连线，极简专业">系统架构图</button>
+                <button type="button" class="btn secondary img-preset-tag" style="font-size:11px;padding:3px 8px;border-radius:12px;" data-prompt="极简几何科技感 App Logo 图标，渐变霓虹紫蓝，居中对称，矢量质感，白色纯净背景">科技感 Logo</button>
+                <button type="button" class="btn secondary img-preset-tag" style="font-size:11px;padding:3px 8px;border-radius:12px;" data-prompt="未来赛博朋克科幻城市夜景，雨夜霓虹倒影，高科技飞行器与摩天大楼，电影级虚幻5光影，8k超清壁纸">赛博朋克壁纸</button>
+                <button type="button" class="btn secondary img-preset-tag" style="font-size:11px;padding:3px 8px;border-radius:12px;" data-prompt="现代极简移动端 App UI 界面设计，毛玻璃卡片风格，精致图标排版，柔和优雅光影">现代 UI 设计</button>
+                <button type="button" class="btn secondary img-preset-tag" style="font-size:11px;padding:3px 8px;border-radius:12px;" data-prompt="可爱科技感 3D 机器人吉祥物，圆润柔和粘土质感，盲盒手办风格，柔和影棚布光">3D 机器人手办</button>
+                <button type="button" class="btn secondary img-preset-tag" style="font-size:11px;padding:3px 8px;border-radius:12px;" data-prompt="现代扁平商业插画，程序员在多屏工作台前协作开发，明快活力配色，极简线条">现代扁平插画</button>
               </div>
             </div>
 
@@ -2799,7 +2832,7 @@
                 <span id="imageModelStatusChip" style="font-size:11px;color:#10b981;"></span>
               </div>
               <select id="imageGenModelSelect">
-                <optgroup label="🌟 官方与商用生图大模型 (画质顶尖 · 需 API Key)">
+                <optgroup label="官方与商用生图大模型 (画质顶尖 · 需 API Key)">
                   <option value="openai:dall-e-3" data-provider="openai" data-model="dall-e-3" selected>OpenAI DALL-E 3 (画质顶尖 · 官方推荐)</option>
                   <option value="openai:dall-e-2" data-provider="openai" data-model="dall-e-2">OpenAI DALL-E 2 (极速低成本)</option>
                   <option value="siliconflow:black-forest-labs/FLUX.1-schnell" data-provider="siliconflow" data-model="black-forest-labs/FLUX.1-schnell">硅基流动 FLUX.1-schnell (秒级极速生成)</option>
@@ -2808,15 +2841,15 @@
                   <option value="zhipu:cogview-3" data-provider="zhipu" data-model="cogview-3">智谱清言 CogView-3 (原生中文大模型生图)</option>
                   <option value="dashscope:wanx-v1" data-provider="dashscope" data-model="wanx-v1">阿里通义万相 Wanx-v1</option>
                 </optgroup>
-                <optgroup label="⚡ 免 Key 公用极速引擎 (即刻可用 · 无需配置 Key)">
+                <optgroup label="免 Key 公用极速引擎 (即刻可用 · 无需配置 Key)">
                   <option value="pollinations:flux" data-provider="pollinations" data-model="flux">Pollinations FLUX (免 Key · 高清推荐)</option>
                   <option value="pollinations:turbo" data-provider="pollinations" data-model="turbo">Pollinations Turbo (免 Key · 2秒秒出)</option>
                   <option value="pollinations:sdxl" data-provider="pollinations" data-model="sdxl">Pollinations SDXL (免 Key · 经典质感)</option>
                 </optgroup>
-                <optgroup label="🛠️ 已配置的 AI 服务商" id="systemConfiguredProvidersOptGroup"></optgroup>
-                <optgroup label="✨ 手动填写与自定义端点">
-                  <option value="manual:manual" data-provider="auto" data-model="manual">✏️ 手动输入生图模型名称...</option>
-                  <option value="custom:custom" data-provider="custom" data-model="custom">🛠️ 自定义 Base URL + API Key + 模型名称...</option>
+                <optgroup label="已配置的 AI 服务商" id="systemConfiguredProvidersOptGroup"></optgroup>
+                <optgroup label="手动填写与自定义端点">
+                  <option value="manual:manual" data-provider="auto" data-model="manual">手动输入生图模型名称...</option>
+                  <option value="custom:custom" data-provider="custom" data-model="custom">自定义 Base URL + API Key + 模型名称...</option>
                 </optgroup>
               </select>
             </div>
@@ -2836,7 +2869,7 @@
 
             <div style="margin-top:6px;">
               <button type="button" class="btn primary" id="doGenerateImageBtn" style="width:100%;padding:10px;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;">
-                <span>✨</span>
+                
                 <span id="doGenerateImageBtnText">立即生成 AI 图像</span>
               </button>
             </div>
@@ -2846,7 +2879,7 @@
           <div style="display:flex;flex-direction:column;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;min-height:360px;justify-content:center;align-items:center;position:relative;" id="imageGenPreviewWrap">
             <!-- 空状态 -->
             <div id="imageGenEmptyBox" style="text-align:center;color:var(--text-muted);padding:30px 16px;">
-              <div style="font-size:42px;margin-bottom:8px;">🖼️</div>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);margin-bottom:8px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
               <div style="font-weight:600;font-size:13.5px;color:#334155;margin-bottom:4px;">画面预览画布</div>
               <div style="font-size:12px;color:#64748b;max-width:240px;margin:0 auto;">输入画面描述并选择生图模型，点击「立即生成 AI 图像」，高分辨率渲染图像将即时在此展示</div>
             </div>
@@ -2856,7 +2889,7 @@
               <div class="spinner" style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#0284c7;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 14px auto;"></div>
               <div style="font-weight:700;font-size:14px;color:#0284c7;" id="imageGenLoadingText">AI 引擎正在精心绘制中...</div>
               <div style="font-size:11.5px;color:#64748b;margin-top:4px;margin-bottom:14px;" id="imageGenLoadingSubtext">正在调度生图模型生成高分辨率画面，通常需 2~8 秒</div>
-              <button type="button" class="btn secondary" id="cancelGeneratingImgBtn" style="font-size:11.5px;padding:4px 12px;color:#ef4444;border-color:#fca5a5;">🚫 中止本次生成</button>
+              <button type="button" class="btn secondary" id="cancelGeneratingImgBtn" style="font-size:11.5px;padding:4px 12px;color:#ef4444;border-color:#fca5a5;">中止本次生成</button>
             </div>
 
             <!-- 生成成功结果 -->
@@ -2872,9 +2905,9 @@
                   <span id="imageGenInfoMeta">1024x1024</span>
                 </div>
                 <div style="display:grid;grid-template-columns: 1fr 1fr 1.2fr;gap:6px;">
-                  <button type="button" class="btn secondary" style="font-size:12px;padding:6px 8px;" id="downloadGenImgBtn">💾 下载图片</button>
-                  <button type="button" class="btn secondary" style="font-size:12px;padding:6px 8px;" id="copyGenImgUriBtn">📋 复制路径</button>
-                  <button type="button" class="btn primary" style="font-size:12px;padding:6px 8px;background:#0284c7;" id="insertGenImgToChatBtn">💬 插入对话</button>
+                  <button type="button" class="btn secondary" style="font-size:12px;padding:6px 8px;" id="downloadGenImgBtn">下载图片</button>
+                  <button type="button" class="btn secondary" style="font-size:12px;padding:6px 8px;" id="copyGenImgUriBtn">复制路径</button>
+                  <button type="button" class="btn primary" style="font-size:12px;padding:6px 8px;background:#0284c7;" id="insertGenImgToChatBtn">插入对话</button>
                 </div>
               </div>
             </div>
@@ -2892,7 +2925,7 @@
       <div class="modal-form-wrap" style="max-width:920px;background:#ffffff;">
         <div class="modal-header-row" style="margin-bottom:12px;">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;display:grid;place-items:center;font-size:16px;">🔑</div>
+            <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-1.5 1.5L14 9l-1.5-1.5M9 13l-4 4a3 3 0 1 0 4 4l4-4"></path></svg></div>
             <div>
               <h2 style="margin:0;font-size:16px;font-weight:700;">全局 AI 环境变量与凭据中心 (Environment Variables)</h2>
               <p style="margin:2px 0 0 0;font-size:12px;color:var(--text-muted);">集中管理所有 AI 大模型服务商的 API Key 与通信密钥，数据持久化存储于本地，全局智能体即刻生效</p>
@@ -2913,7 +2946,7 @@
             <span class="badge success" style="font-size:11px;" id="envStatusBadge">本地配置就绪</span>
           </div>
           <div style="display:flex;gap:8px;">
-            <button type="button" class="btn secondary" style="font-size:12px;padding:5px 12px;" id="openBatchImportEnvBtn">📥 批量导入 .env 格式</button>
+            <button type="button" class="btn secondary" style="font-size:12px;padding:5px 12px;" id="openBatchImportEnvBtn">批量导入 .env 格式</button>
             <button type="button" class="btn secondary" style="font-size:12px;padding:5px 12px;" id="openAddCustomEnvBtn">+ 新增自定义变量</button>
           </div>
         </div>
@@ -2943,7 +2976,7 @@
 
         <!-- 搜索与筛选 -->
         <div style="margin-bottom:10px;">
-          <input type="text" id="searchEnvInput" placeholder="🔍 搜索环境变量名或服务商 (如 DEEPSEEK, OPENAI, Claude, Tavily)..." style="width:100%;font-size:12.5px;padding:6px 12px;" />
+          <input type="text" id="searchEnvInput" placeholder="搜索环境变量名或服务商 (如 DEEPSEEK, OPENAI, Claude, Tavily)..." style="width:100%;font-size:12.5px;padding:6px 12px;" />
         </div>
 
         <!-- 环境变量列表容器 -->
@@ -2953,7 +2986,7 @@
 
         <div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px;border-top:1px solid var(--border-default);margin-top:14px;">
           <div style="font-size:11.5px;color:var(--text-muted);">
-            💡 提示：环境变量保存后将立即载入当前进程，无需重启客户端即可向智能体发起调用。
+            提示：环境变量保存后将立即载入当前进程，无需重启客户端即可向智能体发起调用。
           </div>
           <button type="button" class="btn primary" id="finishEnvManagerBtn">完成并关闭</button>
         </div>
@@ -2966,7 +2999,7 @@
       <div class="modal-form-wrap" style="padding:22px 26px;">
         <div class="modal-header-row" style="margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:#fff;display:grid;place-items:center;font-size:18px;">🔒</div>
+            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></div>
             <div>
               <h2 style="font-size:16.5px;margin:0;font-weight:700;">一键申请 Let's Encrypt SSL 安全证书</h2>
               <p style="font-size:12px;color:var(--text-muted);margin:2px 0 0 0;">通过官方 Certbot 协议全自动申请 HTTPS 证书，并可直接绑定至 Nginx 与开启自动续期</p>
@@ -3018,12 +3051,12 @@
 
           <div style="display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid var(--border-default);margin-top:14px;">
             <div style="font-size:11.5px;color:#64748b;">
-              💡 申请前请确保域名的 DNS A 记录已成功解析至该服务器公网 IP，且服务器 80/443 端口已对外放行。
+              申请前请确保域名的 DNS A 记录已成功解析至该服务器公网 IP，且服务器 80/443 端口已对外放行。
             </div>
             <div style="display:flex;gap:8px;">
               <button type="button" class="btn secondary" onclick="$('sslCertModal').close()">取消</button>
               <button type="submit" class="btn primary" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                🚀 开始一键申请并部署
+                开始一键申请并部署
               </button>
             </div>
           </div>
@@ -3036,7 +3069,7 @@
       <div class="modal-form-wrap" style="padding:22px 26px;">
         <div class="modal-header-row" style="margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;font-size:18px;">🌐</div>
+            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></div>
             <div>
               <h2 style="font-size:16.5px;margin:0;font-weight:700;">一键生成与应用 Nginx 反向代理</h2>
               <p style="font-size:12px;color:var(--text-muted);margin:2px 0 0 0;">自动生成标准的 sites-available 配置文件、开启 WebSocket、流式传输并自动 reload</p>
@@ -3087,12 +3120,12 @@
 
           <div style="display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid var(--border-default);margin-top:14px;">
             <div style="font-size:11.5px;color:#64748b;">
-              💡 写入后将自动执行 `nginx -t` 语法自检，验证成功后立即无缝平滑重载。
+              写入后将自动执行 `nginx -t` 语法自检，验证成功后立即无缝平滑重载。
             </div>
             <div style="display:flex;gap:8px;">
               <button type="button" class="btn secondary" onclick="$('nginxProxyModal').close()">取消</button>
               <button type="submit" class="btn primary">
-                🚀 写入配置并平滑重载
+                写入配置并平滑重载
               </button>
             </div>
           </div>
@@ -3150,7 +3183,7 @@
             退出代码: <strong style="color:#10b981;">0 (成功)</strong>
           </div>
           <div style="display:flex;gap:8px;">
-            <button type="button" class="btn secondary" id="reRunExecBtn">🔄 重新执行</button>
+            <button type="button" class="btn secondary" id="reRunExecBtn">重新执行</button>
             <button type="button" class="btn primary" onclick="$('scriptExecutionModal').close()">关闭窗口</button>
           </div>
         </div>
@@ -3162,7 +3195,7 @@
       <form id="botForm" class="modal-form-wrap">
         <div class="modal-header-row">
           <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:18px;">🤖</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg>
             <h2 id="botDialogTitle" style="margin:0;font-size:16px;font-weight:700;">添加机器人实例</h2>
           </div>
           <button type="button" class="btn-close" id="closeBotDialogBtn" aria-label="关闭" title="关闭"></button>
@@ -3182,31 +3215,31 @@
           <div class="form-group">
             <label>所属通信平台 *</label>
             <select name="platform" id="botInputPlatform" required>
-              <option value="telegram">✈️ Telegram 机器人</option>
-              <option value="qq">🐧 QQ / OneBot 机器人</option>
-              <option value="feishu">🕊️ 飞书 (Feishu/Lark) 机器人</option>
-              <option value="dingtalk">📌 钉钉企业机器人</option>
-              <option value="wechat">🟢 微信 / 企业微信</option>
-              <option value="discord">🎮 Discord 机器人</option>
-              <option value="slack">💼 Slack 机器人</option>
+              <option value="telegram">Telegram 机器人</option>
+              <option value="qq">QQ / OneBot 机器人</option>
+              <option value="feishu">飞书 (Feishu/Lark) 机器人</option>
+              <option value="dingtalk">钉钉企业机器人</option>
+              <option value="wechat">微信 / 企业微信</option>
+              <option value="discord">Discord 机器人</option>
+              <option value="slack">Slack 机器人</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label>🖥️ 绑定执行的目标服务器 *</label>
+            <label>绑定执行的目标服务器 *</label>
             <select name="boundServerId" id="botInputBoundServer">
-              <option value="local">🖥️ 本机 (Localhost / 当前工作区)</option>
+              <option value="local">本机 (Localhost / 当前工作区)</option>
             </select>
           </div>
 
           <div class="form-group full-width">
-            <label>🤖 默认分派执行的智能体 *</label>
+            <label>默认分派执行的智能体 *</label>
             <select name="defaultAgent" id="botInputDefaultAgent">
-              <option value="ops">🛠️ ops (运维与系统管理专家 · 远程执行命令/排查日志)</option>
-              <option value="coder">💻 coder (全栈研发与代码重构)</option>
-              <option value="researcher">🔍 researcher (深度检索与信息收集)</option>
-              <option value="writer">📝 writer (文档撰写与报告总结)</option>
-              <option value="reviewer">🛡️ reviewer (代码审查与安全检查)</option>
+              <option value="ops">ops (运维与系统管理专家 · 远程执行命令/排查日志)</option>
+              <option value="coder">coder (全栈研发与代码重构)</option>
+              <option value="researcher">researcher (深度检索与信息收集)</option>
+              <option value="writer">writer (文档撰写与报告总结)</option>
+              <option value="reviewer">reviewer (代码审查与安全检查)</option>
             </select>
           </div>
         </div>
@@ -3260,9 +3293,22 @@
           </div>
 
           <div id="botFields_wechat" class="bot-platform-fields" style="display:none;">
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 14px;margin-bottom:12px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                <div style="font-weight:700;font-size:13px;color:#15803d;display:flex;align-items:center;gap:6px;">
+                  个人微信扫码登录 (无需填写 Token)
+                </div>
+                <button type="button" class="btn primary" id="openWechatScanFromModalBtn" style="font-size:11.5px;padding:3px 10px;">
+                  立即弹出扫码面板
+                </button>
+              </div>
+              <p style="font-size:11.5px;color:#166534;margin:0;line-height:1.4;">
+                Hermes 平台内置原生微信网关支持个人微信直接扫码绑定。点击上方按钮可直接跳转至扫码面板开始微信登录并联动。
+              </p>
+            </div>
             <div class="form-group">
-              <label style="font-size:11.5px;">Wechaty Puppet Token (可选)</label>
-              <input type="password" id="botWechatToken" placeholder="puppet_padlocal_... 或留空使用网页扫码" autocomplete="off" />
+              <label style="font-size:11.5px;">Wechaty Puppet Token (开发者高级选项，普通扫码请留空)</label>
+              <input type="password" id="botWechatToken" placeholder="puppet_padlocal_... 或留空" autocomplete="off" />
             </div>
           </div>
 
@@ -3298,7 +3344,7 @@
       <div class="modal-form-wrap" style="padding:22px 26px;">
         <div class="modal-header-row" style="margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:#fff;display:grid;place-items:center;font-size:18px;">🤖</div>
+            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg></div>
             <div>
               <h2 style="font-size:16.5px;margin:0;font-weight:700;">设置节点专属智能体与告警机器人</h2>
               <p style="font-size:12px;color:var(--text-muted);margin:2px 0 0 0;">为该计算节点绑定负责运维的专属 Agent，并配置飞书、微信、Telegram 告警通道与自动自愈策略</p>
@@ -3354,7 +3400,7 @@
             <!-- 告警触发阈值与自动自愈配置 -->
             <div class="form-group full-width" style="background:#f8fafc;padding:12px 14px;border-radius:8px;border:1px solid #e2e8f0;">
               <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#1e293b;display:flex;align-items:center;gap:6px;">
-                <span>⚡ 智能告警触发条件与 AI 自动化自愈：</span>
+                <span>智能告警触发条件与 AI 自动化自愈：</span>
               </div>
               <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:10px;font-size:12.5px;">
                 <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
@@ -3383,14 +3429,156 @@
 
           <div style="display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid var(--border-default);margin-top:14px;">
             <button type="button" class="btn secondary" onclick="window.testNodeBotAlertModal()" style="font-size:12.5px;padding:6px 14px;">
-              🔔 发送测试通知
+              发送测试通知
             </button>
             <div style="display:flex;gap:8px;">
               <button type="button" class="btn secondary" onclick="$('nodeBotConfigModal').close()">取消</button>
               <button type="submit" class="btn primary" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                💾 保存机器人与告警设置
+                保存机器人与告警设置
               </button>
             </div>
+          </div>
+        </form>
+      </div>
+    </dialog>
+
+    <!-- 弹窗: 微信专属扫码登录授权面板 (WeChat Dedicated QR Scan Modal) -->
+    <dialog id="wechatQrModal" class="modal modal-md">
+      <div class="modal-form-wrap" style="padding:24px 28px;">
+        <div class="modal-header-row" style="margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border-default);">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg, #22c55e 0%, #16a34a 100%);color:#fff;display:grid;place-items:center;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+            </div>
+            <div>
+              <h2 style="font-size:16.5px;margin:0;font-weight:700;">微信智能体扫码登录授权</h2>
+              <p style="font-size:12px;color:var(--text-muted);margin:2px 0 0 0;">使用手机微信扫描二维码，一键绑定并开启智能体微信双向交互</p>
+            </div>
+          </div>
+          <button type="button" class="btn-close" id="closeWechatQrModalBtn" onclick="$('wechatQrModal')?.close()" aria-label="关闭" title="关闭"></button>
+        </div>
+
+        <div id="wechatModalBody" style="display:flex;flex-direction:column;align-items:center;padding:16px 0;min-height:260px;justify-content:center;">
+          <!-- 动态注入二维码 / 加载中 / 成功状态 -->
+        </div>
+
+        <div class="modal-actions-row" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--border-default);">
+          <span id="wechatModalStatusTip" style="font-size:12px;color:var(--text-muted);">正在同步微信连接状态...</span>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn secondary" id="refreshWechatModalBtn" style="font-size:12px;">刷新二维码</button>
+            <button type="button" class="btn primary" id="confirmWechatModalBtn" style="font-size:12px;">我已确认登录</button>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- 弹窗: Git Commit 说明生成规则设置 (Git Commit Rule Settings Modal) -->
+    <dialog id="gitCommitRuleDialog" class="modal modal-md">
+      <div class="modal-form-wrap">
+        <div class="modal-header-row">
+          <div>
+            <h3 style="margin:0;font-size:16px;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:6px;">
+              <span>⚙️</span> AI Commit 规则与规范设置
+            </h3>
+            <p style="margin:4px 0 0 0;font-size:12px;color:var(--text-muted);">
+              配置一键生成 Git 提交说明时的模型分析引擎、语言习惯与团队代码规范
+            </p>
+          </div>
+          <button type="button" class="btn-close" id="closeGitCommitRuleDialogBtn" aria-label="关闭" title="关闭"></button>
+        </div>
+
+        <form id="gitCommitRuleForm" style="display:flex;flex-direction:column;gap:14px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label style="font-size:12.5px;font-weight:600;">生成引擎 (Generation Engine)</label>
+              <select id="commitRuleEngineSelect">
+                <option value="llm">AI 大模型深度 Diff 分析 (推荐)</option>
+                <option value="template">极速启发式模板规则 (毫秒生成)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label style="font-size:12.5px;font-weight:600;">专属 AI 模型 (Model - 可选)</label>
+              <select id="commitRuleModelSelect">
+                <option value="">跟随当前会话默认模型</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label style="font-size:12.5px;font-weight:600;">输出语言 (Language)</label>
+              <select id="commitRuleLangSelect" onchange="window.updateCommitRulePreview?.()">
+                <option value="zh">简体中文 (如 feat: 新增用户登录验证)</option>
+                <option value="en">English (如 feat: add user auth)</option>
+                <option value="bilingual">中英双语 (首行中文 + 次行英文)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label style="font-size:12.5px;font-weight:600;">规范风格 (Convention Style)</label>
+              <select id="commitRuleConventionSelect" onchange="window.updateCommitRulePreview?.()">
+                <option value="conventional">Conventional Commits (feat, fix, docs...)</option>
+                <option value="angular">Angular 模块范围 (feat(core): ...)</option>
+                <option value="gitmoji">Gitmoji 符号规范 (✨, 🐛, ♻️, 📝...)</option>
+                <option value="simple">简明叙述 (无类别前缀，动词直叙)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label style="font-size:12.5px;font-weight:600;">详情格式结构 (Detail Structure)</label>
+              <select id="commitRuleDetailSelect" onchange="window.updateCommitRulePreview?.()">
+                <option value="detailed">详细改动清单 (首行概括 + 详细要点列表，推荐)</option>
+                <option value="compact">单行简明概括 (仅保留首行摘要)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label style="font-size:12.5px;font-weight:600;">模块作用域 (Scope Extraction)</label>
+              <select id="commitRuleScopeSelect" onchange="window.updateCommitRulePreview?.()">
+                <option value="auto">智能提取改动模块 (如 gui, core, api, agent, build)</option>
+                <option value="none">不添加模块范围括号</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 实时格式预览 -->
+          <div style="background:#0f172a;border-radius:6px;padding:9px 12px;border:1px solid #1e293b;">
+            <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-weight:600;">生成效果格式预览 (Live Preview)：</span>
+              <span style="color:#38bdf8;font-size:10.5px;">示例</span>
+            </div>
+            <div id="commitRulePreviewBox" style="font-size:12px;font-family:var(--font-mono);color:#38bdf8;word-break:break-all;line-height:1.5;white-space:pre-wrap;">refactor(gui): 重构聊天界面和主机监控功能
+
+- 重构聊天输入框初始化逻辑，清空输入内容并重置附件状态
+- 将 scheduledTasksBtn 点击事件的目标页面从 logs 改为 schedules
+- 重构本地主机视图渲染功能，分离数据获取和界面渲染逻辑
+- 实现主机IP地理位置信息的缓存机制，避免频繁请求
+- 优化设置面板标签页切换的样式控制方式</div>
+          </div>
+
+          <div class="form-group">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+              <label style="font-size:12.5px;font-weight:600;">自定义团队规范提示词 (Custom Rules Prompt)</label>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;flex-wrap:wrap;">
+              <span style="font-size:11px;color:#64748b;">快捷追加要求：</span>
+              <button type="button" class="btn text-btn commit-preset-chip" data-preset="scope" style="font-size:10.5px;padding:2px 6px;background:#f1f5f9;border-radius:4px;color:#475569;">+ 强制模块 Scope</button>
+              <button type="button" class="btn text-btn commit-preset-chip" data-preset="brief" style="font-size:10.5px;padding:2px 6px;background:#f1f5f9;border-radius:4px;color:#475569;">+ 首行不超过 50 字</button>
+              <button type="button" class="btn text-btn commit-preset-chip" data-preset="bullets" style="font-size:10.5px;padding:2px 6px;background:#f1f5f9;border-radius:4px;color:#475569;">+ 附带改动要点清单</button>
+              <button type="button" class="btn text-btn commit-preset-chip" data-preset="jira" style="font-size:10.5px;padding:2px 6px;background:#f1f5f9;border-radius:4px;color:#475569;">+ 关联 Issue 编号</button>
+            </div>
+            <textarea id="commitRuleCustomPromptInput" rows="3" placeholder="输入团队个性化 Git 提交约束，例如：使用动词开头，说明为什么做此更改；首行不超过50个字；重大改动在首行标注 BREAKING CHANGE: ..." style="width:100%;padding:8px 10px;font-size:12px;font-family:var(--font-sans);border:1px solid var(--border-default);border-radius:var(--radius-sm);resize:none;"></textarea>
+            <span style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+              调用大模型时，该规则将作为额外约束注入 Prompt，确保团队多人协作的提交信息格式高度统一。
+            </span>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;border-top:1px solid var(--border-default);padding-top:14px;">
+            <button type="button" class="btn secondary" id="cancelGitCommitRuleDialogBtn">取消</button>
+            <button type="submit" class="btn primary">保存规则</button>
           </div>
         </form>
       </div>

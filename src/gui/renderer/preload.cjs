@@ -1,7 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-async function call(channel, payload) {
-  const result = await ipcRenderer.invoke(channel, payload);
+async function call(channel, ...payload) {
+  const result = await ipcRenderer.invoke(channel, ...payload);
   if (!result.ok) throw new Error(result.error);
   return result.data;
 }
@@ -114,10 +114,13 @@ contextBridge.exposeInMainWorld('hap', {
     ipcRenderer.removeAllListeners('gui:installProgress');
   },
   getServerInfo: (id) => call('gui:getServerInfo', id),
+  getServerProcesses: (id, options) => call('gui:getServerProcesses', id, options),
+  killServerProcess: (payload) => call('gui:killServerProcess', payload),
   execServerCommand: (payload) => call('gui:execServerCommand', payload),
   syncTarget: (input) => call('gui:syncTarget', input),
   chat: (input) => call('gui:chat', input),
   logs: () => call('gui:logs'),
   clearLogs: () => call('gui:clearLogs'),
   toggleDevTools: () => call('gui:toggleDevTools'),
+  openExternal: (url) => call('gui:openExternal', url),
 });

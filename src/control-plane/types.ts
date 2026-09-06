@@ -79,6 +79,7 @@ export interface ControlExecutionContext {
   role: OperatorRole;
   capabilityProfile: CapabilityProfile;
   requestId: string;
+  approvalPolicy?: ApprovalPolicy;
 }
 
 export type ControlPlaneErrorCode =

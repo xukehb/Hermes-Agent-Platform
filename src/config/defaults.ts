@@ -169,9 +169,9 @@ export const BUILTIN_PROVIDERS: Record<string, ModelProviderConfig> = {
     env_key: 'OPENAI_API_KEY',
     wire_api: 'responses',
     default_protocol: 'openai-tools',
-    request_max_retries: 4,
-    stream_max_retries: 10,
-    stream_idle_timeout_ms: 300_000,
+    request_max_retries: 2,
+    stream_max_retries: 3,
+    stream_idle_timeout_ms: 45_000,
   },
   anthropic: {
     name: 'Anthropic Claude',

@@ -69,6 +69,16 @@ const SCHEMA = [
     expires_at TEXT NOT NULL,
     decided_at TEXT
   )`,
+  `CREATE TABLE IF NOT EXISTS audit_records (
+    id TEXT PRIMARY KEY,
+    at TEXT NOT NULL,
+    binding_id TEXT,
+    operator_id TEXT,
+    request_id TEXT,
+    tool TEXT NOT NULL,
+    decision TEXT NOT NULL,
+    detail TEXT NOT NULL
+  )`,
 ];
 
 interface AccountRecord {
@@ -111,6 +121,19 @@ interface PairingCodeRecord {
   role: OperatorRole;
   expires_at: string;
   consumed_at: string | null;
+}
+
+interface ApprovalRecord {
+  id: string;
+  binding_id: string;
+  operator_id: string;
+  request_id: string;
+  command_kind: string;
+  args_digest: string;
+  risk: string;
+  status: string;
+  expires_at: string;
+  decided_at: string | null;
 }
 
 function nowIso(): string {
@@ -347,5 +370,129 @@ export class ControlPlaneStore {
       return { id: row.id, role: row.role, expiresAt: row.expires_at };
     });
     return run() as { id: string; role: OperatorRole; expiresAt: string } | undefined;
+  }
+
+  createApprovalRequest(input: {
+    id: string;
+    bindingId: string;
+    operatorId: string;
+    requestId: string;
+    commandKind: string;
+    argsDigest: string;
+    risk: string;
+    expiresAt: string;
+  }): void {
+    this.db.prepare(
+      `INSERT INTO approval_requests
+        (id, binding_id, operator_id, request_id, command_kind, args_digest, risk, status, expires_at, decided_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, NULL)`,
+    ).run(
+      input.id,
+      input.bindingId,
+      input.operatorId,
+      input.requestId,
+      input.commandKind,
+      input.argsDigest,
+      input.risk,
+      input.expiresAt,
+    );
+  }
+
+  decideApproval(id: string, approved: boolean, decidedAt = nowIso()): boolean {
+    const result = this.db.prepare(
+      `UPDATE approval_requests
+       SET status = ?, decided_at = ?
+       WHERE id = ? AND status = 'pending'`,
+    ).run(approved ? 'approved' : 'denied', decidedAt, id);
+    return result.changes === 1;
+  }
+
+  approval(id: string): ApprovalRecord | undefined {
+    return this.db.prepare('SELECT * FROM approval_requests WHERE id = ?').get(id) as ApprovalRecord | undefined;
+  }
+
+  consumeApproval(input: {
+    id: string;
+    bindingId: string;
+    operatorId: string;
+    requestId: string;
+    commandKind: string;
+    argsDigest: string;
+    consumedAt: string;
+  }): boolean {
+    const consume = this.db.transaction(() => {
+      const row = this.db.prepare(
+        `SELECT * FROM approval_requests
+         WHERE id = ? AND binding_id = ? AND operator_id = ? AND request_id = ?
+           AND command_kind = ? AND args_digest = ? AND status = 'approved'`,
+      ).get(
+        input.id,
+        input.bindingId,
+        input.operatorId,
+        input.requestId,
+        input.commandKind,
+        input.argsDigest,
+      ) as ApprovalRecord | undefined;
+      if (row === undefined || Date.parse(row.expires_at) <= Date.parse(input.consumedAt)) return false;
+      const result = this.db.prepare(
+        `UPDATE approval_requests SET status = 'consumed', decided_at = ?
+         WHERE id = ? AND status = 'approved'`,
+      ).run(input.consumedAt, input.id);
+      return result.changes === 1;
+    });
+    return consume() as boolean;
+  }
+
+  recordAudit(input: {
+    id: string;
+    at?: string;
+    bindingId?: string;
+    operatorId?: string;
+    requestId?: string;
+    tool: string;
+    decision: string;
+    detail: string;
+  }): void {
+    this.db.prepare(
+      `INSERT INTO audit_records (id, at, binding_id, operator_id, request_id, tool, decision, detail)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      input.id,
+      input.at ?? nowIso(),
+      input.bindingId ?? null,
+      input.operatorId ?? null,
+      input.requestId ?? null,
+      input.tool,
+      input.decision,
+      input.detail,
+    );
+  }
+
+  listAudit(limit = 100): Array<{
+    id: string;
+    at: string;
+    bindingId?: string;
+    operatorId?: string;
+    requestId?: string;
+    tool: string;
+    decision: string;
+    detail: string;
+  }> {
+    const rows = this.db.prepare(
+      'SELECT id, at, binding_id, operator_id, request_id, tool, decision, detail FROM audit_records ORDER BY at DESC LIMIT ?',
+    ).all(Math.max(1, Math.min(1000, Math.floor(limit)))) as Array<{
+      id: string; at: string; binding_id: string | null; operator_id: string | null; request_id: string | null;
+      tool: string; decision: string; detail: string;
+    }>;
+    return rows.map((row) => ({
+      id: row.id,
+      at: row.at,
+      ...(row.binding_id === null ? {} : { bindingId: row.binding_id }),
+      ...(row.operator_id === null ? {} : { operatorId: row.operator_id }),
+      ...(row.request_id === null ? {} : { requestId: row.request_id }),
+      tool: row.tool,
+      decision: row.decision,
+      detail: row.detail,
+    }));
   }
 }

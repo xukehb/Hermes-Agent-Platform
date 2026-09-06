@@ -332,11 +332,16 @@ export class AgentOrchestrator {
     this.running.set(taskId, handle);
 
     const effectiveAgent: ResolvedAgent = { ...agent };
-    if (request.model !== undefined && request.model !== '') {
+    const explicitModel = request.model?.trim() ?? '';
+    if (explicitModel !== '') {
       effectiveAgent.model = {
-        primary: request.model,
+        primary: explicitModel,
         fallbacks: [],
       };
+      // A model selected at call time owns protocol detection as well. Keeping
+      // an agent-level protocol here can send (for example) an OpenAI model
+      // through the Anthropic adapter and make the selection ineffective.
+      effectiveAgent.protocol = undefined;
     }
     if (request.workspace !== undefined && request.workspace !== '') {
       effectiveAgent.workspace = request.workspace;

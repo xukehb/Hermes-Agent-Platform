@@ -6,6 +6,8 @@ const rendererDir = resolve(process.cwd(), 'src/gui/renderer');
 const html = readFileSync(resolve(rendererDir, 'index.html'), 'utf8');
 const app = readFileSync(resolve(rendererDir, 'app.js'), 'utf8');
 const css = readFileSync(resolve(rendererDir, 'styles.css'), 'utf8');
+const preload = readFileSync(resolve(rendererDir, 'preload.cjs'), 'utf8');
+const main = readFileSync(resolve(process.cwd(), 'src/gui/main.ts'), 'utf8');
 
 function section(source: string, start: string, end: string): string {
   const startIndex = source.indexOf(start);
@@ -99,9 +101,114 @@ describe('Electron renderer UI contracts', () => {
     expect(finallyBlock).toContain('clearInterval(stepTimer)');
   });
 
+  it('derives disk scanner copy from the active platform and roots', () => {
+    expect(app).toContain('function getDiskScanContext');
+    expect(app).toContain('platformLabel');
+    expect(app).toContain('formatDiskRoots');
+    expect(app).not.toContain('C:\\\\, D:\\\\ 等');
+    expect(app).not.toContain('C:\\\\, D:\\\\ 等)');
+  });
+
   it('does not show providers as ready based only on stored credentials', () => {
     expect(app).toContain('healthStatus');
     expect(app).not.toContain("Boolean(p.hasCredential) || p.id === 'ollama' || p.envKey === undefined");
     expect(app).not.toContain("p.hasCredential;");
   });
+
+  it('exposes remote process diagnostics and kill operations through IPC', () => {
+    expect(main).toContain("ipcMain.handle('gui:getServerProcesses'");
+    expect(main).toContain("ipcMain.handle('gui:killServerProcess'");
+    expect(preload).toContain('getServerProcesses:');
+    expect(preload).toContain('killServerProcess:');
+    expect(preload).toContain('ipcRenderer.invoke(channel, ...payload)');
+  });
+
+  it('keeps disk operations bound to the active panorama target', () => {
+    const scan = section(app, 'async function handleScanDisk(server)', 'function filterDiskItemsByCategory');
+    expect(scan).toContain('activePanoramaTarget');
+    expect(scan).toContain('scanDiskCleanable');
+
+    const cleanup = section(app, 'async function handleCleanDisk(type)', 'window.cleanSingleDiskItem');
+    expect(cleanup).toContain('activePanoramaTarget');
+    expect(cleanup).toContain('executeDiskCleanup');
+  });
+
+  it('renders detailed remote process rows with refresh and guarded TERM/KILL controls', () => {
+    expect(html).toContain('hostProcessRefreshBtn');
+    expect(html).toContain('hostProcessListTitle');
+    expect(app).toContain('getServerProcesses');
+    expect(app).toContain('killServerProcess');
+    expect(app).toContain('expectedStartTime');
+    expect(app).toContain("'TERM'");
+    expect(app).toContain("'KILL'");
+    expect(app).toContain('showConfirm');
+    expect(app).toMatch(/activePanoramaTarget[^\n]*===\s*['"]local['"]/);
+  });
+
+  it('does not let a stale node refresh overwrite the newly selected target', () => {
+    const refresh = section(
+      app,
+      'window.refreshHostView = async () => {',
+      '// 快捷运维脚本库与工具箱控制器',
+    );
+    expect(refresh).toContain('hostRefreshQueued');
+    expect(refresh).toContain("if (targetId !== (activePanoramaTarget || 'local')) return;");
+    expect(refresh).toContain('void window.refreshHostView()');
+  });
+
+  it('shows a useful remote process runtime when only startTime is available', () => {
+    expect(app).toContain('function getRemoteProcessElapsedSeconds');
+    expect(app).toContain('Date.now()');
+    expect(app).toContain('getRemoteProcessElapsedSeconds(proc)');
+  });
+
+  it('does not synthesize remote health values when fields are unavailable', () => {
+    expect(app).not.toContain("'0.12, 0.18, 0.15'");
+    expect(app).not.toContain("'0.15, 0.22, 0.18'");
+    expect(app).not.toContain("'v18+'");
+    expect(app).not.toContain('diskPct || 25');
+    expect(app).toContain("'未知'");
+  });
+
+  it('supports one-click model clearing in both provider dialog and provider card', () => {
+    expect(html).toContain('id="clearAllProviderModelsBtn"');
+    expect(html).toContain('id="currentDialogModelsCount"');
+    expect(app).toContain("$('clearAllProviderModelsBtn')?.addEventListener('click'");
+    expect(app).toContain('window.clearModelsForProvider');
+    expect(app).toContain('batchRemoveModels(toDeleteAliases)');
+  });
+
+  it('supports configurable Git commit rules with model selection, presets, and live preview', () => {
+    expect(html).toContain('id="gitCommitRuleDialog"');
+    expect(html).toContain('id="commitRuleEngineSelect"');
+    expect(html).toContain('id="commitRuleModelSelect"');
+    expect(html).toContain('id="commitRuleLangSelect"');
+    expect(html).toContain('id="commitRuleConventionSelect"');
+    expect(html).toContain('id="commitRuleDetailSelect"');
+    expect(html).toContain('id="commitRuleScopeSelect"');
+    expect(html).toContain('id="commitRuleCustomPromptInput"');
+    expect(html).toContain('id="commitRulePreviewBox"');
+    expect(html).toContain('commit-preset-chip');
+    expect(html).toContain('id="currentCommitRuleBadge"');
+    expect(html).toContain('window.openCommitRulesModal()');
+
+    expect(app).toContain('DEFAULT_COMMIT_RULES');
+    expect(app).toContain('window.openCommitRulesModal =');
+    expect(app).toContain('window.updateCommitRulePreview =');
+    expect(app).toContain('function updateCommitRuleBadge()');
+    expect(app).toContain('saveCommitRules({ engine, model, lang, convention, detailLevel, scope, customPrompt });');
+    expect(app).toContain('generateStructuredCommitFallback');
+    expect(app).toContain("rules.convention === 'angular'");
+    expect(app).toContain("rules.lang === 'bilingual'");
+  });
+
+  it('detects Git merge conflicts, renders conflict badges and alert banner with AI resolution', () => {
+    expect(html).toContain('id="gitConflictAlertBanner"');
+    expect(css).toContain('.git-status-badge.C');
+    expect(app).toContain("badgeLabel = '冲突'");
+    expect(app).toContain('window.askAiResolveConflicts =');
+    expect(app).toContain('window.openVsCodeForProject =');
+  });
 });
+
+

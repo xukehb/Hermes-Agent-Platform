@@ -259,6 +259,44 @@ describe('HttpChannel 只读端点', () => {
     expect(await res.json()).toEqual({ aborted: ['t1'] });
     expect(host.abortKeys).toEqual(['http:abc']);
   });
+
+  it('Bearer Token 保护所有端点且拒绝超大请求体', async () => {
+    const secured = new HttpChannel({
+      host,
+      channels: channelsOf(),
+      limits,
+      paths,
+      authToken: 'http-secret',
+      maxBodyBytes: 16,
+    });
+    const missing = await secured.fetch(new Request('http://local/health'));
+    expect(missing.status).toBe(401);
+    const ok = await secured.fetch(new Request('http://local/health', {
+      headers: { Authorization: 'Bearer http-secret' },
+    }));
+    expect(ok.status).toBe(200);
+    const oversized = await secured.fetch(new Request('http://local/run', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer http-secret',
+        'Content-Type': 'application/json',
+        'Content-Length': '1000',
+      },
+      body: JSON.stringify({ input: 'too large' }),
+    }));
+    expect(oversized.status).toBe(413);
+    expect(host.requests).toHaveLength(0);
+  });
+
+  it('公网监听没有 Token 时在 start 前失败', async () => {
+    const publicChannel = new HttpChannel({
+      host,
+      channels: { ...channelsOf(), http: { ...channelsOf().http, bind: '0.0.0.0:8799' } },
+      limits,
+      paths,
+    });
+    await expect(publicChannel.start()).rejects.toThrow(/authToken/);
+  });
 });
 
 describe('HttpChannel 执行端点', () => {
@@ -271,7 +309,12 @@ describe('HttpChannel 执行端点', () => {
   });
 
   it('POST /run 返回完整结果字段', async () => {
-    const res = await post(channel, '/run', { input: '写单测', agent: 'coder', session: 'http:s1' });
+    const res = await post(channel, '/run', {
+      input: '写单测',
+      agent: 'coder',
+      model: 'mockp/model-a',
+      session: 'http:s1',
+    });
     expect(res.status).toBe(200);
     const payload = (await res.json()) as Record<string, unknown>;
     expect(payload.taskId).toBe('task-http-1');
@@ -280,6 +323,7 @@ describe('HttpChannel 执行端点', () => {
     expect(payload.iterations).toBe(2);
     expect(payload.usage).toEqual({ promptTokens: 10, completionTokens: 20, totalTokens: 30 });
     expect(host.requests[0]?.agentId).toBe('coder');
+    expect(host.requests[0]?.model).toBe('mockp/model-a');
     expect(host.requests[0]?.sessionKey).toBe('http:s1');
     expect(host.requests[0]?.channelDefaultAgent).toBeUndefined();
   });

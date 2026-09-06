@@ -60,6 +60,41 @@ export interface ToolContext {
   env: Record<string, string | undefined>;
   /** 来自已配对 Bot 的可信服务器控制上下文；只能由通道/GUI 后端注入。 */
   control?: ControlExecutionContext | undefined;
+  /** Optional one-time approval supplied by a control-plane adapter. */
+  approvedRequestId?: string | undefined;
+  approvalStore?: {
+    createApprovalRequest?(input: {
+      id: string;
+      bindingId: string;
+      operatorId: string;
+      requestId: string;
+      commandKind: string;
+      argsDigest: string;
+      risk: string;
+      expiresAt: string;
+    }): void;
+    consumeApproval(input: {
+      id: string;
+      bindingId: string;
+      operatorId: string;
+      requestId: string;
+      commandKind: string;
+      argsDigest: string;
+      consumedAt: string;
+    }): boolean;
+  } | undefined;
+  audit?: {
+    recordAudit(input: {
+      id: string;
+      at?: string;
+      bindingId?: string | undefined;
+      operatorId?: string | undefined;
+      requestId?: string | undefined;
+      tool: string;
+      decision: string;
+      detail: string;
+    }): void;
+  } | undefined;
   executionContext?: TaskExecutionContext | undefined;
   /** 子智能体派生器，未注入时 spawn_subagent 以可恢复错误回灌 */
   spawn?: SubagentSpawner;

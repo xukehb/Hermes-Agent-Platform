@@ -19,7 +19,7 @@ const roots: string[] = [];
 const created: AgentOrchestrator[] = [];
 
 /** 测试用配置：两个提供商、两个模型别名、两个智能体。 */
-function configText(root: string, limits: readonly string[] = []): string {
+function configText(root: string, limits: readonly string[] = [], alphaProtocol?: 'openai-tools' | 'deepseek' | 'anthropic' | 'hermes-native'): string {
   const lines: string[] = [
     "default_agent = 'alpha'",
     "default_model = 'mockp/model-a'",
@@ -61,6 +61,7 @@ function configText(root: string, limits: readonly string[] = []): string {
     '[agents.entries.alpha]',
     "name = 'Alpha'",
     "capabilities = ['coding']",
+    ...(alphaProtocol === undefined ? [] : [`protocol = '${alphaProtocol}'`]),
     "model = { primary = 'mockp/model-a', fallbacks = ['mockf/model-b'] }",
     '',
     '[agents.entries.alpha.tools]',
@@ -86,11 +87,11 @@ interface Harness {
 }
 
 /** 建立一套隔离的编排环境。每个用例独占临时目录与 mock 脚本。 */
-function harness(limits: readonly string[] = []): Harness {
+function harness(limits: readonly string[] = [], alphaProtocol?: 'openai-tools' | 'deepseek' | 'anthropic' | 'hermes-native'): Harness {
   const root = mkdtempSync(join(tmpdir(), 'hap-orch-'));
   roots.push(root);
   const path = join(root, 'hap.toml');
-  writeFileSync(path, configText(root, limits), 'utf8');
+  writeFileSync(path, configText(root, limits, alphaProtocol), 'utf8');
 
   const primary = new MockProviderClient({ providerId: 'mockp' });
   const fallback = new MockProviderClient({ providerId: 'mockf' });
@@ -297,6 +298,39 @@ describe('AgentOrchestrator 降级与上限', () => {
     expect(outcome.error ?? '').toContain('备用也挂了');
     expect(outcome.text).toBe('');
     expect(existsSync(outcome.tracePath)).toBe(true);
+  });
+
+  it('显式选择模型时只请求该模型，不调用配置中的备用模型', async () => {
+    const h = harness();
+    h.primary.push(errorTurn(new Error('选定模型暂时不可用')));
+    h.fallback.push(textTurn('不应被调用的备用回答。'));
+
+    const outcome = await h.orchestrator.runTask({
+      model: 'mockp/model-a',
+      input: '只使用我选择的模型',
+      sessionKey: 'tg:explicit-model',
+    });
+
+    expect(outcome.status).toBe('failed');
+    expect(h.primary.callCount).toBe(1);
+    expect(h.fallback.callCount).toBe(0);
+    expect(outcome.error ?? '').toContain('模型 mockp/model-a 请求失败');
+    expect(outcome.error ?? '').not.toContain('已尝试模型');
+  });
+
+  it('显式选择模型时按所选模型的协议发送请求', async () => {
+    const h = harness([], 'anthropic');
+    h.primary.push(textTurn('按 OpenAI 协议返回。'));
+
+    const outcome = await h.orchestrator.runTask({
+      model: 'mockp/model-a',
+      input: '使用我选择的模型协议',
+      sessionKey: 'tg:explicit-protocol',
+    });
+
+    expect(outcome.status).toBe('done');
+    expect(outcome.model).toBe('mockp/model-a');
+    expect(outcome.protocol).toBe('openai-tools');
   });
 
   it('达到轮数上限时给出提示并汇总中间结论', async () => {

@@ -198,6 +198,8 @@ let state = {
 const selectedProjectIds = new Set();
 const selectedProviderIds = new Set();
 const selectedModelAliases = new Set();
+let currentDialogModels = [];
+let originalDialogModelAliases = new Set();
 let currentLogFilter = 'all';
 
 // 项目折叠状态与“展开更多”状态
@@ -546,7 +548,7 @@ function parseInlineMarkdown(text, doEscape = true) {
         <div style="position:relative;cursor:zoom-in;" onclick="window.openImageLightbox('${escJs(src)}', '${escJs(alt)}')">
           <img src="${esc(src)}" alt="${esc(alt)}" style="display:block;max-width:100%;max-height:420px;object-fit:contain;background:#f8fafc;" loading="lazy" />
           <div style="position:absolute;bottom:6px;right:6px;background:rgba(15,23,42,0.7);color:#ffffff;font-size:11px;padding:2px 8px;border-radius:12px;display:flex;align-items:center;gap:4px;">
-            <span>🔍 点击放大</span>
+            <span>点击放大</span>
           </div>
         </div>
         ${alt ? `<div style="padding:6px 12px;font-size:12px;color:#475569;background:#f8fafc;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;">
@@ -1240,6 +1242,28 @@ $('importProjectQuickBtn')?.addEventListener('click', async () => {
   }
 });
 
+// 侧边栏折叠/展开与快捷键支持 (Cmd/Ctrl + B)
+function toggleSidebar() {
+  document.body.classList.toggle('sidebar-collapsed');
+  const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+  try { localStorage.setItem('hap_sidebar_collapsed', isCollapsed ? '1' : '0'); } catch {}
+}
+
+try {
+  if (localStorage.getItem('hap_sidebar_collapsed') === '1') {
+    document.body.classList.add('sidebar-collapsed');
+  }
+} catch {}
+
+$('sidebarToggleBtn')?.addEventListener('click', toggleSidebar);
+
+window.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
+    e.preventDefault();
+    toggleSidebar();
+  }
+});
+
 // ==========================================================================
 // Git 版本控制与协同工作流 (Git Status, Commit, Push, Pull)
 // ==========================================================================
@@ -1357,6 +1381,7 @@ $('viewAllDiffsBtn')?.addEventListener('click', () => {
 function renderGitModalContent() {
   const modal = $('gitModal');
   if (!modal) return;
+  updateCommitRuleBadge();
 
   if ($('gitProjectPathText')) $('gitProjectPathText').textContent = currentActiveProject || '未选择工程';
 
@@ -1384,6 +1409,12 @@ function renderGitModalContent() {
     statBadge.innerHTML = `共 <strong>${currentGitStatus.uncommittedCount || 0}</strong> 个文件改动 <span style="color:#2ea043;margin-left:6px;">+${adds}</span> <span style="color:#f85149;margin-left:2px;">-${dels}</span>`;
   }
 
+  const hasConflict = Array.isArray(currentGitStatus.changedFiles) && currentGitStatus.changedFiles.some((f) => f.status.includes('U') || f.status === 'AA' || f.status === 'DD');
+  const conflictBanner = $('gitConflictAlertBanner');
+  if (conflictBanner) {
+    conflictBanner.style.display = hasConflict ? 'flex' : 'none';
+  }
+
   const list = $('gitChangedFilesList');
   if (!list) return;
   if (!currentGitStatus.changedFiles || currentGitStatus.changedFiles.length === 0) {
@@ -1395,7 +1426,10 @@ function renderGitModalContent() {
     list.innerHTML = currentGitStatus.changedFiles.map((f) => {
       let badgeClass = 'M';
       let badgeLabel = '修改';
-      if (f.status.includes('?') || f.status.includes('A')) {
+      if (f.status.includes('U') || f.status === 'AA' || f.status === 'DD') {
+        badgeClass = 'C';
+        badgeLabel = '冲突';
+      } else if (f.status.includes('?') || f.status.includes('A')) {
         badgeClass = 'A';
         badgeLabel = '新增';
       } else if (f.status.includes('D')) {
@@ -1462,15 +1496,362 @@ $('gitInitRepoBtn')?.addEventListener('click', async () => {
   }
 });
 
-$('aiGenerateCommitBtn')?.addEventListener('click', () => {
-  if (!currentGitStatus || currentGitStatus.changedFiles.length === 0) {
-    $('gitCommitMessageInput').value = 'chore: minor updates';
+// ==========================================================================
+// Git Commit 说明生成规则设置与智能生成
+// ==========================================================================
+const DEFAULT_COMMIT_RULES = {
+  engine: 'llm',
+  model: '',
+  lang: 'zh',
+  convention: 'conventional',
+  detailLevel: 'detailed',
+  scope: 'auto',
+  customPrompt: '',
+};
+
+function getCommitRules() {
+  try {
+    const raw = localStorage.getItem('hap_git_commit_rules');
+    if (raw) return { ...DEFAULT_COMMIT_RULES, ...JSON.parse(raw) };
+  } catch {}
+  return { ...DEFAULT_COMMIT_RULES };
+}
+
+function saveCommitRules(rules) {
+  try {
+    localStorage.setItem('hap_git_commit_rules', JSON.stringify(rules));
+  } catch {}
+}
+
+function updateCommitRuleBadge() {
+  const badge = $('currentCommitRuleBadge');
+  if (!badge) return;
+  const rules = getCommitRules();
+  const convMap = {
+    conventional: 'Conventional',
+    angular: 'Angular',
+    gitmoji: 'Gitmoji',
+    simple: '简明',
+  };
+  const langMap = {
+    zh: '中文',
+    en: 'English',
+    bilingual: '双语',
+  };
+  const engineText = rules.engine === 'template' ? '模板' : (rules.model ? rules.model : 'AI 深度');
+  const convText = convMap[rules.convention] || 'Conventional';
+  const langText = langMap[rules.lang] || '中文';
+  const detailText = rules.detailLevel === 'compact' ? '单行' : '详细清单';
+  badge.textContent = `${engineText} · ${convText} · ${langText} · ${detailText}`;
+}
+
+window.updateCommitRulePreview = function () {
+  const box = $('commitRulePreviewBox');
+  if (!box) return;
+  const lang = $('commitRuleLangSelect')?.value || 'zh';
+  const convention = $('commitRuleConventionSelect')?.value || 'conventional';
+  const detailLevel = $('commitRuleDetailSelect')?.value || 'detailed';
+  const scopeMode = $('commitRuleScopeSelect')?.value || 'auto';
+
+  const scopePrefix = scopeMode === 'none' ? 'refactor' : 'refactor(gui)';
+  const header = convention === 'gitmoji'
+    ? ':recycle: 重构聊天界面和主机监控功能'
+    : convention === 'simple'
+    ? '重构聊天界面和主机监控功能'
+    : `${scopePrefix}: 重构聊天界面和主机监控功能`;
+
+  const headerEn = convention === 'gitmoji'
+    ? ':recycle: refactor chat interface and host monitoring features'
+    : convention === 'simple'
+    ? 'refactor chat interface and host monitoring features'
+    : `${scopePrefix}: refactor chat interface and host monitoring features`;
+
+  if (detailLevel === 'compact') {
+    box.textContent = lang === 'zh' ? header : lang === 'en' ? headerEn : `${header}\n${headerEn}`;
     return;
   }
+
+  const bulletsZh = `- 重构聊天输入框初始化逻辑，清空输入内容并重置附件状态\n- 将 scheduledTasksBtn 点击事件的目标页面从 logs 改为 schedules\n- 重构本地主机视图渲染功能，分离数据获取和界面渲染逻辑\n- 实现主机IP地理位置信息的缓存机制，避免频繁请求\n- 优化设置面板标签页切换的样式控制方式`;
+  const bulletsEn = `- Refactor chat input initialization and reset composer attachment state\n- Redirect scheduledTasksBtn target view from logs to schedules\n- Decouple host view rendering between data retrieval and UI rendering\n- Add caching mechanism for host public IP lookups\n- Refine settings tab navigation styles`;
+
+  if (lang === 'zh') {
+    box.textContent = `${header}\n\n${bulletsZh}`;
+  } else if (lang === 'en') {
+    box.textContent = `${headerEn}\n\n${bulletsEn}`;
+  } else {
+    box.textContent = `${header}\n${headerEn}\n\n${bulletsZh}`;
+  }
+};
+
+window.openCommitRulesModal = function () {
+  const rules = getCommitRules();
+  if ($('commitRuleEngineSelect')) $('commitRuleEngineSelect').value = rules.engine || 'llm';
+  if ($('commitRuleLangSelect')) $('commitRuleLangSelect').value = rules.lang || 'zh';
+  if ($('commitRuleConventionSelect')) $('commitRuleConventionSelect').value = rules.convention || 'conventional';
+  if ($('commitRuleDetailSelect')) $('commitRuleDetailSelect').value = rules.detailLevel || 'detailed';
+  if ($('commitRuleScopeSelect')) $('commitRuleScopeSelect').value = rules.scope || 'auto';
+  if ($('commitRuleCustomPromptInput')) $('commitRuleCustomPromptInput').value = rules.customPrompt || '';
+
+  const modelSelect = $('commitRuleModelSelect');
+  if (modelSelect) {
+    const currentSelected = rules.model || '';
+    let opts = '<option value="">跟随当前会话默认模型</option>';
+    const models = Array.isArray(state?.models) ? state.models : [];
+    for (const m of models) {
+      const val = m.fullName || m.id || m.alias || m.name || '';
+      if (!val) continue;
+      const label = m.alias ? `${m.alias} (${val})` : val;
+      const isSelected = val === currentSelected ? 'selected' : '';
+      opts += `<option value="${esc(val)}" ${isSelected}>${esc(label)}</option>`;
+    }
+    modelSelect.innerHTML = opts;
+    modelSelect.value = currentSelected;
+  }
+
+  window.updateCommitRulePreview();
+  $('gitCommitRuleDialog')?.showModal();
+};
+
+$('openCommitRulesModalBtn')?.addEventListener('click', () => {
+  window.openCommitRulesModal();
+});
+
+$('closeGitCommitRuleDialogBtn')?.addEventListener('click', () => $('gitCommitRuleDialog')?.close());
+$('cancelGitCommitRuleDialogBtn')?.addEventListener('click', () => $('gitCommitRuleDialog')?.close());
+
+document.querySelectorAll('.commit-preset-chip').forEach((chip) => {
+  chip.addEventListener('click', () => {
+    const type = chip.getAttribute('data-preset');
+    const input = $('commitRuleCustomPromptInput');
+    if (!input) return;
+    const map = {
+      scope: '必须包含模块范围，格式如 feat(scope): ...',
+      brief: '首行描述简短，严格控制在 50 个字符以内',
+      bullets: '正文使用项目符号清单（- 细节）逐项列出具体实现细节与关键修改点',
+      jira: '如有关联任务，请在末尾附加对应的 Issue 或工单编号（如 Closes #123）',
+    };
+    const text = map[type];
+    if (!text) return;
+    if (input.value.includes(text)) return;
+    input.value = input.value ? `${input.value.trim()}；${text}` : text;
+    input.focus();
+  });
+});
+
+$('gitCommitRuleForm')?.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const engine = $('commitRuleEngineSelect')?.value || 'llm';
+  const model = $('commitRuleModelSelect')?.value || '';
+  const lang = $('commitRuleLangSelect')?.value || 'zh';
+  const convention = $('commitRuleConventionSelect')?.value || 'conventional';
+  const detailLevel = $('commitRuleDetailSelect')?.value || 'detailed';
+  const scope = $('commitRuleScopeSelect')?.value || 'auto';
+  const customPrompt = $('commitRuleCustomPromptInput')?.value.trim() || '';
+
+  saveCommitRules({ engine, model, lang, convention, detailLevel, scope, customPrompt });
+  updateCommitRuleBadge();
+  $('gitCommitRuleDialog')?.close();
+  showToast('Commit 说明生成规则已成功保存！', 'success');
+});
+
+// 初始化更新一次规则徽章
+updateCommitRuleBadge();
+
+function generateStructuredCommitFallback(files, rules) {
+  const fileItems = [];
+  for (const f of files) {
+    const fileName = f.split(/[\\/]/).pop();
+    if (f.endsWith('.md') || f.includes('docs/')) {
+      fileItems.push(`完善 ${fileName} 项目开发文档与规范说明`);
+    } else if (f.includes('test') || f.includes('.spec.')) {
+      fileItems.push(`补充与完善 ${fileName} 单元测试用例`);
+    } else if (f.endsWith('.css') || f.endsWith('.scss') || f.endsWith('.less')) {
+      fileItems.push(`优化 ${fileName} 界面布局样式与视觉质感`);
+    } else if (f.includes('package.json') || f.includes('tsconfig') || f.includes('eslint') || f.includes('.npmrc')) {
+      fileItems.push(`调整 ${fileName} 项目依赖版本与构建配置`);
+    } else if (f.includes('/gui/') || f.includes('/renderer/')) {
+      fileItems.push(`重构与优化 ${fileName} 界面交互与视图状态逻辑`);
+    } else if (f.includes('/remote/') || f.includes('/system/') || f.includes('/channels/')) {
+      fileItems.push(`完善 ${fileName} 节点诊断与服务通讯协议`);
+    } else if (f.includes('/agent/') || f.includes('/control-plane/') || f.includes('/tools/')) {
+      fileItems.push(`增强 ${fileName} 核心智能体调度与执行安全`);
+    } else {
+      fileItems.push(`更新 ${fileName} 业务功能实现`);
+    }
+  }
+
+  const bullets = [...new Set(fileItems)].slice(0, 8);
+  if (files.length > bullets.length) {
+    bullets.push(`同步更新并检查相关代码实现（共 ${files.length} 个文件改动）`);
+  }
+
+  let autoScope = 'core';
+  if (files.every(f => f.includes('gui') || f.includes('renderer'))) autoScope = 'gui';
+  else if (files.every(f => f.includes('docs') || f.endsWith('.md'))) autoScope = 'docs';
+  else if (files.every(f => f.includes('test'))) autoScope = 'test';
+  else if (files.some(f => f.includes('gui') || f.includes('renderer'))) autoScope = 'gui';
+
+  let type = 'feat';
+  let titleZh = '优化与更新相关功能';
+  let titleEn = 'update and improve relevant features';
+  if (files.every(f => f.endsWith('.md') || f.includes('docs/'))) {
+    type = 'docs';
+    titleZh = '更新项目说明与架构文档';
+    titleEn = 'update documentation';
+  } else if (files.every(f => f.includes('test') || f.includes('.spec.'))) {
+    type = 'test';
+    titleZh = '补充与完善自动化测试';
+    titleEn = 'add and refine tests';
+  } else if (files.some(f => f.includes('gui') || f.includes('app.js') || f.includes('index.html'))) {
+    type = 'refactor';
+    titleZh = '重构界面交互与系统功能';
+    titleEn = 'refactor UI interaction and system features';
+  }
+
+  const scopePrefix = (rules.scope === 'none' || rules.convention === 'simple')
+    ? type
+    : `${type}(${autoScope})`;
+
+  const headerZh = rules.convention === 'gitmoji'
+    ? `:sparkles: ${titleZh}`
+    : rules.convention === 'simple'
+    ? `${titleZh}`
+    : `${scopePrefix}: ${titleZh}`;
+
+  const headerEn = rules.convention === 'gitmoji'
+    ? `:sparkles: ${titleEn}`
+    : rules.convention === 'simple'
+    ? `${titleEn}`
+    : `${scopePrefix}: ${titleEn}`;
+
+  if (rules.detailLevel === 'compact') {
+    return rules.lang === 'zh' ? headerZh : rules.lang === 'en' ? headerEn : `${headerZh}\n${headerEn}`;
+  }
+
+  const bodyZh = bullets.map(b => `- ${b}`).join('\n');
+  const bodyEn = bullets.map(b => `- ${b}`).join('\n');
+
+  if (rules.lang === 'zh') {
+    return `${headerZh}\n\n${bodyZh}`;
+  } else if (rules.lang === 'en') {
+    return `${headerEn}\n\n${bodyEn}`;
+  } else {
+    return `${headerZh}\n${headerEn}\n\n${bodyZh}`;
+  }
+}
+
+$('aiGenerateCommitBtn')?.addEventListener('click', async () => {
+  if (!currentActiveProject) return;
+  const inputEl = $('gitCommitMessageInput');
+  const btn = $('aiGenerateCommitBtn');
+  const origText = btn.innerHTML;
+
+  const rules = getCommitRules();
+
+  if (!currentGitStatus || currentGitStatus.changedFiles.length === 0) {
+    const emptyMsg = rules.lang === 'zh'
+      ? (rules.detailLevel === 'compact' ? 'chore: 常规更新与维护' : 'chore: 常规更新与维护\n\n- 检查并整理本地工程文件\n- 保持工作区整洁')
+      : (rules.detailLevel === 'compact' ? 'chore: minor maintenance' : 'chore: minor maintenance\n\n- Tidy workspace and configuration\n- Maintain clean repo state');
+    inputEl.value = emptyMsg;
+    return;
+  }
+
   const files = currentGitStatus.changedFiles.map((f) => f.file);
-  const sample = files.slice(0, 2).map((f) => f.split(/[\\/]/).pop()).join(', ');
-  $('gitCommitMessageInput').value = `feat: update ${sample}${files.length > 2 ? ` and ${files.length - 2} other files` : ''}`;
-  showToast('已智能生成 Commit 说明', 'info');
+
+  // 大模型深度分析模式
+  if (rules.engine === 'llm') {
+    try {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner" style="display:inline-block;width:11px;height:11px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-right:4px;"></span>AI 深度分析中...';
+
+      let diffSnippet = '';
+      try {
+        const diffRes = await window.hap.gitDiff(currentActiveProject);
+        diffSnippet = (diffRes?.diff || '').slice(0, 4500);
+      } catch {}
+
+      const filesList = currentGitStatus.changedFiles.map(f => `${f.status || 'M'} ${f.file}`).join('\n');
+      const activeAgent = $('chatAgentSelect')?.value || 'coder';
+      const defaultModel = $('chatModelPickerSelect')?.value || (state.models?.[0]?.fullName || state.models?.[0]?.alias || 'gpt-5.5');
+      const activeModel = rules.model || defaultModel;
+
+      let conventionDesc = '遵循 Conventional Commits 规范（以 feat:, fix:, docs:, style:, refactor:, perf:, test:, chore: 为前缀）';
+      if (rules.convention === 'gitmoji') {
+        conventionDesc = '使用 Gitmoji 规范（如 :sparkles: 新功能，:bug: 修复，:recycle: 重构，:memo: 文档更新，:lipstick: 样式等）';
+      } else if (rules.convention === 'angular') {
+        conventionDesc = '严格遵循 Angular Commit 规范，必须包含变更的范围/模块名（例如 feat(gui): ..., refactor(core): ...）';
+      } else if (rules.convention === 'simple') {
+        conventionDesc = '不使用类别前缀，直接输出清晰简练的动词开头概述';
+      }
+
+      let langDesc = '请全部使用简体中文输出';
+      if (rules.lang === 'en') {
+        langDesc = 'Please output entirely in English';
+      } else if (rules.lang === 'bilingual') {
+        langDesc = '采用中英双语输出（第一行为中文标题，紧随第二行为英文标题，下方清单中英对照）';
+      }
+
+      const isDetailed = rules.detailLevel !== 'compact';
+
+      const prompt = `你是一位顶尖的软件工程与 Git 版本控制专家。请根据以下 Git 变动文件列表与核心代码差异（diff），为本次提交提炼并生成一份高水准、层级清晰、带具体改动详情的 Git Commit 提交说明：
+
+变动文件列表：
+${filesList}
+
+核心代码差异（Diff 摘要）：
+${diffSnippet || '（未获取到详细 diff，请根据变动文件路径推测修改细节）'}
+
+生成要求：
+1. 语言要求：${langDesc}
+2. 规范风格：${conventionDesc}
+${isDetailed ? `3. 结构格式必须严格分为两部分（标准开源项目推荐格式）：
+   - 第一行（首行标题）：<type>(<scope>): <简明扼要概括本次提交的核心主旨，50 字以内>
+   - 第二行：必须为空行
+   - 正文部分（详细改动清单）：从第三行开始，使用以 "- " 开头的项目符号列表，逐条详细列出本次提交具体做了哪些修改、重构了哪些函数/逻辑、修复了什么问题或调整了什么配置（提供 3 ~ 10 条具体详实的改动点，不要写空洞套话）。
+   示例格式参考：
+   refactor(gui): 重构聊天界面和主机监控功能
+
+   - 重构聊天输入框初始化逻辑，清空输入内容并重置附件状态
+   - 将 scheduledTasksBtn 点击事件的目标页面从 logs 改为 schedules
+   - 重构本地主机视图渲染功能，分离数据获取和界面渲染逻辑
+   - 实现主机IP地理位置信息的缓存机制，避免频繁请求
+   - 优化设置面板标签页切换的样式控制方式` : '3. 单行格式：仅输出一行简明扼要的 Commit 标题，不超过 50 个字符。'}
+${rules.customPrompt ? `4. 额外团队规范约束：${rules.customPrompt}` : ''}
+5. 绝不要输出任何解释、引言、客套话或 markdown 代码块反引号，直接且仅输出生成的 Commit Message 纯文本！`;
+
+      const res = await window.hap.chat({
+        input: prompt,
+        agentId: activeAgent,
+        model: activeModel,
+        projectPath: currentActiveProject,
+      });
+
+      const rawText = res?.outcome?.text || res?.output || (typeof res === 'string' ? res : '');
+
+      if (rawText && !rawText.startsWith('⚠️') && !rawText.includes('智能体回复提示')) {
+        let commitMsg = rawText.trim();
+        commitMsg = commitMsg.replace(/^```[a-zA-Z]*\n?/, '').replace(/\n?```$/, '').trim();
+        commitMsg = commitMsg.replace(/^[`"']+|[`"']+$/g, '').trim();
+        if (commitMsg) {
+          inputEl.value = commitMsg;
+          showToast(`已根据规则由 AI 深度生成 Commit 详细说明 (${activeModel})`, 'success');
+          return;
+        }
+      } else if (rawText) {
+        showToast('AI 模型未返回有效回复，已自动切换结构化详情模板生成', 'info');
+      }
+    } catch (err) {
+      console.warn('AI 大模型生成 Commit 失败，降级为模板规则:', err);
+      showToast('AI 生成请求异常，已切换为启发式结构化模板', 'info');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = origText;
+    }
+  }
+
+  // 极速启发式模板模式（或大模型调用失败时的降级兜底）
+  inputEl.value = generateStructuredCommitFallback(files, rules);
+  showToast('已智能生成结构化 Commit 说明', 'info');
 });
 
 $('gitCommitBtn')?.addEventListener('click', async () => {
@@ -1515,9 +1896,46 @@ $('gitPullBtn')?.addEventListener('click', async () => {
     await updateGitStatus(currentActiveProject);
     renderGitModalContent();
   } catch (error) {
-    showToast('Git 拉取失败：' + error.message, 'error');
+    const msg = error?.message || String(error);
+    if (msg.includes('CONFLICT') || msg.includes('conflict')) {
+      showToast('⚠️ 检测到代码合并冲突！请查看标红文件并解决冲突', 'warning');
+    } else {
+      showToast('Git 拉取失败：' + msg, 'error');
+    }
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
   }
 });
+
+window.askAiResolveConflicts = function () {
+  if (!currentActiveProject || !currentGitStatus) return;
+  const conflictFiles = (currentGitStatus.changedFiles || [])
+    .filter((f) => f.status.includes('U') || f.status === 'AA' || f.status === 'DD')
+    .map((f) => f.file);
+
+  const filesList = conflictFiles.length > 0 ? conflictFiles.map((f) => `· ${f}`).join('\n') : '（当前工作区冲突文件）';
+  const prompt = `我们在工程代码合并时遇到了 Git 合并冲突，以下文件包含冲突标记 (<<<<<<< HEAD ... ======= ... >>>>>>>)：\n\n${filesList}\n\n请作为软件工程专家帮我解决冲突：\n1. 逐一读取并分析冲突文件中的双方改动意图；\n2. 综合业务上下文，合理保留双方代码逻辑并彻底移除所有 Git 冲突标记；\n3. 运行项目构建或测试用例，确保冲突解决后工程正常编译通过；\n4. 汇报解决结果与改动说明。`;
+
+  $('gitModal')?.close();
+  show('chat');
+  const input = $('chatInput');
+  if (input) {
+    input.value = prompt;
+    input.focus();
+    updateComposerState?.();
+    $('chatSendBtn')?.click();
+  }
+};
+
+window.openVsCodeForProject = async function () {
+  if (!currentActiveProject) return;
+  try {
+    await window.hap.openExternal(currentActiveProject);
+    showToast('已在外部编辑器中打开工程目录', 'info');
+  } catch (err) {
+    showToast('打开外部编辑器失败：' + err.message, 'error');
+  }
+};
 
 // ==========================================================================
 // 数据刷新与视图渲染
@@ -1839,19 +2257,19 @@ function renderPermissions() {
         <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:12px;">
           <div id="setModeFullAccess" class="card ${perm.mode === 'full-access' ? 'active' : ''}" style="cursor:pointer;padding:14px;border:1.5px solid ${perm.mode === 'full-access' ? '#0284c7' : '#e2e8f0'};border-radius:10px;background:${perm.mode === 'full-access' ? '#f0f9ff' : '#ffffff'};transition:all 0.15s ease;" onclick="window.selectPermissionModeInSettings('full-access')">
             <div style="font-weight:700;font-size:13.5px;color:${perm.mode === 'full-access' ? '#0369a1' : '#1e293b'};display:flex;align-items:center;gap:6px;">
-              <span>🟢 完全信任模式 (全权限)</span>
+              <span>完全信任模式 (全权限)</span>
             </div>
             <div style="font-size:12px;color:#64748b;margin-top:6px;line-height:1.4;">完完全全放开全部权限，智能体全自动执行终端命令、本地代码写入与网络请求，无需手动弹窗确认。</div>
           </div>
           <div id="setModeConfirm" class="card ${perm.mode === 'confirm-writes' ? 'active' : ''}" style="cursor:pointer;padding:14px;border:1.5px solid ${perm.mode === 'confirm-writes' ? '#0284c7' : '#e2e8f0'};border-radius:10px;background:${perm.mode === 'confirm-writes' ? '#f0f9ff' : '#ffffff'};transition:all 0.15s ease;" onclick="window.selectPermissionModeInSettings('confirm-writes')">
             <div style="font-weight:700;font-size:13.5px;color:${perm.mode === 'confirm-writes' ? '#0369a1' : '#1e293b'};display:flex;align-items:center;gap:6px;">
-              <span>🟡 写入需确认模式</span>
+              <span>写入需确认模式</span>
             </div>
             <div style="font-size:12px;color:#64748b;margin-top:6px;line-height:1.4;">允许自动读取与检索，遇到终端执行或文件修改时弹出确认框二次审批。</div>
           </div>
           <div id="setModeStrict" class="card ${perm.mode === 'strict' ? 'active' : ''}" style="cursor:pointer;padding:14px;border:1.5px solid ${perm.mode === 'strict' ? '#0284c7' : '#e2e8f0'};border-radius:10px;background:${perm.mode === 'strict' ? '#f0f9ff' : '#ffffff'};transition:all 0.15s ease;" onclick="window.selectPermissionModeInSettings('strict')">
             <div style="font-weight:700;font-size:13.5px;color:${perm.mode === 'strict' ? '#0369a1' : '#1e293b'};display:flex;align-items:center;gap:6px;">
-              <span>🔴 严格只读模式</span>
+              <span>严格只读模式</span>
             </div>
             <div style="font-size:12px;color:#64748b;margin-top:6px;line-height:1.4;">禁止一切写入、终端命令与外部网络访问，仅支持静态代码检索。</div>
           </div>
@@ -2078,7 +2496,7 @@ function renderProviders() {
   const html = state.providers.map((p) => {
     const models = (state.models || []).filter(m => (m.providerId || m.provider) === p.id);
     const modelPills = models.length === 0
-      ? '<span style="font-size:11.5px;color:var(--text-muted);font-style:italic;">尚未添加任何模型，可点击右侧「🔄 获取模型」或「+ 添加模型」</span>'
+      ? '<span style="font-size:11.5px;color:var(--text-muted);font-style:italic;">尚未添加任何模型，可点击右侧「获取模型」或「+ 添加模型」</span>'
       : models.map(m => `
           <span class="prop-chip" style="background:#f0f9ff;border:1px solid #bae6fd;color:#0369a1;padding:3px 8px;font-size:11.5px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;">
             <span style="font-weight:600;">${esc(m.alias)}</span>
@@ -2103,7 +2521,7 @@ function renderProviders() {
             </div>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="window.fetchAndSyncModelsForProvider('${escJs(p.id)}', this)">🔄 获取模型</button>
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="window.fetchAndSyncModelsForProvider('${escJs(p.id)}', this)">获取模型</button>
             <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="openProviderDialog('${escJs(p.id)}')">编辑服务商及模型</button>
             <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="window.testProvider('${escJs(p.id)}', this)">测试</button>
             <button type="button" class="btn danger" style="font-size:11.5px;padding:4px 10px;" onclick="deleteProvider('${escJs(p.id)}')">删除</button>
@@ -2113,6 +2531,7 @@ function renderProviders() {
         <div style="margin-top:10px;padding-top:10px;border-top:1px solid #f1f5f9;">
           <div style="font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
             <span>包含的模型 (${models.length})：</span>
+            ${models.length > 0 ? `<button type="button" class="btn text-btn" style="font-size:11px;color:#ef4444;padding:0;cursor:pointer;background:none;border:none;display:inline-flex;align-items:center;gap:3px;" onclick="window.clearModelsForProvider('${escJs(p.id)}')">清空模型</button>` : ''}
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
             ${modelPills}
@@ -2124,6 +2543,30 @@ function renderProviders() {
 
   containers.forEach(c => { c.innerHTML = html; });
 }
+
+window.clearModelsForProvider = async (providerId) => {
+  if (!providerId) return;
+  const models = (state.models || []).filter(m => (m.providerId || m.provider) === providerId);
+  if (models.length === 0) {
+    showToast('该服务商下当前无任何模型', 'info');
+    return;
+  }
+  const ok = await showConfirm({
+    title: '清空服务商模型',
+    message: `确定要清空服务商 <strong>${esc(providerId)}</strong> 名下的全部 <strong>${models.length}</strong> 个模型吗？`,
+    okText: '确认清空',
+    isDanger: true,
+  });
+  if (!ok) return;
+  try {
+    const aliases = models.map(m => m.alias);
+    await window.hap.batchRemoveModels(aliases);
+    showToast(`已成功清空 ${providerId} 下的 ${aliases.length} 个模型`, 'success');
+    await refresh();
+  } catch (err) {
+    showToast('清空模型失败：' + err.message, 'error');
+  }
+};
 
 $('selectAllProvidersBtn')?.addEventListener('click', () => {
   if (selectedProviderIds.size === state.providers.length) {
@@ -2490,6 +2933,25 @@ function renderLogs(filter = 'all') {
   }
 }
 
+function formatAgentLabel(a) {
+  if (!a) return '';
+  const id = typeof a === 'string' ? a : (a.id || '');
+  if (typeof a === 'string') return a;
+  const display = a.displayName || a.name || id;
+  if (!display || display === id) {
+    return id;
+  }
+  return `${display} (${id})`;
+}
+
+function formatModelLabel(m) {
+  if (!m) return '';
+  const alias = m.alias || m.id || '';
+  const fullName = m.fullName || m.model || '';
+  if (!fullName || fullName === alias) return alias;
+  return `${alias} (${fullName})`;
+}
+
 function fillSelects() {
   const modelPicker = $('chatModelPickerSelect');
   if (modelPicker) {
@@ -2499,9 +2961,8 @@ function fillSelects() {
     modelPicker.innerHTML = (state.models || []).map((m) => {
       const p = providersMap.get(m.providerId);
       const isReady = p && p.healthStatus === 'ok';
-      const icon = isReady ? '🟢 ' : (p?.healthStatus === 'missing_credentials' ? '⚪ ' : '🟡 ');
       const statusText = isReady ? '就绪' : (p?.healthStatus === 'missing_credentials' ? '需配置 Key' : '需连通测试');
-      return `<option value="${esc(m.fullName || m.alias)}">${icon}${esc(m.alias)} (${esc(p?.name || m.providerId)} · ${statusText})</option>`;
+      return `<option value="${esc(m.fullName || m.alias)}">${esc(m.alias)} (${esc(p?.name || m.providerId)} · ${statusText})</option>`;
     }).join('');
 
     if (previousModel && state.models.some((m) => (m.fullName || m.alias) === previousModel)) {
@@ -2509,8 +2970,8 @@ function fillSelects() {
     } else {
       const firstReady = (state.models || []).find((m) => {
         const p = providersMap.get(m.providerId);
-        return p && p.healthStatus === 'ok';
-      });
+        return p && (p.healthStatus === 'ok' || p.hasCredential);
+      }) || (state.models || [])[0];
       if (firstReady) {
         modelPicker.value = firstReady.fullName || firstReady.alias;
       }
@@ -2520,7 +2981,7 @@ function fillSelects() {
   const switchModelSelect = $('switchModelSelect');
   if (switchModelSelect) {
     switchModelSelect.innerHTML = state.models.map((m) => `
-      <option value="${esc(m.fullName || m.alias)}">${esc(m.alias)} (${esc(m.fullName)})</option>
+      <option value="${esc(m.fullName || m.alias)}">${esc(formatModelLabel(m))}</option>
     `).join('');
   }
 
@@ -2528,7 +2989,7 @@ function fillSelects() {
   if (agentSelect) {
     const previousAgent = agentSelect.value || localStorage.getItem('hap:selected-chat-agent') || 'coder';
     agentSelect.innerHTML = state.agents.map((a) => `
-      <option value="${esc(a.id)}">${esc(a.name || a.id)} (${esc(a.id)})</option>
+      <option value="${esc(a.id)}">${esc(formatAgentLabel(a))}</option>
     `).join('');
     if (previousAgent && state.agents.some((a) => a.id === previousAgent)) {
       agentSelect.value = previousAgent;
@@ -2594,7 +3055,7 @@ async function renderTelegramView() {
     if ($('tgAgentSelect')) {
       const agents = state.agents || [];
       if (agents.length > 0) {
-        $('tgAgentSelect').innerHTML = agents.map((a) => `<option value="${esc(a.id)}">${esc(a.name || a.id)} (${esc(a.id)})</option>`).join('');
+        $('tgAgentSelect').innerHTML = agents.map((a) => `<option value="${esc(a.id)}">${esc(formatAgentLabel(a))}</option>`).join('');
       }
       $('tgAgentSelect').value = tgConfig.defaultAgent || (agents[0]?.id || 'ops');
     }
@@ -2762,7 +3223,7 @@ async function renderWeChatView() {
     if ($('wxAgentSelect')) {
       const agents = state.agents || [];
       if (agents.length > 0) {
-        $('wxAgentSelect').innerHTML = agents.map((a) => `<option value="${esc(a.id)}">${esc(a.name || a.id)} (${esc(a.id)})</option>`).join('');
+        $('wxAgentSelect').innerHTML = agents.map((a) => `<option value="${esc(a.id)}">${esc(formatAgentLabel(a))}</option>`).join('');
       }
       $('wxAgentSelect').value = wxConfig.defaultAgent || (agents[0]?.id || 'ops');
     }
@@ -2824,7 +3285,7 @@ async function renderWeChatView() {
         if (wxConfig.status === 'connected') {
           qrBox.innerHTML = `
             <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:24px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;text-align:center;width:100%;max-width:280px;box-shadow:0 4px 12px rgba(34,197,94,0.08);">
-              <div style="width:44px;height:44px;border-radius:50%;background:#22c55e;color:#fff;display:grid;place-items:center;font-size:22px;box-shadow:0 2px 8px rgba(34,197,94,0.3);"></div>
+              <div style="width:44px;height:44px;border-radius:50%;background:#22c55e;color:#fff;display:grid;place-items:center;font-size:22px;box-shadow:0 2px 8px rgba(34,197,94,0.3);">✓</div>
               <div style="font-weight:700;color:#15803d;font-size:15px;">微信已成功连接就绪</div>
               <div style="font-size:12.5px;color:#166534;font-weight:500;">当前账号：${esc(wxConfig.loginUser || 'WeChat User')}</div>
               <div style="font-size:11.5px;color:#15803d;line-height:1.4;">现在拿起手机在微信中发送需求，AI 将实时自动响应并处理任务！</div>
@@ -2845,10 +3306,24 @@ async function renderWeChatView() {
               </div>
               <div style="font-size:11.5px;color:#64748b;margin-top:2px;">请使用手机微信扫码并点击【确认登录】</div>
               <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
-                <button type="button" class="btn text-btn" style="font-size:11.5px;padding:3px 8px;color:#2563eb;" onclick="copyText('${esc(wxConfig.qrCodeText)}', '登录链接')">
-                  复制登录链接
+                <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="window.hap.openExternal('${esc(wxConfig.qrCodeText)}')">
+                  🌐 外部浏览器打开
+                </button>
+                <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="copyText('${esc(wxConfig.qrCodeText)}', '登录链接')">
+                  📋 复制登录链接
+                </button>
+                <button type="button" class="btn text-btn" style="font-size:11.5px;padding:3px 8px;color:#2563eb;" onclick="window.triggerRefreshWechatQr()">
+                  🔄 刷新
                 </button>
               </div>
+            </div>
+          `;
+        } else {
+          qrBox.innerHTML = `
+            <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:32px 16px;text-align:center;">
+              <div class="thinking-pulse-dot" style="width:28px;height:28px;background:var(--primary, #2563eb);"></div>
+              <div style="font-weight:600;font-size:13.5px;color:var(--text-main);">正在生成微信登录二维码...</div>
+              <div style="font-size:12px;color:var(--text-muted);max-width:240px;line-height:1.4;">正在向微信通道服务申请扫码凭证，二维码将在此处实时呈现</div>
             </div>
           `;
         }
@@ -2973,23 +3448,161 @@ $('toggleWxServiceBtn')?.addEventListener('click', async () => {
   }
 });
 
-// 微信/企微状态自动同步监听 (每 1.2 秒快速响应)
-setInterval(async () => {
-  const wxView = $('wechat');
-  if (wxView && wxView.classList.contains('active')) {
-    try {
-      const cfg = await window.hap.getWeChatConfig();
-      if (cfg && cfg.running) {
-        const badge = $('wxStatusBadge');
-        const isAlreadyConnected = badge && badge.classList.contains('success');
-        if (cfg.status === 'connected' && !isAlreadyConnected) {
-          await renderWeChatView();
-          showToast('微信通道已成功连接就绪！', 'success');
-        }
-      }
-    } catch {}
+let lastRenderedWxQrCode = '';
+let lastRenderedWxStatus = '';
+
+window.triggerRefreshWechatQr = async () => {
+  try {
+    showToast('正在重新向微信服务器申请登录二维码...', 'info');
+    await window.hap.refreshWeChatQr();
+    const cfg = await window.hap.getWeChatConfig();
+    updateWechatQrModal(cfg);
+    await renderWeChatView();
+  } catch (err) {
+    showToast('刷新二维码失败：' + err.message, 'error');
   }
-}, 1200);
+};
+
+function updateWechatQrModal(wxConfig) {
+  const body = $('wechatModalBody');
+  const tip = $('wechatModalStatusTip');
+  if (!body) return;
+
+  if (!wxConfig || !wxConfig.running) {
+    body.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:36px 20px;text-align:center;">
+        <div class="thinking-pulse-dot" style="width:32px;height:32px;background:var(--primary, #2563eb);"></div>
+        <div style="font-weight:600;font-size:14px;color:var(--text-main);">微信服务启动中...</div>
+        <div style="font-size:12px;color:var(--text-muted);max-width:280px;line-height:1.5;">正在启动本地与微信云端握手通道，二维码将即刻呈现</div>
+      </div>
+    `;
+    if (tip) tip.textContent = '正在启动服务...';
+    return;
+  }
+
+  if (wxConfig.status === 'connected') {
+    body.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px 20px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;text-align:center;width:100%;box-shadow:0 4px 16px rgba(34,197,94,0.1);">
+        <div style="width:52px;height:52px;border-radius:50%;background:#22c55e;color:#fff;display:grid;place-items:center;font-size:26px;box-shadow:0 4px 12px rgba(34,197,94,0.3);">✓</div>
+        <div style="font-weight:700;color:#15803d;font-size:16px;">微信已成功连接就绪</div>
+        <div style="font-size:13px;color:#166534;font-weight:500;">当前绑定账号：${esc(wxConfig.loginUser || 'WeChat User')}</div>
+        <div style="font-size:12px;color:#15803d;line-height:1.5;">现在拿起手机在微信中向智能体发送任何需求，AI 将实时自动响应！</div>
+      </div>
+    `;
+    if (tip) tip.textContent = '✅ 已连接就绪';
+    setTimeout(() => {
+      if ($('wechatQrModal')?.open) $('wechatQrModal')?.close();
+    }, 2000);
+  } else if (wxConfig.qrCodeText) {
+    let qrSvgHtml = '';
+    if (window.QRCodeSvg && typeof window.QRCodeSvg.generate === 'function') {
+      qrSvgHtml = window.QRCodeSvg.generate(wxConfig.qrCodeText, { size: 190 });
+    } else {
+      qrSvgHtml = `<div style="font-family:monospace;font-size:11px;color:#334155;word-break:break-all;background:#f1f5f9;padding:8px;border-radius:6px;">${esc(wxConfig.qrCodeText)}</div>`;
+    }
+
+    body.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:8px 0;">
+        <div style="padding:10px;background:#ffffff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.08);border:1px solid #e2e8f0;display:inline-block;">
+          ${qrSvgHtml}
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--text-main);margin-top:4px;">请使用手机微信扫码并点击【确认登录】</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+          <button type="button" class="btn secondary" style="font-size:12px;padding:5px 12px;" onclick="window.hap.openExternal('${esc(wxConfig.qrCodeText)}')">
+            🌐 外部浏览器打开
+          </button>
+          <button type="button" class="btn secondary" style="font-size:12px;padding:5px 12px;" onclick="copyText('${esc(wxConfig.qrCodeText)}', '登录链接')">
+            📋 复制登录链接
+          </button>
+        </div>
+      </div>
+    `;
+    if (tip) tip.textContent = '等待手机微信扫码确认...';
+  } else {
+    body.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:36px 20px;text-align:center;">
+        <div class="thinking-pulse-dot" style="width:32px;height:32px;background:var(--primary, #2563eb);"></div>
+        <div style="font-weight:600;font-size:14px;color:var(--text-main);">正在生成微信登录二维码...</div>
+        <div style="font-size:12px;color:var(--text-muted);max-width:280px;line-height:1.5;">正在连接腾讯微信智能体网关，二维码生成后将在此处实时呈现</div>
+      </div>
+    `;
+    if (tip) tip.textContent = '正在与微信通道握手...';
+  }
+}
+
+window.openWeChatScanModal = async () => {
+  const modal = $('wechatQrModal');
+  if (!modal) return;
+  if (modal.open) modal.close();
+  modal.showModal();
+
+  let wxConfig = await window.hap.getWeChatConfig();
+  updateWechatQrModal(wxConfig);
+
+  if (!wxConfig.running) {
+    try {
+      showToast('正在启动微信网关服务...', 'info');
+      await window.hap.startWeChatService();
+      wxConfig = await window.hap.getWeChatConfig();
+      updateWechatQrModal(wxConfig);
+      await renderWeChatView();
+    } catch (err) {
+      showToast('启动微信服务异常：' + err.message, 'error');
+    }
+  }
+};
+
+$('openWechatModalBtn')?.addEventListener('click', () => {
+  window.openWeChatScanModal();
+});
+
+$('refreshWechatModalBtn')?.addEventListener('click', async () => {
+  await window.triggerRefreshWechatQr();
+});
+
+$('confirmWechatModalBtn')?.addEventListener('click', async () => {
+  try {
+    showToast('正在确认并同步手机微信登录态...', 'info');
+    const res = await window.hap.confirmWeChatLogin();
+    if (res && res.status === 'connected') {
+      showToast('微信通道已成功连接！', 'success');
+      const cfg = await window.hap.getWeChatConfig();
+      updateWechatQrModal(cfg);
+      await renderWeChatView();
+    } else {
+      showToast('尚未检测到手机端确认，请在微信中点击【确认登录】', 'warning');
+    }
+  } catch (err) {
+    showToast('同步失败：' + err.message, 'error');
+  }
+});
+
+// 微信/企微状态自动同步监听 (每 1 秒快速响应)
+setInterval(async () => {
+  const wxPane = $('channelSubPane_wechat');
+  const qrModal = $('wechatQrModal');
+  const isWxVisible = (wxPane && wxPane.offsetParent !== null) || (qrModal && qrModal.open);
+  if (!isWxVisible) return;
+
+  try {
+    const cfg = await window.hap.getWeChatConfig();
+    if (cfg && cfg.running) {
+      const badge = $('wxStatusBadge');
+      const isAlreadyConnected = badge && badge.classList.contains('success');
+
+      if (cfg.status === 'connected' && !isAlreadyConnected) {
+        await renderWeChatView();
+        if (qrModal && qrModal.open) updateWechatQrModal(cfg);
+        showToast('微信通道已成功连接就绪！', 'success');
+      } else if (cfg.qrCodeText !== lastRenderedWxQrCode || cfg.status !== lastRenderedWxStatus) {
+        lastRenderedWxQrCode = cfg.qrCodeText || '';
+        lastRenderedWxStatus = cfg.status || '';
+        await renderWeChatView();
+        if (qrModal && qrModal.open) updateWechatQrModal(cfg);
+      }
+    }
+  } catch {}
+}, 1000);
 
 // ==========================================================================
 // 微信实时交互与消息监控面板
@@ -3194,23 +3807,26 @@ window.openProviderDialog = async (id) => {
       const keyInfo = await window.hap.getProviderApiKey(p.id);
       if (statusChip) {
         if (keyInfo.isSet) {
-          statusChip.innerHTML = `<span style="color:#10b981;font-weight:600;">🟢 已配置密钥</span> 环境变量 <code>${esc(keyInfo.envKey)}</code> (掩码: ${esc(keyInfo.maskedValue)})，留空保存将保持原样`;
+          statusChip.innerHTML = `<span style="color:#10b981;font-weight:600;">已配置密钥</span> 环境变量 <code>${esc(keyInfo.envKey)}</code> (掩码: ${esc(keyInfo.maskedValue)})，留空保存将保持原样`;
         } else {
-          statusChip.innerHTML = `<span style="color:#f59e0b;font-weight:600;">⚪ 尚未配置密钥</span> 环境变量 <code>${esc(keyInfo.envKey)}</code> 当前为空`;
+          statusChip.innerHTML = `<span style="color:#f59e0b;font-weight:600;">尚未配置密钥</span> 环境变量 <code>${esc(keyInfo.envKey)}</code> 当前为空`;
         }
       }
     } catch {
       // 容错
     }
 
-    currentDialogModels = (state.models || [])
-      .filter(m => (m.providerId || m.provider) === p.id)
+    const providerModels = (state.models || [])
+      .filter(m => (m.providerId || m.provider) === p.id);
+    originalDialogModelAliases = new Set(providerModels.map(m => m.alias));
+    currentDialogModels = providerModels
       .map(m => ({ alias: m.alias, model: m.model || m.modelName || m.alias, contextWindow: m.contextWindow || 64000 }));
   } else {
     $('providerDialogTitle').textContent = '新增 AI 服务商与模型';
     $('providerPresetRow').style.display = 'block';
     $('providerInputId').readOnly = false;
     $('deleteProviderBtn').style.display = 'none';
+    originalDialogModelAliases = new Set();
     currentDialogModels = [];
   }
   renderCurrentDialogModels();
@@ -3235,7 +3851,14 @@ $('providerForm')?.addEventListener('submit', async (e) => {
       protocol: data.protocol,
     });
 
-    // 2. 同步保存该服务商名下的所有模型
+    // 2. 清理在本次编辑中被移除的模型（支持一键清空或单个移除）
+    const currentAliases = new Set(currentDialogModels.map(m => m.alias));
+    const toDeleteAliases = [...originalDialogModelAliases].filter(alias => !currentAliases.has(alias));
+    if (toDeleteAliases.length > 0) {
+      await window.hap.batchRemoveModels(toDeleteAliases).catch(err => console.warn('批量移除已删除模型警告:', err));
+    }
+
+    // 3. 同步保存该服务商名下保留或新增的所有模型
     for (const m of currentDialogModels) {
       await window.hap.upsertModel({
         alias: m.alias,
@@ -3246,7 +3869,7 @@ $('providerForm')?.addEventListener('submit', async (e) => {
     }
 
     $('providerDialog').close();
-    showToast(`🎉 服务商 ${providerId} 与 ${currentDialogModels.length} 个模型已成功保存！`, 'success');
+    showToast(`服务商 ${providerId} 与 ${currentDialogModels.length} 个模型已成功保存！`, 'success');
     await refresh();
   } catch (error) {
     showToast('保存失败：' + error.message, 'error');
@@ -3311,14 +3934,14 @@ window.testProvider = async (targetId, clickBtn) => {
 
       const res = await window.hap.testProvider({ id: id || 'custom', baseUrl, apiKey, envKey, wireApi, protocol });
       if (res.reachable) {
-        showToast(`🎉 服务商连通性测试通过！握手成功 (${res.handshakeMs || 0}ms)`, 'success');
+        showToast(`服务商连通性测试通过！握手成功 (${res.handshakeMs || 0}ms)`, 'success');
         if (statusChip) {
-          statusChip.innerHTML = `<span style="color:#10b981;font-weight:600;">🟢 连通测试通过！握手成功 (${res.handshakeMs || 0}ms)，网络可达</span>`;
+          statusChip.innerHTML = `<span style="color:#10b981;font-weight:600;">连通测试通过！握手成功 (${res.handshakeMs || 0}ms)，网络可达</span>`;
         }
       } else {
-        showToast(`❌ 连接失败：${res.error || '无法建立握手'}`, 'error');
+        showToast(`连接失败：${res.error || '无法建立握手'}`, 'error');
         if (statusChip) {
-          statusChip.innerHTML = `<span style="color:#ef4444;font-weight:600;">❌ 连接失败：${esc(res.error || '无法建立握手')}</span>`;
+          statusChip.innerHTML = `<span style="color:#ef4444;font-weight:600;">连接失败：${esc(res.error || '无法建立握手')}</span>`;
         }
       }
       return;
@@ -3330,9 +3953,9 @@ window.testProvider = async (targetId, clickBtn) => {
     showToast(`正在测试服务商 [${id}] 连通性...`, 'info');
     const res = await window.hap.testProvider(id);
     if (res.reachable) {
-      showToast(`🎉 服务商 [${id}] 连通性测试通过！握手成功 (${res.handshakeMs || 0}ms)`, 'success');
+      showToast(`服务商 [${id}] 连通性测试通过！握手成功 (${res.handshakeMs || 0}ms)`, 'success');
     } else {
-      showToast(`❌ 服务商 [${id}] 连接失败：${res.error || '无法建立握手'}`, 'error');
+      showToast(`服务商 [${id}] 连接失败：${res.error || '无法建立握手'}`, 'error');
     }
   } catch (error) {
     showToast('测试异常：' + error.message, 'error');
@@ -3627,7 +4250,7 @@ window.quickSyncTarget = async (target) => {
     if ($('syncPreview')) {
       $('syncPreview').textContent = JSON.stringify(result, null, 2);
     }
-    showToast(`🎉 已成功将 [${selectedModel}] 注入到 ${target} 命令行环境！`, 'success');
+    showToast(`已成功将 [${selectedModel}] 注入到 ${target} 命令行环境！`, 'success');
     await refresh();
   } catch (err) {
     showToast(`注入失败：${err.message}`, 'error');
@@ -3834,6 +4457,12 @@ const sendBtn = $('sendChatBtn');
 const chatModelPicker = $('chatModelPickerSelect');
 chatModelPicker?.addEventListener('change', () => {
   localStorage.setItem('hap:selected-chat-model', chatModelPicker.value);
+});
+const chatAgentSelectEl = $('chatAgentSelect');
+chatAgentSelectEl?.addEventListener('change', () => {
+  if (chatAgentSelectEl.value) {
+    localStorage.setItem('hap:selected-chat-agent', chatAgentSelectEl.value);
+  }
 });
 
 function updateComposerState() {
@@ -4042,7 +4671,7 @@ async function renderServers() {
   if (cachedServers.length === 0) {
     grid.innerHTML = `
       <div class="card" style="grid-column: 1 / -1; padding: 42px 20px; text-align: center; color: var(--text-secondary); background: #ffffff; border-radius: 12px; border: 1px dashed #cbd5e1;">
-        <div style="font-size: 36px; margin-bottom: 12px;">🌐</div>
+        <div style="margin-bottom: 12px; display:flex; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></div>
         <div style="font-weight: 700; font-size: 15px; color: var(--text-main); margin-bottom: 6px;">尚未添加任何远程服务器</div>
         <div style="font-size: 13px; max-width: 440px; margin: 0 auto 18px auto; line-height: 1.5; color: #64748b;">
           输入服务器 IP 与 SSH 凭据，即可一键自动化部署 HAP 守护进程，实现跨机器算力协同与实时操控。
@@ -4122,7 +4751,7 @@ async function renderServers() {
           <!-- 绑定的专属机器人状态徽标 -->
           <div style="margin-top:4px;padding:6px 10px;background:#f8fafc;border-radius:6px;font-size:11.5px;display:flex;justify-content:space-between;align-items:center;border:1px dashed #cbd5e1;">
             <div style="display:flex;align-items:center;gap:6px;">
-              <span>🤖</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg>
               <span style="color:#475569;">绑定机器人：</span>
               ${(() => {
                 const boundBot = (cachedBots || []).find(b => b.id === s.boundBotId || b.boundServerId === s.id);
@@ -4135,7 +4764,7 @@ async function renderServers() {
             ${(() => {
               const boundBot = (cachedBots || []).find(b => b.id === s.boundBotId || b.boundServerId === s.id);
               if (boundBot) {
-                return `<span class="badge ${boundBot.enabled ? 'success' : 'neutral'}" style="font-size:10.5px;">${boundBot.enabled ? '🟢 在线' : '⚪ 停止'}</span>`;
+                return `<span class="badge ${boundBot.enabled ? 'success' : 'neutral'}" style="font-size:10.5px;">${boundBot.enabled ? '在线' : '停止'}</span>`;
               }
               return `<button type="button" class="btn text-btn" style="font-size:11px;color:#0284c7;padding:0;" onclick="window.openBotDialog('', '${escJs(s.id)}')">+ 绑定机器人</button>`;
             })()}
@@ -4145,7 +4774,7 @@ async function renderServers() {
         <div class="card-footer" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #f1f5f9;margin-top:auto;">
           <div style="display:flex;gap:6px;">
             <button type="button" class="btn primary" onclick="window.openServerDetailsModal('${esc(s.id)}')" style="padding:4px 10px;font-size:12px;" title="查看服务器完整硬件与系统详情">
-              🔍 详情
+              详情
             </button>
             <button type="button" class="btn secondary" onclick="window.testServerNode('${esc(s.id)}')" style="padding:4px 10px;font-size:12px;" title="测试 SSH 连通性">
               连通测试
@@ -4203,7 +4832,7 @@ window.openServerDialog = (id) => {
   if (boundBotSelect) {
     boundBotSelect.innerHTML = '<option value="">-- 未绑定机器人 (可选) --</option>' + (cachedBots || []).map(b => `
       <option value="${esc(b.id)}" ${server && (server.boundBotId === b.id || b.boundServerId === server.id) ? 'selected' : ''}>
-        ${b.platform === 'telegram' ? '✈️' : b.platform === 'qq' ? '🐧' : b.platform === 'feishu' ? '🕊️' : b.platform === 'dingtalk' ? '📌' : b.platform === 'wechat' ? '🟢' : '🤖'} ${esc(b.name)} (${esc(b.id)})
+        ${esc(b.name)} (${esc(b.id)})
       </option>
     `).join('');
   }
@@ -4536,14 +5165,14 @@ let cachedBots = [];
 
 function getPlatformIcon(platform) {
   switch (platform) {
-    case 'telegram': return '✈️';
-    case 'qq': return '🐧';
-    case 'feishu': return '🕊️';
-    case 'dingtalk': return '📌';
-    case 'wechat': return '🟢';
-    case 'discord': return '🎮';
-    case 'slack': return '💼';
-    default: return '🤖';
+    case 'telegram': return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>';
+    case 'qq': return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>';
+    case 'feishu': return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path><line x1="16" y1="8" x2="2" y2="22"></line><line x1="17.5" y1="15" x2="9" y2="15"></line></svg>';
+    case 'dingtalk': return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>';
+    case 'wechat': return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>';
+    case 'discord': return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 18 3 22 21 2 21 6 3"></polygon><circle cx="9" cy="12" r="1.5"></circle><circle cx="15" cy="12" r="1.5"></circle></svg>';
+    case 'slack': return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="13" y="2" width="3" height="8" rx="1.5"></rect><path d="M19 8.5a2.5 2.5 0 0 1-5 0"></path><rect x="8" y="14" width="3" height="8" rx="1.5"></rect><path d="M5 15.5a2.5 2.5 0 0 1 5 0"></path></svg>';
+    default: return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg>';
   }
 }
 
@@ -4567,7 +5196,7 @@ window.renderBotInstancesGrid = () => {
   if (cachedBots.length === 0) {
     container.innerHTML = `
       <div style="grid-column:1/-1;text-align:center;padding:36px 20px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;">
-        <div style="font-size:32px;margin-bottom:8px;">🤖</div>
+        <div style="margin-bottom:8px; display:flex; justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);margin-bottom:8px;"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg></div>
         <div style="font-size:14px;font-weight:600;color:#334155;margin-bottom:4px;">暂无配置任何机器人实例</div>
         <div style="font-size:12px;color:#64748b;margin-bottom:14px;">您可以为不同的服务器或业务场景创建多个专属机器人，直接在群内遥控目标服务器。</div>
         <button type="button" class="btn primary" onclick="window.openBotDialog()" style="font-size:12.5px;padding:6px 16px;">
@@ -4595,7 +5224,7 @@ window.renderBotInstancesGrid = () => {
               <div style="display:flex;align-items:center;gap:6px;">
                 <strong style="font-size:14px;color:#0f172a;">${esc(bot.name || bot.id)}</strong>
                 <span class="badge ${isRunning ? 'success' : 'neutral'}" style="font-size:10px;">
-                  ${isRunning ? '🟢 运行中' : '⚪ 已停止'}
+                  ${isRunning ? '运行中' : '已停止'}
                 </span>
               </div>
               <div style="font-size:11px;color:#64748b;font-family:var(--font-mono);margin-top:2px;">
@@ -4607,11 +5236,11 @@ window.renderBotInstancesGrid = () => {
 
         <div style="background:#f8fafc;padding:8px 10px;border-radius:6px;font-size:11.5px;display:flex;flex-direction:column;gap:4px;border:1px solid #f1f5f9;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="color:#64748b;">🖥️ 绑定服务器：</span>
+            <span style="color:#64748b;">绑定服务器：</span>
             <strong style="color:#0284c7;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(serverLabel)}">${esc(serverLabel)}</strong>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="color:#64748b;">🤖 调度智能体：</span>
+            <span style="color:#64748b;">调度智能体：</span>
             <span class="prop-chip" style="font-size:10.5px;">${esc(bot.defaultAgent || 'ops')}</span>
           </div>
         </div>
@@ -4619,7 +5248,7 @@ window.renderBotInstancesGrid = () => {
         <div style="display:flex;justify-content:space-between;align-items:center;padding-top:6px;border-top:1px solid #f1f5f9;margin-top:auto;">
           <div style="display:flex;gap:6px;">
             <button type="button" class="btn ${isRunning ? 'secondary' : 'primary'}" style="font-size:11.5px;padding:3px 8px;" onclick="window.toggleBotStatus('${escJs(bot.id)}', ${!isRunning})">
-              ${isRunning ? '⏹️ 停止' : '🚀 启动'}
+              ${isRunning ? '停止' : '启动'}
             </button>
             <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="window.testBotInstanceDirectly('${escJs(bot.id)}')">
               连通测试
@@ -4670,8 +5299,8 @@ window.openBotDialog = (botId, preselectedServerId) => {
   // 渲染服务器绑定下拉框
   const serverSelect = $('botInputBoundServer');
   if (serverSelect) {
-    serverSelect.innerHTML = '<option value="local">🖥️ 本机 (Localhost / 当前工作区)</option>' + cachedServers.map(s => `
-      <option value="${esc(s.id)}">🖥️ ${esc(s.name || s.id)} (${esc(s.host)})</option>
+    serverSelect.innerHTML = '<option value="local">本机 (Localhost / 当前工作区)</option>' + cachedServers.map(s => `
+      <option value="${esc(s.id)}">${esc(s.name || s.id)} (${esc(s.host)})</option>
     `).join('');
     if (bot && bot.boundServerId) {
       serverSelect.value = bot.boundServerId;
@@ -4769,7 +5398,7 @@ $('botForm')?.addEventListener('submit', async (e) => {
       config,
     });
     $('botDialog')?.close();
-    showToast(`🎉 机器人实例 [${name}] 已成功保存并绑定服务器！`, 'success');
+    showToast(`机器人实例 [${name}] 已成功保存并绑定服务器！`, 'success');
     await window.loadBotInstances();
     await renderServers();
   } catch (err) {
@@ -4783,6 +5412,7 @@ $('testBotModalBtn')?.addEventListener('click', async () => {
   const appId = $('botFeishuAppId')?.value.trim();
   const appSecret = $('botFeishuAppSecret')?.value.trim();
   const wsEndpoint = $('botQqWsEndpoint')?.value.trim();
+  const puppetToken = $('botWechatToken')?.value.trim();
 
   const testBtn = $('testBotModalBtn');
   if (testBtn) {
@@ -4793,7 +5423,7 @@ $('testBotModalBtn')?.addEventListener('click', async () => {
   try {
     const res = await window.hap.testBotConnection({
       platform,
-      config: { token, appId, appSecret, wsEndpoint },
+      config: { token, appId, appSecret, wsEndpoint, puppetToken },
     });
     if (res.ok) {
       showToast(res.message, 'success');
@@ -4808,6 +5438,11 @@ $('testBotModalBtn')?.addEventListener('click', async () => {
       testBtn.textContent = '连通测试';
     }
   }
+});
+
+$('openWechatScanFromModalBtn')?.addEventListener('click', async () => {
+  $('botDialog')?.close();
+  await window.openWeChatScanModal();
 });
 
 window.testBotInstanceDirectly = async (id) => {
@@ -4885,7 +5520,7 @@ async function renderFeishuView() {
     if ($('feishuAgentSelect')) {
       const agents = state.agents || [];
       if (agents.length > 0) {
-        $('feishuAgentSelect').innerHTML = agents.map(a => `<option value="${esc(a.id)}">${esc(a.name || a.id)} (${esc(a.id)})</option>`).join('');
+        $('feishuAgentSelect').innerHTML = agents.map(a => `<option value="${esc(a.id)}">${esc(formatAgentLabel(a))}</option>`).join('');
       }
       $('feishuAgentSelect').value = cfg.defaultAgent || (agents[0]?.id || 'ops');
     }
@@ -4925,7 +5560,7 @@ async function renderQQView() {
     if ($('qqAgentSelect')) {
       const agents = state.agents || [];
       if (agents.length > 0) {
-        $('qqAgentSelect').innerHTML = agents.map(a => `<option value="${esc(a.id)}">${esc(a.name || a.id)} (${esc(a.id)})</option>`).join('');
+        $('qqAgentSelect').innerHTML = agents.map(a => `<option value="${esc(a.id)}">${esc(formatAgentLabel(a))}</option>`).join('');
       }
       $('qqAgentSelect').value = cfg.defaultAgent || (agents[0]?.id || 'ops');
     }
@@ -4978,7 +5613,7 @@ async function renderDingTalkView() {
     if ($('dingAgentSelect')) {
       const agents = state.agents || [];
       if (agents.length > 0) {
-        $('dingAgentSelect').innerHTML = agents.map(a => `<option value="${esc(a.id)}">${esc(a.name || a.id)} (${esc(a.id)})</option>`).join('');
+        $('dingAgentSelect').innerHTML = agents.map(a => `<option value="${esc(a.id)}">${esc(formatAgentLabel(a))}</option>`).join('');
       }
       $('dingAgentSelect').value = cfg.defaultAgent || (agents[0]?.id || 'ops');
     }
@@ -5032,6 +5667,210 @@ function fmtHostUptime(seconds) {
 
 // 防止进入监控页、切换节点和手动刷新同时发起多个 IPC/SSH 请求。
 let hostRefreshInFlight = false;
+let hostRefreshQueued = false;
+
+function setProcessPanelMode(isRemote, serverName = '') {
+  const title = $('hostProcessListTitle');
+  const badge = $('hostProcessModeBadge');
+  const refreshBtn = $('hostProcessRefreshBtn');
+
+  if (title) {
+    title.textContent = isRemote
+      ? `${serverName || '远程节点'} 详细进程列表`
+      : '本机内存占用 Top 活跃进程';
+  }
+  if (badge) {
+    badge.textContent = isRemote ? '远程 · 可控' : '本机 · 可控';
+    badge.className = `badge ${isRemote ? 'warning' : 'success'}`;
+  }
+  if (refreshBtn) {
+    refreshBtn.style.display = 'inline-flex';
+    refreshBtn.disabled = false;
+  }
+}
+
+function formatRemoteProcessStartTime(startTime) {
+  if (!startTime) return '启动时间未知';
+  const parsed = new Date(startTime);
+  return Number.isNaN(parsed.getTime()) ? String(startTime) : parsed.toLocaleString();
+}
+
+function getRemoteProcessElapsedSeconds(proc) {
+  const explicit = Number(proc?.elapsedSeconds);
+  if (Number.isFinite(explicit) && explicit >= 0) return explicit;
+
+  const startedAt = Date.parse(String(proc?.startTime || ''));
+  if (Number.isNaN(startedAt)) return 0;
+
+  return Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+}
+
+function renderRemoteProcessList(processList, serverId) {
+  const procList = $('hostTopProcessList');
+  if (!procList) return;
+
+  const processes = Array.isArray(processList?.processes) ? processList.processes : [];
+  if (processes.length === 0) {
+    procList.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:8px 0; text-align:center;">远程节点暂无可展示的进程</div>';
+    return;
+  }
+
+  procList.innerHTML = processes.map((proc) => {
+    const pid = Number(proc?.pid);
+    const safePid = Number.isSafeInteger(pid) && pid > 0 ? pid : 0;
+    const command = String(proc?.command || '未知命令');
+    const user = String(proc?.user || '--');
+    const ppid = Number(proc?.ppid);
+    const safePpid = Number.isSafeInteger(ppid) && ppid > 0 ? ppid : 0;
+    const cpu = Number(proc?.cpuPercent || 0).toFixed(1);
+    const mem = Number(proc?.memPercent || 0).toFixed(1);
+    const elapsed = getRemoteProcessElapsedSeconds(proc);
+    const startTime = proc?.startTime || '';
+
+    return `
+      <div data-remote-process-row="${safePid}" style="display:flex; flex-direction:column; gap:7px; background:#f8fafc; padding:9px 10px; border-radius:6px; border:1px solid #e2e8f0; font-size:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+            <strong style="color:var(--text-main); font-size:12.5px;">PID ${safePid || '--'}</strong>
+            <span style="color:#64748b;">用户 ${esc(user)}</span>
+            <span style="color:#64748b; font-family:var(--font-mono);">PPID ${safePpid || '--'}</span>
+            <span style="color:#64748b; font-family:var(--font-mono);">CPU ${cpu}% · MEM ${mem}%</span>
+            <span style="color:#94a3b8;">运行 ${fmtHostUptime(elapsed)}</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:5px; flex-shrink:0;">
+            <button type="button" class="btn secondary remote-process-signal-btn" data-process-pid="${safePid}" data-process-start-time="${esc(startTime)}" data-process-signal="TERM" ${safePid ? '' : 'disabled'} style="font-size:10.5px; padding:3px 7px;">TERM</button>
+            <button type="button" class="btn danger remote-process-signal-btn" data-process-pid="${safePid}" data-process-start-time="${esc(startTime)}" data-process-signal="KILL" ${safePid ? '' : 'disabled'} style="font-size:10.5px; padding:3px 7px;">KILL</button>
+          </div>
+        </div>
+        <code title="${esc(command)}" style="display:block; color:#334155; background:#eef2f7; border-radius:4px; padding:4px 6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(command)}</code>
+        <div style="display:flex; justify-content:space-between; gap:8px; color:#94a3b8; font-size:10.5px; flex-wrap:wrap;">
+          <span>启动: ${esc(formatRemoteProcessStartTime(startTime))}</span>
+          <span>目标: ${esc(serverId || '--')}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  procList.querySelectorAll('.remote-process-signal-btn').forEach((button) => {
+    button.addEventListener('click', () => {
+      const pid = Number(button.getAttribute('data-process-pid'));
+      const signal = button.getAttribute('data-process-signal');
+      const startTime = button.getAttribute('data-process-start-time') || undefined;
+      if (!Number.isSafeInteger(pid) || pid <= 0 || (signal !== 'TERM' && signal !== 'KILL')) return;
+      void requestRemoteProcessKill(serverId, { pid, command: button.closest('[data-remote-process-row]')?.querySelector('code')?.textContent || '', startTime }, signal);
+    });
+  });
+}
+
+async function refreshRemoteProcessList(serverId) {
+  if (!serverId || serverId === 'local') return;
+  const procList = $('hostTopProcessList');
+  const refreshBtn = $('hostProcessRefreshBtn');
+  if (refreshBtn) refreshBtn.disabled = true;
+  if (procList) procList.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:8px 0; text-align:center;">正在获取远程进程列表...</div>';
+
+  try {
+    const result = await window.hap.getServerProcesses(serverId, { limit: 100 });
+    if (serverId !== (activePanoramaTarget || 'local')) return;
+    renderRemoteProcessList(result, serverId);
+  } catch (error) {
+    if (serverId !== (activePanoramaTarget || 'local')) return;
+    if (procList) procList.innerHTML = `<div style="color:#dc2626; font-size:12px; padding:8px 0; text-align:center;">远程进程获取失败：${esc(error?.message || error)}</div>`;
+  } finally {
+    if (refreshBtn && serverId === (activePanoramaTarget || 'local')) refreshBtn.disabled = false;
+  }
+}
+
+async function requestRemoteProcessKill(serverId, proc, signal) {
+  const pid = Number(proc?.pid);
+  if (!serverId || serverId === 'local' || !Number.isSafeInteger(pid) || pid <= 0) return;
+  const command = String(proc?.command || '未知命令');
+
+  const confirmed = await showConfirm({
+    title: signal === 'KILL' ? '强制终止远程进程' : '终止远程进程',
+    message: `确定向远程节点 <strong>${esc(serverId)}</strong> 的进程 <strong>PID ${pid}</strong> 发送 <strong>${signal}</strong> 信号吗？<br/><code style="font-size:11px;word-break:break-all;">${esc(command)}</code>`,
+    okText: signal === 'KILL' ? '继续强制终止' : '确认终止',
+    isDanger: true,
+  });
+  if (!confirmed) return;
+
+  if (signal === 'KILL') {
+    const forceConfirmed = await showConfirm({
+      title: '确认不可逆强制终止',
+      message: `KILL 会立即结束 PID ${pid}，可能造成未保存数据丢失。仍要继续吗？`,
+      okText: '确认 KILL',
+      isDanger: true,
+    });
+    if (!forceConfirmed) return;
+  }
+
+  try {
+    const result = await window.hap.killServerProcess({
+      serverId,
+      id: serverId,
+      pid,
+      signal,
+      expectedStartTime: proc?.startTime || undefined,
+    });
+    if (result?.killed) {
+      showToast(`远程进程 PID ${pid} 已发送 ${signal} 信号`, 'success');
+    } else {
+      showToast(result?.message || `远程进程 PID ${pid} 未被终止`, 'warning');
+    }
+    await refreshRemoteProcessList(serverId);
+  } catch (error) {
+    showToast(`终止远程进程失败：${error?.message || error}`, 'error');
+  }
+}
+
+function parseProcessDisplay(rawPath) {
+  if (!rawPath || typeof rawPath !== 'string') return { title: '未知进程', fullPath: '' };
+  const trimmed = rawPath.trim();
+  const parts = trimmed.split(/[\/\\]/);
+  const exe = parts[parts.length - 1] || trimmed;
+
+  // 识别 macOS .app 包装与 bundle
+  const appMatch = trimmed.match(/\/([^\/]+)\.app\b/);
+  const appName = appMatch ? appMatch[1] : '';
+
+  let title = exe;
+  if (appName) {
+    if (exe === appName || exe.startsWith(appName)) {
+      title = exe;
+    } else {
+      title = `${appName} · ${exe}`;
+    }
+  }
+
+  return { title, fullPath: trimmed };
+}
+
+window.requestLocalProcessKill = async (pid, name, memoryFormatted) => {
+  const safePid = Number(pid);
+  if (!Number.isSafeInteger(safePid) || safePid <= 1) return;
+
+  const confirmed = await showConfirm({
+    title: '一键结束高占用进程',
+    message: `确定要结束本机进程 <strong>${esc(name)}</strong> (PID: <code>${safePid}</code>${memoryFormatted ? ` · 占用: <strong>${esc(memoryFormatted)}</strong>` : ''}) 吗？<br/><small style="color:#ef4444;">该操作将发送 SIGKILL 信号强制终止该进程，请确保重要内容已保存。</small>`,
+    okText: '确认 Kill',
+    isDanger: true,
+  });
+  if (!confirmed) return;
+
+  try {
+    const res = await window.hap.killServerProcess({ serverId: 'local', pid: safePid, signal: 'KILL' });
+    if (res && res.killed) {
+      showToast(`🎉 已成功结束进程 ${name} (PID: ${safePid})`, 'success');
+      if (typeof window.refreshHostView === 'function') {
+        void window.refreshHostView();
+      }
+    } else {
+      showToast(`结束进程失败：${res?.message || '未知错误'}`, 'error');
+    }
+  } catch (err) {
+    showToast(`结束进程失败：${err.message || err}`, 'error');
+  }
+};
 
 function renderLocalHostView(info) {
   if (!info || !info.cpu || !info.memory) return;
@@ -5107,7 +5946,7 @@ function renderLocalHostView(info) {
       partList.innerHTML = info.disk.partitions.map(p => `
         <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; display:flex; flex-direction:column; gap:4px;">
           <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:600; color:var(--text-main);">
-            <span>📁 驱动卷 <code>${esc(p.mount)}</code></span>
+            <span>驱动卷 <code>${esc(p.mount)}</code></span>
             <span style="color:#0f172a; font-family:var(--font-mono);">${p.usedPercent}% (${fmtHostBytes(p.usedBytes)} / ${fmtHostBytes(p.totalBytes)})</span>
           </div>
           <div style="width: 100%; height: 5px; background: #e2e8f0; border-radius: 3px; overflow:hidden;">
@@ -5125,20 +5964,52 @@ function renderLocalHostView(info) {
     const procList = $('hostTopProcessList');
     if (procList) {
       if (!info.topProcesses || info.topProcesses.length === 0) {
-        procList.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:8px 0; text-align:center;">暂无活跃进程列表</div>';
+        procList.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:16px 0; text-align:center;">暂无活跃高消耗进程</div>';
       } else {
-        procList.innerHTML = info.topProcesses.map((p, idx) => `
-          <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:6px 10px; border-radius:6px; border:1px solid #e2e8f0; font-size:12px;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span style="font-size:11px; font-weight:700; color:#3b82f6; width:18px; text-align:center;">#${idx + 1}</span>
-              <strong style="color:var(--text-main); font-size:12.5px;">${esc(p.name)}</strong>
-              <span style="color:#94a3b8; font-size:11px; font-family:var(--font-mono);">(PID: ${p.pid})</span>
+        const selfPid = info.os?.pid;
+        procList.innerHTML = info.topProcesses.map((p, idx) => {
+          const parsed = parseProcessDisplay(p.name);
+          const isSelf = selfPid && p.pid === selfPid;
+
+          // Rank styling with clear visual hierarchy
+          let rankBadge = '';
+          if (idx === 0) {
+            rankBadge = '<span style="font-size:11px; font-weight:700; color:#b45309; background:#fef3c7; border:1px solid #fcd34d; border-radius:4px; min-width:24px; height:20px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">#1</span>';
+          } else if (idx === 1) {
+            rankBadge = '<span style="font-size:11px; font-weight:700; color:#475569; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:4px; min-width:24px; height:20px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">#2</span>';
+          } else if (idx === 2) {
+            rankBadge = '<span style="font-size:11px; font-weight:700; color:#c2410c; background:#ffedd5; border:1px solid #fed7aa; border-radius:4px; min-width:24px; height:20px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">#3</span>';
+          } else {
+            rankBadge = `<span style="font-size:11px; font-weight:600; color:#64748b; background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; min-width:24px; height:20px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">#${idx + 1}</span>`;
+          }
+
+          const actionBtn = isSelf
+            ? '<span class="badge neutral" style="font-size:10.5px; padding:2px 8px; flex-shrink:0;" title="当前平台控制台运行主进程">当前平台</span>'
+            : `<button type="button" class="btn danger local-process-kill-btn" onclick="window.requestLocalProcessKill(${p.pid}, '${escJs(parsed.title)}', '${escJs(p.memoryFormatted)}')" style="font-size:11px; padding:3px 9px; font-weight:600; display:inline-flex; align-items:center; gap:3px; flex-shrink:0; cursor:pointer;" title="一键强制结束此进程 (PID: ${p.pid})">⚡ Kill</button>`;
+
+          return `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#ffffff; padding:8px 12px; border-radius:7px; border:1px solid #e2e8f0; gap:12px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+              <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
+                ${rankBadge}
+                <div style="display:flex; flex-direction:column; min-width:0; flex:1;">
+                  <div style="display:flex; align-items:center; gap:6px; min-width:0;">
+                    <strong style="color:var(--text-main); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${esc(parsed.fullPath)}">${esc(parsed.title)}</strong>
+                    <span style="color:#64748b; font-size:10.5px; font-family:var(--font-mono); background:#f1f5f9; padding:1px 5px; border-radius:3px; flex-shrink:0; border:1px solid #e2e8f0;">PID ${p.pid}</span>
+                  </div>
+                  <div style="font-size:11px; color:#94a3b8; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:2px;" title="${esc(parsed.fullPath)}">
+                    ${esc(parsed.fullPath)}
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                <span style="font-weight:700; font-family:var(--font-mono); color:#1d4ed8; background:#eff6ff; border:1px solid #bfdbfe; padding:2px 8px; border-radius:4px; font-size:11.5px; white-space:nowrap;">
+                  ${esc(p.memoryFormatted)}
+                </span>
+                ${actionBtn}
+              </div>
             </div>
-            <div style="font-weight:700; font-family:var(--font-mono); color:#0f172a; background:#e2e8f0; padding:2px 8px; border-radius:4px; font-size:11.5px;">
-              ${esc(p.memoryFormatted)}
-            </div>
-          </div>
-        `).join('');
+          `;
+        }).join('');
       }
     }
 
@@ -5226,9 +6097,76 @@ async function loadHostIpGeo() {
 
 // AI 智能全盘扫描与深度瘦身 (AI Smart Disk Scanner & Storage Analyzer)
 let currentDiskScanReport = null;
+let currentDiskScanTarget = 'local';
 let currentDiskCategory = 'all';
 
+const DISK_PLATFORM_LABELS = {
+  win32: 'Windows',
+  windows: 'Windows',
+  darwin: 'macOS',
+  macos: 'macOS',
+  mac: 'macOS',
+  linux: 'Linux',
+};
+
+function normalizeDiskPlatform(platform) {
+  const raw = String(platform || '').trim().toLowerCase();
+  if (raw === 'win32' || raw === 'windows' || raw.startsWith('win')) return 'win32';
+  if (raw === 'darwin' || raw === 'macos' || raw === 'mac' || raw.startsWith('mac')) return 'darwin';
+  if (raw === 'linux' || raw.startsWith('linux')) return 'linux';
+  return raw || 'unknown';
+}
+
+function getDiskPlatformLabel(platform, isRemote = false) {
+  const normalized = normalizeDiskPlatform(platform);
+  return DISK_PLATFORM_LABELS[normalized] || (isRemote ? '远程主机' : '当前系统');
+}
+
+function getDefaultDiskRoots(platform, isRemote = false) {
+  if (isRemote) return [];
+  return normalizeDiskPlatform(platform) === 'win32' ? ['C:\\'] : ['/', '/tmp', '/var/tmp'];
+}
+
+function formatDiskRoots(roots) {
+  const values = Array.isArray(roots) ? roots.map((root) => String(root || '').trim()).filter(Boolean) : [];
+  return values.length > 0 ? values.join(', ') : '全盘';
+}
+
+function getDiskScanContext(report = {}) {
+  const target = report.target || currentDiskScanTarget || activePanoramaTarget || 'local';
+  const isRemote = target !== 'local' && target !== 'host';
+  const platform = normalizeDiskPlatform(report.platform || (isRemote ? '' : navigator.platform));
+  const platformLabel = report.platformLabel || getDiskPlatformLabel(platform, isRemote);
+  const roots = Array.isArray(report.scannedRoots) && report.scannedRoots.length > 0
+    ? report.scannedRoots
+    : getDefaultDiskRoots(platform, isRemote);
+  const rootsText = formatDiskRoots(roots);
+  return { target, isRemote, platform, platformLabel, roots, rootsText };
+}
+
+function updateDiskScannerScope(report = {}) {
+  const context = getDiskScanContext(report);
+  const scopeText = `${context.platformLabel} · 根目录: ${context.rootsText}`;
+  if ($('diskScannerScopeText')) $('diskScannerScopeText').textContent = scopeText;
+  if ($('diskEmptyStateScopeText')) {
+    $('diskEmptyStateScopeText').textContent = `点击右上角「开始扫描」排查 ${scopeText} 下的系统临时文件、包管理器缓存、构建残留与应用日志`;
+  }
+  return context;
+}
+
+function resetDiskScanForTarget(targetId) {
+  currentDiskScanReport = null;
+  currentDiskScanTarget = targetId || 'local';
+  updateDiskScannerScope({ target: currentDiskScanTarget });
+  if ($('diskScanResultContainer')) $('diskScanResultContainer').style.display = 'none';
+  if ($('diskEmptyState')) $('diskEmptyState').style.display = 'block';
+  if ($('diskCleanableTotalBadge')) $('diskCleanableTotalBadge').style.display = 'none';
+  if ($('diskRootsBadge')) $('diskRootsBadge').style.display = 'none';
+}
+
 async function handleScanDisk(server) {
+  const targetId = server || activePanoramaTarget || 'local';
+  const requestTarget = targetId === 'local' ? undefined : targetId;
   const scanBtn = $('scanDiskBtn');
   const progressBox = $('diskScanProgressBox');
   const progressText = $('diskScanProgressText');
@@ -5242,13 +6180,14 @@ async function handleScanDisk(server) {
     if (resultContainer) resultContainer.style.display = 'none';
     if (progressBox) progressBox.style.display = 'block';
 
+    const scanContext = updateDiskScannerScope({ target: targetId });
     const steps = [
-      '⏳ 正在排查全盘根目录 (C:\\, D:\\ 等) 系统临时文件与更新缓存...',
+      `⏳ 正在排查 ${scanContext.platformLabel} 根目录 (${scanContext.rootsText}) 的系统临时文件与更新缓存...`,
       '⏳ 正在排查 npm / pnpm / pip / yarn / cargo / go 全局包管理器缓存...',
       '⏳ 正在深度探测所有工程与工作区构建残留 (dist, target, .next, __pycache__)...',
-      '⏳ 正在分析 Chrome / Edge 浏览器及桌面应用临时运行缓存...',
+      `⏳ 正在分析 ${scanContext.platformLabel} 浏览器及桌面应用临时运行缓存...`,
       '⏳ 正在排查 Docker 悬空虚悬镜像与 BuildKit 构建缓存...',
-      '🧠 AI 正在生成全盘健康评分与智能清理诊断建议...',
+      'AI 正在生成全盘健康评分与智能清理诊断建议...',
     ];
 
     let stepIdx = 0;
@@ -5257,11 +6196,14 @@ async function handleScanDisk(server) {
       if (progressText) progressText.textContent = steps[stepIdx];
     }, 400);
 
-    const report = await window.hap.scanDiskCleanable(server);
+    const report = await window.hap.scanDiskCleanable(requestTarget);
 
-    currentDiskScanReport = report;
-    renderDiskScanResult(report);
-    showToast(`AI 全盘体检完成！健康评分 ${report.healthScore || 90} 分，发现 ${fmtHostBytes(report.totalCleanableBytes)} 可释放空间`, 'success');
+    if (targetId !== (activePanoramaTarget || 'local')) return;
+    currentDiskScanTarget = targetId;
+    currentDiskScanReport = report ? { ...report, target: report.target || targetId } : report;
+    if (!currentDiskScanReport) throw new Error('扫描未返回有效报告');
+    renderDiskScanResult(currentDiskScanReport);
+    showToast(`AI 全盘体检完成！健康评分 ${currentDiskScanReport.healthScore || 90} 分，发现 ${fmtHostBytes(currentDiskScanReport.totalCleanableBytes)} 可释放空间`, 'success');
   } catch (err) {
     showToast('AI 磁盘扫描失败: ' + err.message, 'error');
     if (emptyState) emptyState.style.display = 'block';
@@ -5300,23 +6242,23 @@ function filterDiskItemsByCategory(category) {
   }
 
   const categoryIcons = {
-    system_root: '🏛️',
-    package_cache: '📦',
-    build_artifact: '🏗️',
-    browser_app: '🌐',
-    temp_logs: '📝',
-    docker_prune: '🐳',
-    custom: '📁',
+    system_root: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>',
+    package_cache: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>',
+    build_artifact: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>',
+    browser_app: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>',
+    temp_logs: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
+    docker_prune: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="14" width="18" height="7" rx="2"></rect><rect x="4" y="9" width="4" height="4"></rect><rect x="10" y="9" width="4" height="4"></rect><rect x="16" y="9" width="4" height="4"></rect><rect x="10" y="4" width="4" height="4"></rect></svg>',
+    custom: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>',
   };
 
   listEl.innerHTML = items.map((item) => `
     <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; transition:background 0.2s; gap:12px;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'">
       <div style="display:flex; align-items:center; gap:12px; min-width:0; flex:1;">
         <input type="checkbox" class="disk-item-chk" data-id="${esc(item.id)}" data-size="${item.sizeBytes}" data-safety="${item.safety}" ${item.safety === 'safe' ? 'checked' : ''} style="width:16px; height:16px; cursor:pointer;" onchange="window.updateDiskSelectedSummary()" />
-        <span style="font-size:18px; flex-shrink:0;">${categoryIcons[item.category] || '📁'}</span>
+        <span style="display:inline-flex; align-items:center; flex-shrink:0; color:var(--text-secondary);">${categoryIcons[item.category] || categoryIcons.custom}</span>
         <div style="min-width:0; overflow:hidden; flex:1;">
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <span class="badge ${item.safety === 'safe' ? 'success' : 'warn'}" style="font-size:11px;">${item.safety === 'safe' ? '🟢 安全清理' : '🟡 建议确认'}</span>
+            <span class="badge ${item.safety === 'safe' ? 'success' : 'warn'}" style="font-size:11px;">${item.safety === 'safe' ? '安全清理' : '建议确认'}</span>
             ${item.rootPrefix ? `<span class="badge neutral" style="font-size:10.5px; font-family:var(--font-mono);">${esc(item.rootPrefix)}</span>` : ''}
             <strong style="font-size:13px; color:var(--text-main); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${esc(item.name)}</strong>
           </div>
@@ -5332,7 +6274,7 @@ function filterDiskItemsByCategory(category) {
           ${fmtHostBytes(item.sizeBytes)}
         </div>
         <button type="button" class="btn secondary" style="font-size:11px; padding:3px 8px;" onclick="window.cleanSingleDiskItem('${esc(item.id)}')">
-          🗑️ 清理
+          清理
         </button>
       </div>
     </div>
@@ -5343,6 +6285,7 @@ function filterDiskItemsByCategory(category) {
 
 function renderDiskScanResult(report) {
   if (!report) return;
+  const context = updateDiskScannerScope(report);
   if ($('diskEmptyState')) $('diskEmptyState').style.display = 'none';
   if ($('diskScanResultContainer')) $('diskScanResultContainer').style.display = 'block';
 
@@ -5353,8 +6296,7 @@ function renderDiskScanResult(report) {
   }
   if ($('diskRootsBadge')) {
     $('diskRootsBadge').style.display = 'inline-flex';
-    const rootsStr = (report.scannedRoots || []).join(', ') || '全盘';
-    $('diskRootsBadge').textContent = `已覆盖根目录: ${rootsStr}`;
+    $('diskRootsBadge').textContent = `系统: ${context.platformLabel} · 根目录: ${context.rootsText}`;
   }
   if ($('safeCleanDiskBtn')) $('safeCleanDiskBtn').style.display = report.safeCleanableBytes > 0 ? 'inline-block' : 'none';
   if ($('allCleanDiskBtn')) $('allCleanDiskBtn').style.display = report.totalCleanableBytes > 0 ? 'inline-block' : 'none';
@@ -5366,11 +6308,14 @@ function renderDiskScanResult(report) {
     $('diskHealthScore').style.color = score >= 90 ? '#16a34a' : score >= 70 ? '#d97706' : '#dc2626';
   }
   if ($('diskHealthLevel')) {
-    $('diskHealthLevel').textContent = score >= 90 ? '🟢 空间充裕' : score >= 70 ? '🟡 建议优化' : '🔴 空间偏紧';
+    $('diskHealthLevel').textContent = score >= 90 ? '空间充裕' : score >= 70 ? '建议优化' : '空间偏紧';
     $('diskHealthLevel').className = `badge ${score >= 90 ? 'success' : score >= 70 ? 'warn' : 'danger'}`;
   }
   if ($('diskAiDiagnosisText')) {
-    $('diskAiDiagnosisText').textContent = report.aiDiagnosis || 'AI 体检完成，建议定期清理依赖包缓存以保持系统轻快。';
+    const diagnosis = report.aiDiagnosis || 'AI 体检完成，建议定期清理依赖包缓存以保持系统轻快。';
+    $('diskAiDiagnosisText').textContent = diagnosis.includes(context.platformLabel)
+      ? diagnosis
+      : `${context.platformLabel} · ${diagnosis}`;
   }
 
   if ($('diskSafeSize')) $('diskSafeSize').textContent = fmtHostBytes(report.safeCleanableBytes);
@@ -5410,14 +6355,15 @@ function updateDiskSelectedSummary() {
   if (cleanSelectedBtn) {
     cleanSelectedBtn.disabled = selectedCount === 0;
     cleanSelectedBtn.textContent = selectedCount > 0
-      ? `🚀 一键清理选中项 (${fmtHostBytes(selectedBytes)})`
-      : '🚀 一键清理选中项';
+      ? `一键清理选中项 (${fmtHostBytes(selectedBytes)})`
+      : '一键清理选中项';
   }
 }
 
 async function handleCleanDisk(type) {
-  if (!currentDiskScanReport) {
-    await handleScanDisk();
+  const targetId = activePanoramaTarget || 'local';
+  if (!currentDiskScanReport || currentDiskScanTarget !== targetId) {
+    await handleScanDisk(targetId);
   }
   if (!currentDiskScanReport || currentDiskScanReport.items.length === 0) {
     showToast('当前没有需要清理的垃圾项', 'info');
@@ -5455,11 +6401,11 @@ async function handleCleanDisk(type) {
   try {
     showToast('正在执行磁盘安全清理...', 'info');
     const result = await window.hap.executeDiskCleanup({
-      server: currentDiskScanReport.target === 'local' ? undefined : currentDiskScanReport.target,
+      server: targetId === 'local' ? undefined : targetId,
       itemIds: targetIds,
     });
     showToast(`清理成功！已释放 ${fmtHostBytes(result.cleanedBytes)} 空间！`, 'success');
-    await handleScanDisk();
+    await handleScanDisk(targetId);
     await window.refreshHostView();
   } catch (err) {
     showToast('清理失败: ' + err.message, 'error');
@@ -5468,6 +6414,11 @@ async function handleCleanDisk(type) {
 
 window.cleanSingleDiskItem = async (itemId) => {
   if (!currentDiskScanReport) return;
+  const targetId = activePanoramaTarget || 'local';
+  if (currentDiskScanTarget !== targetId) {
+    await handleScanDisk(targetId);
+    if (!currentDiskScanReport) return;
+  }
   const item = currentDiskScanReport.items.find(i => i.id === itemId);
   if (!item) return;
 
@@ -5476,11 +6427,11 @@ window.cleanSingleDiskItem = async (itemId) => {
   try {
     showToast(`正在清理 ${item.name}...`, 'info');
     const result = await window.hap.executeDiskCleanup({
-      server: currentDiskScanReport.target === 'local' ? undefined : currentDiskScanReport.target,
+      server: targetId === 'local' ? undefined : targetId,
       itemIds: [itemId],
     });
     showToast(`清理完成！已释放 ${fmtHostBytes(result.cleanedBytes)}`, 'success');
-    await handleScanDisk();
+    await handleScanDisk(targetId);
     await window.refreshHostView();
   } catch (err) {
     showToast('单项清理失败: ' + err.message, 'error');
@@ -5490,16 +6441,16 @@ window.cleanSingleDiskItem = async (itemId) => {
 // 咨询 AI 智能体制定磁盘瘦身计划
 function handleAskAiDiskPlan() {
   if (!currentDiskScanReport) {
-    showToast('请先点击「⚡ 从根目录开始全盘扫描」', 'info');
+    showToast('请先点击「从根目录开始全盘扫描」', 'info');
     return;
   }
   const report = currentDiskScanReport;
-  const rootsStr = (report.scannedRoots || []).join(', ') || '全盘';
+  const context = getDiskScanContext(report);
   const topItems = (report.items || []).slice(0, 8).map(i => `- [${i.safety === 'safe' ? '安全' : '确认'}] ${i.name} (${fmtHostBytes(i.sizeBytes)}) -> ${i.path}`).join('\n');
 
   const prompt = [
-    `请帮我分析本机系统的全盘存储与垃圾清理策略：`,
-    `- 全盘根目录覆盖: ${rootsStr}`,
+    `请帮我分析 ${context.platformLabel} 系统的全盘存储与垃圾清理策略：`,
+    `- 全盘根目录覆盖: ${context.rootsText}`,
     `- 当前 AI 健康评分: ${report.healthScore || 90} / 100`,
     `- 发现可释放空间总计: ${fmtHostBytes(report.totalCleanableBytes)}`,
     `- 零副作用安全项 (Safe): ${fmtHostBytes(report.safeCleanableBytes)}`,
@@ -5530,7 +6481,7 @@ window.updateDiskSelectedSummary = updateDiskSelectedSummary;
 window.handleAskAiDiskPlan = handleAskAiDiskPlan;
 
 document.addEventListener('DOMContentLoaded', () => {
-  $('scanDiskBtn')?.addEventListener('click', () => handleScanDisk());
+  $('scanDiskBtn')?.addEventListener('click', () => handleScanDisk(activePanoramaTarget || 'local'));
   $('safeCleanDiskBtn')?.addEventListener('click', () => handleCleanDisk('safe'));
   $('allCleanDiskBtn')?.addEventListener('click', () => handleCleanDisk('all'));
   $('cleanSelectedBtn')?.addEventListener('click', () => handleCleanDisk('selected'));
@@ -5561,7 +6512,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $('refreshHostBtn')?.addEventListener('click', async () => {
     await window.refreshHostView();
-    showToast('本机系统全景状态已刷新！', 'info');
+    showToast(`${activePanoramaTarget === 'local' ? '本机' : '远程节点'}系统全景状态已刷新！`, 'info');
+  });
+
+  $('hostProcessRefreshBtn')?.addEventListener('click', async () => {
+    const targetId = activePanoramaTarget || 'local';
+    if (targetId === 'local') {
+      await window.refreshHostView();
+      showToast('本机活跃进程列表已刷新', 'info');
+      return;
+    }
+    await refreshRemoteProcessList(targetId);
+    showToast('远程进程列表已刷新', 'info');
   });
 });
 
@@ -5922,10 +6884,14 @@ setInterval(async () => {
 // ==========================================================================
 // AI 服务商与模型统一弹窗与在线拉取逻辑
 // ==========================================================================
-let currentDialogModels = [];
-
 function renderCurrentDialogModels() {
   const container = $('currentProviderModelsList');
+  const countEl = $('currentDialogModelsCount');
+  const clearBtn = $('clearAllProviderModelsBtn');
+
+  if (countEl) countEl.textContent = String(currentDialogModels.length);
+  if (clearBtn) clearBtn.style.display = currentDialogModels.length > 0 ? 'inline-flex' : 'none';
+
   if (!container) return;
   if (currentDialogModels.length === 0) {
     container.innerHTML = '<span style="font-size:11.5px;color:#94a3b8;line-height:24px;">暂无添加模型，请点击上方「一键从服务商获取模型」或手动添加</span>';
@@ -5936,7 +6902,7 @@ function renderCurrentDialogModels() {
       <strong>${esc(m.alias)}</strong>
       ${m.model && m.model !== m.alias ? `<span style="color:#64748b;font-size:11px;">(${esc(m.model)})</span>` : ''}
       ${m.contextWindow ? `<span style="font-size:10px;background:#bae6fd;padding:1px 3px;border-radius:3px;">${(m.contextWindow/1024).toFixed(0)}k</span>` : ''}
-      <span style="cursor:pointer;font-weight:bold;margin-left:2px;color:#ef4444;" onclick="window.removeModelFromDialog(${idx})">×</span>
+      <span style="cursor:pointer;font-weight:bold;margin-left:2px;color:#ef4444;" title="移除此模型" onclick="window.removeModelFromDialog(${idx})">×</span>
     </span>
   `).join('');
 }
@@ -5945,6 +6911,21 @@ window.removeModelFromDialog = (index) => {
   currentDialogModels.splice(index, 1);
   renderCurrentDialogModels();
 };
+
+$('clearAllProviderModelsBtn')?.addEventListener('click', async () => {
+  if (currentDialogModels.length === 0) return;
+  const count = currentDialogModels.length;
+  const ok = await showConfirm({
+    title: '一键清除模型',
+    message: `确定要清除当前已包含的全部 <strong>${count}</strong> 个模型吗？<br><small style="color:#64748b;">点击下方「保存」按钮后将同步从系统配置中移除。</small>`,
+    okText: '确认清除',
+    isDanger: true,
+  });
+  if (!ok) return;
+  currentDialogModels = [];
+  renderCurrentDialogModels();
+  showToast(`已清空 ${count} 个模型，点击下方「保存」后正式生效`, 'info');
+});
 
 window.fetchAndSyncModelsForProvider = async (providerId, clickBtn) => {
   const btn = clickBtn || (window.event?.currentTarget);
@@ -6000,7 +6981,7 @@ window.fetchAndSyncModelsForProvider = async (providerId, clickBtn) => {
           contextWindow: 64000,
         }).catch(() => {});
       }
-      showToast(`🎉 成功从 ${providerId} 导入并生效 ${selectedCbs.length} 个模型！`, 'success');
+      showToast(`成功从 ${providerId} 导入并生效 ${selectedCbs.length} 个模型！`, 'success');
       await refresh();
     };
 
@@ -6013,7 +6994,7 @@ window.fetchAndSyncModelsForProvider = async (providerId, clickBtn) => {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = origText || '🔄 获取模型';
+      btn.textContent = origText || '获取模型';
     }
   }
 };
@@ -6248,23 +7229,23 @@ async function refreshServerDetailsModalContent(id) {
       $('serverDetailsMemBar').style.background = memPct > 85 ? '#ef4444' : memPct > 60 ? '#f59e0b' : '#10b981';
     }
 
-    if ($('serverDetailsDiskBadge')) $('serverDetailsDiskBadge').textContent = diskTotal > 0 ? `${diskPct}%` : '/';
-    if ($('serverDetailsDiskFree')) $('serverDetailsDiskFree').textContent = diskTotal > 0 ? `${diskUsedGb} GB` : '正常挂载';
-    if ($('serverDetailsDiskTotal')) $('serverDetailsDiskTotal').textContent = diskTotal > 0 ? `总空间: ${diskTotalGb} GB (已用 ${diskPct}%)` : '主系统盘已挂载';
-    if ($('serverDetailsDiskBar')) $('serverDetailsDiskBar').style.width = `${diskPct || 25}%`;
+    if ($('serverDetailsDiskBadge')) $('serverDetailsDiskBadge').textContent = diskTotal > 0 ? `${diskPct}%` : '未知';
+    if ($('serverDetailsDiskFree')) $('serverDetailsDiskFree').textContent = diskTotal > 0 ? `${diskUsedGb} GB` : '不可用';
+    if ($('serverDetailsDiskTotal')) $('serverDetailsDiskTotal').textContent = diskTotal > 0 ? `总空间: ${diskTotalGb} GB (已用 ${diskPct}%)` : '磁盘数据不可用';
+    if ($('serverDetailsDiskBar')) $('serverDetailsDiskBar').style.width = `${diskTotal > 0 ? diskPct : 0}%`;
 
-    if ($('serverDetailsUptime')) $('serverDetailsUptime').textContent = uptimeSec > 0 ? formatHostUptime(uptimeSec) : '运行中';
+    if ($('serverDetailsUptime')) $('serverDetailsUptime').textContent = uptimeSec > 0 ? formatHostUptime(uptimeSec) : '未知';
     if ($('serverDetailsPlatform')) $('serverDetailsPlatform').textContent = `系统: ${info?.osRelease || info?.platform || 'Linux'}`;
 
     if ($('serverDetailsOsFull')) $('serverDetailsOsFull').textContent = info?.osRelease || info?.os?.release || info?.platform || 'Linux';
     if ($('serverDetailsArch')) $('serverDetailsArch').textContent = info?.arch || info?.os?.arch || 'x86_64';
     if ($('serverDetailsHostname')) $('serverDetailsHostname').textContent = info?.hostname || info?.os?.hostname || (server?.host || '--');
-    if ($('serverDetailsLoadAvg')) $('serverDetailsLoadAvg').textContent = Array.isArray(info?.loadAvg) ? info.loadAvg.map(n => typeof n === 'number' ? n.toFixed(2) : n).join(', ') : '0.15, 0.22, 0.18';
+    if ($('serverDetailsLoadAvg')) $('serverDetailsLoadAvg').textContent = Array.isArray(info?.loadAvg) && info.loadAvg.length > 0 ? info.loadAvg.map(n => typeof n === 'number' ? n.toFixed(2) : n).join(', ') : '未知';
 
     if ($('serverDetailsDaemonPort')) $('serverDetailsDaemonPort').textContent = String(server?.daemonPort || 9527);
     if ($('serverDetailsSshUser')) $('serverDetailsSshUser').textContent = server?.username || 'root';
     if ($('serverDetailsAuthType')) $('serverDetailsAuthType').textContent = server?.authType === 'privateKey' ? 'SSH 私钥免密' : '账号密码认证';
-    if ($('serverDetailsNodeVer')) $('serverDetailsNodeVer').textContent = info?.nodeVersion || 'v18+';
+    if ($('serverDetailsNodeVer')) $('serverDetailsNodeVer').textContent = info?.nodeVersion || '未知';
 
     // 绑定动作按钮事件
     if ($('serverDetailsPanoramaBtn')) {
@@ -6325,7 +7306,7 @@ const PRESET_MCP_CATALOG = [
     desc: '管理 Issues、Pull Requests、分支代码审查与文件树',
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-github'],
-    icon: '🐙',
+    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>',
     category: 'developer',
     tags: ['GitHub', 'Code', 'Official'],
   },
@@ -6335,7 +7316,7 @@ const PRESET_MCP_CATALOG = [
     desc: '分析 SQLite 本地数据库、提取 Schema 结构并自动化执行 SQL',
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-sqlite'],
-    icon: '🗄️',
+    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>',
     category: 'database',
     tags: ['SQLite', 'SQL', 'Database'],
   },
@@ -6345,7 +7326,7 @@ const PRESET_MCP_CATALOG = [
     desc: '连接远程或本地 Postgres，进行表结构反向工程与复杂 SQL 编排',
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-postgres'],
-    icon: '🐘',
+    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>',
     category: 'database',
     tags: ['PostgreSQL', 'SQL', 'Database'],
   },
@@ -6355,7 +7336,7 @@ const PRESET_MCP_CATALOG = [
     desc: '调用 Brave 搜索 API 获取实时互联网最新文档、技术动态与解决思路',
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-brave-search'],
-    icon: '🦁',
+    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>',
     category: 'search',
     tags: ['Search', 'Web', 'Live'],
   },
@@ -6365,7 +7346,7 @@ const PRESET_MCP_CATALOG = [
     desc: '构建项目与用户长期知识图谱，跨多轮会话持久化关键决策与偏好',
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-memory'],
-    icon: '🧠',
+    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>',
     category: 'system',
     tags: ['Knowledge Graph', 'Memory'],
   },
@@ -6375,7 +7356,7 @@ const PRESET_MCP_CATALOG = [
     desc: '无头浏览器页面排版审查、控制台错误抓取、渲染视觉快照与截图',
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-puppeteer'],
-    icon: '🌐',
+    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>',
     category: 'browser',
     tags: ['Browser', 'DevTools', 'UI'],
   },
@@ -6385,7 +7366,7 @@ const PRESET_MCP_CATALOG = [
     desc: '监控本地 Docker 容器生命周期、Compose 编排与日志排查',
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-docker'],
-    icon: '🐳',
+    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="14" width="18" height="7" rx="2"></rect><rect x="4" y="9" width="4" height="4"></rect><rect x="10" y="9" width="4" height="4"></rect><rect x="16" y="9" width="4" height="4"></rect></svg>',
     category: 'ops',
     tags: ['Docker', 'DevOps', 'Containers'],
   },
@@ -6395,7 +7376,7 @@ const PRESET_MCP_CATALOG = [
     desc: '高效抓取任意 URL 页面并转化为 Markdown，供智能体深度研读',
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-fetch'],
-    icon: '📥',
+    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path></svg>',
     category: 'developer',
     tags: ['Fetch', 'Markdown', 'Web'],
   },
@@ -6405,7 +7386,7 @@ const PRESET_MCP_CATALOG = [
     desc: '向 Slack 频道发送构建通知、告警消息或与团队实时异步沟通',
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-slack'],
-    icon: '💬',
+    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>',
     category: 'im',
     tags: ['Slack', 'Collaboration'],
   },
@@ -6491,11 +7472,11 @@ function renderMarket(query = '', tab = activeMarketTab) {
   if (filtered.length === 0) {
     container.innerHTML = `
       <div class="empty-card" style="grid-column:1/-1;padding:48px 20px;text-align:center;color:var(--text-muted);background:#ffffff;border-radius:12px;border:1px dashed #cbd5e1;">
-        <div style="font-size:32px;margin-bottom:10px;">🔍</div>
+        <div style="margin-bottom:10px; display:flex; justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);margin-bottom:8px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></div>
         <div style="font-size:15px;font-weight:700;color:var(--text-main);margin-bottom:6px;">未检索到匹配的插件或技能</div>
         <div style="font-size:12.5px;max-width:400px;margin:0 auto 16px auto;">您可以清空搜索条件，或者点击上方按钮安装热门 MCP 或导入 GitHub Skill</div>
         <button type="button" class="btn primary" onclick="$('openPresetMcpModalBtn').click()" style="margin:0 auto;">
-          📦 浏览热门 MCP 扩展市场
+          浏览热门 MCP 扩展市场
         </button>
       </div>
     `;
@@ -6505,7 +7486,7 @@ function renderMarket(query = '', tab = activeMarketTab) {
   container.innerHTML = filtered.map(item => {
     const isMcp = item.kind === 'mcp';
     const isSkill = item.kind === 'skill';
-    const icon = isMcp ? '🧩' : isSkill ? '⚡' : '🛠️';
+    const icon = isMcp ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.439 7.85c0-1.571-1.277-2.85-2.852-2.85a2.85 2.85 0 0 0-2.85 2.85V9H10V7.85C10 6.279 8.723 5 7.148 5 5.572 5 4.296 6.279 4.296 7.85v1.299a2.85 2.85 0 0 0 2.852 2.851h.704V14H6.57a2.85 2.85 0 0 0-2.851 2.85v1.299c0 1.571 1.276 2.851 2.851 2.851h1.299a2.85 2.85 0 0 0 2.85-2.851v-.704H13.73v.704a2.85 2.85 0 0 0 2.851 2.851h1.306c1.575 0 2.852-1.28 2.852-2.851V16.85a2.85 2.85 0 0 0-2.852-2.85h-.704V12h.704a2.85 2.85 0 0 0 2.852-2.851V7.85z"></path></svg>' : isSkill ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>';
 
     let commandSnippetHtml = '';
     if (item.command) {
@@ -6702,7 +7683,7 @@ async function renderSchedules() {
               <strong style="font-size:14px;color:var(--text-main);">${esc(job.name)}</strong>
               <div style="margin-top:4px;display:flex;align-items:center;gap:6px;">
                 <span class="prop-chip" style="font-family:var(--font-mono);font-size:11.5px;color:#0284c7;background:#f0f9ff;">⏰ ${esc(job.cron)}</span>
-                <span class="prop-chip" style="font-size:11.5px;">🤖 ${esc(job.agent || 'coder')}</span>
+                <span class="prop-chip" style="font-size:11.5px;">${esc(job.agent || 'coder')}</span>
               </div>
             </div>
             <label class="switch" style="position:relative;display:inline-block;width:34px;height:18px;">
@@ -6757,7 +7738,7 @@ window.openAddScheduleDialog = () => {
   $('scheduleInputId').value = '';
   const agentSelect = $('scheduleAgentSelect');
   if (agentSelect) {
-    agentSelect.innerHTML = (state.agents || []).map(a => `<option value="${esc(a.id)}">${esc(a.name || a.id)} (${esc(a.id)})</option>`).join('');
+    agentSelect.innerHTML = (state.agents || []).map(a => `<option value="${esc(a.id)}">${esc(formatAgentLabel(a))}</option>`).join('');
   }
   dialog.showModal();
 };
@@ -6775,7 +7756,7 @@ window.openEditScheduleDialog = async (id) => {
   $('scheduleInputPrompt').value = job.prompt || '';
   const agentSelect = $('scheduleAgentSelect');
   if (agentSelect) {
-    agentSelect.innerHTML = (state.agents || []).map(a => `<option value="${esc(a.id)}">${esc(a.name || a.id)} (${esc(a.id)})</option>`).join('');
+    agentSelect.innerHTML = (state.agents || []).map(a => `<option value="${esc(a.id)}">${esc(formatAgentLabel(a))}</option>`).join('');
     agentSelect.value = job.agent || 'coder';
   }
   dialog.showModal();
@@ -6830,7 +7811,7 @@ window.runScheduleNow = async (id) => {
   try {
     const res = await window.hap.runScheduleNow(id);
     if (res.status === 'success') {
-      showToast('🎉 定时任务执行成功！', 'success');
+      showToast('定时任务执行成功！', 'success');
     } else {
       showToast('任务执行返回异常：' + (res.error || '未完成'), 'error');
     }
@@ -6917,7 +7898,7 @@ function renderEnvVarsList(list) {
             <strong style="font-size:13.5px;color:#0f172a;">${esc(item.label || item.key)}</strong>
             <code style="font-size:11.5px;background:#f1f5f9;padding:2px 6px;border-radius:4px;color:#0284c7;">${esc(item.key)}</code>
             <span class="badge ${item.isSet ? 'success' : 'warn'}" style="font-size:11px;">
-              ${item.isSet ? '🟢 已配置' : '⚪ 未配置'}
+              ${item.isSet ? '已配置' : '未配置'}
             </span>
           </div>
           <div style="font-size:11.5px;color:#64748b;">${esc(item.desc || '')}</div>
@@ -7026,7 +8007,7 @@ $('doBatchImportEnvBtn')?.addEventListener('click', async () => {
 
   try {
     await window.hap.batchSaveEnvVars(entries);
-    showToast(`🎉 成功导入并生效 ${count} 项环境变量！`, 'success');
+    showToast(`成功导入并生效 ${count} 项环境变量！`, 'success');
     $('batchEnvTextarea').value = '';
     $('batchEnvImportBox').style.display = 'none';
     await renderEnvManagerModal();
@@ -7092,7 +8073,7 @@ function populateImageGenProviders() {
   }
   optGroup.innerHTML = providers.map(p => {
     const isReady = p.healthStatus === 'ok';
-    const label = `${p.name || p.id} (${isReady ? '🟢 连通就绪' : p.healthStatus === 'missing_credentials' ? '⚪ 需填Key' : '🟡 待测试'})`;
+    const label = `${p.name || p.id} (${isReady ? '连通就绪' : p.healthStatus === 'missing_credentials' ? '需填Key' : '待测试'})`;
     return `<option value="${esc(p.id)}:dall-e-3" data-provider="${esc(p.id)}" data-model="dall-e-3">${esc(label)} - DALL-E 3 / Flux</option>`;
   }).join('');
 }
@@ -7111,7 +8092,7 @@ function updateImageGenModelChip() {
   if (val === 'custom:custom') {
     if (customBox) customBox.style.display = 'flex';
     if (manualBox) manualBox.style.display = 'none';
-    chip.innerHTML = '<span style="color:#0284c7;">✨ 自定义生图端点</span>';
+    chip.innerHTML = '<span style="color:#0284c7;">自定义生图端点</span>';
     return;
   } else if (val === 'manual:manual') {
     if (customBox) customBox.style.display = 'none';
@@ -7119,7 +8100,7 @@ function updateImageGenModelChip() {
       manualBox.style.display = 'block';
       $('manualImageModelInput')?.focus();
     }
-    chip.innerHTML = '<span style="color:#0284c7;">✏️ 手动填写生图模型</span>';
+    chip.innerHTML = '<span style="color:#0284c7;">手动填写生图模型</span>';
     return;
   } else {
     if (customBox) customBox.style.display = 'none';
@@ -7127,15 +8108,15 @@ function updateImageGenModelChip() {
   }
 
   if (provider === 'pollinations') {
-    chip.innerHTML = '<span style="color:#10b981;">⚡ 免 Key · 即刻可用</span>';
+    chip.innerHTML = '<span style="color:#10b981;">免 Key · 即刻可用</span>';
   } else {
     const p = (state.providers || []).find(item => item.id === provider);
     if (p && p.healthStatus === 'ok') {
-      chip.innerHTML = `<span style="color:#10b981;">🟢 ${esc(p.name || p.id)} 连通就绪</span>`;
+      chip.innerHTML = `<span style="color:#10b981;">${esc(p.name || p.id)} 连通就绪</span>`;
     } else if (p && p.healthStatus === 'unknown') {
-      chip.innerHTML = `<span style="color:#f59e0b;">🟡 ${esc(p.name || p.id)} 已配置，需先连通测试</span>`;
+      chip.innerHTML = `<span style="color:#f59e0b;">${esc(p.name || p.id)} 已配置，需先连通测试</span>`;
     } else {
-      chip.innerHTML = `<span style="color:#f59e0b;">⚪ 需配置 ${esc(provider.toUpperCase())}_API_KEY</span>`;
+      chip.innerHTML = `<span style="color:#f59e0b;">需配置 ${esc(provider.toUpperCase())}_API_KEY</span>`;
     }
   }
 }
@@ -7282,7 +8263,7 @@ function initAiImageStudio() {
         $('imageGenEngineBadge').textContent = res.engineUsed || 'Flux SDXL';
         $('imageGenInfoPrompt').textContent = `“${res.prompt}”`;
         $('imageGenInfoMeta').textContent = `${res.width}x${res.height} (${ratio})`;
-        showToast(`🎉 AI 图像生成成功！耗时 ${elapsedSec}s`, 'success');
+        showToast(`AI 图像生成成功！耗时 ${elapsedSec}s`, 'success');
 
         // 点击大图全屏预览 Lightbox
         $('previewImgContainer').onclick = () => {
@@ -7356,6 +8337,7 @@ let activePanoramaTarget = 'local'; // 'local' 或 serverId
 
 window.openNodePanorama = (targetId) => {
   activePanoramaTarget = targetId || 'local';
+  resetDiskScanForTarget(activePanoramaTarget);
   show('host');
   const select = $('panoramaNodeSelect');
   if (select) select.value = activePanoramaTarget;
@@ -7365,12 +8347,16 @@ window.openNodePanorama = (targetId) => {
 
 $('panoramaNodeSelect')?.addEventListener('change', (e) => {
   activePanoramaTarget = e.target.value || 'local';
+  resetDiskScanForTarget(activePanoramaTarget);
   refreshHostView();
 });
 
 // 重构 refreshHostView 支持监控任意节点
 window.refreshHostView = async () => {
-  if (hostRefreshInFlight) return;
+  if (hostRefreshInFlight) {
+    hostRefreshQueued = true;
+    return;
+  }
   hostRefreshInFlight = true;
   const targetId = activePanoramaTarget || 'local';
   const isLocal = targetId === 'local';
@@ -7379,8 +8365,8 @@ window.refreshHostView = async () => {
   const select = $('panoramaNodeSelect');
   if (select) {
     const servers = cachedServers.length > 0 ? cachedServers : (state.servers || []);
-    const opts = ['<option value="local">🖥️ 本机宿主环境 (Local Host)</option>']
-      .concat(servers.map(s => `<option value="${esc(s.id)}">🌐 ${esc(s.name)} (${esc(s.host)})${s.status === 'online' ? ' [在线]' : ''}</option>`))
+    const opts = ['<option value="local">本机宿主环境 (Local Host)</option>']
+      .concat(servers.map(s => `<option value="${esc(s.id)}">${esc(s.name)} (${esc(s.host)})${s.status === 'online' ? ' [在线]' : ''}</option>`))
       .join('');
     select.innerHTML = opts;
     select.value = targetId;
@@ -7424,13 +8410,23 @@ window.refreshHostView = async () => {
   try {
     if (isLocal) {
       // 本机系统全景
+      setProcessPanelMode(false);
       const info = await window.hap.getHostSysInfo();
+      if (targetId !== (activePanoramaTarget || 'local')) return;
       renderLocalHostView(info);
     } else {
       // 远端服务器节点全景
       const s = cachedServers.find(item => item.id === targetId);
-      const info = await window.hap.getServerInfo(targetId);
+      setProcessPanelMode(true, s?.name || targetId);
+      const [info, processList] = await Promise.all([
+        window.hap.getServerInfo(targetId),
+        window.hap.getServerProcesses(targetId, { limit: 100 }).catch(() => null),
+      ]);
+      if (targetId !== (activePanoramaTarget || 'local')) return;
       if (!info) return;
+
+      if (processList) renderRemoteProcessList(processList, targetId);
+      else if ($('hostTopProcessList')) $('hostTopProcessList').innerHTML = '<div style="color:#dc2626; font-size:12px; padding:8px 0; text-align:center;">远程进程接口暂不可用</div>';
 
       const cpuPct = info.cpuUsagePercent ?? info.cpu?.usagePercent ?? 0;
       const cpuCores = info.cpuCount ?? info.cpu?.cores ?? '--';
@@ -7467,8 +8463,8 @@ window.refreshHostView = async () => {
       if ($('hostProcessHeap')) $('hostProcessHeap').textContent = `SSH 账户: ${s?.username || 'root'}@${s?.host || '--'}`;
 
       const uptimeSec = info.uptimeSeconds ?? info.uptime ?? 0;
-      if ($('hostLoadAvgBadge')) $('hostLoadAvgBadge').textContent = `负载: ${Array.isArray(info.loadAvg) ? info.loadAvg.map(n => typeof n === 'number' ? n.toFixed(2) : n).join(', ') : '0.12, 0.18, 0.15'}`;
-      if ($('hostSystemUptime')) $('hostSystemUptime').textContent = formatHostUptime(uptimeSec);
+      if ($('hostLoadAvgBadge')) $('hostLoadAvgBadge').textContent = `负载: ${Array.isArray(info.loadAvg) && info.loadAvg.length > 0 ? info.loadAvg.map(n => typeof n === 'number' ? n.toFixed(2) : n).join(', ') : '未知'}`;
+      if ($('hostSystemUptime')) $('hostSystemUptime').textContent = uptimeSec > 0 ? formatHostUptime(uptimeSec) : '未知';
       if ($('hostProcessUptime')) $('hostProcessUptime').textContent = `节点别名: ${s?.name || targetId}`;
       if ($('hostTimestamp')) $('hostTimestamp').textContent = `更新于: ${new Date().toLocaleTimeString()}`;
 
@@ -7477,19 +8473,19 @@ window.refreshHostView = async () => {
         const diskTotal = info.diskTotalBytes ?? info.disk?.total ?? 0;
         const diskFree = info.diskFreeBytes ?? info.disk?.free ?? 0;
         const diskUsed = diskTotal - diskFree;
-        const diskPct = diskTotal > 0 ? Math.round((diskUsed / diskTotal) * 100) : 25;
+        const diskPct = diskTotal > 0 ? Math.round((diskUsed / diskTotal) * 100) : 0;
         partList.innerHTML = `
           <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; font-size:12px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
               <strong>/ (主文件系统根挂载)</strong>
-              <span style="font-family:var(--font-mono); font-weight:600; color:#0284c7;">${diskPct}%</span>
+              <span style="font-family:var(--font-mono); font-weight:600; color:#0284c7;">${diskTotal > 0 ? `${diskPct}%` : '未知'}</span>
             </div>
             <div style="width:100%; height:4px; background:#e2e8f0; border-radius:2px; overflow:hidden; margin-bottom:4px;">
               <div style="width:${diskPct}%; height:100%; background:#0284c7;"></div>
             </div>
             <div style="font-size:11px; color:#64748b; display:flex; justify-content:space-between;">
-              <span>已用: ${fmtHostBytes(diskUsed)}</span>
-              <span>总计: ${fmtHostBytes(diskTotal)}</span>
+              <span>已用: ${diskTotal > 0 ? fmtHostBytes(diskUsed) : '不可用'}</span>
+              <span>总计: ${diskTotal > 0 ? fmtHostBytes(diskTotal) : '不可用'}</span>
             </div>
           </div>
         `;
@@ -7500,13 +8496,17 @@ window.refreshHostView = async () => {
       if ($('hostUsername')) $('hostUsername').textContent = s?.username || 'root';
       if ($('hostOsFull')) $('hostOsFull').textContent = info.osRelease || 'Linux';
       if ($('hostArch')) $('hostArch').textContent = info.arch || 'x86_64';
-      if ($('hostNodeVersion')) $('hostNodeVersion').textContent = info.nodeVersion || 'v18+';
+      if ($('hostNodeVersion')) $('hostNodeVersion').textContent = info.nodeVersion || '未知';
       if ($('hostCwd')) $('hostCwd').textContent = `/root/.hap/`;
     }
   } catch (error) {
     console.error('刷新节点监控失败:', error);
   } finally {
     hostRefreshInFlight = false;
+    if (hostRefreshQueued) {
+      hostRefreshQueued = false;
+      void window.refreshHostView();
+    }
   }
 };
 
@@ -7521,7 +8521,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'web',
     title: '申请 Let\'s Encrypt SSL 安全证书',
     desc: '全自动向 Let\'s Encrypt 申请官方免费 HTTPS 证书，支持自动绑定 Nginx 与每 60 天自动续期',
-    icon: '🔒',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>',
     type: 'modal',
     action: () => window.openSslCertModal(),
   },
@@ -7530,7 +8530,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'web',
     title: '一键安装 Nginx Web 服务器',
     desc: '通过系统官方源一键安装 Nginx，配置默认反向代理根目录并设置开机自动启动守护服务',
-    icon: '🌐',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>',
     cmd: 'sudo apt-get update && sudo apt-get install -y nginx && sudo systemctl enable --now nginx && sudo nginx -v',
   },
   {
@@ -7538,7 +8538,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'web',
     title: '可视化配置 Nginx 反向代理',
     desc: '一键生成标准的 sites-available 域名反代规则，支持 WebSocket、流式响应并平滑 reload',
-    icon: '🔀',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>',
     type: 'modal',
     action: () => window.openNginxProxyModal(),
   },
@@ -7547,7 +8547,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'web',
     title: '测试并平滑重载 Nginx 配置',
     desc: '执行 nginx -t 语法完整性自检，若语法通过则立即向主进程发送 HUP 信号无缝平滑重载',
-    icon: '🔄',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>',
     cmd: 'sudo nginx -t && sudo systemctl reload nginx && echo "\n[Success] Nginx 语法自检通过并已完成平滑重载！"',
   },
   {
@@ -7555,7 +8555,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'web',
     title: '检查所有已配置 SSL 证书有效期',
     desc: '扫描并列出 Certbot 管理的所有域名的证书路径、加密套件与剩余到期天数',
-    icon: '📜',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
     cmd: 'sudo certbot certificates 2>/dev/null || echo "当前机器尚未安装 Certbot 证书工具"',
   },
   {
@@ -7563,7 +8563,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'web',
     title: '强制续签全部 SSL 证书',
     desc: '立即对当前服务器上所有已绑定的 Let\'s Encrypt 证书执行续签并重载 Web 服务',
-    icon: '⚡',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>',
     cmd: 'sudo certbot renew --force-renewal && sudo systemctl reload nginx || true',
   },
 
@@ -7573,7 +8573,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'env',
     title: 'Node.js LTS (v20+) & pnpm & PM2',
     desc: '自动化配置 Nodesource 官方镜像源，安装最新 Node.js、npm、pnpm 与 PM2 生产级进程守护',
-    icon: '🟩',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>',
     cmd: 'curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs && sudo npm install -g pnpm pm2 && echo "\nNode 版本: $(node -v)\npm 版本: $(npm -v)\npm2 版本: $(pm2 -v)"',
   },
   {
@@ -7581,7 +8581,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'env',
     title: 'Docker & Docker Compose 官方最新版',
     desc: '通过 Docker 官方全自动安装脚本部署容器引擎、安装 Compose 插件并加入当前用户组',
-    icon: '🐳',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="14" width="18" height="7" rx="2"></rect><rect x="4" y="9" width="4" height="4"></rect><rect x="10" y="9" width="4" height="4"></rect><rect x="16" y="9" width="4" height="4"></rect></svg>',
     cmd: 'curl -fsSL https://get.docker.com | sudo sh && sudo systemctl enable --now docker && sudo usermod -aG docker $USER 2>/dev/null || true && echo "\nDocker 已安装: $(docker --version)"',
   },
   {
@@ -7589,7 +8589,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'env',
     title: 'Python 3、pip 与 uv 极速包管理器',
     desc: '安装 Python3 核心开发库、虚拟环境模块以及由 Astral 开发的万倍极速包管理器 uv',
-    icon: '🐍',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>',
     cmd: 'sudo apt-get update && sudo apt-get install -y python3 python3-pip python3-venv python3-dev && curl -LsSf https://astral.sh/uv/install.sh | sh && echo "\nPython 环境就绪: $(python3 --version)"',
   },
   {
@@ -7597,7 +8597,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'env',
     title: 'Redis 内存高速缓存数据库',
     desc: '一键部署 Redis Server 内存数据库，开启 systemd 服务守护并验证 PING 连通响应',
-    icon: '🟥',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>',
     cmd: 'sudo apt-get update && sudo apt-get install -y redis-server && sudo systemctl enable --now redis-server && redis-cli ping && echo "\nRedis 数据库已成功启动并就绪！"',
   },
   {
@@ -7605,7 +8605,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'env',
     title: 'PostgreSQL 关系型数据库',
     desc: '安装 PostgreSQL 关系型数据库服务端与 contrib 扩展包，并初始化默认 postgres 账户',
-    icon: '🐘',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>',
     cmd: 'sudo apt-get update && sudo apt-get install -y postgresql postgresql-contrib && sudo systemctl enable --now postgresql && sudo -u postgres psql -c "SELECT version();"',
   },
   {
@@ -7613,7 +8613,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'env',
     title: 'Linux 基础运维工具全家桶',
     desc: '一键安装 git, curl, wget, htop, jq, unzip, tar, net-tools, build-essential 等 10+ 常用运维软件',
-    icon: '🛠️',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>',
     cmd: 'sudo apt-get update && sudo apt-get install -y git build-essential curl wget htop jq unzip tar net-tools procps && echo "\n[Success] 基础运维工具包已全部就绪！"',
   },
 
@@ -7623,7 +8623,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'sec',
     title: '一键开启 Linux BBR 拥塞控制加速',
     desc: '优化 TCP 队列算法为 fq+bbr，大幅提升高丢包、高延迟网络下的传输带宽与响应速度',
-    icon: '🚀',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>',
     cmd: 'echo "net.core.default_qdisc=fq" | sudo tee -a /etc/sysctl.conf && echo "net.ipv4.tcp_congestion_control=bbr" | sudo tee -a /etc/sysctl.conf && sudo sysctl -p && sysctl net.ipv4.tcp_congestion_control && echo "\n[Success] Linux BBR 拥塞控制加速已成功开启！"',
   },
   {
@@ -7631,7 +8631,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'sec',
     title: 'UFW 防火墙一键放行核心业务端口',
     desc: '自动启用 UFW 防火墙并快速放行 22 (SSH)、80 (HTTP)、443 (HTTPS) 及 9527 (HAP 通信) 端口',
-    icon: '🛡️',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>',
     cmd: 'sudo ufw allow 22/tcp && sudo ufw allow 80/tcp && sudo ufw allow 443/tcp && sudo ufw allow 9527/tcp && sudo ufw --force enable && sudo ufw status verbose',
   },
   {
@@ -7639,7 +8639,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'sec',
     title: '一键创建 2GB Swap 虚拟内存 (防OOM)',
     desc: '在磁盘创建 2GB 安全虚拟交换文件，写入 /etc/fstab 自动挂载，防止突发内存溢出崩溃',
-    icon: '💾',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>',
     cmd: 'sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile && (grep -q "/swapfile" /etc/fstab || echo "/swapfile none swap sw 0 0" | sudo tee -a /etc/fstab) && swapon --show && echo "\n[Success] 2GB Swap 虚拟内存创建并激活成功！"',
   },
   {
@@ -7647,7 +8647,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'sec',
     title: 'SSH 安全加固：禁用密码登录',
     desc: '关闭 SSH 密码爆破通道，强制仅允许私钥认证登录 (请务必确保本地已成功配置 SSH 公钥)',
-    icon: '🔑',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-1.5 1.5L14 9l-1.5-1.5M9 13l-4 4a3 3 0 1 0 4 4l4-4"></path></svg>',
     cmd: 'sudo sed -i "s/^#*PasswordAuthentication.*/PasswordAuthentication no/" /etc/ssh/sshd_config && (sudo systemctl restart ssh || sudo systemctl restart sshd) && echo "\n[Success] SSH 密码认证已关闭，当前仅接受公钥验证！"',
   },
 
@@ -7657,7 +8657,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'clean',
     title: '全量系统包与内核安全升级',
     desc: '同步最新软件仓库索引，自动升级存在 CVE 漏洞的软件包并自动清理无用孤儿依赖',
-    icon: '📦',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>',
     cmd: 'sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get autoremove -y && echo "\n[Success] 系统全量软件包升级完毕！"',
   },
   {
@@ -7665,7 +8665,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'clean',
     title: '清理 Docker 无用容器、镜像与卷缓存',
     desc: '一键深度释放 Docker 磁盘空间，清理所有已停止的容器、悬空无标签镜像及残留缓存',
-    icon: '🧹',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
     cmd: 'docker system prune -af --volumes && echo "\n[Success] Docker 无用容器与镜像缓存已深度清理！"',
   },
   {
@@ -7673,7 +8673,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'clean',
     title: '清空 Systemd 过期日志与 apt 缓存',
     desc: '清除 3 天前的旧系统日志（保留近期诊断），清空 apt 安装包本地缓存释放磁盘',
-    icon: '🗑️',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
     cmd: 'sudo journalctl --vacuum-time=3d && sudo journalctl --vacuum-size=100M && sudo apt-get clean && df -h /',
   },
   {
@@ -7681,7 +8681,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'clean',
     title: '扫描全盘 >100MB 大文件 TOP 15',
     desc: '快速定位占用服务器存储空间最大的前 15 个大文件、归档包与服务 Core dump',
-    icon: '🔍',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>',
     cmd: 'sudo find / -type f -size +100M -exec ls -lh {} + 2>/dev/null | sort -k 5 -rh | head -n 15 || true',
   },
   {
@@ -7689,7 +8689,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'clean',
     title: '查看所有网络监听端口与关联进程',
     desc: '通过 ss/netstat 实时输出当前机器所有正在监听的 TCP/UDP 端口及对应执行 PID',
-    icon: '🔌',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>',
     cmd: 'sudo ss -tulpn || sudo netstat -tulpn',
   },
   {
@@ -7697,7 +8697,7 @@ const OPS_PRESET_SCRIPTS = [
     category: 'clean',
     title: '全景 VPS 综合跑分与测速 (YABS)',
     desc: '测试 Geekbench CPU 多核算力、4K 磁盘 IOPS 读写速度与国际骨干网回程延迟',
-    icon: '📊',
+    icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>',
     cmd: 'curl -sL yabs.sh | bash -s -- -i -g',
   },
 ];
@@ -7745,10 +8745,10 @@ function renderOpsScriptsGrid() {
 
         <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #f1f5f9;">
           <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-            ${item.cmd ? esc(item.cmd) : '⚡ 引导式交互向导'}
+            ${item.cmd ? esc(item.cmd) : '引导式交互向导'}
           </div>
           <button type="button" class="btn primary" onclick="window.runPresetOpsScript('${item.id}')" style="padding:4px 14px;font-size:12px;white-space:nowrap;">
-            ${item.type === 'modal' ? '打开向导 ↗' : '立即执行 ⚡'}
+            ${item.type === 'modal' ? '打开向导 ↗' : '立即执行'}
           </button>
         </div>
       </div>
@@ -8248,8 +9248,8 @@ window.openNodeBotConfigModal = (preServerId) => {
     const select = $('nodeBotServerSelect');
     if (select) {
       const servers = cachedServers.length > 0 ? cachedServers : (state.servers || []);
-      const opts = ['<option value="local">🖥️ 本机宿主系统 (Local Host)</option>']
-        .concat(servers.map(s => `<option value="${esc(s.id)}">🌐 ${esc(s.name)} (${esc(s.host)})</option>`))
+      const opts = ['<option value="local">本机宿主系统 (Local Host)</option>']
+        .concat(servers.map(s => `<option value="${esc(s.id)}">${esc(s.name)} (${esc(s.host)})</option>`))
         .join('');
       select.innerHTML = opts;
       select.value = targetId;
@@ -8522,7 +9522,7 @@ async function renderMemories(searchQuery = '') {
       agents.forEach(a => {
         const opt = document.createElement('option');
         opt.value = a.id;
-        opt.textContent = a.name || a.id;
+        opt.textContent = formatAgentLabel(a);
         filterSelect.appendChild(opt);
       });
     }
@@ -8560,7 +9560,7 @@ async function renderMemories(searchQuery = '') {
           <div style="flex:1;">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
               <span class="prop-chip" style="background:${cat.bg};color:${cat.color};font-weight:600;font-size:11px;">${cat.label}</span>
-              ${m.agentId ? `<span class="prop-chip" style="font-size:11px;">🤖 ${esc(m.agentId)}</span>` : '<span class="prop-chip" style="font-size:11px;color:#94a3b8;">🌐 全局通用</span>'}
+              ${m.agentId ? `<span class="prop-chip" style="font-size:11px;">${esc(m.agentId)}</span>` : '<span class="prop-chip" style="font-size:11px;color:#94a3b8;">全局通用</span>'}
               <span style="font-size:11px;color:#94a3b8;margin-left:auto;">${new Date(m.createdAt || m.updatedAt || Date.now()).toLocaleDateString()}</span>
             </div>
             <div style="font-size:13px;color:var(--text-main);line-height:1.5;white-space:pre-wrap;word-break:break-all;">${esc(m.content)}</div>
@@ -8581,7 +9581,7 @@ window.openAddMemoryDialog = () => {
   form.reset();
   const agentSelect = $('memoryAgentSelect');
   if (agentSelect) {
-    agentSelect.innerHTML = '<option value="">全部智能体通用</option>' + (state.agents || []).map(a => `<option value="${esc(a.id)}">${esc(a.name || a.id)} (${esc(a.id)})</option>`).join('');
+    agentSelect.innerHTML = '<option value="">全部智能体通用</option>' + (state.agents || []).map(a => `<option value="${esc(a.id)}">${esc(formatAgentLabel(a))}</option>`).join('');
   }
   dialog.showModal();
 };
@@ -8627,3 +9627,221 @@ window.deleteMemoryItem = async (id) => {
     showToast('删除失败：' + err.message, 'error');
   }
 };
+
+// ==========================================================================
+// 全局现代化高质感悬浮下拉弹层控制器 (Universal Custom Select Popup Controller)
+// ==========================================================================
+let activeCustomSelectPopup = null;
+
+function closeCustomSelectPopup() {
+  if (!activeCustomSelectPopup) return;
+  const select = activeCustomSelectPopup._targetSelect;
+  if (select) {
+    select.classList.remove('custom-select-open');
+    const pill = select.closest('.model-switch-pill, .tool-capsule');
+    if (pill) pill.classList.remove('custom-select-open');
+  }
+  activeCustomSelectPopup.remove();
+  activeCustomSelectPopup = null;
+}
+
+function openCustomSelectPopup(select) {
+  closeCustomSelectPopup();
+  if (!select || select.disabled) return;
+
+  const children = Array.from(select.children);
+  if (children.length === 0) return;
+
+  const pill = select.closest('.model-switch-pill, .tool-capsule');
+  const triggerEl = pill || select;
+  const sRect = triggerEl.getBoundingClientRect();
+
+  select.classList.add('custom-select-open');
+  if (pill) pill.classList.add('custom-select-open');
+
+  const popup = document.createElement('div');
+  popup.className = 'custom-select-popup';
+  if (pill) {
+    popup.classList.add('header-select-popup');
+  }
+  popup._targetSelect = select;
+
+  const checkmarkSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+
+  const isAgentSelect = select.classList.contains('agent-switch-select') || (select.id && select.id.toLowerCase().includes('agent'));
+  const isModelSelect = select.classList.contains('model-switch-select') || (select.id && select.id.toLowerCase().includes('model'));
+
+  let optIcon = '';
+  if (isAgentSelect) {
+    optIcon = '<svg class="custom-select-opt-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>';
+  } else if (isModelSelect) {
+    optIcon = '<svg class="custom-select-opt-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>';
+  }
+
+  function createOptionItem(opt, idx) {
+    const item = document.createElement('div');
+    item.className = 'custom-select-item';
+    item.dataset.value = opt.value;
+    item.dataset.index = idx;
+
+    const isSelected = (opt.value === select.value) || (select.selectedIndex === idx) || opt.selected;
+    if (isSelected) {
+      item.classList.add('selected');
+    }
+    if (opt.disabled) {
+      item.classList.add('disabled');
+    }
+
+    item.innerHTML = `
+      ${optIcon ? `<span class="custom-select-opt-prefix">${optIcon}</span>` : ''}
+      <span class="custom-select-item-text">${esc(opt.textContent || opt.text || opt.value)}</span>
+      <span class="custom-select-checkmark">${checkmarkSvg}</span>
+    `;
+
+    item.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      if (opt.disabled) return;
+      select.value = opt.value;
+      select.selectedIndex = idx;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      select.dispatchEvent(new Event('input', { bubbles: true }));
+      closeCustomSelectPopup();
+    });
+
+    return item;
+  }
+
+  let optionCounter = 0;
+  children.forEach((child) => {
+    if (child.tagName === 'OPTGROUP') {
+      const grp = document.createElement('div');
+      grp.className = 'custom-select-group-header';
+      grp.textContent = child.label || '';
+      popup.appendChild(grp);
+
+      Array.from(child.children).forEach((opt) => {
+        if (opt.tagName === 'OPTION') {
+          popup.appendChild(createOptionItem(opt, optionCounter++));
+        }
+      });
+    } else if (child.tagName === 'OPTION') {
+      popup.appendChild(createOptionItem(child, optionCounter++));
+    }
+  });
+
+  const dialog = select.closest('dialog');
+  const container = (dialog && dialog.open) ? dialog : document.body;
+  container.appendChild(popup);
+  activeCustomSelectPopup = popup;
+
+  const minW = pill ? Math.max(Math.round(sRect.width), 150) : Math.max(Math.round(sRect.width), 160);
+  popup.style.minWidth = `${minW}px`;
+  popup.style.width = 'max-content';
+  popup.style.maxWidth = `${Math.min(window.innerWidth - 32, 420)}px`;
+
+  const pRect = popup.getBoundingClientRect();
+  const popupWidth = pRect.width;
+  const pHeight = pRect.height || 220;
+  const spaceBelow = window.innerHeight - sRect.bottom;
+  const spaceAbove = sRect.top;
+
+  let top = sRect.bottom + 4;
+  let left = sRect.left;
+
+  if (pill && sRect.left > window.innerWidth / 2) {
+    left = sRect.right - popupWidth;
+  }
+
+  if (left + popupWidth > window.innerWidth - 12) {
+    left = window.innerWidth - popupWidth - 12;
+  }
+  if (left < 12) left = 12;
+
+  if (spaceBelow < pHeight && spaceAbove > spaceBelow) {
+    top = Math.max(10, sRect.top - pHeight - 4);
+    popup.classList.add('direction-up');
+  }
+
+  popup.style.top = `${top}px`;
+  popup.style.left = `${left}px`;
+
+  const selectedItem = popup.querySelector('.custom-select-item.selected');
+  if (selectedItem) {
+    selectedItem.scrollIntoView({ block: 'nearest' });
+  }
+}
+
+document.addEventListener('mousedown', (e) => {
+  if (e.target.closest('.custom-select-popup')) return;
+
+  const pill = e.target.closest('.model-switch-pill, .tool-capsule');
+  const select = e.target.closest('select') || (pill ? pill.querySelector('select') : null);
+  if (select) {
+    if (select.disabled) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (activeCustomSelectPopup && activeCustomSelectPopup._targetSelect === select) {
+      closeCustomSelectPopup();
+      return;
+    }
+
+    select.focus();
+    openCustomSelectPopup(select);
+    return;
+  }
+
+  if (activeCustomSelectPopup) {
+    closeCustomSelectPopup();
+  }
+}, true);
+
+document.addEventListener('keydown', (e) => {
+  if (!activeCustomSelectPopup) {
+    const activeEl = document.activeElement;
+    if (activeEl && activeEl.tagName === 'SELECT' && (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown')) {
+      e.preventDefault();
+      openCustomSelectPopup(activeEl);
+    }
+    return;
+  }
+
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    closeCustomSelectPopup();
+    return;
+  }
+
+  const items = Array.from(activeCustomSelectPopup.querySelectorAll('.custom-select-item:not(.disabled)'));
+  if (items.length === 0) return;
+
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    let curIdx = items.findIndex(it => it.classList.contains('highlighted') || it.classList.contains('selected'));
+    if (e.key === 'ArrowDown') {
+      curIdx = curIdx < items.length - 1 ? curIdx + 1 : 0;
+    } else {
+      curIdx = curIdx > 0 ? curIdx - 1 : items.length - 1;
+    }
+    items.forEach((it, idx) => it.classList.toggle('highlighted', idx === curIdx));
+    items[curIdx].scrollIntoView({ block: 'nearest' });
+    return;
+  }
+
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const targetItem = activeCustomSelectPopup.querySelector('.custom-select-item.highlighted') || activeCustomSelectPopup.querySelector('.custom-select-item.selected');
+    if (targetItem) {
+      targetItem.click();
+    }
+  }
+});
+
+window.addEventListener('resize', closeCustomSelectPopup);
+document.addEventListener('scroll', (e) => {
+  if (activeCustomSelectPopup && e.target && activeCustomSelectPopup.contains(e.target)) {
+    return;
+  }
+  closeCustomSelectPopup();
+}, true);
+

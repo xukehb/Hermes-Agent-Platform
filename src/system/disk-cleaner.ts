@@ -29,6 +29,10 @@ export interface CleanableItem {
 
 export interface DiskScanReport {
   target: 'local' | string;
+  /** Runtime platform of the machine that produced the report (win32/darwin/linux). */
+  platform?: string;
+  /** Human-readable platform label for UI consumers. */
+  platformLabel?: string;
   totalCleanableBytes: number;
   safeCleanableBytes: number;
   reviewCleanableBytes: number;
@@ -37,6 +41,23 @@ export interface DiskScanReport {
   scannedRoots: string[];
   items: CleanableItem[];
   scannedAt: number;
+}
+
+/** Map Node.js platform identifiers to the labels shown in the scanner UI. */
+export function getPlatformLabel(platform: string | undefined, fallback = '当前系统'): string {
+  switch (String(platform || '').toLowerCase()) {
+    case 'win32':
+    case 'windows':
+      return 'Windows';
+    case 'darwin':
+    case 'macos':
+    case 'mac':
+      return 'macOS';
+    case 'linux':
+      return 'Linux';
+    default:
+      return fallback;
+  }
 }
 
 export interface DiskCleanResult {
@@ -650,19 +671,23 @@ export async function scanLocalDisk(options: {
   else if (totalAll > 1024 * 1024 * 1024 * 1) healthScore -= 8;
   healthScore = Math.max(20, Math.min(100, healthScore));
 
-  const rootsStr = rootDrives.map(d => d.replace(/\\|\//g, '')).join(', ');
+  const platform = process.platform;
+  const platformLabel = getPlatformLabel(platform);
+  const rootsStr = rootDrives.join(', ') || '全盘';
 
   let aiDiagnosis = '';
   if (healthScore >= 90) {
-    aiDiagnosis = `✨ 已从全盘根目录 (${rootsStr}) 深度排查共 ${items.length} 个存储区块。宿主系统整体非常健康（评分 ${healthScore} 分），发现 ${formatBytes(totalSafe)} 安全无副作用缓存，可直接一键安全瘦身。`;
+    aiDiagnosis = `✨ ${platformLabel} 已从全盘根目录 (${rootsStr}) 深度排查共 ${items.length} 个存储区块。宿主系统整体非常健康（评分 ${healthScore} 分），发现 ${formatBytes(totalSafe)} 安全无副作用缓存，可直接一键安全瘦身。`;
   } else if (healthScore >= 70) {
-    aiDiagnosis = `⚡ 全盘根目录体检完成（发现 ${formatBytes(totalAll)} 冗余）。建议优先清理 ${formatBytes(totalSafe)} 依赖包缓存 (npm/pip/cargo) 与系统临时日志，释放驱动盘空间。`;
+    aiDiagnosis = `⚡ ${platformLabel} 全盘根目录体检完成（发现 ${formatBytes(totalAll)} 冗余）。建议优先清理 ${formatBytes(totalSafe)} 依赖包缓存 (npm/pip/cargo) 与系统临时日志，释放驱动盘空间。`;
   } else {
-    aiDiagnosis = `🚨 警告：系统驱动盘空间偏紧（评分 ${healthScore} 分）！全盘共扫描出 ${formatBytes(totalAll)} 缓存与构建垃圾。AI 诊断强烈建议立即清理 ${formatBytes(totalSafe)} 安全项，并审视工程构建产物 (dist/target) 与 Docker 镜像，避免磁盘耗尽阻碍开发构建。`;
+    aiDiagnosis = `🚨 警告：${platformLabel} 驱动盘空间偏紧（评分 ${healthScore} 分）！全盘共扫描出 ${formatBytes(totalAll)} 缓存与构建垃圾。AI 诊断强烈建议立即清理 ${formatBytes(totalSafe)} 安全项，并审视工程构建产物 (dist/target) 与 Docker 镜像，避免磁盘耗尽阻碍开发构建。`;
   }
 
   return {
     target: 'local',
+    platform,
+    platformLabel,
     totalCleanableBytes: totalAll,
     safeCleanableBytes: totalSafe,
     reviewCleanableBytes: totalReview,
@@ -707,4 +732,3 @@ export async function cleanLocalDisk(itemIds: string[], scanReport: DiskScanRepo
     cleanedAt: Date.now(),
   };
 }
-

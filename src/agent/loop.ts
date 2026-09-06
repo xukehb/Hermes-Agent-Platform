@@ -503,11 +503,16 @@ export class AgentLoop {
           data: { model: plan.fullName, iteration: hooks.onIteration, retryable: isRetryable(error) },
         });
         if (index === chain.length - 1) {
-          throw new FatalError('FALLBACK_EXHAUSTED', '降级链全部失败：' + failures.join(' | '), {
-            userMessage: '本次任务失败：已尝试模型 '
-              + chain.slice(startIndex).map((item) => item.fullName).join('、')
+          const attemptedModels = chain.slice(startIndex).map((item) => item.fullName);
+          const userMessage = attemptedModels.length === 1
+            ? '本次任务失败：模型 ' + attemptedModels[0] + ' 请求失败：' + reason
+              + '。请稍后重试，或用 hap provider check 检查提供商可用性。'
+            : '本次任务失败：已尝试模型 '
+              + attemptedModels.join('、')
               + ' 均未成功。最后一次失败原因：' + reason
-              + '。请稍后重试，或用 hap provider check 检查提供商可用性。',
+              + '。请稍后重试，或用 hap provider check 检查提供商可用性。';
+          throw new FatalError('FALLBACK_EXHAUSTED', '降级链全部失败：' + failures.join(' | '), {
+            userMessage,
             context: { failures, models: chain.map((item) => item.fullName) },
             cause: error,
           });

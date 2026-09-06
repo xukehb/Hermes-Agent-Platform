@@ -96,7 +96,10 @@ export interface LoopRequest {
 export interface RunTaskRequest {
   /** 目标智能体；缺省走四级路由（FR-ROUTE-003） */
   agentId?: string | undefined;
-  /** 显式指定使用的模型（如 "openrouter/anthropic/claude-3.5-sonnet" 或别名） */
+  /**
+   * 显式指定使用的模型（如 "openrouter/anthropic/claude-3.5-sonnet" 或别名）。
+   * 传入后本次任务只使用该模型，不沿用智能体配置中的 fallbacks。
+   */
   model?: string | undefined;
   /** 本次任务的工具工作目录覆盖；GUI 用它绑定当前导入项目。 */
   workspace?: string | undefined;
