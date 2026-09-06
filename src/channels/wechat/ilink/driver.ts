@@ -33,6 +33,10 @@ export class NativeIlinkPersonalDriver {
   private api: Pick<IlinkApiClient, 'createQr' | 'qrStatus' | 'notifyStart' | 'notifyStop' | 'getUpdates' | 'sendText'>;
   private running = false;
   private loop: Promise<void> | undefined;
+  private loginSession: IlinkLoginSession | undefined;
+  private generation = 0;
+  private authenticated = false;
+  private cancelStart: (() => void) | undefined;
 
   constructor(options: NativeIlinkDriverOptions) {
     this.store = new IlinkAccountStore(options.rootDir, options.accountId);
@@ -49,21 +53,42 @@ export class NativeIlinkPersonalDriver {
   async start(): Promise<void> {
     if (this.running) return;
     this.running = true;
-    const account = this.store.loadAccount();
-    if (account === undefined) {
-      await this.login();
-    } else {
-      this.api = this.apiFactory({ token: account.botToken, baseUrl: account.baseUrl });
-      this.onLogin?.({ id: account.ilinkBotId, name: 'WeChat iLink Bot' });
-    }
-    await this.api.notifyStart();
-    this.loop = this.pollLoop();
+    const generation = ++this.generation;
+    await new Promise<void>((resolve, reject) => {
+      this.cancelStart = resolve;
+      // Return once the QR is available so the GUI can display it while polling continues.
+      void (async () => {
+        let account = this.store.loadAccount();
+        if (account === undefined) {
+          await this.login(generation, resolve);
+          account = this.store.loadAccount();
+        } else {
+          this.api = this.apiFactory({ token: account.botToken, baseUrl: account.baseUrl });
+        }
+        if (!this.running || generation !== this.generation) return;
+        await this.api.notifyStart();
+        if (!this.running || generation !== this.generation) return;
+        this.authenticated = true;
+        if (account) this.onLogin?.({ id: account.ilinkBotId, name: 'WeChat iLink Bot' });
+        this.loop = this.pollLoop(generation);
+        resolve();
+      })().catch((error: unknown) => {
+        if (generation !== this.generation) return;
+        this.running = false;
+        this.onLogout?.(error instanceof Error ? error.message : String(error));
+        reject(error);
+      });
+    });
   }
 
   async stop(): Promise<void> {
     if (!this.running) return;
     this.running = false;
-    await this.api.notifyStop();
+    this.generation += 1;
+    this.loginSession?.stop();
+    this.cancelStart?.();
+    if (this.authenticated) await this.api.notifyStop();
+    this.authenticated = false;
     this.onLogout?.('channel_stopped');
     await this.loop;
   }
@@ -79,16 +104,33 @@ export class NativeIlinkPersonalDriver {
     await this.pollOnce();
   }
 
-  private async login(): Promise<void> {
+  private async login(generation: number, ready: () => void): Promise<void> {
+    let lastState: LoginState = { phase: 'idle' };
     const login = new IlinkLoginSession({
       api: this.api,
       store: this.store,
       pollIntervalMs: this.pollIntervalMs,
-      onState: (state) => this.handleLoginState(state),
+      onState: (state) => {
+        lastState = state;
+        this.handleLoginState(state);
+        if (state.phase === 'qr_ready') ready();
+      },
     });
+    this.loginSession = login;
     await login.start();
+    if (!this.running || generation !== this.generation) return;
     const account = this.store.loadAccount();
-    if (account === undefined) throw new Error('ILINK_AUTH_REQUIRED');
+    if (account === undefined) {
+      const state = lastState as LoginState;
+      const messages: Partial<Record<LoginState['phase'], string>> = {
+        expired: '微信二维码已过期，请刷新二维码后重新扫码',
+        verification_required: '微信要求额外验证码验证，当前客户端尚不支持，请重新扫码或更换绑定方式',
+        verification_blocked: '微信验证暂时受限，请稍后重新扫码',
+        redirect: '微信登录需要跳转其他服务，请重新扫码或检查账号绑定',
+        already_bound: '微信机器人已绑定，请检查现有绑定后重新扫码',
+      };
+      throw new Error(state.phase === 'error' ? state.code : messages[state.phase] ?? '微信登录未完成，请重新扫码');
+    }
     this.api = this.apiFactory({ token: account.botToken, baseUrl: account.baseUrl });
   }
 
@@ -98,7 +140,6 @@ export class NativeIlinkPersonalDriver {
         this.onQrCode?.(state.qrText);
         break;
       case 'connected':
-        this.onLogin?.({ id: state.ilinkBotId, name: 'WeChat iLink Bot' });
         break;
       case 'scanned':
         this.log('[WeChat iLink] QR scanned, waiting for confirmation');
@@ -114,8 +155,8 @@ export class NativeIlinkPersonalDriver {
     }
   }
 
-  private async pollLoop(): Promise<void> {
-    while (this.running) {
+  private async pollLoop(generation: number): Promise<void> {
+    while (this.running && generation === this.generation) {
       try {
         await this.pollOnce();
       } catch (error) {

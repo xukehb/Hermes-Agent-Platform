@@ -1,6 +1,6 @@
 {
   "name": "hermes-agent-platform",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "description": "Hermes 多智能体平台",

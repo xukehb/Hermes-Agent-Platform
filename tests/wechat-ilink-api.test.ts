@@ -21,6 +21,23 @@ class FetchMock {
 }
 
 describe('IlinkApiClient', () => {
+  it('accepts omitted success codes in lifecycle and message responses', async () => {
+    const mock = new FetchMock();
+    mock.response = {};
+    const client = new IlinkApiClient({ fetch: mock.fetch, token: 'token' });
+    await expect(client.notifyStart()).resolves.toBeUndefined();
+    await expect(client.notifyStop()).resolves.toBeUndefined();
+    await expect(client.sendText({ toUserId: 'user', contextToken: 'ctx', text: 'hello' })).resolves.toBeUndefined();
+  });
+
+  it('reports session expiry even when the server omits ret', async () => {
+    const mock = new FetchMock();
+    mock.response = { errcode: -14, errmsg: 'session timeout' };
+    const client = new IlinkApiClient({ fetch: mock.fetch, token: 'token' });
+    await expect(client.notifyStart()).rejects.toThrow(/ILINK_SESSION_EXPIRED/);
+    await expect(client.getUpdates('cursor')).rejects.toThrow(/ILINK_SESSION_EXPIRED/);
+  });
+
   it('sends required client headers without bearer before login', async () => {
     const mock = new FetchMock();
     const client = new IlinkApiClient({ fetch: mock.fetch, localTokens: ['a', 'b'] });
@@ -33,6 +50,7 @@ describe('IlinkApiClient', () => {
       'ilink-app-id': 'bot',
     });
     expect(mock.lastHeaders().authorization).toBeUndefined();
+    expect(Buffer.from(mock.lastHeaders()['x-wechat-uin']!, 'base64').toString()).toMatch(/^\d+$/);
     expect(mock.lastBody()).toEqual({ local_token_list: ['a', 'b'] });
   });
 
@@ -63,7 +81,11 @@ describe('IlinkApiClient', () => {
     expect(mock.calls.at(-1)?.url).toContain('/ilink/bot/sendmessage');
     expect(mock.lastBody()).toEqual({
       msg: {
+        from_user_id: '',
         to_user_id: 'user-a',
+        client_id: expect.any(String),
+        message_type: 2,
+        message_state: 2,
         context_token: 'ctx-a',
         item_list: [{ type: 1, text_item: { text: 'hello' } }],
       },

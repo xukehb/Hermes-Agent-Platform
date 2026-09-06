@@ -3338,7 +3338,7 @@ async function renderWeChatView() {
         toggleBtn.textContent = '启动微信服务';
       }
       if (nameEl) nameEl.textContent = '微信未连接';
-      if (descEl) descEl.textContent = '启动服务后，可在手机微信中直接给智能体发送需求与指令';
+      if (descEl) descEl.textContent = wxConfig.error || '启动服务后，可在手机微信中直接给智能体发送需求与指令';
 
       if (qrPlaceholder && qrBox) {
         qrPlaceholder.style.display = 'block';
@@ -3468,6 +3468,12 @@ function updateWechatQrModal(wxConfig) {
   const tip = $('wechatModalStatusTip');
   if (!body) return;
 
+  if (wxConfig?.status === 'error') {
+    body.innerHTML = `<div style="padding:32px 20px;text-align:center;">${esc(wxConfig.error || '微信登录失败，请刷新二维码重试')}</div>`;
+    if (tip) tip.textContent = '请刷新二维码重试';
+    return;
+  }
+
   if (!wxConfig || !wxConfig.running) {
     body.innerHTML = `
       <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:36px 20px;text-align:center;">
@@ -3586,7 +3592,7 @@ setInterval(async () => {
 
   try {
     const cfg = await window.hap.getWeChatConfig();
-    if (cfg && cfg.running) {
+    if (cfg) {
       const badge = $('wxStatusBadge');
       const isAlreadyConnected = badge && badge.classList.contains('success');
 
@@ -9844,4 +9850,3 @@ document.addEventListener('scroll', (e) => {
   }
   closeCustomSelectPopup();
 }, true);
-

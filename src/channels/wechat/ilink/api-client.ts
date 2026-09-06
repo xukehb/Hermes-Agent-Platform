@@ -1,10 +1,11 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import {
   IlinkError,
   parseQrCreation,
   parseQrStatus,
   parseUpdateBatch,
   sendMessageResponseSchema,
+  validateIlinkResult,
   type IlinkQrCreation,
   type IlinkQrStatus,
   type IlinkUpdateBatch,
@@ -101,7 +102,11 @@ export class IlinkApiClient {
   async sendText(input: { toUserId: string; contextToken: string; text: string }, signal?: AbortSignal): Promise<void> {
     await this.retRequest('ilink/bot/sendmessage', 'sendmessage', {
       msg: {
+        from_user_id: '',
         to_user_id: input.toUserId,
+        client_id: 'hap-' + randomUUID(),
+        message_type: 2,
+        message_state: 2,
         context_token: input.contextToken,
         item_list: [{ type: 1, text_item: { text: input.text } }],
       },
@@ -117,6 +122,7 @@ export class IlinkApiClient {
       body,
       ...(signal === undefined ? {} : { signal }),
       parse: (raw) => {
+        validateIlinkResult(raw);
         const parsed = sendMessageResponseSchema.safeParse(raw);
         if (!parsed.success) throw IlinkError.schema(label);
         return parsed.data;
@@ -158,7 +164,7 @@ export class IlinkApiClient {
       'iLink-App-Id': 'bot',
       'iLink-App-ClientVersion': CLIENT_VERSION,
       AuthorizationType: 'ilink_bot_token',
-      'X-WECHAT-UIN': randomBytes(4).toString('base64'),
+      'X-WECHAT-UIN': Buffer.from(String(randomBytes(4).readUInt32BE(0))).toString('base64'),
     });
     if (authenticated && this.token !== undefined) {
       headers.set('Authorization', 'Bearer ' + this.token);

@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { dialog, shell } from 'electron';
 import { execa } from 'execa';
 import { AgentOrchestrator } from '../agent/index.js';
+import { WeChatChannel } from '../channels/wechat.js';
 import { ChannelManager, TelegramChannel, createChannelHost, parseCommand, HELP_TEXT, ChannelContactStore, WeChatContactStore, FeishuChannel, QQChannel, type ChannelContact, type ChannelChatMessage, type ChannelName, type WeChatContact, type WeChatChatMessage } from '../channels/index.js';
 import { BUILTIN_PROVIDERS, ConfigResolver, ConfigWriter, loadConfig, resolveConfigPath, sanitizeModelRef, type ModelPatch, type ProviderPatch, type ResolvedAgent, type ResolvedProvider } from '../config/index.js';
 import { describeError, type Attachment, type ProtocolName, type WireApi } from '../domain/index.js';
@@ -2302,11 +2303,12 @@ export class GuiService {
     }
   }
 
-  private wechatManager: ChannelManager | undefined;
+  private wechatManager: WeChatChannel | undefined;
   private wechatRunning = false;
   private wechatStatus: 'idle' | 'waiting_qr' | 'connected' | 'error' = 'idle';
   private wechatQrCode: string | undefined;
   private wechatLoginUser: string | undefined;
+  private wechatError: string | undefined;
 
   async getWeChatConfig(): Promise<GuiWeChatConfig> {
     const resolver = this.resolver();
@@ -2330,8 +2332,9 @@ export class GuiService {
       workspace: agentWorkspace,
       running: this.wechatRunning,
       status: this.wechatStatus,
-      qrCodeText: this.wechatQrCode,
+      qrCodeText: this.wechatStatus === 'error' ? undefined : this.wechatManager?.qrCodeText ?? this.wechatQrCode,
       loginUser: this.wechatLoginUser,
+      error: this.wechatError,
       wecomCorpId: wx.wecom?.corpId,
       wecomAgentId: wx.wecom?.agentId,
       wecomSecret: wx.wecom?.corpSecretEnv ? process.env[wx.wecom.corpSecretEnv] || '' : '',
@@ -2405,16 +2408,13 @@ export class GuiService {
   }
 
   async refreshWeChatQr(): Promise<{ ok: boolean; qrCodeText?: string | undefined }> {
-    if (this.wechatRunning && this.wechatManager) {
-      await this.stopWeChatService();
-      const res = await this.startWeChatService();
-      return { ok: true, qrCodeText: this.wechatQrCode };
-    }
-    return { ok: false };
+    await this.stopWeChatService();
+    await this.startWeChatService();
+    return { ok: true, qrCodeText: (await this.getWeChatConfig()).qrCodeText };
   }
 
   async confirmWeChatLogin(): Promise<{ ok: boolean; status: string; user?: string | undefined }> {
-    const user = this.wechatManager?.wechat?.currentUser;
+    const user = this.wechatManager?.currentUser;
     if (!user) return { ok: false, status: this.wechatStatus };
     this.wechatStatus = 'connected';
     this.wechatLoginUser = user.name;
@@ -2426,6 +2426,11 @@ export class GuiService {
       return { ok: true, message: '微信服务正在运行中', user: this.wechatLoginUser };
     }
 
+    if (this.wechatManager) await this.stopWeChatService();
+    this.wechatError = undefined;
+    this.wechatQrCode = undefined;
+    this.wechatLoginUser = undefined;
+
     await this.saveWeChatConfig({ enabled: true });
 
     const orchestrator = new AgentOrchestrator({ configPath: this.configPath });
@@ -2433,11 +2438,21 @@ export class GuiService {
 
     this.wechatStatus = 'waiting_qr';
 
-    const manager = new ChannelManager({
-      orchestrator,
+    const manager = new WeChatChannel({
+      host: createChannelHost(orchestrator),
+      channels: orchestrator.config.resolveChannels(),
+      limits: orchestrator.config.resolveLimits(),
+      paths: orchestrator.resolvedPaths,
       env: process.env,
       log: (line) => {
         this.info(`[WeChat] ${line}`);
+        if (line.includes('[WeChat] 微信已登出：')) {
+          this.wechatRunning = false;
+          this.wechatStatus = 'error';
+          this.wechatError = line.split('[WeChat] 微信已登出：')[1]?.trim();
+          this.wechatLoginUser = undefined;
+          this.wechatQrCode = undefined;
+        }
         if (line.includes('[WeChat] 请使用手机微信扫码登录：') || line.includes('[WeChat QR] 扫码地址:')) {
           const qr = line.split('：')[1]?.trim() || line.split('扫码地址:')[1]?.trim();
           if (qr && qr.startsWith('http')) {
@@ -2451,19 +2466,27 @@ export class GuiService {
           this.wechatLoginUser = userName;
         }
       },
-      includeCli: false,
     });
 
-    await manager.start();
     this.wechatManager = manager;
     this.wechatRunning = true;
-
-    if (manager.wechat?.qrCodeText) {
-      this.wechatQrCode = manager.wechat.qrCodeText;
+    try {
+      await manager.start();
+    } catch (error) {
+      await manager.stop();
+      this.wechatManager = undefined;
+      this.wechatRunning = false;
+      this.wechatStatus = 'error';
+      this.wechatError = describeError(error);
+      throw error;
     }
-    if (manager.wechat?.currentUser) {
+
+    if (manager.qrCodeText) {
+      this.wechatQrCode = manager.qrCodeText;
+    }
+    if (manager.currentUser) {
       this.wechatStatus = 'connected';
-      this.wechatLoginUser = manager.wechat.currentUser.name;
+      this.wechatLoginUser = manager.currentUser.name;
     }
 
     this.info('微信服务已成功启动！');
@@ -2476,9 +2499,12 @@ export class GuiService {
   }
 
   async stopWeChatService(): Promise<{ ok: boolean; message: string }> {
-    if (!this.wechatRunning || !this.wechatManager) {
+    if (!this.wechatManager) {
       this.wechatRunning = false;
       this.wechatStatus = 'idle';
+      this.wechatError = undefined;
+      this.wechatQrCode = undefined;
+      this.wechatLoginUser = undefined;
       return { ok: true, message: '微信服务未处于运行状态' };
     }
 
@@ -2487,6 +2513,9 @@ export class GuiService {
       this.wechatManager = undefined;
       this.wechatRunning = false;
       this.wechatStatus = 'idle';
+      this.wechatError = undefined;
+      this.wechatQrCode = undefined;
+      this.wechatLoginUser = undefined;
       this.info('微信服务已停止');
       return { ok: true, message: '微信服务已成功停止' };
     } catch (err) {
@@ -2497,8 +2526,8 @@ export class GuiService {
   }
 
   async syncWeChatContacts(): Promise<{ contacts: number; rooms: number; syncedAt: number }> {
-    if (!this.wechatRunning || !this.wechatManager?.wechat) throw new Error('微信服务尚未启动，无法同步真实联系人');
-    const result = await this.wechatManager.wechat.syncPersonalContacts();
+    if (!this.wechatRunning || !this.wechatManager) throw new Error('微信服务尚未启动，无法同步真实联系人');
+    const result = await this.wechatManager.syncPersonalContacts();
     this.info(`微信真实联系人同步完成：${result.contacts} 位联系人，${result.rooms} 个群聊`);
     return result;
   }

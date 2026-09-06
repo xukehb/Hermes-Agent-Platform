@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   NativeIlinkPersonalDriver,
   type IlinkApiClient,
@@ -61,6 +61,49 @@ class FakeApi implements Pick<IlinkApiClient, 'createQr' | 'qrStatus' | 'notifyS
 }
 
 describe('NativeIlinkPersonalDriver', () => {
+  it('does not report connected until startup notification succeeds', async () => {
+    const api = new FakeApi();
+    let finish!: () => void;
+    api.notifyStart = () => new Promise((resolve) => { finish = resolve; });
+    const driver = new NativeIlinkPersonalDriver({ accountId: 'bot-a', rootDir: tempRoot(), apiFactory: () => api, pollIntervalMs: 0 });
+    const logins: string[] = [];
+    driver.onLogin = (user) => logins.push(user.id);
+    await driver.start();
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'));
+    try {
+      expect(logins).toEqual([]);
+      finish();
+      await vi.waitFor(() => expect(logins).toEqual(['bot-a']));
+    } finally {
+      finish();
+      await driver.stop();
+    }
+  });
+
+  it('returns with a QR before confirmation and ignores confirmation after stop', async () => {
+    const api = new FakeApi();
+    let confirm!: (status: IlinkQrStatus) => void;
+    api.qrStatus = () => new Promise((resolve) => { confirm = resolve; });
+    const driver = new NativeIlinkPersonalDriver({ accountId: 'bot-a', rootDir: tempRoot(), apiFactory: () => api, pollIntervalMs: 0 });
+    const qrs: string[] = [];
+    const logins: string[] = [];
+    driver.onQrCode = (qr) => qrs.push(qr);
+    driver.onLogin = (user) => logins.push(user.id);
+    let started = false;
+    const starting = driver.start().then(() => { started = true; });
+    try {
+      await vi.waitFor(() => expect(started).toBe(true), { timeout: 200 });
+      expect(qrs).toEqual(['qr-url-1']);
+      expect(api.started).toBe(false);
+    } finally {
+      await driver.stop();
+      confirm(api.statuses[0]!);
+      await starting.catch(() => undefined);
+    }
+    expect(logins).toEqual([]);
+    expect(api.started).toBe(false);
+  });
+
   it('emits QR and login, then starts notifications', async () => {
     const api = new FakeApi();
     const driver = new NativeIlinkPersonalDriver({ accountId: 'bot-a', rootDir: tempRoot(), apiFactory: () => api, pollIntervalMs: 0 });
@@ -72,8 +115,9 @@ describe('NativeIlinkPersonalDriver', () => {
     await driver.start();
 
     expect(qrs).toEqual(['qr-url-1']);
-    expect(logins).toEqual(['bot-a']);
-    expect(api.started).toBe(true);
+    await vi.waitFor(() => expect(logins).toEqual(['bot-a']));
+    await vi.waitFor(() => expect(api.started).toBe(true));
+    await driver.stop();
   });
 
   it('dispatches inbound text and reuses its context token for replies', async () => {
@@ -96,10 +140,12 @@ describe('NativeIlinkPersonalDriver', () => {
     };
 
     await driver.start();
+    await vi.waitFor(() => expect(api.started).toBe(true));
     await driver.pollOnceForTest();
     await driver.sendMessage('user-a', 'pong');
 
     expect(messages).toEqual(['ping']);
     expect(api.sent).toEqual([{ toUserId: 'user-a', contextToken: 'ctx-a', text: 'pong' }]);
+    await driver.stop();
   });
 });

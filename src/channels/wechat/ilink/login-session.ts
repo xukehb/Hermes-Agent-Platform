@@ -32,6 +32,7 @@ export class IlinkLoginSession {
   private generation = 0;
   private aborted = false;
   private state: LoginState = { phase: 'idle' };
+  private controller: AbortController | undefined;
 
   constructor(options: IlinkLoginSessionOptions) {
     this.api = options.api;
@@ -42,10 +43,13 @@ export class IlinkLoginSession {
   }
 
   async start(): Promise<void> {
+    this.controller?.abort();
+    const controller = new AbortController();
+    this.controller = controller;
     const generation = ++this.generation;
     this.aborted = false;
     try {
-      const qr = await this.api.createQr();
+      const qr = await this.api.createQr(controller.signal);
       this.publish(generation, { phase: 'qr_ready', qrText: qr.qrcodeImageContent });
       await this.poll(generation, qr.qrcode);
     } catch (error) {
@@ -63,6 +67,7 @@ export class IlinkLoginSession {
   stop(): void {
     this.aborted = true;
     this.generation += 1;
+    this.controller?.abort();
   }
 
   submitVerification(code: string): void {
@@ -75,7 +80,7 @@ export class IlinkLoginSession {
   private async poll(generation: number, qrcode: string): Promise<void> {
     let verifyCode: string | undefined;
     while (generation === this.generation && !this.aborted) {
-      const status = await this.api.qrStatus(qrcode, verifyCode);
+      const status = await this.api.qrStatus(qrcode, verifyCode, this.controller?.signal);
       verifyCode = undefined;
       if (generation !== this.generation || this.aborted) return;
       const terminal = await this.handleStatus(generation, status);
@@ -107,9 +112,7 @@ export class IlinkLoginSession {
         this.publish(generation, { phase: 'expired' });
         return true;
       case 'confirmed':
-        if (status.ilink_bot_id !== this.store.accountId) {
-          return false;
-        }
+        // accountId is a local storage alias, not the server-issued bot identity.
         this.store.saveAccount({
           botToken: status.bot_token,
           ilinkBotId: status.ilink_bot_id,

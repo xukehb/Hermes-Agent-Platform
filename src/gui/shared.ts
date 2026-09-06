@@ -220,6 +220,7 @@ export interface GuiWeChatConfig {
   workspace?: string | undefined;
   running: boolean;
   status: 'idle' | 'waiting_qr' | 'connected' | 'error';
+  error?: string | undefined;
   qrCodeText?: string | undefined;
   loginUser?: string | undefined;
   wecomCorpId?: string | undefined;
