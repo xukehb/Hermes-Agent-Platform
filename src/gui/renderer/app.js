@@ -170,6 +170,7 @@ const ACTIVE_SESSION_STORAGE_KEY = 'hap_active_session_v2';
 
 let state = {
   configPath: '',
+  defaultAgentId: '',
   projects: [],
   providers: [],
   models: [],
@@ -3356,12 +3357,17 @@ function fillSelects() {
 
   const agentSelect = $('chatAgentSelect');
   if (agentSelect) {
-    const previousAgent = agentSelect.value || localStorage.getItem('hap:selected-chat-agent') || 'coder';
+    const previousAgent = agentSelect.value || localStorage.getItem('hap:selected-chat-agent') || state.defaultAgentId || '';
     agentSelect.innerHTML = state.agents.map((a) => `
       <option value="${esc(a.id)}">${esc(formatAgentLabel(a))}</option>
     `).join('');
     if (previousAgent && state.agents.some((a) => a.id === previousAgent)) {
       agentSelect.value = previousAgent;
+    } else if (state.agents.length > 0) {
+      agentSelect.value = state.agents.some((a) => a.id === state.defaultAgentId)
+        ? state.defaultAgentId
+        : state.agents[0].id;
+      localStorage.setItem('hap:selected-chat-agent', agentSelect.value);
     }
   }
 

@@ -535,9 +535,14 @@ export class GuiService {
       .filter((model) => !hiddenModels.has(model.alias) && !hiddenProviders.has(model.providerId));
 
     const agents = resolver.listAgentIds().map((id) => resolver.resolveAgent(id));
+    const configuredDefaultAgent = resolver.resolveDefaultAgentId();
+    const defaultAgentId = agents.some((agent) => agent.id === configuredDefaultAgent)
+      ? configuredDefaultAgent
+      : agents[0]?.id;
     const rawAgents = loaded.config.agents?.entries ?? {};
     return {
       configPath: this.configPath,
+      defaultAgentId,
       projects: state.projects,
       providers,
       models,
@@ -2149,7 +2154,16 @@ export class GuiService {
         request.attachments = attachments;
       }
       if (input.agentId !== undefined && input.agentId !== '') {
-        request.agentId = input.agentId;
+        const requestedAgent = input.agentId.trim();
+        if (resolver.listAgentIds().includes(requestedAgent)) {
+          request.agentId = requestedAgent;
+        } else {
+          const configuredDefault = resolver.resolveDefaultAgentId();
+          request.agentId = resolver.listAgentIds().includes(configuredDefault)
+            ? configuredDefault
+            : resolver.listAgentIds()[0];
+          this.error(`聊天请求指定的智能体 ${requestedAgent} 不存在，已回退到 ${request.agentId}`);
+        }
       }
       if (targetModel !== undefined && targetModel !== '') {
         request.model = targetModel;

@@ -60,6 +60,12 @@ describe('GuiService agent role management', () => {
     expect(run.mock.calls[0]?.[0].model).toBe('openai/gpt-5');
   });
 
+  it('falls back to the configured default agent when the UI sends a deleted agent id', async () => {
+    const run = vi.spyOn(AgentOrchestrator.prototype, 'runTask').mockResolvedValue({ text: 'ok' } as never);
+    await new GuiService(configPath).chat({ input: 'hello', agentId: 'coder' });
+    expect(run.mock.calls[0]?.[0].agentId).toBe('helper');
+  });
+
   it('tests the exact model with a generation request without listing models', async () => {
     const client = new MockProviderClient({ turns: [textTurn('OK')] });
     vi.spyOn(ProviderRegistry.prototype, 'client').mockReturnValue(client);
