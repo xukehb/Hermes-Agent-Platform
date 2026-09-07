@@ -191,3 +191,8 @@
 - `tests/channels-telegram.test.ts` — 新增 14 项端到端测试
 - `tests/channels-core.test.ts` — 更新 extractMention 测试以匹配新语义
 - `verification.md` — 追加 Bug 修复记录、更新测试统计
+## 2026-09-07：继续推送 Windows 发布产物
+
+- `read_thread`：读取任务 `01a03e57-965a-7e83-a581-94b297af803a`，确认上一轮因 Codex 服务端 503 中断，目标远端为 `xukehb/Hermes-Agent-Platform`。
+- `exec_command`：检查仓库状态、远端、发布目录与 Git LFS；确认 `main` 已同步，两个 0.1.2 `.exe` 分别为约 111 MB，普通 Git push 会超过 GitHub 单文件限制。
+- `exec_command`：复制 `E:\\Hermes-Agent-Platform\\release` 顶层 0.1.2 发布产物到仓库 `release/`，启用 `release/*.exe` 的 Git LFS 跟踪并完成暂存。
