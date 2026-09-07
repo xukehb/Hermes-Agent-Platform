@@ -1,8 +1,8 @@
 version: 0.1.2
 files:
   - url: CodexConnect-Setup-0.1.2.exe
-    sha512: GYioRrpWo8Gzfj0pp7Bzr8GPzS8m1o2wn+udWoVbki+veiKcrQc+h6FWzW9ewDDh7uNlaRCT4QPs2MLlDMsAuA==
-    size: 111296720
+    sha512: QTSstPpgSAmmGaR9fkFOmvpk+k5Rg0WgRSmNVtEYsZ7OZNVlcjh5adNPBrj/GsNwj3fGCXo1bmRzPqZKzWurzw==
+    size: 111299328
 path: CodexConnect-Setup-0.1.2.exe
-sha512: GYioRrpWo8Gzfj0pp7Bzr8GPzS8m1o2wn+udWoVbki+veiKcrQc+h6FWzW9ewDDh7uNlaRCT4QPs2MLlDMsAuA==
-releaseDate: '2026-09-07T02:04:28.064Z'
+sha512: QTSstPpgSAmmGaR9fkFOmvpk+k5Rg0WgRSmNVtEYsZ7OZNVlcjh5adNPBrj/GsNwj3fGCXo1bmRzPqZKzWurzw==
+releaseDate: '2026-09-07T06:30:47.742Z'
