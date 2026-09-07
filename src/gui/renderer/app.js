@@ -3655,7 +3655,7 @@ async function renderWeChatView() {
       }
       if (toggleBtn) {
         toggleBtn.className = 'btn danger';
-        toggleBtn.textContent = '停止微信服务';
+        toggleBtn.textContent = '断开连接';
       }
       if (nameEl) nameEl.textContent = wxConfig.loginUser ? `微信用户：${wxConfig.loginUser}` : '微信智能体通道（服务中）';
       if (descEl) {
@@ -3809,7 +3809,7 @@ $('toggleWxServiceBtn')?.addEventListener('click', async () => {
   if (wxConfig.running) {
     try {
       await window.hap.stopWeChatService();
-      showToast('微信服务已停止', 'info');
+      showToast('微信连接已断开，登录凭据已保留', 'info');
       await renderWeChatView();
     } catch (err) {
       showToast('停止失败：' + err.message, 'error');
@@ -10560,3 +10560,18 @@ document.addEventListener('scroll', (e) => {
   }
   closeCustomSelectPopup();
 }, true);
+
+$('logoutWxBtn')?.addEventListener('click', async () => {
+  if (!window.confirm('断开微信并清除本地登录凭据？下次连接需重新扫码。此操作不会撤销微信端绑定，也不会删除聊天记录。')) return;
+  const button = $('logoutWxBtn');
+  button.disabled = true;
+  try {
+    const result = await window.hap.logoutWeChat();
+    showToast(result.message, 'info');
+  } catch (error) {
+    showToast('退出登录失败：' + error.message, 'error');
+  } finally {
+    button.disabled = false;
+    await renderWeChatView();
+  }
+});

@@ -77,6 +77,7 @@ contextBridge.exposeInMainWorld('hap', {
   getWeChatConfig: () => call('gui:getWeChatConfig'),
   saveWeChatConfig: (config) => call('gui:saveWeChatConfig', config),
   startWeChatService: () => call('gui:startWeChatService'),
+  logoutWeChat: () => call('gui:logoutWeChat'),
   stopWeChatService: () => call('gui:stopWeChatService'),
   refreshWeChatQr: () => call('gui:refreshWeChatQr'),
   confirmWeChatLogin: () => call('gui:confirmWeChatLogin'),

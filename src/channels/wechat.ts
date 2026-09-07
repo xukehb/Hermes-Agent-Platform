@@ -126,17 +126,17 @@ export class WeChatChannel implements Channel {
     if (!this.started) return;
     this.started = false;
 
-    if (this.personalDriver) {
-      await this.personalDriver.stop();
-      this.personalDriver = undefined;
-    }
-
-    if (this.webhookServer) {
-      this.webhookServer.close();
+    const driver = this.personalDriver;
+    this.personalDriver = undefined;
+    this.loginUser = undefined;
+    this.latestQrText = undefined;
+    try {
+      await driver?.stop();
+    } finally {
+      this.webhookServer?.close();
       this.webhookServer = undefined;
+      await this.dispatcher.drain();
     }
-
-    await this.dispatcher.drain();
   }
 
   /** 个人微信模式启动。 */
@@ -163,6 +163,7 @@ export class WeChatChannel implements Channel {
     this.personalDriver = driver;
 
     driver.onQrCode = (qrText) => {
+      if (!this.started || this.personalDriver !== driver) return;
       this.latestQrText = qrText;
       if (this.config.qrLog) {
         this.log(`[WeChat QR] 扫码地址: ${qrText}`);
@@ -170,6 +171,7 @@ export class WeChatChannel implements Channel {
     };
 
     driver.onLogin = (user) => {
+      if (!this.started || this.personalDriver !== driver) return;
       this.loginUser = user;
       this.log(`[WeChat] 登录成功：${user.name} (${user.id})`);
     };
@@ -180,6 +182,7 @@ export class WeChatChannel implements Channel {
     };
 
     driver.onMessage = async (msg) => {
+      if (!this.started || this.personalDriver !== driver) return;
       await this.handlePersonalMessage(msg);
     };
 
@@ -241,10 +244,8 @@ export class WeChatChannel implements Channel {
       }
     }
 
-    // 若联系人配置了专属回复智能体，且消息未显式指定 @agent，则使用联系人专属配置
-    if (!agentId && contact.agentId) {
-      agentId = contact.agentId;
-    }
+    // 联系人绑定属于可回退偏好；仅消息中的 @agent 作为严格的显式选择。
+    const contactAgentId = !agentId ? contact.agentId : undefined;
 
     // 若联系人关闭了自动回复
     if (!contact.autoReply || contact.replyMode === 'manual') {
@@ -252,7 +253,7 @@ export class WeChatChannel implements Channel {
       return;
     }
 
-    const assignedAgent = agentId || this.config.defaultAgent || 'coder';
+    const assignedAgent = agentId || contactAgentId || this.config.defaultAgent || 'ops';
 
     const target: OutboundTarget = {
       channel: 'wechat',
@@ -277,7 +278,7 @@ export class WeChatChannel implements Channel {
       target,
       ...(msg.attachments !== undefined ? { attachments: msg.attachments } : {}),
       ...(agentId !== undefined ? { agentId } : {}),
-      ...(this.config.defaultAgent !== undefined ? { defaultAgent: this.config.defaultAgent } : {}),
+      ...((contactAgentId || this.config.defaultAgent) !== undefined ? { defaultAgent: contactAgentId || this.config.defaultAgent } : {}),
     };
 
     this.dispatcher.submit(inbound);

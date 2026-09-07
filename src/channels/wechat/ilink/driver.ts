@@ -37,6 +37,8 @@ export class NativeIlinkPersonalDriver {
   private generation = 0;
   private authenticated = false;
   private cancelStart: (() => void) | undefined;
+  private controller: AbortController | undefined;
+  private stopping: Promise<void> | undefined;
 
   constructor(options: NativeIlinkDriverOptions) {
     this.store = new IlinkAccountStore(options.rootDir, options.accountId);
@@ -51,8 +53,11 @@ export class NativeIlinkPersonalDriver {
   }
 
   async start(): Promise<void> {
+    await this.stopping;
     if (this.running) return;
     this.running = true;
+    this.controller = new AbortController();
+    const signal = this.controller.signal;
     const generation = ++this.generation;
     await new Promise<void>((resolve, reject) => {
       this.cancelStart = resolve;
@@ -66,7 +71,7 @@ export class NativeIlinkPersonalDriver {
           this.api = this.apiFactory({ token: account.botToken, baseUrl: account.baseUrl });
         }
         if (!this.running || generation !== this.generation) return;
-        await this.api.notifyStart();
+        await this.api.notifyStart(signal);
         if (!this.running || generation !== this.generation) return;
         this.authenticated = true;
         if (account) this.onLogin?.({ id: account.ilinkBotId, name: 'WeChat iLink Bot' });
@@ -82,21 +87,36 @@ export class NativeIlinkPersonalDriver {
   }
 
   async stop(): Promise<void> {
-    if (!this.running) return;
+    if (this.stopping) return this.stopping;
     this.running = false;
     this.generation += 1;
+    this.controller?.abort();
     this.loginSession?.stop();
     this.cancelStart?.();
-    if (this.authenticated) await this.api.notifyStop();
+    const authenticated = this.authenticated;
     this.authenticated = false;
     this.onLogout?.('channel_stopped');
-    await this.loop;
+    this.stopping = (async () => {
+      try {
+        if (authenticated) await this.api.notifyStop(AbortSignal.timeout(5000));
+      } finally {
+        this.loop = undefined;
+        this.loginSession = undefined;
+        this.cancelStart = undefined;
+      }
+    })();
+    try {
+      await this.stopping;
+    } finally {
+      this.stopping = undefined;
+    }
   }
 
   async sendMessage(targetId: string, text: string): Promise<string | undefined> {
+    if (!this.running || !this.authenticated) throw new Error('ILINK_NOT_CONNECTED');
     const contextToken = this.store.contextFor(targetId);
     if (contextToken === undefined) throw new Error('ILINK_CONTEXT_TOKEN_MISSING');
-    await this.api.sendText({ toUserId: targetId, contextToken, text });
+    await this.api.sendText({ toUserId: targetId, contextToken, text }, this.controller?.signal);
     return 'ilink:' + Date.now().toString(36);
   }
 
@@ -158,19 +178,29 @@ export class NativeIlinkPersonalDriver {
   private async pollLoop(generation: number): Promise<void> {
     while (this.running && generation === this.generation) {
       try {
-        await this.pollOnce();
+        await this.pollOnce(generation);
       } catch (error) {
+        if (!this.running || generation !== this.generation) return;
         this.log('[WeChat iLink] getupdates failed: ' + (error instanceof Error ? error.message : String(error)));
       }
-      if (this.pollIntervalMs > 0) await new Promise((resolve) => setTimeout(resolve, this.pollIntervalMs));
+      if (!this.running || generation !== this.generation) return;
+      if (this.pollIntervalMs > 0) await new Promise<void>((resolve) => {
+        const signal = this.controller?.signal;
+        const done = () => { clearTimeout(timer); signal?.removeEventListener('abort', done); resolve(); };
+        const timer = setTimeout(done, this.pollIntervalMs);
+        signal?.addEventListener('abort', done, { once: true });
+        if (signal?.aborted) done();
+      });
       else return;
     }
   }
 
-  private async pollOnce(): Promise<void> {
-    const batch = await this.api.getUpdates(this.store.loadCursor());
-    this.store.saveCursor(batch.cursor);
+  private async pollOnce(generation = this.generation): Promise<void> {
+    if (!this.running || generation !== this.generation) return;
+    const batch = await this.api.getUpdates(this.store.loadCursor(), this.controller?.signal);
+    if (!this.running || generation !== this.generation) return;
     for (const message of batch.messages) {
+      if (!this.running || generation !== this.generation) return;
       if (!this.store.markInboundSeen(message.id)) continue;
       const targetId = message.groupId ?? message.fromUserId;
       if (message.contextToken !== undefined) this.store.putContext(targetId, message.contextToken);
@@ -183,5 +213,6 @@ export class NativeIlinkPersonalDriver {
         text: message.text,
       });
     }
+    if (this.running && generation === this.generation) this.store.saveCursor(batch.cursor);
   }
 }

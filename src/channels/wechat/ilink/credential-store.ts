@@ -76,6 +76,14 @@ export class IlinkAccountStore {
     return this.readJson('account.json', ilinkAccountStateSchema);
   }
 
+  /** Only clear this account's login and synchronization state, not contact history. */
+  clearSession(): void {
+    for (const name of stateNames) {
+      try { unlinkSync(join(this.accountDir, name)); }
+      catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+    }
+  }
+
   saveCursor(cursor: string): void {
     this.writeJson('sync.json', syncStateSchema.parse({ cursor }));
   }

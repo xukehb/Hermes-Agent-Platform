@@ -1,3 +1,4 @@
+import { IlinkAccountStore } from '../channels/wechat/ilink/credential-store.js';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, resolve as resolvePath } from 'node:path';
 import { homedir } from 'node:os';
@@ -2675,6 +2676,7 @@ export class GuiService {
       env: process.env,
       log: (line) => {
         this.info(`[WeChat] ${line}`);
+        if (this.wechatManager !== manager) return;
         if (line.includes('[WeChat] 微信已登出：')) {
           this.wechatRunning = false;
           this.wechatStatus = 'error';
@@ -2710,6 +2712,8 @@ export class GuiService {
       throw error;
     }
 
+    if (this.wechatManager !== manager) return { ok: true, message: '微信启动已取消' };
+
     if (manager.qrCodeText) {
       this.wechatQrCode = manager.qrCodeText;
     }
@@ -2728,30 +2732,34 @@ export class GuiService {
   }
 
   async stopWeChatService(): Promise<{ ok: boolean; message: string }> {
-    if (!this.wechatManager) {
-      this.wechatRunning = false;
-      this.wechatStatus = 'idle';
-      this.wechatError = undefined;
-      this.wechatQrCode = undefined;
-      this.wechatLoginUser = undefined;
-      return { ok: true, message: '微信服务未处于运行状态' };
-    }
-
+    const manager = this.wechatManager;
+    this.wechatManager = undefined;
+    this.wechatRunning = false;
     try {
-      await this.wechatManager.stop();
-      this.wechatManager = undefined;
-      this.wechatRunning = false;
+      await manager?.stop();
+      return { ok: true, message: '微信连接已断开，登录凭据已保留' };
+    } catch (err) {
+      throw new Error('本地微信连接已停止，但停止通知或清理失败：' + describeError(err));
+    } finally {
       this.wechatStatus = 'idle';
       this.wechatError = undefined;
       this.wechatQrCode = undefined;
       this.wechatLoginUser = undefined;
-      this.info('微信服务已停止');
-      return { ok: true, message: '微信服务已成功停止' };
-    } catch (err) {
-      this.wechatRunning = false;
-      this.wechatStatus = 'error';
-      throw new Error(`停止微信服务失败：${describeError(err)}`);
+      await this.saveWeChatConfig({ enabled: false });
+      this.info('微信本地连接已断开');
     }
+  }
+
+  async logoutWeChat(): Promise<{ ok: boolean; message: string }> {
+    const wx = this.resolver().resolveChannels().wechat;
+    if (!['personal', 'ilink_bot'].includes(wx.mode) || wx.personal.puppet !== 'ilink') {
+      throw new Error('当前仅支持 iLink 模式清除登录；其他模式请在对应服务商撤销授权');
+    }
+    let warning = '';
+    try { await this.stopWeChatService(); }
+    catch (error) { warning = '（' + describeError(error) + '）'; }
+    new IlinkAccountStore(wx.authDir, wx.personal.ilinkAccountId).clearSession();
+    return { ok: true, message: '已清除本地微信登录，下次连接需扫码；远端绑定未撤销' + warning };
   }
 
   async syncWeChatContacts(): Promise<{ contacts: number; rooms: number; syncedAt: number }> {
