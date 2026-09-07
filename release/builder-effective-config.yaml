@@ -1,0 +1,22 @@
+directories:
+  output: release
+  buildResources: build
+appId: com.hermes.agent.platform
+productName: CodexConnect
+copyright: Copyright © 2026 CodexConnect Team
+files:
+  - filter:
+      - dist/**/*
+      - package.json
+asarUnpack:
+  - '**/node_modules/better-sqlite3/**/*'
+win:
+  target:
+    - nsis
+    - portable
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+electronVersion: 37.10.3
