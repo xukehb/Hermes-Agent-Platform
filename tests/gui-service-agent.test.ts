@@ -10,6 +10,9 @@ vi.mock('electron', () => ({
 
 import { ConfigResolver, loadConfig } from '../src/config/index.js';
 import { GuiService } from '../src/gui/service.js';
+import { AgentOrchestrator } from '../src/agent/index.js';
+import { ProviderRegistry } from '../src/providers/index.js';
+import { MockProviderClient, textTurn } from '../src/providers/mock.js';
 
 const initialConfig = [
   'default_agent = "helper"',
@@ -43,7 +46,34 @@ describe('GuiService agent role management', () => {
     writeFileSync(configPath, `${text}\n\n[paths]\ndata_dir = "${join(testDir, 'data')}"\n`, 'utf8');
   });
 
-  afterEach(() => rmSync(testDir, { recursive: true, force: true }));
+  afterEach(() => { vi.restoreAllMocks(); rmSync(testDir, { recursive: true, force: true }); });
+
+  it('leaves model selection to the agent when no override is supplied', async () => {
+    const run = vi.spyOn(AgentOrchestrator.prototype, 'runTask').mockResolvedValue({ text: 'ok' } as never);
+    await new GuiService(configPath).chat({ input: 'hello', agentId: 'helper' });
+    expect(run.mock.calls[0]?.[0].model).toBeUndefined();
+  });
+
+  it('passes an explicitly selected model to the orchestrator', async () => {
+    const run = vi.spyOn(AgentOrchestrator.prototype, 'runTask').mockResolvedValue({ text: 'ok' } as never);
+    await new GuiService(configPath).chat({ input: 'hello', agentId: 'helper', model: 'openai/gpt-5' });
+    expect(run.mock.calls[0]?.[0].model).toBe('openai/gpt-5');
+  });
+
+  it('tests the exact model with a generation request without listing models', async () => {
+    const client = new MockProviderClient({ turns: [textTurn('OK')] });
+    vi.spyOn(ProviderRegistry.prototype, 'client').mockReturnValue(client);
+    const check = vi.spyOn(client, 'check');
+    const result = await new GuiService(configPath).testProvider({ id: 'custom', baseUrl: 'http://localhost:9/v1', model: 'org/model' } as never);
+    expect(result.reachable).toBe(true);
+    expect(client.requests[0]?.model).toBe('org/model');
+    expect(check).not.toHaveBeenCalled();
+  });
+
+  it('rejects a model test without a user supplied model', async () => {
+    const result = await new GuiService(configPath).testProvider({ id: 'custom', baseUrl: 'http://localhost:9/v1' });
+    expect(result.error).toContain('模型');
+  });
 
   it('rejects a duplicate id when creating but still allows editing', () => {
     const service = new GuiService(configPath);

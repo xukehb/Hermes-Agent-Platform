@@ -100,6 +100,7 @@ export interface GuiProviderTestInput {
   id: string;
   baseUrl?: string;
   apiKey?: string;
+  model?: string;
   envKey?: string;
   wireApi?: 'chat' | 'responses' | 'anthropic-messages';
   protocol?: 'hermes-native' | 'openai-tools' | 'deepseek' | 'anthropic';

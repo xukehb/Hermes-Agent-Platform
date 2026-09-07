@@ -1037,8 +1037,12 @@ export class GuiService {
       const config = idOrConfig;
       const id = config.id?.trim() || 'custom';
       const baseUrl = config.baseUrl?.trim() || '';
+      const testModel = config.model?.trim() || '';
       if (!baseUrl) {
         return { providerId: id, reachable: false, error: '未配置 Base URL' };
+      }
+      if (!testModel) {
+        return { providerId: id, reachable: false, error: '请先指定要测试的模型 ID' };
       }
 
       const resolver = this.resolver();
@@ -1071,7 +1075,12 @@ export class GuiService {
 
       const tempMap = new Map<string, ResolvedProvider>([[id, tempProvider]]);
       const registry = new ProviderRegistry(tempMap, { env: tempEnv });
-      const result = await registry.check(id, controller.signal);
+      const started = Date.now();
+      let received = false;
+      for await (const event of registry.client(id).send({ model: testModel, messages: [{ role: 'user', content: 'Reply with OK.' }], params: {}, maxTokens: 16 }, controller.signal)) {
+        if (event.type === 'text_delta' || event.type === 'finish') received = true;
+      }
+      const result = { providerId: id, reachable: received, handshakeMs: Date.now() - started, models: [testModel], ...(received ? {} : { error: '模型未返回有效响应' }) };
       this.providerHealth.set(id, { reachable: result.reachable, checkedAt: Date.now(), ...(result.error === undefined ? {} : { error: result.error }) });
       if (result.reachable) {
         this.info(`测试服务商 ${id} (实时动态参数)：可达`);
@@ -1888,14 +1897,6 @@ export class GuiService {
           const providerId = readyProvider ? readyProvider.id : 'openai';
           targetModel = `${providerId}/${targetModel}`;
         }
-      }
-    } else {
-      if (availableModels.length > 0) {
-        const configuredModel = availableModels.find((m) => {
-          const p = providers.get(m.providerId);
-          return p !== undefined && p.envKey !== undefined && Boolean(process.env[p.envKey]);
-        });
-        targetModel = configuredModel !== undefined ? configuredModel.fullName : availableModels[0]?.fullName;
       }
     }
 

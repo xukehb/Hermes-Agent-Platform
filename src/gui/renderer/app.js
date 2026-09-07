@@ -3333,7 +3333,7 @@ function fillSelects() {
     const previousModel = modelPicker.value || localStorage.getItem('hap:selected-chat-model') || '';
     const providersMap = new Map((state.providers || []).map(p => [p.id, p]));
 
-    modelPicker.innerHTML = (state.models || []).map((m) => {
+    modelPicker.innerHTML = `<option value="">跟随智能体默认模型</option>` + (state.models || []).map((m) => {
       const p = providersMap.get(m.providerId);
       const isReady = p && p.healthStatus === 'ok';
       const statusText = isReady ? '就绪' : (p?.healthStatus === 'missing_credentials' ? '需配置 Key' : '需连通测试');
@@ -3343,13 +3343,7 @@ function fillSelects() {
     if (previousModel && state.models.some((m) => (m.fullName || m.alias) === previousModel)) {
       modelPicker.value = previousModel;
     } else {
-      const firstReady = (state.models || []).find((m) => {
-        const p = providersMap.get(m.providerId);
-        return p && (p.healthStatus === 'ok' || p.hasCredential);
-      }) || (state.models || [])[0];
-      if (firstReady) {
-        modelPicker.value = firstReady.fullName || firstReady.alias;
-      }
+      modelPicker.value = '';
     }
   }
 
@@ -4298,6 +4292,7 @@ window.testProvider = async (targetId, clickBtn) => {
       const id = $('providerInputId')?.value.trim();
       const baseUrl = $('providerInputBaseUrl')?.value.trim();
       const apiKey = $('providerInputApiKey')?.value.trim();
+      const model = $('providerInputTestModel')?.value.trim();
       const envKey = $('providerInputEnvKey')?.value.trim();
       const wireApi = $('providerInputWireApi')?.value;
       const protocol = $('providerInputProtocol')?.value;
@@ -4313,7 +4308,7 @@ window.testProvider = async (targetId, clickBtn) => {
       }
       showToast(`正在测试连通性：${id || baseUrl}...`, 'info');
 
-      const res = await window.hap.testProvider({ id: id || 'custom', baseUrl, apiKey, envKey, wireApi, protocol });
+      const res = await window.hap.testProvider({ id: id || 'custom', baseUrl, apiKey, model, envKey, wireApi, protocol });
       if (res.reachable) {
         showToast(`服务商连通性测试通过！握手成功 (${res.handshakeMs || 0}ms)`, 'success');
         if (statusChip) {
