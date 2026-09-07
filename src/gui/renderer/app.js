@@ -8779,62 +8779,61 @@ let lastGeneratedImage = null;
 let isGeneratingImage = false;
 let imageGenTimerInterval = null;
 
+let imageGenModelsRequest = 0;
+
 function populateImageGenProviders() {
-  const optGroup = $('systemConfiguredProvidersOptGroup');
-  if (!optGroup) return;
-  const providers = (state.providers || []).filter(p => p.id !== 'ollama');
-  if (providers.length === 0) {
-    optGroup.innerHTML = '';
+  const select = $('imageGenProviderSelect');
+  if (!select) return;
+  const previous = select.value;
+  select.innerHTML = '<option value="">请选择服务商</option>' + (state.providers || [])
+    .map(p => `<option value="${esc(p.id)}">${esc(p.name || p.id)}</option>`).join('');
+  if ((state.providers || []).some(p => p.id === previous)) select.value = previous;
+  else if (state.providers?.length) select.value = state.providers[0].id;
+  return populateImageGenModels();
+}
+
+async function populateImageGenModels() {
+  const providerId = $('imageGenProviderSelect').value;
+  const select = $('imageGenModelSelect');
+  const request = ++imageGenModelsRequest;
+  select.disabled = true;
+  select.innerHTML = '<option value="">加载模型中...</option>';
+  $('doGenerateImageBtn').disabled = true;
+  $('manualImageModelInlineBox').style.display = 'none';
+  $('manualImageModelInput').value = '';
+  if (!providerId) {
+    select.innerHTML = '<option value="">请先选择服务商</option>';
+    $('imageModelStatusChip').textContent = '未选择服务商';
     return;
   }
-  optGroup.innerHTML = providers.map(p => {
-    const isReady = p.healthStatus === 'ok';
-    const label = `${p.name || p.id} (${isReady ? '连通就绪' : p.healthStatus === 'missing_credentials' ? '需填Key' : '待测试'})`;
-    return `<option value="${esc(p.id)}:dall-e-3" data-provider="${esc(p.id)}" data-model="dall-e-3">${esc(label)} - DALL-E 3 / Flux</option>`;
-  }).join('');
+  const configured = (state.models || []).filter(m => (m.providerId || m.provider) === providerId)
+    .map(m => m.model || m.modelName || m.alias).filter(Boolean);
+  let result;
+  try {
+    result = await window.hap.fetchProviderModels(providerId);
+  } catch (error) {
+    result = { ok: false, models: [], error: error.message };
+  }
+  // 服务商快速切换时，忽略旧请求返回的模型。
+  if (request !== imageGenModelsRequest) return;
+  const models = [...new Set([...configured, ...(result.ok ? result.models : [])])];
+  select.innerHTML = '<option value="">请选择生图模型</option>' + models.map(model =>
+    `<option value="${esc(model)}" data-provider="${esc(providerId)}" data-model="${esc(model)}">${esc(model)}</option>`
+  ).join('') + '<option value="manual:manual">手动输入模型名称...</option>';
+  select.disabled = false;
+  if (!models.length) select.value = 'manual:manual';
+  $('imageModelStatusChip').textContent = result.ok ? `${models.length} 个模型` : '模型列表获取失败';
+  $('imageModelStatusChip').title = result.ok ? '' : result.error || '';
+  updateImageGenModelChip();
 }
 
 function updateImageGenModelChip() {
   const select = $('imageGenModelSelect');
-  const chip = $('imageModelStatusChip');
-  const customBox = $('customImageModelBox');
-  const manualBox = $('manualImageModelInlineBox');
-  if (!select || !chip) return;
-
-  const selectedOpt = select.selectedOptions?.[0];
-  const provider = selectedOpt?.getAttribute('data-provider') || '';
-  const val = select.value || '';
-
-  if (val === 'custom:custom') {
-    if (customBox) customBox.style.display = 'flex';
-    if (manualBox) manualBox.style.display = 'none';
-    chip.innerHTML = '<span style="color:#0284c7;">自定义生图端点</span>';
-    return;
-  } else if (val === 'manual:manual') {
-    if (customBox) customBox.style.display = 'none';
-    if (manualBox) {
-      manualBox.style.display = 'block';
-      $('manualImageModelInput')?.focus();
-    }
-    chip.innerHTML = '<span style="color:#0284c7;">手动填写生图模型</span>';
-    return;
-  } else {
-    if (customBox) customBox.style.display = 'none';
-    if (manualBox) manualBox.style.display = 'none';
-  }
-
-  if (provider === 'pollinations') {
-    chip.innerHTML = '<span style="color:#10b981;">免 Key · 即刻可用</span>';
-  } else {
-    const p = (state.providers || []).find(item => item.id === provider);
-    if (p && p.healthStatus === 'ok') {
-      chip.innerHTML = `<span style="color:#10b981;">${esc(p.name || p.id)} 连通就绪</span>`;
-    } else if (p && p.healthStatus === 'unknown') {
-      chip.innerHTML = `<span style="color:#f59e0b;">${esc(p.name || p.id)} 已配置，需先连通测试</span>`;
-    } else {
-      chip.innerHTML = `<span style="color:#f59e0b;">需配置 ${esc(provider.toUpperCase())}_API_KEY</span>`;
-    }
-  }
+  const manual = select.value === 'manual:manual';
+  $('manualImageModelInlineBox').style.display = manual ? 'block' : 'none';
+  $('doGenerateImageBtn').disabled = isGeneratingImage || select.disabled
+    || !$('imageGenProviderSelect').value
+    || !(manual ? $('manualImageModelInput').value.trim() : select.value);
 }
 
 function initAiImageStudio() {
@@ -8848,13 +8847,14 @@ function initAiImageStudio() {
       $('imageGenPromptInput').value = chatInputVal;
     }
     populateImageGenProviders();
-    updateImageGenModelChip();
     modal.showModal();
   });
 
   $('imageGenModelSelect')?.addEventListener('change', () => {
     updateImageGenModelChip();
   });
+  $('imageGenProviderSelect')?.addEventListener('change', populateImageGenModels);
+  $('manualImageModelInput')?.addEventListener('input', updateImageGenModelChip);
 
   $('closeAiImageGenModalBtn')?.addEventListener('click', () => modal.close());
   $('cancelAiImageGenModalBtn')?.addEventListener('click', () => modal.close());
@@ -8907,30 +8907,12 @@ function initAiImageStudio() {
     }
 
     const modelSelect = $('imageGenModelSelect');
-    const selectedOpt = modelSelect?.selectedOptions?.[0];
-    let providerId = selectedOpt?.getAttribute('data-provider') || 'pollinations';
-    let model = selectedOpt?.getAttribute('data-model') || 'flux';
-    let customBaseUrl = '';
-    let customApiKey = '';
-
-    if (modelSelect?.value === 'custom:custom') {
-      customBaseUrl = $('customImageBaseUrl')?.value.trim() || '';
-      customApiKey = $('customImageApiKey')?.value.trim() || '';
-      model = $('customImageModelName')?.value.trim() || 'dall-e-3';
-      providerId = 'custom';
-      if (!customBaseUrl) {
-        showToast('自定义生图请输入 Base URL 地址', 'warning');
-        $('customImageBaseUrl')?.focus();
-        return;
-      }
-    } else if (modelSelect?.value === 'manual:manual') {
-      model = $('manualImageModelInput')?.value.trim();
-      if (!model) {
-        showToast('请输入生图模型名称 (如 dall-e-3, FLUX.1-schnell, cogview-3)', 'warning');
-        $('manualImageModelInput')?.focus();
-        return;
-      }
-      providerId = 'auto';
+    const providerId = $('imageGenProviderSelect').value;
+    const model = modelSelect.value === 'manual:manual'
+      ? $('manualImageModelInput').value.trim() : modelSelect.value;
+    if (!providerId || !model || modelSelect.disabled) {
+      showToast('请选择服务商和生图模型', 'warning');
+      return;
     }
 
     const style = $('imageGenStyleSelect')?.value || 'vivid';
@@ -8960,8 +8942,6 @@ function initAiImageStudio() {
         prompt,
         providerId,
         model,
-        customBaseUrl,
-        customApiKey,
         style,
         aspectRatio: ratio,
         size,

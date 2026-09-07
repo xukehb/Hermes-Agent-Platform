@@ -1149,180 +1149,104 @@ export class GuiService {
     const allProviders = resolver.resolveProviders();
     const savedEnv = readSavedEnv();
 
-    // 确定使用的服务商与模型
     const providerId = input.providerId?.trim() || '';
-    let model = input.model?.trim() || '';
-    let baseUrl = input.customBaseUrl?.trim() || '';
-    let apiKey = input.customApiKey?.trim() || '';
-
-    if (providerId && providerId !== 'pollinations' && providerId !== 'custom' && providerId !== 'auto') {
-      const p = allProviders.get(providerId);
-      if (p) {
-        if (!baseUrl) baseUrl = p.baseUrl;
-        if (!apiKey) {
-          apiKey = (p.envKey ? process.env[p.envKey] || savedEnv[p.envKey] : undefined) || process.env[`${providerId.toUpperCase()}_API_KEY`] || '';
-        }
-      }
+    const model = input.model?.trim() || '';
+    const provider = allProviders.get(providerId);
+    const usedEngine = `${providerId} (${model})`;
+    if (!provider || !model || !provider.baseUrl) {
+      return { ok: false, prompt, width, height, engineUsed: usedEngine, error: '请选择已配置的服务商及生图模型，并配置服务商 Base URL' };
     }
-
-    // 兜底自动检测凭据
-    if (!baseUrl && !apiKey) {
-      if (model.startsWith('dall-e') || input.engine === 'dalle3') {
-        baseUrl = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
-        apiKey = process.env.OPENAI_API_KEY || savedEnv['OPENAI_API_KEY'] || '';
-      } else if (model.includes('FLUX') || model.includes('stabilityai') || providerId === 'siliconflow') {
-        baseUrl = process.env.SILICONFLOW_BASE_URL || 'https://api.siliconflow.cn/v1';
-        apiKey = process.env.SILICONFLOW_API_KEY || savedEnv['SILICONFLOW_API_KEY'] || '';
-      } else if (model.startsWith('cogview') || providerId === 'zhipu') {
-        baseUrl = process.env.ZHIPU_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4';
-        apiKey = process.env.ZHIPU_API_KEY || savedEnv['ZHIPU_API_KEY'] || '';
-      }
-    }
-
-    let usedEngine = '';
-
-    // 方案 A: 走 OpenAI 兼容标准生图接口 (POST /v1/images/generations)
-    // 支持 OpenAI DALL-E 3/2, 硅基流动 Flux / SD3, 智谱 CogView, 通义万相, OneAPI/NewAPI 等
-    if (baseUrl && apiKey && providerId !== 'pollinations') {
-      usedEngine = `${providerId || 'AI 服务商'} (${model || 'dall-e-3'})`;
-      try {
-        const cleanBase = baseUrl.replace(/\/+$/, '');
-        const endpoint = cleanBase.endsWith('/v1') ? `${cleanBase}/images/generations` : `${cleanBase}/v1/images/generations`;
-
-        const sizeStr = input.size === '1024x1792' ? '1024x1792' : input.size === '1792x1024' ? '1792x1024' : '1024x1024';
-        const styleDesc = input.style ? `${input.style} style, ` : '';
-        const fullPrompt = `${prompt}${styleDesc ? ` (${styleDesc.trim()})` : ''}`;
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 40000);
-
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            prompt: fullPrompt,
-            model: model || 'dall-e-3',
-            n: 1,
-            size: sizeStr,
-            style: input.style === 'natural' ? 'natural' : 'vivid',
-            response_format: 'b64_json',
-          }),
-          signal: controller.signal,
-        }).finally(() => clearTimeout(timeoutId));
-
-        if (!res.ok) {
-          const errText = await res.text().catch(() => '');
-          throw new Error(`服务商接口返回 HTTP ${res.status}: ${errText.slice(0, 160)}`);
-        }
-
-        const data = await res.json() as { data?: Array<{ url?: string; b64_json?: string }> };
-        if (data.data?.[0]?.b64_json) {
-          const buf = Buffer.from(data.data[0].b64_json, 'base64');
-          writeFileSync(localFilePath, buf);
-          const normPath = localFilePath.replace(/\\/g, '/');
-          this.info(`已成功通过 ${usedEngine} 生成图像：${fileName}`);
-          return {
-            ok: true,
-            imageUrl: `file:///${normPath}`,
-            localFilePath,
-            localUri: `file:///${normPath}`,
-            prompt,
-            width,
-            height,
-            engineUsed: usedEngine,
-          };
-        } else if (data.data?.[0]?.url) {
-          const downloadUrl = data.data[0].url;
-          try {
-            const dlController = new AbortController();
-            const dlTimeout = setTimeout(() => dlController.abort(), 25000);
-            const imgRes = await fetch(downloadUrl, { signal: dlController.signal }).finally(() => clearTimeout(dlTimeout));
-            if (imgRes.ok) {
-              const arrayBuf = await imgRes.arrayBuffer();
-              writeFileSync(localFilePath, Buffer.from(arrayBuf));
-            }
-          } catch {
-            // 允许使用直链
-          }
-          const normPath = localFilePath.replace(/\\/g, '/');
-          const finalUri = existsSync(localFilePath) ? `file:///${normPath}` : downloadUrl;
-          return {
-            ok: true,
-            imageUrl: finalUri,
-            localFilePath: existsSync(localFilePath) ? localFilePath : undefined,
-            localUri: finalUri,
-            prompt,
-            width,
-            height,
-            engineUsed: usedEngine,
-          };
-        } else {
-          throw new Error('服务商响应数据未包含有效图像 (缺少 url 或 b64_json)');
-        }
-      } catch (provErr) {
-        const errorMsg = describeError(provErr);
-        this.error(`使用 ${usedEngine} 生图失败：${errorMsg}`);
-        if (providerId !== 'auto' && providerId !== '') {
-          return {
-            ok: false,
-            prompt,
-            width,
-            height,
-            engineUsed: usedEngine,
-            error: `${usedEngine} 生图失败：${errorMsg}。请检查服务商 API Key、Base URL 是否支持生图接口，或切换为免 Key 极速引擎。`,
-          };
-        }
-      }
-    }
-
-    // 方案 B: Pollinations AI (免 Key Flux / Turbo / SDXL 极速引擎，带严谨超时防护)
-    const pollinationsModel = (model === 'turbo' || model === 'sdxl') ? model : 'flux';
-    usedEngine = `Pollinations AI (${pollinationsModel})`;
-    const styleDesc = input.style ? `${input.style} style, ` : '';
-    const encodedPrompt = encodeURIComponent(`${prompt}, ${styleDesc}high quality, masterpiece, detailed, 8k resolution`);
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&model=${pollinationsModel}&nologo=true&seed=${timestamp % 100000}`;
+    const baseUrl = provider.baseUrl;
+    const apiKey = (provider.envKey ? process.env[provider.envKey] || savedEnv[provider.envKey] : undefined)
+      || process.env[`${providerId.toUpperCase()}_API_KEY`] || savedEnv[`${providerId.toUpperCase()}_API_KEY`] || '';
 
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 25000);
+      const cleanBase = baseUrl.replace(/\/+$/, '');
+      // 保留服务商配置的版本路径，例如智谱的 /api/paas/v4。
+      const endpoint = new URL(cleanBase).pathname === '/'
+        ? `${cleanBase}/v1/images/generations` : `${cleanBase}/images/generations`;
+      const sizeStr = `${width}x${height}`;
+      const styleDesc = input.style ? `${input.style} style, ` : '';
+      const fullPrompt = `${prompt}${styleDesc ? ` (${styleDesc.trim()})` : ''}`;
 
-      const imgRes = await fetch(imageUrl, { method: 'GET', signal: controller.signal }).finally(() => clearTimeout(timeoutId));
-      if (imgRes.ok) {
-        const arrayBuf = await imgRes.arrayBuffer();
-        writeFileSync(localFilePath, Buffer.from(arrayBuf));
-        this.info(`Pollinations 图像已下载并持久化至：${localFilePath}`);
-      } else {
-        throw new Error(`HTTP ${imgRes.status} ${imgRes.statusText}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 40000);
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...provider.httpHeaders,
+          ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+        },
+        body: JSON.stringify({
+          prompt: fullPrompt,
+          model,
+          n: 1,
+          size: sizeStr,
+          ...(model === 'dall-e-3' ? { style: input.style === 'natural' ? 'natural' : 'vivid' } : {}),
+          ...(model.startsWith('dall-e-') ? { response_format: 'b64_json' } : {}),
+        }),
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeoutId));
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        throw new Error(`服务商接口返回 HTTP ${res.status}: ${errText.slice(0, 160)}`);
       }
-    } catch (saveErr) {
-      const errMsg = describeError(saveErr);
-      this.error(`Pollinations 图像获取失败：${errMsg}`);
+
+      const data = await res.json() as { data?: Array<{ url?: string; b64_json?: string }> };
+      if (data.data?.[0]?.b64_json) {
+        const buf = Buffer.from(data.data[0].b64_json, 'base64');
+        writeFileSync(localFilePath, buf);
+        const normPath = localFilePath.replace(/\\/g, '/');
+        this.info(`已成功通过 ${usedEngine} 生成图像：${fileName}`);
+        return {
+          ok: true,
+          imageUrl: `file:///${normPath}`,
+          localFilePath,
+          localUri: `file:///${normPath}`,
+          prompt,
+          width,
+          height,
+          engineUsed: usedEngine,
+        };
+      } else if (data.data?.[0]?.url) {
+        const downloadUrl = data.data[0].url;
+        try {
+          const dlController = new AbortController();
+          const dlTimeout = setTimeout(() => dlController.abort(), 25000);
+          const imgRes = await fetch(downloadUrl, { signal: dlController.signal }).finally(() => clearTimeout(dlTimeout));
+          if (imgRes.ok) {
+            const arrayBuf = await imgRes.arrayBuffer();
+            writeFileSync(localFilePath, Buffer.from(arrayBuf));
+          }
+        } catch {
+          // 允许使用直链
+        }
+        const normPath = localFilePath.replace(/\\/g, '/');
+        const finalUri = existsSync(localFilePath) ? `file:///${normPath}` : downloadUrl;
+        return {
+          ok: true,
+          imageUrl: finalUri,
+          localFilePath: existsSync(localFilePath) ? localFilePath : undefined,
+          localUri: finalUri,
+          prompt,
+          width,
+          height,
+          engineUsed: usedEngine,
+        };
+      } else {
+        throw new Error('服务商响应数据未包含有效图像 (缺少 url 或 b64_json)');
+      }
+    } catch (provErr) {
+      const errorMsg = describeError(provErr);
+      this.error(`使用 ${usedEngine} 生图失败：${errorMsg}`);
       return {
-        ok: false,
-        prompt,
-        width,
-        height,
-        engineUsed: usedEngine,
-        error: `免 Key 生图引擎连接失败或超时（${errMsg}）。通常因国际网络波动，建议在模型下拉框中选择已配置的 AI 服务商（如 OpenAI / SiliconFlow / 智谱）并配置对应 API Key。`,
+        ok: false, prompt, width, height, engineUsed: usedEngine,
+        error: `${usedEngine} 生图失败：${errorMsg}。请检查服务商配置及所选模型是否支持生图接口。`,
       };
     }
-
-    const normPath = localFilePath.replace(/\\/g, '/');
-    const localUri = existsSync(localFilePath) ? `file:///${normPath}` : imageUrl;
-
-    return {
-      ok: true,
-      imageUrl: localUri,
-      localFilePath: existsSync(localFilePath) ? localFilePath : undefined,
-      localUri,
-      prompt,
-      width,
-      height,
-      engineUsed: usedEngine,
-    };
   }
 
   async fetchProviderModels(providerId: string, customOptions?: { baseUrl?: string; apiKey?: string; wireApi?: string; protocol?: string }): Promise<{ ok: boolean; models: string[]; error?: string }> {
@@ -1341,7 +1265,7 @@ export class GuiService {
       if (!baseUrl) return { ok: false, models: [], error: '未配置 Base URL' };
 
       const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
-      const modelsEndpoint = cleanBaseUrl.endsWith('/v1') ? `${cleanBaseUrl}/models` : `${cleanBaseUrl}/v1/models`;
+      const modelsEndpoint = new URL(cleanBaseUrl).pathname === '/' ? `${cleanBaseUrl}/v1/models` : `${cleanBaseUrl}/models`;
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',

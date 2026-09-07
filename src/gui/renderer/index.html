@@ -2908,7 +2908,6 @@
             <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"></circle><circle cx="17.5" cy="10.5" r=".5"></circle><circle cx="8.5" cy="7.5" r=".5"></circle><circle cx="6.5" cy="12.5" r=".5"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path></svg></div>
             <div>
               <h2 style="margin:0;font-size:16px;font-weight:700;">AI 生图与视觉创作中心 (AI Image Studio)</h2>
-              <p style="margin:2px 0 0 0;font-size:12px;color:var(--text-muted);">支持 DALL-E 3、OpenAI 兼容生图以及高画质免 Key Flux / SDXL 生图引擎，一键生成插画、架构图与设计图</p>
             </div>
           </div>
           <button type="button" class="btn-close" id="closeAiImageGenModalBtn" aria-label="关闭" title="关闭"></button>
@@ -2970,26 +2969,13 @@
                 <label style="font-size:12px;font-weight:600;">生图服务商与模型 (Model & Provider) *</label>
                 <span id="imageModelStatusChip" style="font-size:11px;color:#10b981;"></span>
               </div>
-              <select id="imageGenModelSelect">
-                <optgroup label="官方与商用生图大模型 (画质顶尖 · 需 API Key)">
-                  <option value="openai:dall-e-3" data-provider="openai" data-model="dall-e-3" selected>OpenAI DALL-E 3 (画质顶尖 · 官方推荐)</option>
-                  <option value="openai:dall-e-2" data-provider="openai" data-model="dall-e-2">OpenAI DALL-E 2 (极速低成本)</option>
-                  <option value="siliconflow:black-forest-labs/FLUX.1-schnell" data-provider="siliconflow" data-model="black-forest-labs/FLUX.1-schnell">硅基流动 FLUX.1-schnell (秒级极速生成)</option>
-                  <option value="siliconflow:black-forest-labs/FLUX.1-dev" data-provider="siliconflow" data-model="black-forest-labs/FLUX.1-dev">硅基流动 FLUX.1-dev (超高画质与细节)</option>
-                  <option value="siliconflow:stabilityai/stable-diffusion-3-medium" data-provider="siliconflow" data-model="stabilityai/stable-diffusion-3-medium">硅基流动 SD3 Medium</option>
-                  <option value="zhipu:cogview-3" data-provider="zhipu" data-model="cogview-3">智谱清言 CogView-3 (原生中文大模型生图)</option>
-                  <option value="dashscope:wanx-v1" data-provider="dashscope" data-model="wanx-v1">阿里通义万相 Wanx-v1</option>
-                </optgroup>
-                <optgroup label="免 Key 公用极速引擎 (即刻可用 · 无需配置 Key)">
-                  <option value="pollinations:flux" data-provider="pollinations" data-model="flux">Pollinations FLUX (免 Key · 高清推荐)</option>
-                  <option value="pollinations:turbo" data-provider="pollinations" data-model="turbo">Pollinations Turbo (免 Key · 2秒秒出)</option>
-                  <option value="pollinations:sdxl" data-provider="pollinations" data-model="sdxl">Pollinations SDXL (免 Key · 经典质感)</option>
-                </optgroup>
-                <optgroup label="已配置的 AI 服务商" id="systemConfiguredProvidersOptGroup"></optgroup>
-                <optgroup label="手动填写与自定义端点">
-                  <option value="manual:manual" data-provider="auto" data-model="manual">手动输入生图模型名称...</option>
-                  <option value="custom:custom" data-provider="custom" data-model="custom">自定义 Base URL + API Key + 模型名称...</option>
-                </optgroup>
+              <label for="imageGenProviderSelect">服务商</label>
+              <select id="imageGenProviderSelect" style="margin-bottom:8px;">
+                <option value="">请选择服务商</option>
+              </select>
+              <label for="imageGenModelSelect">生图模型</label>
+              <select id="imageGenModelSelect" disabled>
+                <option value="">请先选择服务商</option>
               </select>
             </div>
 
@@ -2998,13 +2984,6 @@
               <input type="text" id="manualImageModelInput" placeholder="手动输入模型名称 (如 dall-e-3, black-forest-labs/FLUX.1-schnell, cogview-3)" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid #0284c7;background:#f0f9ff;" />
             </div>
 
-            <!-- 自定义生图模型端点展开区域 -->
-            <div id="customImageModelBox" style="display:none;padding:10px;background:#f1f5f9;border-radius:8px;border:1px dashed #cbd5e1;display:none;flex-direction:column;gap:8px;">
-              <div style="font-size:11.5px;font-weight:600;color:#334155;">自定义生图接口配置 (OpenAI 兼容 /v1/images/generations 格式)：</div>
-              <input type="text" id="customImageBaseUrl" placeholder="API 基础地址 (如 https://api.siliconflow.cn/v1)" style="width:100%;box-sizing:border-box;font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid #cbd5e1;" />
-              <input type="password" id="customImageApiKey" placeholder="API Key 凭据 (留空使用全局环境变量)" style="width:100%;box-sizing:border-box;font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid #cbd5e1;" />
-              <input type="text" id="customImageModelName" placeholder="模型名称 (如 black-forest-labs/FLUX.1-schnell)" style="width:100%;box-sizing:border-box;font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid #cbd5e1;" />
-            </div>
 
             <div style="margin-top:6px;">
               <button type="button" class="btn primary" id="doGenerateImageBtn" style="width:100%;padding:10px;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;">
