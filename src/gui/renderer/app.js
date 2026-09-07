@@ -3045,9 +3045,10 @@ function renderAgents() {
             <span class="card-subtitle">ID: ${esc(agent.id)}</span>
           </div>
         </div>
-        <span class="badge ${agent.toolTier === 'full' ? 'danger' : 'neutral'}">
-          ${esc(agent.toolTier || 'standard')}
-        </span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          ${agent.id === state.defaultAgentId ? '<span class="badge" style="background:#dcfce7;color:#166534;">默认智能体</span>' : ''}
+          <span class="badge ${agent.toolTier === 'full' ? 'danger' : 'neutral'}">${esc(agent.toolTier || 'standard')}</span>
+        </div>
       </div>
       <div class="card-body">
         <div style="font-size:12.5px;color:var(--text-secondary);line-height:1.5;margin-bottom:6px;min-height:36px;">
@@ -3065,6 +3066,7 @@ function renderAgents() {
       <div class="card-footer">
         <div style="display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;">
           <button type="button" class="btn danger" onclick="deleteAgentRole('${escJs(agent.id)}')">删除</button>
+          ${agent.id === state.defaultAgentId ? '' : `<button type="button" class="btn secondary" onclick="setDefaultAgent('${escJs(agent.id)}')">设为默认</button>`}
           <button type="button" class="btn secondary" onclick="openAgentDialog('${escJs(agent.id)}')">编辑配置</button>
           <button type="button" class="btn primary" onclick="startChatWithAgent('${escJs(agent.id)}')">开始对话</button>
         </div>
@@ -3072,6 +3074,17 @@ function renderAgents() {
     </div>
   `).join('');
 }
+
+window.setDefaultAgent = async (agentId) => {
+  try {
+    await window.hap.setDefaultAgent(agentId);
+    localStorage.setItem('hap:selected-chat-agent', agentId);
+    await refresh();
+    showToast(`已将 ${agentId} 设为默认智能体`, 'success');
+  } catch (error) {
+    showToast('设置默认智能体失败：' + error.message, 'error');
+  }
+};
 
 window.openAgentDialog = (agentId) => {
   const agent = (state.agents || []).find((item) => item.id === agentId);

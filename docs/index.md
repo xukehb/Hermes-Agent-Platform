@@ -4,6 +4,10 @@
 
 本文档说明本项目首发范围的本地启动、服务商与模型配置、智能体生成、Telegram 手机端下发指令，以及本地验证方式。详细需求规格见 [hermes-agent-platform.spec.md](../specs/hermes-agent-platform.spec.md)，完整验证留痕见 [verification.md](../verification.md)。
 
+## 优化计划
+
+参见 [项目优化清单](OPTIMIZATION_CHECKLIST.md)，包含 13 项优化建议、P0/P1/P2 优先级、验收标准、预计工作量和建议落地顺序。该清单用于排期，不表示优化已经实施。
+
 ## 1. 初始化配置
 
 在项目根目录执行：

@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('hap', {
   removeModel: (alias) => call('gui:removeModel', alias),
   batchRemoveModels: (aliases) => call('gui:batchRemoveModels', aliases),
   upsertAgent: (input) => call('gui:upsertAgent', input),
+  setDefaultAgent: (id) => call('gui:setDefaultAgent', id),
   removeAgent: (id) => call('gui:removeAgent', id),
   openInVsCode: (path) => call('gui:openInVsCode', path),
   openInExplorer: (path) => call('gui:openInExplorer', path),

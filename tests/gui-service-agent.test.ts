@@ -99,6 +99,17 @@ describe('GuiService agent role management', () => {
       .toBe('Analyze data');
   });
 
+  it('sets an existing agent as the global default', () => {
+    const service = new GuiService(configPath);
+    service.setDefaultAgent('coder');
+    expect(loadConfig({ path: configPath }).config.default_agent).toBe('coder');
+    expect((service.snapshot() as { defaultAgentId: string }).defaultAgentId).toBe('coder');
+  });
+
+  it('rejects setting an unknown agent as the global default', () => {
+    expect(() => new GuiService(configPath).setDefaultAgent('missing')).toThrow('不存在');
+  });
+
   it('creates a role with system prompt and advanced settings', () => {
     const service = new GuiService(configPath);
 

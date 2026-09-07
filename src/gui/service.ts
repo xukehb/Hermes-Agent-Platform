@@ -891,6 +891,17 @@ export class GuiService {
     return result;
   }
 
+  setDefaultAgent(rawId: string): object {
+    const id = rawId.trim();
+    const resolver = this.resolver();
+    if (!resolver.listAgentIds().includes(id)) {
+      throw new Error(`智能体 ${id} 不存在，无法设为默认`);
+    }
+    const result = new ConfigWriter(this.configPath).setGlobals({ defaultAgent: id });
+    this.info('已设置默认智能体：' + id);
+    return result;
+  }
+
   removeAgent(rawId: string): object {
     const id = rawId.trim();
     const result = removeGuiAgent(this.configPath, id);
