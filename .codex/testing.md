@@ -58,3 +58,9 @@ npx tsx src/cli/bin.ts -c .tmp-probe/hap.toml init
 ## 五、结论
 
 类型检查与全量测试均通过，无已知失败项。2026-08-25 在同步规格实施清单并新增 `docs/index.md` 后复跑 `npx tsc -p tsconfig.json --noEmit` 与 `npx vitest run --reporter dot`，结果仍为 14 个测试文件、433 项全部通过。测试覆盖了配置、协议、服务商、工具、编排、存储、三个通道与命令行九个层次的正常流程、边界条件与错误恢复路径。
+
+## 六、2026-09-07 发布推送验证
+
+- `npm run typecheck`：退出码 0。
+- `npm test -- --runInBand`：退出码 1；56 个测试文件中 43 个通过、13 个失败，696 项用例中 656 通过、40 失败，另有 1 个未处理错误。
+- 主要环境原因：`better-sqlite3` 原生模块使用 Node 模块版本 136 编译，而当前 Node 要求版本 127；Windows 测试环境也缺少 `sleep` 命令。失败集中在控制平面、GUI 服务、远程诊断与工具测试，与本次发布产物上传无直接关系。
