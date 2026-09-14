@@ -9,6 +9,21 @@ import { isIP } from 'node:net';
 import { AgentOrchestrator } from '../agent/index.js';
 import { BUILTIN_PROVIDERS, ConfigResolver, loadConfig, resolveConfigPath } from '../config/index.js';
 import { removeAgent, upsertAgent, type GuiAgentInput } from '../gui/agent-operations.js';
+import {
+  upsertProvider,
+  removeProvider,
+  batchRemoveProviders,
+  upsertModel,
+  removeModel,
+  batchRemoveModels,
+  setDefaultModel,
+  testProvider,
+  testModel,
+  fetchProviderModels,
+  getProviderApiKey,
+  type GuiProviderTestInput,
+} from '../gui/provider-operations.js';
+import type { GuiModelInput, GuiProviderInput } from '../gui/shared.js';
 import { ScheduleStore, SchedulerEngine } from '../scheduler/index.js';
 import { MemoryStore, type MemoryCategory } from '../memory/index.js';
 import { RemoteClientManager, RemoteServerStore, type RemoteServerConfig } from '../remote/index.js';
@@ -258,8 +273,12 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
         id: m.alias,
         fullName: m.fullName,
         alias: m.alias,
+        model: m.model || m.alias,
         providerId: m.providerId,
         contextWindow: m.contextWindow,
+        maxOutputTokens: m.maxOutputTokens,
+        capabilities: m.capabilities,
+        protocol: m.protocol,
       }));
 
       const agents = resolver.listAgentIds().map(id => {
@@ -289,6 +308,7 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
         ok: true,
         data: {
           configPath: cfg.path,
+          defaultModel: resolver.resolveDefaultModel(),
           providers,
           models,
           agents,
@@ -329,6 +349,113 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
   app.delete('/api/agents/:id', (c) => {
     try {
       const data = removeAgent(resolveConfigPath(configPath, process.env), c.req.param('id'));
+      return c.json({ ok: true, data });
+    } catch (err) {
+      return c.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, 400);
+    }
+  });
+
+  // 1.2 服务商管理接口
+  app.post('/api/providers', async (c) => {
+    try {
+      const body = await c.req.json<GuiProviderInput>();
+      const data = upsertProvider(resolveConfigPath(configPath, process.env), body);
+      return c.json({ ok: true, data });
+    } catch (err) {
+      return c.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, 400);
+    }
+  });
+
+  app.delete('/api/providers/:id', (c) => {
+    try {
+      const data = removeProvider(resolveConfigPath(configPath, process.env), c.req.param('id'));
+      return c.json({ ok: true, data });
+    } catch (err) {
+      return c.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, 400);
+    }
+  });
+
+  app.post('/api/providers/batch-delete', async (c) => {
+    try {
+      const body = await c.req.json<{ ids: string[] }>();
+      const data = batchRemoveProviders(resolveConfigPath(configPath, process.env), body.ids || []);
+      return c.json({ ok: true, data });
+    } catch (err) {
+      return c.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, 400);
+    }
+  });
+
+  app.post('/api/providers/test', async (c) => {
+    try {
+      const body = await c.req.json<string | GuiProviderTestInput>();
+      const data = await testProvider(resolveConfigPath(configPath, process.env), body);
+      return c.json({ ok: true, data });
+    } catch (err) {
+      return c.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, 400);
+    }
+  });
+
+  app.get('/api/providers/:id/api-key', (c) => {
+    try {
+      const data = getProviderApiKey(resolveConfigPath(configPath, process.env), c.req.param('id'));
+      return c.json({ ok: true, data });
+    } catch (err) {
+      return c.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, 400);
+    }
+  });
+
+  app.post('/api/providers/:id/fetch-models', async (c) => {
+    try {
+      const body = await c.req.json<{ baseUrl?: string; apiKey?: string; wireApi?: string; protocol?: string }>().catch(() => ({}));
+      const data = await fetchProviderModels(resolveConfigPath(configPath, process.env), c.req.param('id'), body);
+      return c.json({ ok: true, data });
+    } catch (err) {
+      return c.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, 400);
+    }
+  });
+
+  // 1.3 模型管理接口
+  app.post('/api/models', async (c) => {
+    try {
+      const body = await c.req.json<GuiModelInput>();
+      const data = upsertModel(resolveConfigPath(configPath, process.env), body);
+      return c.json({ ok: true, data });
+    } catch (err) {
+      return c.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, 400);
+    }
+  });
+
+  app.delete('/api/models/:alias', (c) => {
+    try {
+      const data = removeModel(resolveConfigPath(configPath, process.env), c.req.param('alias'));
+      return c.json({ ok: true, data });
+    } catch (err) {
+      return c.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, 400);
+    }
+  });
+
+  app.post('/api/models/batch-delete', async (c) => {
+    try {
+      const body = await c.req.json<{ aliases: string[] }>();
+      const data = batchRemoveModels(resolveConfigPath(configPath, process.env), body.aliases || []);
+      return c.json({ ok: true, data });
+    } catch (err) {
+      return c.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, 400);
+    }
+  });
+
+  app.post('/api/models/:alias/set-default', (c) => {
+    try {
+      const data = setDefaultModel(resolveConfigPath(configPath, process.env), c.req.param('alias'));
+      return c.json({ ok: true, data });
+    } catch (err) {
+      return c.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, 400);
+    }
+  });
+
+  app.post('/api/models/:alias/test', async (c) => {
+    try {
+      const data = await testModel(resolveConfigPath(configPath, process.env), c.req.param('alias'));
       return c.json({ ok: true, data });
     } catch (err) {
       return c.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, 400);
@@ -693,6 +820,96 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
               headers: authHeader
             }).then(r => r.json());
             if (!res.ok) throw new Error(res.error || '智能体删除失败');
+            return res.data;
+          },
+          upsertProvider: async (input) => {
+            const res = await fetch('/api/providers', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...authHeader },
+              body: JSON.stringify(input)
+            }).then(r => r.json());
+            if (!res.ok) throw new Error(res.error || '服务商保存失败');
+            return res.data;
+          },
+          removeProvider: async (id) => {
+            const res = await fetch('/api/providers/' + encodeURIComponent(id), {
+              method: 'DELETE',
+              headers: authHeader
+            }).then(r => r.json());
+            if (!res.ok) throw new Error(res.error || '服务商删除失败');
+            return res.data;
+          },
+          batchRemoveProviders: async (ids) => {
+            const res = await fetch('/api/providers/batch-delete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...authHeader },
+              body: JSON.stringify({ ids })
+            }).then(r => r.json());
+            if (!res.ok) throw new Error(res.error || '批量删除服务商失败');
+            return res.data;
+          },
+          testProvider: async (idOrConfig) => {
+            const res = await fetch('/api/providers/test', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...authHeader },
+              body: JSON.stringify(typeof idOrConfig === 'string' ? idOrConfig : idOrConfig)
+            }).then(r => r.json());
+            if (!res.ok) throw new Error(res.error || '测试失败');
+            return res.data;
+          },
+          getProviderApiKey: async (providerId) => {
+            const res = await fetch('/api/providers/' + encodeURIComponent(providerId) + '/api-key', { headers: authHeader }).then(r => r.json());
+            if (!res.ok) throw new Error(res.error || '获取密钥状态失败');
+            return res.data;
+          },
+          fetchProviderModels: async (providerId, options) => {
+            const res = await fetch('/api/providers/' + encodeURIComponent(providerId) + '/fetch-models', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...authHeader },
+              body: JSON.stringify(options || {})
+            }).then(r => r.json());
+            return res.data || { ok: false, models: [], error: res.error };
+          },
+          upsertModel: async (input) => {
+            const res = await fetch('/api/models', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...authHeader },
+              body: JSON.stringify(input)
+            }).then(r => r.json());
+            if (!res.ok) throw new Error(res.error || '模型保存失败');
+            return res.data;
+          },
+          removeModel: async (alias) => {
+            const res = await fetch('/api/models/' + encodeURIComponent(alias), {
+              method: 'DELETE',
+              headers: authHeader
+            }).then(r => r.json());
+            if (!res.ok) throw new Error(res.error || '模型删除失败');
+            return res.data;
+          },
+          batchRemoveModels: async (aliases) => {
+            const res = await fetch('/api/models/batch-delete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...authHeader },
+              body: JSON.stringify({ aliases })
+            }).then(r => r.json());
+            if (!res.ok) throw new Error(res.error || '批量删除模型失败');
+            return res.data;
+          },
+          setDefaultModel: async (alias) => {
+            const res = await fetch('/api/models/' + encodeURIComponent(alias) + '/set-default', {
+              method: 'POST',
+              headers: authHeader
+            }).then(r => r.json());
+            if (!res.ok) throw new Error(res.error || '设置默认模型失败');
+            return res.data;
+          },
+          testModel: async (alias) => {
+            const res = await fetch('/api/models/' + encodeURIComponent(alias) + '/test', {
+              method: 'POST',
+              headers: authHeader
+            }).then(r => r.json());
+            if (!res.ok) throw new Error(res.error || '测试模型失败');
             return res.data;
           },
           listSchedules: async () => {

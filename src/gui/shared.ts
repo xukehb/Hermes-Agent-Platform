@@ -29,6 +29,7 @@ export interface GuiModelInput {
   contextWindow?: number;
   maxOutputTokens?: number;
   protocol?: 'hermes-native' | 'openai-tools' | 'deepseek' | 'anthropic';
+  capabilities?: ('tools' | 'vision' | 'streaming' | 'reasoning' | 'longctx')[];
 }
 
 export interface GuiSyncInput {

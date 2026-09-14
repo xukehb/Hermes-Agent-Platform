@@ -30,9 +30,13 @@ function registerIpc(): void {
   ipcMain.handle('gui:upsertProvider', (_event, input) => invoke(() => service.upsertProvider(input)));
   ipcMain.handle('gui:removeProvider', (_event, id) => invoke(() => service.removeProvider(id)));
   ipcMain.handle('gui:batchRemoveProviders', (_event, ids) => invoke(() => service.batchRemoveProviders(ids)));
+  ipcMain.handle('gui:clearDefaultProviders', () => invoke(() => service.clearDefaultProviders()));
+  ipcMain.handle('gui:restoreDefaultProviders', () => invoke(() => service.restoreDefaultProviders()));
   ipcMain.handle('gui:upsertModel', (_event, input) => invoke(() => service.upsertModel(input)));
   ipcMain.handle('gui:removeModel', (_event, alias) => invoke(() => service.removeModel(alias)));
   ipcMain.handle('gui:batchRemoveModels', (_event, aliases) => invoke(() => service.batchRemoveModels(aliases)));
+  ipcMain.handle('gui:setDefaultModel', (_event, alias) => invoke(() => service.setDefaultModel(alias)));
+  ipcMain.handle('gui:testModel', (_event, alias) => invoke(() => service.testModel(alias)));
   ipcMain.handle('gui:upsertAgent', (_event, input) => invoke(() => service.upsertAgent(input)));
   ipcMain.handle('gui:setDefaultAgent', (_event, id) => invoke(() => service.setDefaultAgent(id)));
   ipcMain.handle('gui:removeAgent', (_event, id) => invoke(() => service.removeAgent(id)));

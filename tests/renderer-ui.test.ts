@@ -8,6 +8,7 @@ const app = readFileSync(resolve(rendererDir, 'app.js'), 'utf8');
 const css = readFileSync(resolve(rendererDir, 'styles.css'), 'utf8');
 const preload = readFileSync(resolve(rendererDir, 'preload.cjs'), 'utf8');
 const main = readFileSync(resolve(process.cwd(), 'src/gui/main.ts'), 'utf8');
+const serviceSource = readFileSync(resolve(process.cwd(), 'src/gui/service.ts'), 'utf8');
 
 function section(source: string, start: string, end: string): string {
   const startIndex = source.indexOf(start);
@@ -208,6 +209,33 @@ describe('Electron renderer UI contracts', () => {
     expect(app).toContain("badgeLabel = '冲突'");
     expect(app).toContain('window.askAiResolveConflicts =');
     expect(app).toContain('window.openVsCodeForProject =');
+  });
+
+  it('supports clearing default providers and models with one-click action and confirmation', () => {
+    expect(html).toContain('id="clearDefaultProvidersBtn"');
+    expect(app).toContain('window.clearDefaultProviders =');
+    expect(app).toContain('window.restoreDefaultProviders =');
+    expect(app).toContain('window.hap.clearDefaultProviders()');
+    expect(app).toContain('window.hap.restoreDefaultProviders()');
+    expect(preload).toContain("clearDefaultProviders: () => call('gui:clearDefaultProviders')");
+    expect(preload).toContain("restoreDefaultProviders: () => call('gui:restoreDefaultProviders')");
+    expect(main).toContain("ipcMain.handle('gui:clearDefaultProviders'");
+    expect(main).toContain("ipcMain.handle('gui:restoreDefaultProviders'");
+    expect(serviceSource).toContain('clearDefaultProviders(): object');
+    expect(serviceSource).toContain('restoreDefaultProviders(): object');
+  });
+
+  it('ensures all modals only close on close button (X), not on backdrop click or Escape key', () => {
+    // Backdrop click close must NOT exist
+    expect(app).not.toMatch(/if\s*\(\s*e\.target\s*===\s*modal\s*\)\s*modal\.close\(\)/);
+
+    // Cancel event (Escape key) must be prevented
+    expect(app).toContain("modal.addEventListener('cancel'");
+    expect(app).toContain('e.preventDefault()');
+
+    // All .btn-close buttons are bound to modal.close()
+    expect(app).toContain("modal.querySelectorAll('.btn-close')");
+    expect(app).toContain('if (modal.open) modal.close()');
   });
 });
 

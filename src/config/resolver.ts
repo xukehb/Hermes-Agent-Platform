@@ -1297,8 +1297,12 @@ export class ConfigResolver {
     return ids.length > 0 ? ids : [this.resolveDefaultAgentId()];
   }
 
- resolveDefaultAgentId(): string {
+  resolveDefaultAgentId(): string {
     return asString(this.read('default_agent', this.context())) ?? BUILTIN.defaultAgent;
+  }
+
+  resolveDefaultModel(): string {
+    return asString(this.read('default_model', this.context())) ?? BUILTIN.defaultModel;
   }
 
   /**

@@ -203,6 +203,14 @@ let currentDialogModels = [];
 let originalDialogModelAliases = new Set();
 let currentLogFilter = 'all';
 
+// 服务商与模型管理视图状态
+let pmViewMode = 'providers'; // 'providers' | 'models'
+let pmSearchKeyword = '';
+let pmStatusFilter = 'all';
+let pmCapabilityFilter = 'all';
+const providerLatencies = new Map(); // providerId -> { latencyMs, ok, error }
+const modelLatencies = new Map(); // alias -> { latencyMs, ok, preview, error }
+
 // 项目折叠状态与“展开更多”状态
 const collapsedProjectIds = new Set();
 const expandedProjectAllIds = new Set();
@@ -545,16 +553,16 @@ function parseInlineMarkdown(text, doEscape = true) {
   // 图片解析 (![alt](src))
   s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
     return `
-      <div class="ai-generated-image-card" style="margin:10px 0;display:inline-block;max-width:100%;background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+      <div class="ai-generated-image-card" style="margin:10px 0;display:inline-block;max-width:100%;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--radius-md);overflow:hidden;box-shadow:var(--shadow-sm);">
         <div style="position:relative;cursor:zoom-in;" onclick="window.openImageLightbox('${escJs(src)}', '${escJs(alt)}')">
-          <img src="${esc(src)}" alt="${esc(alt)}" style="display:block;max-width:100%;max-height:420px;object-fit:contain;background:#f8fafc;" loading="lazy" />
+          <img src="${esc(src)}" alt="${esc(alt)}" style="display:block;max-width:100%;max-height:420px;object-fit:contain;background:var(--bg-subtle);" loading="lazy" />
           <div style="position:absolute;bottom:6px;right:6px;background:rgba(15,23,42,0.7);color:#ffffff;font-size:11px;padding:2px 8px;border-radius:12px;display:flex;align-items:center;gap:4px;">
             <span>点击放大</span>
           </div>
         </div>
-        ${alt ? `<div style="padding:6px 12px;font-size:12px;color:#475569;background:#f8fafc;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;">
+        ${alt ? `<div style="padding:6px 12px;font-size:12px;color:var(--text-secondary);background:var(--bg-subtle);border-top:1px solid var(--border-default);display:flex;justify-content:space-between;align-items:center;">
           <span>${esc(alt)}</span>
-          <a href="${esc(src)}" download="image.png" target="_blank" style="color:#0284c7;text-decoration:none;font-size:11px;font-weight:600;" onclick="event.stopPropagation();">下载</a>
+          <a href="${esc(src)}" download="image.png" target="_blank" style="color:var(--primary);text-decoration:none;font-size:11px;font-weight:600;" onclick="event.stopPropagation();">下载</a>
         </div>` : ''}
       </div>
     `;
@@ -2631,36 +2639,36 @@ function renderPermissions() {
     container.innerHTML = `
       <div style="display:flex;flex-direction:column;gap:16px;">
         <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:12px;">
-          <div id="setModeFullAccess" class="card ${perm.mode === 'full-access' ? 'active' : ''}" style="cursor:pointer;padding:14px;border:1.5px solid ${perm.mode === 'full-access' ? '#0284c7' : '#e2e8f0'};border-radius:10px;background:${perm.mode === 'full-access' ? '#f0f9ff' : '#ffffff'};transition:all 0.15s ease;" onclick="window.selectPermissionModeInSettings('full-access')">
-            <div style="font-weight:700;font-size:13.5px;color:${perm.mode === 'full-access' ? '#0369a1' : '#1e293b'};display:flex;align-items:center;gap:6px;">
+          <div id="setModeFullAccess" class="card ${perm.mode === 'full-access' ? 'active' : ''}" style="cursor:pointer;padding:14px;border:1.5px solid ${perm.mode === 'full-access' ? 'var(--primary)' : 'var(--border-default)'};border-radius:var(--radius-md);background:${perm.mode === 'full-access' ? 'var(--primary-subtle)' : 'var(--bg-surface)'};transition:all var(--ease-snappy);" onclick="window.selectPermissionModeInSettings('full-access')">
+            <div style="font-weight:700;font-size:13.5px;color:${perm.mode === 'full-access' ? 'var(--primary)' : 'var(--text-main)'};display:flex;align-items:center;gap:6px;">
               <span>完全信任模式 (全权限)</span>
             </div>
-            <div style="font-size:12px;color:#64748b;margin-top:6px;line-height:1.4;">完完全全放开全部权限，智能体全自动执行终端命令、本地代码写入与网络请求，无需手动弹窗确认。</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:6px;line-height:1.4;">完完全全放开全部权限，智能体全自动执行终端命令、本地代码写入与网络请求，无需手动弹窗确认。</div>
           </div>
-          <div id="setModeConfirm" class="card ${perm.mode === 'confirm-writes' ? 'active' : ''}" style="cursor:pointer;padding:14px;border:1.5px solid ${perm.mode === 'confirm-writes' ? '#0284c7' : '#e2e8f0'};border-radius:10px;background:${perm.mode === 'confirm-writes' ? '#f0f9ff' : '#ffffff'};transition:all 0.15s ease;" onclick="window.selectPermissionModeInSettings('confirm-writes')">
-            <div style="font-weight:700;font-size:13.5px;color:${perm.mode === 'confirm-writes' ? '#0369a1' : '#1e293b'};display:flex;align-items:center;gap:6px;">
+          <div id="setModeConfirm" class="card ${perm.mode === 'confirm-writes' ? 'active' : ''}" style="cursor:pointer;padding:14px;border:1.5px solid ${perm.mode === 'confirm-writes' ? 'var(--primary)' : 'var(--border-default)'};border-radius:var(--radius-md);background:${perm.mode === 'confirm-writes' ? 'var(--primary-subtle)' : 'var(--bg-surface)'};transition:all var(--ease-snappy);" onclick="window.selectPermissionModeInSettings('confirm-writes')">
+            <div style="font-weight:700;font-size:13.5px;color:${perm.mode === 'confirm-writes' ? 'var(--primary)' : 'var(--text-main)'};display:flex;align-items:center;gap:6px;">
               <span>写入需确认模式</span>
             </div>
-            <div style="font-size:12px;color:#64748b;margin-top:6px;line-height:1.4;">允许自动读取与检索，遇到终端执行或文件修改时弹出确认框二次审批。</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:6px;line-height:1.4;">允许自动读取与检索，遇到终端执行或文件修改时弹出确认框二次审批。</div>
           </div>
-          <div id="setModeStrict" class="card ${perm.mode === 'strict' ? 'active' : ''}" style="cursor:pointer;padding:14px;border:1.5px solid ${perm.mode === 'strict' ? '#0284c7' : '#e2e8f0'};border-radius:10px;background:${perm.mode === 'strict' ? '#f0f9ff' : '#ffffff'};transition:all 0.15s ease;" onclick="window.selectPermissionModeInSettings('strict')">
-            <div style="font-weight:700;font-size:13.5px;color:${perm.mode === 'strict' ? '#0369a1' : '#1e293b'};display:flex;align-items:center;gap:6px;">
+          <div id="setModeStrict" class="card ${perm.mode === 'strict' ? 'active' : ''}" style="cursor:pointer;padding:14px;border:1.5px solid ${perm.mode === 'strict' ? 'var(--primary)' : 'var(--border-default)'};border-radius:var(--radius-md);background:${perm.mode === 'strict' ? 'var(--primary-subtle)' : 'var(--bg-surface)'};transition:all var(--ease-snappy);" onclick="window.selectPermissionModeInSettings('strict')">
+            <div style="font-weight:700;font-size:13.5px;color:${perm.mode === 'strict' ? 'var(--primary)' : 'var(--text-main)'};display:flex;align-items:center;gap:6px;">
               <span>严格只读模式</span>
             </div>
-            <div style="font-size:12px;color:#64748b;margin-top:6px;line-height:1.4;">禁止一切写入、终端命令与外部网络访问，仅支持静态代码检索。</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:6px;line-height:1.4;">禁止一切写入、终端命令与外部网络访问，仅支持静态代码检索。</div>
           </div>
         </div>
 
-        <div style="background:#f8fafc;padding:16px;border-radius:10px;border:1px solid #e2e8f0;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-          <label style="display:flex;align-items:center;gap:10px;font-size:13px;color:#334155;cursor:pointer;">
+        <div style="background:var(--bg-subtle);padding:16px;border-radius:var(--radius-md);border:1px solid var(--border-default);display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <label style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-main);cursor:pointer;">
             <input type="checkbox" id="setPermShell" ${perm.allowShell ? 'checked' : ''} style="width:16px;height:16px;" />
             <span>允许智能体调用系统终端 (Shell / PowerShell / Bash)</span>
           </label>
-          <label style="display:flex;align-items:center;gap:10px;font-size:13px;color:#334155;cursor:pointer;">
+          <label style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-main);cursor:pointer;">
             <input type="checkbox" id="setPermFsWrite" ${perm.allowFsWrite ? 'checked' : ''} style="width:16px;height:16px;" />
             <span>允许智能体写入、覆盖与修补本地文件代码</span>
           </label>
-          <label style="display:flex;align-items:center;gap:10px;font-size:13px;color:#334155;cursor:pointer;">
+          <label style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-main);cursor:pointer;">
             <input type="checkbox" id="setPermNetwork" ${perm.allowNetwork ? 'checked' : ''} style="width:16px;height:16px;" />
             <span>允许智能体发起外部网络请求 (HTTP/HTTPS)</span>
           </label>
@@ -2739,14 +2747,14 @@ function updateBatchBars() {
   if ($('selectAllProjectsBtn')) $('selectAllProjectsBtn').textContent = pCount === state.projects.length && pCount > 0 ? '取消全选' : '全选';
 
   const provCount = selectedProviderIds.size;
-  if ($('providerBatchBar')) $('providerBatchBar').style.display = provCount > 0 ? 'flex' : 'none';
-  if ($('batchDeleteProvidersText')) $('batchDeleteProvidersText').textContent = `批量删除 (${provCount})`;
-  if ($('selectAllProvidersBtn')) $('selectAllProvidersBtn').textContent = provCount === state.providers.length && provCount > 0 ? '取消全选' : '全选';
+  if ($('providerBatchBar')) $('providerBatchBar').style.display = (provCount > 0 && pmViewMode === 'providers') ? 'inline-flex' : 'none';
+  if ($('batchDeleteProvidersBtn')) $('batchDeleteProvidersBtn').textContent = `批量删除 (${provCount})`;
+  if ($('selectAllProvidersBtn')) $('selectAllProvidersBtn').textContent = provCount === (state.providers?.length || 0) && provCount > 0 ? '取消全选' : '全选';
 
   const mCount = selectedModelAliases.size;
-  if ($('modelBatchBar')) $('modelBatchBar').style.display = mCount > 0 ? 'flex' : 'none';
-  if ($('batchDeleteModelsText')) $('batchDeleteModelsText').textContent = `批量删除 (${mCount})`;
-  if ($('selectAllModelsBtn')) $('selectAllModelsBtn').textContent = mCount === state.models.length && mCount > 0 ? '取消全选' : '全选';
+  if ($('modelBatchBar')) $('modelBatchBar').style.display = (mCount > 0 && pmViewMode === 'models') ? 'inline-flex' : 'none';
+  if ($('batchDeleteModelsBtn')) $('batchDeleteModelsBtn').textContent = `批量删除 (${mCount})`;
+  if ($('selectAllModelsBtn')) $('selectAllModelsBtn').textContent = mCount === (state.models?.length || 0) && mCount > 0 ? '取消全选' : '全选模型';
 }
 
 function renderProjects() {
@@ -2756,7 +2764,7 @@ function renderProjects() {
   const html = state.projects.length === 0
     ? `<div class="empty-card" style="padding:24px;text-align:center;color:var(--text-muted);font-size:12.5px;">暂未导入任何工作区工程，点击上方“导入已有项目”开始。</div>`
     : state.projects.map((p) => `
-        <div class="card project-card" style="margin-bottom:10px;padding:12px;background:#ffffff;border:1px solid var(--border-default);border-radius:8px;">
+        <div class="card project-card" style="margin-bottom:10px;padding:12px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:8px;">
           <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
             <div style="display:flex;align-items:center;gap:8px;">
               <strong style="font-size:13.5px;color:var(--text-main);">${esc(p.name)}</strong>
@@ -2856,61 +2864,337 @@ window.removeProject = async (id, name) => {
 };
 
 // ==========================================================================
-// 5. 模型服务商管理
+// 5. 模型服务商管理 (AI Providers & Models)
 // ==========================================================================
 
+function renderProviderMetrics() {
+  const totalProviders = state.providers?.length || 0;
+  const healthyCount = (state.providers || []).filter(p => p.healthStatus === 'ok').length;
+  const totalModels = state.models?.length || 0;
+  const defaultModel = state.defaultModel || (state.models?.[0]?.alias) || '';
+
+  if ($('statTotalProviders')) $('statTotalProviders').textContent = String(totalProviders);
+  if ($('statHealthyProviders')) $('statHealthyProviders').textContent = String(healthyCount);
+  if ($('statTotalModels')) $('statTotalModels').textContent = String(totalModels);
+  if ($('statDefaultModel')) {
+    if (defaultModel) {
+      $('statDefaultModel').innerHTML = `<span style="color:#d97706;font-weight:700;" title="${esc(defaultModel)}">★ ${esc(defaultModel)}</span>`;
+    } else {
+      $('statDefaultModel').textContent = '未设置';
+    }
+  }
+}
+
+window.switchProviderModelView = (mode) => {
+  pmViewMode = mode;
+  const provWrap = $('providersViewWrap');
+  const modelsWrap = $('modelsViewWrap');
+  const provBtn = $('viewModeProvidersBtn');
+  const modelsBtn = $('viewModeModelsBtn');
+
+  if (mode === 'models') {
+    if (provWrap) provWrap.style.display = 'none';
+    if (modelsWrap) modelsWrap.style.display = 'block';
+    if (provBtn) provBtn.classList.remove('active');
+    if (modelsBtn) modelsBtn.classList.add('active');
+    renderModels();
+  } else {
+    if (provWrap) provWrap.style.display = 'block';
+    if (modelsWrap) modelsWrap.style.display = 'none';
+    if (provBtn) provBtn.classList.add('active');
+    if (modelsBtn) modelsBtn.classList.remove('active');
+    renderProviders();
+  }
+  updateBatchBars();
+};
+
+window.onProviderModelSearch = (val) => {
+  pmSearchKeyword = (val || '').trim().toLowerCase();
+  if (pmViewMode === 'models') {
+    renderModels();
+  } else {
+    renderProviders();
+  }
+};
+
+window.onProviderModelFilterChange = () => {
+  pmStatusFilter = $('pmStatusFilter')?.value || 'all';
+  pmCapabilityFilter = $('pmCapabilityFilter')?.value || 'all';
+  if (pmViewMode === 'models') {
+    renderModels();
+  } else {
+    renderProviders();
+  }
+};
+
+window.setGlobalDefaultModel = async (alias) => {
+  if (!alias) return;
+  try {
+    await window.hap.setDefaultModel(alias);
+    state.defaultModel = alias;
+    showToast(`已成功将 [${alias}] 设为系统全局默认主模型！`, 'success');
+    await refresh();
+  } catch (err) {
+    showToast(`设置全局默认模型失败：${err.message}`, 'error');
+  }
+};
+
+window.testSingleModel = async (alias, clickBtn) => {
+  const btn = clickBtn || (window.event?.currentTarget);
+  const origText = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="display:inline-block;width:10px;height:10px;border:2px solid #cbd5e1;border-top-color:#0284c7;border-radius:50%;margin-right:2px;vertical-align:middle;"></span>测速中...';
+  }
+
+  showToast(`正在对模型 [${alias}] 发起探针测速...`, 'info');
+  try {
+    const res = await window.hap.testModel(alias);
+    modelLatencies.set(alias, res);
+    if (res.ok) {
+      showToast(`模型 [${alias}] 测速成功！响应延迟: ${res.latencyMs || 0}ms`, 'success');
+    } else {
+      showToast(`模型 [${alias}] 测速失败：${res.error || '无响应'}`, 'error');
+    }
+    if (pmViewMode === 'models') {
+      renderModels();
+    } else {
+      renderProviders();
+    }
+  } catch (err) {
+    modelLatencies.set(alias, { ok: false, error: err.message });
+    showToast(`模型 [${alias}] 探针测试异常：${err.message}`, 'error');
+    if (pmViewMode === 'models') {
+      renderModels();
+    } else {
+      renderProviders();
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origText || '测速';
+    }
+  }
+};
+
+window.testAllProviders = async (clickBtn) => {
+  const providers = state.providers || [];
+  if (providers.length === 0) {
+    showToast('暂无已配置的服务商', 'info');
+    return;
+  }
+  const btn = clickBtn || $('testAllProvidersBtn');
+  const origText = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="display:inline-block;width:11px;height:11px;border:2px solid #cbd5e1;border-top-color:#0284c7;border-radius:50%;margin-right:4px;vertical-align:middle;"></span>批量测速中...';
+  }
+
+  showToast(`开始并发测试全部 ${providers.length} 个服务商连通性...`, 'info');
+  let successCount = 0;
+  let failCount = 0;
+
+  await Promise.all(providers.map(async (p) => {
+    try {
+      const res = await window.hap.testProvider(p.id);
+      providerLatencies.set(p.id, { ok: res.reachable, latencyMs: res.handshakeMs, error: res.error });
+      if (res.reachable) {
+        successCount++;
+        p.healthStatus = 'ok';
+      } else {
+        failCount++;
+        p.healthStatus = 'error';
+      }
+    } catch (err) {
+      failCount++;
+      providerLatencies.set(p.id, { ok: false, error: err.message });
+      p.healthStatus = 'error';
+    }
+  }));
+
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = origText || '⚡ 一键测全部服务商';
+  }
+
+  showToast(`服务商连通测试完成：${successCount} 成功，${failCount} 异常`, successCount > 0 ? 'success' : 'warning');
+  renderProviderMetrics();
+  renderProviders();
+};
+
+window.toggleSelectProvider = (id) => {
+  if (selectedProviderIds.has(id)) {
+    selectedProviderIds.delete(id);
+  } else {
+    selectedProviderIds.add(id);
+  }
+  updateBatchBars();
+  renderProviders();
+};
+
 function renderProviders() {
+  renderProviderMetrics();
+
   const containers = [$('providerList'), $('providersTable')].filter(Boolean);
   if (containers.length === 0) return;
 
-  if (state.providers.length === 0) {
-    const emptyHtml = `<div class="empty-card" style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">暂无配置的服务商，点击右上角“+ 添加 AI 服务商与模型”开始配置。</div>`;
+  const allProviders = state.providers || [];
+  const allModels = state.models || [];
+  const defaultModel = state.defaultModel || (allModels[0]?.alias) || '';
+
+  if (allProviders.length === 0) {
+    const emptyHtml = `<div class="empty-card" style="padding:36px;text-align:center;color:var(--text-muted);font-size:13px;background:var(--bg-surface);border-radius:10px;border:1px dashed var(--border-default);">
+      <div style="font-size:32px;margin-bottom:8px;">🏢</div>
+      <strong style="color:var(--text-main);font-size:14px;">暂无配置的 AI 服务商</strong>
+      <p style="margin:6px 0 14px;color:var(--text-secondary);font-size:12px;">点击右上角“+ 添加 AI 服务商”开始配置，或点击下方链接快速恢复默认预置。</p>
+      <button type="button" class="btn primary" onclick="window.restoreDefaultProviders()" style="font-size:12px;padding:6px 14px;">恢复默认服务商预置</button>
+    </div>`;
     containers.forEach(c => { c.innerHTML = emptyHtml; });
     return;
   }
 
-  const html = state.providers.map((p) => {
-    const models = (state.models || []).filter(m => (m.providerId || m.provider) === p.id);
-    const modelPills = models.length === 0
-      ? '<span style="font-size:11.5px;color:var(--text-muted);font-style:italic;">尚未添加任何模型，可点击右侧「获取模型」或「+ 添加模型」</span>'
-      : models.map(m => `
-          <span class="prop-chip" style="background:#f0f9ff;border:1px solid #bae6fd;color:#0369a1;padding:3px 8px;font-size:11.5px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;">
-            <span style="font-weight:600;">${esc(m.alias)}</span>
-            ${m.model && m.model !== m.alias ? `<span style="color:#64748b;font-size:10.5px;">(${esc(m.model)})</span>` : ''}
-            ${m.contextWindow ? `<span style="font-size:10px;background:#e0f2fe;padding:1px 4px;border-radius:4px;color:#0284c7;">${(m.contextWindow / 1024).toFixed(0)}k</span>` : ''}
-          </span>
-        `).join(' ');
+  // 检索与筛选
+  const kw = pmSearchKeyword;
+  const statusFilter = pmStatusFilter;
+  const capFilter = pmCapabilityFilter;
+
+  const filteredProviders = allProviders.filter(p => {
+    const provModels = allModels.filter(m => (m.providerId || m.provider) === p.id);
+
+    if (statusFilter !== 'all') {
+      const pStatus = p.healthStatus || 'unknown';
+      if (statusFilter === 'ok' && pStatus !== 'ok') return false;
+      if (statusFilter === 'missing_credentials' && pStatus !== 'missing_credentials') return false;
+      if (statusFilter === 'unknown' && pStatus !== 'unknown' && pStatus !== 'init' && pStatus !== 'untested') return false;
+    }
+
+    if (capFilter !== 'all') {
+      const hasCap = provModels.some(m => Array.isArray(m.capabilities) && m.capabilities.includes(capFilter));
+      if (!hasCap) return false;
+    }
+
+    if (kw) {
+      const pMatch = p.id.toLowerCase().includes(kw) ||
+                     (p.name && p.name.toLowerCase().includes(kw)) ||
+                     (p.baseUrl && p.baseUrl.toLowerCase().includes(kw));
+      const modelMatch = provModels.some(m =>
+        m.alias.toLowerCase().includes(kw) ||
+        (m.model && m.model.toLowerCase().includes(kw))
+      );
+      if (!pMatch && !modelMatch) return false;
+    }
+
+    return true;
+  });
+
+  if (filteredProviders.length === 0) {
+    const noMatchHtml = `<div class="empty-card" style="padding:28px;text-align:center;color:var(--text-muted);font-size:12.5px;background:var(--bg-surface);border-radius:10px;border:1px dashed var(--border-default);">
+      🔍 未找到符合当前筛选或检索条件的服务商与模型。
+    </div>`;
+    containers.forEach(c => { c.innerHTML = noMatchHtml; });
+    return;
+  }
+
+  const html = filteredProviders.map((p) => {
+    let provModels = allModels.filter(m => (m.providerId || m.provider) === p.id);
+
+    if (capFilter !== 'all') {
+      provModels = provModels.filter(m => Array.isArray(m.capabilities) && m.capabilities.includes(capFilter));
+    }
+    if (kw) {
+      const pMatch = p.id.toLowerCase().includes(kw) || (p.name && p.name.toLowerCase().includes(kw));
+      if (!pMatch) {
+        provModels = provModels.filter(m =>
+          m.alias.toLowerCase().includes(kw) || (m.model && m.model.toLowerCase().includes(kw))
+        );
+      }
+    }
+
+    const isChecked = selectedProviderIds.has(p.id);
+    const pLatency = providerLatencies.get(p.id);
+
+    const modelChipsHtml = provModels.length === 0
+      ? '<span style="font-size:11.5px;color:var(--text-muted);font-style:italic;">尚未添加任何模型，可点击右侧「一键拉取模型」或「+ 录入模型」</span>'
+      : provModels.map(m => {
+          const isDefault = (m.alias === defaultModel);
+          const mLat = modelLatencies.get(m.alias);
+
+          const caps = Array.isArray(m.capabilities) ? m.capabilities : [];
+          const capIcons = [];
+          if (caps.includes('tools')) capIcons.push('<span class="cap-pill tools" title="工具调用 (Tools)">🛠️ Tools</span>');
+          if (caps.includes('vision')) capIcons.push('<span class="cap-pill vision" title="多模态视觉 (Vision)">👁️ Vision</span>');
+          if (caps.includes('reasoning')) capIcons.push('<span class="cap-pill reasoning" title="深度思考 (Reasoning)">🧠 Reasoning</span>');
+          if (caps.includes('streaming')) capIcons.push('<span class="cap-pill streaming" title="流式传输 (Streaming)">⚡ Stream</span>');
+          if (caps.includes('longctx')) capIcons.push('<span class="cap-pill longctx" title="长上下文 (LongCtx)">📜 LongCtx</span>');
+
+          let latBadge = '';
+          if (mLat) {
+            latBadge = mLat.ok
+              ? `<span class="badge success" style="font-size:10px;padding:1px 5px;" title="测速成功: ${mLat.latencyMs}ms">${mLat.latencyMs}ms</span>`
+              : `<span class="badge danger" style="font-size:10px;padding:1px 5px;" title="测速失败: ${esc(mLat.error || '')}">失败</span>`;
+          }
+
+          return `
+            <div class="interactive-model-chip ${isDefault ? 'is-default' : ''}" title="${esc(m.model || m.alias)}">
+              <div style="display:flex;align-items:center;gap:5px;">
+                ${isDefault ? '<span class="star-badge" title="系统全局默认主模型">★ 默认</span>' : ''}
+                <strong class="chip-alias">${esc(m.alias)}</strong>
+                ${m.model && m.model !== m.alias ? `<span class="chip-real-name">(${esc(m.model)})</span>` : ''}
+                ${m.contextWindow ? `<span class="model-ctx-badge">${(m.contextWindow / 1024).toFixed(0)}k</span>` : ''}
+                ${latBadge}
+              </div>
+
+              ${capIcons.length > 0 ? `<div style="display:flex;gap:3px;align-items:center;margin-top:2px;">${capIcons.join('')}</div>` : ''}
+
+              <div class="chip-actions">
+                ${!isDefault ? `<button type="button" class="chip-action-btn default-btn" title="设为全局默认主模型" onclick="event.stopPropagation(); window.setGlobalDefaultModel('${escJs(m.alias)}')">★ 设默认</button>` : ''}
+                <button type="button" class="chip-action-btn test-btn" title="测试模型延迟" onclick="event.stopPropagation(); window.testSingleModel('${escJs(m.alias)}', this)">⚡ 测速</button>
+                <button type="button" class="chip-action-btn edit-btn" title="编辑模型" onclick="event.stopPropagation(); window.openModelDialog('${escJs(m.alias)}')">✏️</button>
+                <button type="button" class="chip-action-btn delete-btn" title="删除模型" onclick="event.stopPropagation(); window.deleteModel('${escJs(m.alias)}')">×</button>
+              </div>
+            </div>
+          `;
+        }).join('');
 
     return `
-      <div class="card provider-card" style="margin-bottom:14px;padding:14px;background:#ffffff;border:1px solid var(--border-default);border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
-        <div class="card-header" style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
-          <div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <strong style="font-size:15px;color:var(--text-main);">${esc(p.name || p.id)}</strong>
-              <span class="prop-chip" style="font-size:11.5px;font-weight:600;">${esc(p.id)}</span>
-              <span class="badge ${p.healthStatus === 'ok' ? 'success' : p.healthStatus === 'missing_credentials' ? 'warn' : 'neutral'}" style="font-size:11px;">
-                ${p.healthStatus === 'ok' ? '连通就绪' : p.healthStatus === 'missing_credentials' ? '缺凭据' : '待测试'}
-              </span>
-            </div>
-            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;word-break:break-all;font-family:var(--font-mono);">
-              URL: ${esc(p.baseUrl)} | 线制: ${esc(p.wireApi)} | 协议: ${esc(p.defaultProtocol || p.protocol || '默认')}
+      <div class="card provider-card" style="margin-bottom:14px;padding:16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;box-shadow:var(--shadow-xs);">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;gap:10px;">
+          <div style="display:flex;align-items:flex-start;gap:10px;">
+            <input type="checkbox" style="width:16px;height:16px;margin-top:3px;cursor:pointer;" ${isChecked ? 'checked' : ''} onchange="window.toggleSelectProvider('${escJs(p.id)}')" />
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <strong style="font-size:15.5px;color:var(--text-main);">${esc(p.name || p.id)}</strong>
+                <span class="prop-chip" style="font-size:11.5px;font-weight:600;font-family:var(--font-mono);">${esc(p.id)}</span>
+                <span class="badge ${p.healthStatus === 'ok' ? 'success' : p.healthStatus === 'missing_credentials' ? 'warn' : 'neutral'}" style="font-size:11px;">
+                  ${p.healthStatus === 'ok' ? '🟢 连通就绪' : p.healthStatus === 'missing_credentials' ? '⚠️ 缺凭据' : '⏳ 待测试'}
+                </span>
+                ${pLatency ? (pLatency.ok ? `<span class="badge success" style="font-size:11px;">⚡ ${pLatency.latencyMs}ms</span>` : `<span class="badge danger" style="font-size:11px;">连通失败</span>`) : ''}
+              </div>
+              <div style="font-size:12px;color:var(--text-secondary);margin-top:5px;word-break:break-all;font-family:var(--font-mono);display:flex;gap:12px;flex-wrap:wrap;">
+                <span><strong>URL:</strong> ${esc(p.baseUrl)}</span>
+                <span><strong>线制:</strong> ${esc(p.wireApi || 'chat')}</span>
+                <span><strong>协议:</strong> ${esc(p.defaultProtocol || p.protocol || '默认')}</span>
+                ${p.envKey ? `<span><strong>环境变量:</strong> <code>${esc(p.envKey)}</code></span>` : ''}
+              </div>
             </div>
           </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="window.fetchAndSyncModelsForProvider('${escJs(p.id)}', this)">获取模型</button>
-            <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="openProviderDialog('${escJs(p.id)}')">编辑服务商及模型</button>
-            <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="window.testProvider('${escJs(p.id)}', this)">测试</button>
+
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="window.openModelDialogWithProvider('${escJs(p.id)}')">+ 录入模型</button>
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="window.fetchAndSyncModelsForProvider('${escJs(p.id)}', this)">一键拉取模型</button>
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="openProviderDialog('${escJs(p.id)}')">编辑服务商</button>
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="window.testProvider('${escJs(p.id)}', this)">测试连通</button>
             <button type="button" class="btn danger" style="font-size:11.5px;padding:4px 10px;" onclick="deleteProvider('${escJs(p.id)}')">删除</button>
           </div>
         </div>
 
-        <div style="margin-top:10px;padding-top:10px;border-top:1px solid #f1f5f9;">
-          <div style="font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
-            <span>包含的模型 (${models.length})：</span>
-            ${models.length > 0 ? `<button type="button" class="btn text-btn" style="font-size:11px;color:#ef4444;padding:0;cursor:pointer;background:none;border:none;display:inline-flex;align-items:center;gap:3px;" onclick="window.clearModelsForProvider('${escJs(p.id)}')">清空模型</button>` : ''}
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-subtle);">
+          <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+            <span>包含的模型 (${provModels.length})：</span>
+            ${provModels.length > 0 ? `<button type="button" class="btn text-btn" style="font-size:11px;color:#ef4444;padding:0;cursor:pointer;background:none;border:none;display:inline-flex;align-items:center;gap:3px;" onclick="window.clearModelsForProvider('${escJs(p.id)}')">清空本服务商模型</button>` : ''}
           </div>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
-            ${modelPills}
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+            ${modelChipsHtml}
           </div>
         </div>
       </div>
@@ -2944,6 +3228,7 @@ window.clearModelsForProvider = async (providerId) => {
   }
 };
 
+
 $('selectAllProvidersBtn')?.addEventListener('click', () => {
   if (selectedProviderIds.size === state.providers.length) {
     selectedProviderIds.clear();
@@ -2974,6 +3259,40 @@ $('batchDeleteProvidersBtn')?.addEventListener('click', async () => {
   } catch (error) {
     showToast('批量删除失败：' + error.message, 'error');
   }
+});
+
+window.clearDefaultProviders = async () => {
+  const ok = await showConfirm({
+    title: '清空默认服务商',
+    message: '确定要清空所有默认预置的 AI 服务商及关联模型吗？<br><span style="font-size:12px;color:var(--text-muted);">（清空后列表将恢复纯净空状态，您可随时通过“+ 添加 AI 服务商与模型”使用预置模板重新添加）</span>',
+    okText: '确认清空',
+    isDanger: true,
+  });
+  if (!ok) return;
+
+  try {
+    await window.hap.clearDefaultProviders();
+    selectedProviderIds.clear();
+    showToast('已成功清空默认服务商与模型', 'success');
+    await refresh();
+  } catch (error) {
+    showToast('清空默认服务商失败：' + (error?.message || error), 'error');
+  }
+};
+
+window.restoreDefaultProviders = async () => {
+  try {
+    await window.hap.restoreDefaultProviders();
+    selectedProviderIds.clear();
+    showToast('已恢复默认服务商预置', 'success');
+    await refresh();
+  } catch (error) {
+    showToast('恢复默认服务商失败：' + (error?.message || error), 'error');
+  }
+};
+
+$('clearDefaultProvidersBtn')?.addEventListener('click', () => {
+  window.clearDefaultProviders();
 });
 
 // ==========================================================================
@@ -3037,7 +3356,7 @@ function renderAgents() {
     <div class="card agent-card">
       <div class="card-header">
         <div style="display:flex;align-items:center;gap:10px;">
-          <div style="width:38px;height:38px;border-radius:8px;background:#f1f5f9;display:grid;place-items:center;font-size:20px;flex-shrink:0;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+          <div style="width:38px;height:38px;border-radius:8px;background:var(--bg-subtle);border:1px solid var(--border-subtle);display:grid;place-items:center;font-size:20px;flex-shrink:0;box-shadow:var(--shadow-sm);">
             ${esc(agent.emoji || '')}
           </div>
           <div class="card-title-wrap">
@@ -3210,39 +3529,234 @@ $('agentForm')?.addEventListener('submit', async (e) => {
 // 6. 模型目录管理
 // ==========================================================================
 
+window.toggleSelectModel = (alias) => {
+  if (selectedModelAliases.has(alias)) {
+    selectedModelAliases.delete(alias);
+  } else {
+    selectedModelAliases.add(alias);
+  }
+  updateBatchBars();
+  renderModels();
+};
+
+window.toggleSelectAllModelsInHeader = (checked) => {
+  const kw = pmSearchKeyword;
+  const statusFilter = pmStatusFilter;
+  const capFilter = pmCapabilityFilter;
+  const allModels = state.models || [];
+  const allProviders = state.providers || [];
+  const providerMap = new Map(allProviders.map(p => [p.id, p]));
+
+  const filtered = allModels.filter(m => {
+    const provId = m.providerId || m.provider;
+    const p = providerMap.get(provId);
+    if (statusFilter !== 'all') {
+      const pStatus = p?.healthStatus || 'unknown';
+      if (statusFilter === 'ok' && pStatus !== 'ok') return false;
+      if (statusFilter === 'missing_credentials' && pStatus !== 'missing_credentials') return false;
+      if (statusFilter === 'unknown' && pStatus !== 'unknown' && pStatus !== 'init' && pStatus !== 'untested') return false;
+    }
+    if (capFilter !== 'all') {
+      const caps = Array.isArray(m.capabilities) ? m.capabilities : [];
+      if (!caps.includes(capFilter)) return false;
+    }
+    if (kw) {
+      const mMatch = m.alias.toLowerCase().includes(kw) ||
+                     (m.model && m.model.toLowerCase().includes(kw)) ||
+                     (provId && provId.toLowerCase().includes(kw)) ||
+                     (p?.name && p.name.toLowerCase().includes(kw));
+      if (!mMatch) return false;
+    }
+    return true;
+  });
+
+  if (checked) {
+    filtered.forEach(m => selectedModelAliases.add(m.alias));
+  } else {
+    filtered.forEach(m => selectedModelAliases.delete(m.alias));
+  }
+  updateBatchBars();
+  renderModels();
+};
+
 function renderModels() {
+  renderProviderMetrics();
+
   const containers = [$('modelList'), $('modelsTable')].filter(Boolean);
   if (containers.length === 0) return;
 
-  const html = state.models.length === 0
-    ? `<div class="empty-card" style="padding:24px;text-align:center;color:var(--text-muted);font-size:12.5px;">暂无声明的模型，点击右上角“+ 添加模型”开始。</div>`
-    : state.models.map((m) => `
-        <div class="card model-card" style="margin-bottom:10px;padding:12px;background:#ffffff;border:1px solid var(--border-default);border-radius:8px;">
-          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <div style="display:flex;align-items:center;gap:8px;">
-              <strong style="font-size:13.5px;color:var(--text-main);">${esc(m.alias)}</strong>
-              <span class="prop-chip" style="font-size:11px;">${esc(m.providerId || m.provider || 'default')}</span>
-            </div>
-            <span class="badge neutral" style="font-size:11px;">${esc(m.model || m.fullName || m.alias)}</span>
-          </div>
-          <div style="font-size:11.5px;color:var(--text-secondary);margin-bottom:8px;">
-            全名：${esc(m.fullName || m.alias)} | 上下文：${m.contextWindow ? m.contextWindow + ' tokens' : '自动'}
-          </div>
-          <div style="display:flex;gap:6px;justify-content:flex-end;">
-            <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="openModelDialog('${escJs(m.alias)}')">编辑</button>
-            <button type="button" class="btn danger" style="font-size:11.5px;padding:3px 8px;" onclick="deleteModel('${escJs(m.alias)}')">删除</button>
-          </div>
-        </div>
-      `).join('');
+  const allModels = state.models || [];
+  const allProviders = state.providers || [];
+  const defaultModel = state.defaultModel || (allModels[0]?.alias) || '';
+  const providerMap = new Map(allProviders.map(p => [p.id, p]));
 
-  containers.forEach(c => { c.innerHTML = html; });
+  if (allModels.length === 0) {
+    const emptyHtml = `
+      <div class="empty-card" style="padding:36px;text-align:center;color:var(--text-muted);font-size:13px;background:var(--bg-surface);border-radius:10px;border:1px dashed var(--border-default);">
+        <div style="font-size:32px;margin-bottom:8px;">🤖</div>
+        <strong style="color:var(--text-main);font-size:14px;">暂无收录的 AI 模型</strong>
+        <p style="margin:6px 0 14px;color:var(--text-secondary);font-size:12px;">您可以点击右上角“+ 录入单个模型”手动录入，或在服务商卡片中点击“一键拉取模型”。</p>
+        <button type="button" class="btn primary" onclick="window.openModelDialog()" style="font-size:12px;padding:6px 14px;">+ 录入单个模型</button>
+      </div>`;
+    containers.forEach(c => { c.innerHTML = emptyHtml; });
+    return;
+  }
+
+  // 检索与筛选
+  const kw = pmSearchKeyword;
+  const statusFilter = pmStatusFilter;
+  const capFilter = pmCapabilityFilter;
+
+  const filteredModels = allModels.filter(m => {
+    const provId = m.providerId || m.provider;
+    const p = providerMap.get(provId);
+
+    if (statusFilter !== 'all') {
+      const pStatus = p?.healthStatus || 'unknown';
+      if (statusFilter === 'ok' && pStatus !== 'ok') return false;
+      if (statusFilter === 'missing_credentials' && pStatus !== 'missing_credentials') return false;
+      if (statusFilter === 'unknown' && pStatus !== 'unknown' && pStatus !== 'init' && pStatus !== 'untested') return false;
+    }
+
+    if (capFilter !== 'all') {
+      const caps = Array.isArray(m.capabilities) ? m.capabilities : [];
+      if (!caps.includes(capFilter)) return false;
+    }
+
+    if (kw) {
+      const mMatch = m.alias.toLowerCase().includes(kw) ||
+                     (m.model && m.model.toLowerCase().includes(kw)) ||
+                     (provId && provId.toLowerCase().includes(kw)) ||
+                     (p?.name && p.name.toLowerCase().includes(kw));
+      if (!mMatch) return false;
+    }
+
+    return true;
+  });
+
+  if (filteredModels.length === 0) {
+    const noMatchHtml = `
+      <div class="empty-card" style="padding:28px;text-align:center;color:var(--text-muted);font-size:12.5px;background:var(--bg-surface);border-radius:10px;border:1px dashed var(--border-default);">
+        🔍 未找到符合当前检索或筛选条件的模型。
+      </div>`;
+    containers.forEach(c => { c.innerHTML = noMatchHtml; });
+    return;
+  }
+
+  const rows = filteredModels.map(m => {
+    const provId = m.providerId || m.provider || '';
+    const p = providerMap.get(provId);
+    const isChecked = selectedModelAliases.has(m.alias);
+    const isDefault = (m.alias === defaultModel);
+    const mLat = modelLatencies.get(m.alias);
+
+    const caps = Array.isArray(m.capabilities) ? m.capabilities : [];
+    const capBadges = [];
+    if (caps.includes('tools')) capBadges.push('<span class="cap-pill tools" title="工具调用">🛠️ Tools</span>');
+    if (caps.includes('vision')) capBadges.push('<span class="cap-pill vision" title="视觉多模态">👁️ Vision</span>');
+    if (caps.includes('reasoning')) capBadges.push('<span class="cap-pill reasoning" title="深度思考推理">🧠 Reasoning</span>');
+    if (caps.includes('streaming')) capBadges.push('<span class="cap-pill streaming" title="流式传输">⚡ Stream</span>');
+    if (caps.includes('longctx')) capBadges.push('<span class="cap-pill longctx" title="长上下文">📜 LongCtx</span>');
+    const capHtml = capBadges.length > 0 ? capBadges.join(' ') : '<span style="color:var(--text-muted);font-size:11px;">基础对话</span>';
+
+    let latBadge = '<span style="color:var(--text-muted);font-size:11px;">未测试</span>';
+    if (mLat) {
+      latBadge = mLat.ok
+        ? `<span class="badge success" style="font-size:11px;" title="测速成功">${mLat.latencyMs}ms</span>`
+        : `<span class="badge danger" style="font-size:11px;" title="${esc(mLat.error || '')}">失败</span>`;
+    }
+
+    return `
+      <tr class="${isDefault ? 'row-default-model' : ''}">
+        <td style="width:36px;text-align:center;">
+          <input type="checkbox" style="cursor:pointer;" ${isChecked ? 'checked' : ''} onchange="window.toggleSelectModel('${escJs(m.alias)}')" />
+        </td>
+        <td style="width:70px;text-align:center;">
+          ${isDefault
+            ? `<button type="button" class="btn text-btn" style="color:#f59e0b;font-weight:700;font-size:13px;padding:2px 6px;cursor:default;" title="当前全局默认主模型">★ 默认</button>`
+            : `<button type="button" class="btn text-btn" style="color:var(--text-muted);font-size:12px;padding:2px 6px;cursor:pointer;" title="点击设为全局默认主模型" onclick="window.setGlobalDefaultModel('${escJs(m.alias)}')">☆ 设默认</button>`
+          }
+        </td>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <strong style="color:var(--text-main);font-size:13px;">${esc(m.alias)}</strong>
+            ${isDefault ? '<span class="star-badge" style="font-size:10px;">默认</span>' : ''}
+          </div>
+        </td>
+        <td>
+          <span class="prop-chip" style="font-size:11px;cursor:pointer;" title="${esc(p?.baseUrl || '')}" onclick="window.openProviderDialog('${escJs(provId)}')">
+            🏢 ${esc(p?.name || provId || '未知')}
+          </span>
+        </td>
+        <td>
+          <code style="font-size:11.5px;color:var(--text-secondary);word-break:break-all;">${esc(m.model || m.alias)}</code>
+        </td>
+        <td>
+          <span style="font-size:11px;color:var(--text-secondary);">${esc(m.protocol || p?.protocol || 'openai-tools')}</span>
+        </td>
+        <td>
+          <span style="font-size:11px;color:var(--text-secondary);">
+            ${m.contextWindow ? Math.round(m.contextWindow / 1024) + 'k' : '自动'} / ${m.maxOutputTokens ? Math.round(m.maxOutputTokens / 1024) + 'k' : '自动'}
+          </span>
+        </td>
+        <td>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
+            ${capHtml}
+          </div>
+        </td>
+        <td>
+          ${latBadge}
+        </td>
+        <td>
+          <div style="display:flex;gap:4px;align-items:center;white-space:nowrap;">
+            <button type="button" class="btn secondary" style="font-size:11px;padding:2px 7px;" onclick="window.testSingleModel('${escJs(m.alias)}', this)">测速</button>
+            <button type="button" class="btn secondary" style="font-size:11px;padding:2px 7px;" onclick="window.openModelDialog('${escJs(m.alias)}')">编辑</button>
+            <button type="button" class="btn danger" style="font-size:11px;padding:2px 7px;" onclick="window.deleteModel('${escJs(m.alias)}')">删除</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  const tableHtml = `
+    <div style="overflow-x:auto;">
+      <table class="models-catalog-table" style="width:100%;border-collapse:collapse;font-size:12px;text-align:left;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border-default);background:var(--bg-subtle);">
+            <th style="width:36px;padding:8px;text-align:center;">
+              <input type="checkbox" id="selectAllModelsHeaderCb" style="cursor:pointer;" onchange="window.toggleSelectAllModelsInHeader(this.checked)" />
+            </th>
+            <th style="width:70px;padding:8px;text-align:center;">默认</th>
+            <th style="padding:8px;">模型别名 (Alias)</th>
+            <th style="padding:8px;">所属服务商</th>
+            <th style="padding:8px;">真实模型 ID</th>
+            <th style="padding:8px;">调用协议</th>
+            <th style="padding:8px;">上下文 / 输出</th>
+            <th style="padding:8px;">特性能力</th>
+            <th style="padding:8px;">探针延迟</th>
+            <th style="padding:8px;">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  containers.forEach(c => { c.innerHTML = tableHtml; });
+
+  const headerCb = $('selectAllModelsHeaderCb');
+  if (headerCb) {
+    headerCb.checked = (filteredModels.length > 0 && filteredModels.every(m => selectedModelAliases.has(m.alias)));
+  }
 }
 
 $('selectAllModelsBtn')?.addEventListener('click', () => {
-  if (selectedModelAliases.size === state.models.length) {
+  if (selectedModelAliases.size === (state.models?.length || 0)) {
     selectedModelAliases.clear();
   } else {
-    state.models.forEach((m) => selectedModelAliases.add(m.alias));
+    (state.models || []).forEach((m) => selectedModelAliases.add(m.alias));
   }
   renderModels();
   updateBatchBars();
@@ -3281,7 +3795,7 @@ function renderTargets() {
   const html = state.targets.length === 0
     ? `<div class="empty-card" style="padding:24px;text-align:center;color:var(--text-muted);font-size:12.5px;">未检测到已安装的 CLI 工具环境</div>`
     : state.targets.map((t) => `
-        <div class="card target-card" style="margin-bottom:10px;padding:12px;background:#ffffff;border:1px solid var(--border-default);border-radius:8px;">
+        <div class="card target-card" style="margin-bottom:10px;padding:12px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:8px;">
           <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
             <strong style="font-size:13.5px;color:var(--text-main);text-transform:capitalize;">${esc(t.target)}</strong>
             <span class="badge ${t.exists ? 'success' : 'neutral'}" style="font-size:11px;">${t.exists ? '已检测到' : '未检测到'}</span>
@@ -3304,10 +3818,10 @@ function renderLogs(filter = 'all') {
   const html = filtered.length === 0
     ? '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:12px;">暂无运行日志</div>'
     : filtered.slice().reverse().map((log) => `
-        <div style="padding:6px 10px;margin-bottom:4px;border-radius:4px;background:#ffffff;border:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <div style="padding:6px 10px;margin-bottom:4px;border-radius:4px;background:var(--bg-surface);border:1px solid var(--border-default);display:flex;justify-content:space-between;align-items:center;gap:8px;">
           <div style="display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11.5px;">
             <span class="badge ${log.level === 'error' ? 'danger' : 'neutral'}" style="padding:1px 4px;font-size:10px;">${esc(log.level)}</span>
-            <span style="word-break:break-all;color:#1e293b;">${esc(log.message)}</span>
+            <span style="word-break:break-all;color:var(--text-main);">${esc(log.message)}</span>
           </div>
           <span style="font-size:10.5px;color:var(--text-muted);white-space:nowrap;">${new Date(log.at).toLocaleTimeString()}</span>
         </div>
@@ -3684,7 +4198,7 @@ async function renderWeChatView() {
           if (window.QRCodeSvg && typeof window.QRCodeSvg.generate === 'function') {
             qrSvgHtml = window.QRCodeSvg.generate(wxConfig.qrCodeText, { size: 168 });
           } else {
-            qrSvgHtml = `<div style="font-family:monospace;font-size:11px;color:#334155;word-break:break-all;background:#f1f5f9;padding:8px;border-radius:6px;">${esc(wxConfig.qrCodeText)}</div>`;
+            qrSvgHtml = `<div style="font-family:var(--font-mono);font-size:11px;color:var(--text-main);word-break:break-all;background:var(--bg-subtle);border:1px solid var(--border-default);padding:8px;border-radius:var(--radius-sm);">${esc(wxConfig.qrCodeText)}</div>`;
           }
 
           qrBox.innerHTML = `
@@ -3892,7 +4406,7 @@ function updateWechatQrModal(wxConfig) {
     if (window.QRCodeSvg && typeof window.QRCodeSvg.generate === 'function') {
       qrSvgHtml = window.QRCodeSvg.generate(wxConfig.qrCodeText, { size: 190 });
     } else {
-      qrSvgHtml = `<div style="font-family:monospace;font-size:11px;color:#334155;word-break:break-all;background:#f1f5f9;padding:8px;border-radius:6px;">${esc(wxConfig.qrCodeText)}</div>`;
+      qrSvgHtml = `<div style="font-family:var(--font-mono);font-size:11px;color:var(--text-main);word-break:break-all;background:var(--bg-subtle);border:1px solid var(--border-default);padding:8px;border-radius:var(--radius-sm);">${esc(wxConfig.qrCodeText)}</div>`;
     }
 
     body.innerHTML = `
@@ -4026,7 +4540,7 @@ function renderWeChatFeed() {
             <span class="badge neutral" style="background:#dcfce7;color:#15803d;font-size:11px;font-weight:600;">微信端用户</span>
             <span style="font-size:11px;color:var(--text-muted);">${esc(timeStr)}</span>
           </div>
-          <div style="background:#ffffff;border:1px solid #cbd5e1;padding:10px 14px;border-radius:12px 12px 12px 2px;font-size:13.5px;color:#0f172a;line-height:1.55;box-shadow:0 1px 3px rgba(0,0,0,0.02);word-break:break-word;">
+          <div style="background:var(--bg-surface);border:1px solid var(--border-default);padding:10px 14px;border-radius:12px 12px 12px 2px;font-size:13.5px;color:var(--text-main);line-height:1.55;box-shadow:var(--shadow-sm);word-break:break-word;">
             ${esc(item.text)}
           </div>
         </div>
@@ -4036,16 +4550,16 @@ function renderWeChatFeed() {
         <div style="display:flex;flex-direction:column;align-items:flex-end;margin-left:auto;max-width:85%;">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
             <span style="font-size:11px;color:var(--text-muted);">${esc(timeStr)}</span>
-            <span class="badge" style="background:#eff6ff;color:#2563eb;font-size:11px;font-weight:600;">AI 智能体 (${esc(item.agent || 'coder')}) 回复</span>
+            <span class="badge" style="background:var(--primary-subtle);color:var(--primary);font-size:11px;font-weight:600;">AI 智能体 (${esc(item.agent || 'coder')}) 回复</span>
           </div>
-          <div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:12px 16px;border-radius:12px 12px 2px 12px;font-size:13.5px;color:#166534;line-height:1.65;box-shadow:0 1px 3px rgba(0,0,0,0.03);word-break:break-word;">
+          <div style="background:var(--bg-subtle);border:1px solid var(--border-default);padding:12px 16px;border-radius:12px 12px 2px 12px;font-size:13.5px;color:var(--text-main);line-height:1.65;box-shadow:var(--shadow-sm);word-break:break-word;">
             ${renderMarkdownContent(item.text)}
           </div>
         </div>
       `;
     } else if (item.type === 'thinking') {
       return `
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f1f5f9;border-radius:8px;font-size:12px;color:#475569;width:fit-content;">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg-subtle);border:1px solid var(--border-subtle);border-radius:8px;font-size:12px;color:var(--text-secondary);width:fit-content;">
           <div class="thinking-pulse-dot"></div>
           <span>智能体正在处理微信任务指令，检索本地代码与分析中...</span>
         </div>
@@ -4126,22 +4640,52 @@ $('wxTestMessageInput')?.addEventListener('keydown', (e) => {
 // ==========================================================================
 
 const PRESET_TEMPLATES = {
-  openai: { name: 'OpenAI 官方', baseUrl: 'https://api.openai.com/v1', wireApi: 'chat', protocol: 'openai-tools' },
-  deepseek: { name: 'DeepSeek 官方', baseUrl: 'https://api.deepseek.com', wireApi: 'chat', protocol: 'deepseek' },
-  openrouter: { name: 'OpenRouter 全球聚合', baseUrl: 'https://openrouter.ai/api/v1', wireApi: 'chat', protocol: 'openai-tools' },
-  anthropic: { name: 'Anthropic Claude', baseUrl: 'https://api.anthropic.com/v1', wireApi: 'anthropic-messages', protocol: 'anthropic' },
-  groq: { name: 'Groq 极速推理', baseUrl: 'https://api.groq.com/openai/v1', wireApi: 'chat', protocol: 'openai-tools' },
-  siliconflow: { name: 'SiliconFlow 硅基流动', baseUrl: 'https://api.siliconflow.cn/v1', wireApi: 'chat', protocol: 'openai-tools' },
-  moonshot: { name: 'Moonshot 月之暗面', baseUrl: 'https://api.moonshot.cn/v1', wireApi: 'chat', protocol: 'openai-tools' },
-  zhipu: { name: '智谱 GLM', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', wireApi: 'chat', protocol: 'openai-tools' },
+  // 国内主流大模型
+  deepseek: { name: 'DeepSeek 官方', baseUrl: 'https://api.deepseek.com', wireApi: 'chat', protocol: 'deepseek', testModel: 'deepseek-chat', category: '国内主流大模型' },
+  qwen: { name: 'Qwen / 通义千问 (百炼兼容)', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'qwen-plus', category: '国内主流大模型' },
+  siliconflow: { name: 'SiliconFlow 硅基流动', baseUrl: 'https://api.siliconflow.cn/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'deepseek-ai/DeepSeek-V3', category: '国内主流大模型' },
+  moonshot: { name: 'Moonshot Kimi 月之暗面', baseUrl: 'https://api.moonshot.cn/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'moonshot-v1-8k', category: '国内主流大模型' },
+  zhipu: { name: '智谱 GLM', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', wireApi: 'chat', protocol: 'openai-tools', testModel: 'glm-4-flash', category: '国内主流大模型' },
+  minimax: { name: 'MiniMax 海螺', baseUrl: 'https://api.minimax.chat/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'abab6.5s-chat', category: '国内主流大模型' },
+
+  // 国际前沿大模型
+  openai: { name: 'OpenAI 官方', baseUrl: 'https://api.openai.com/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'gpt-4o-mini', category: '国际前沿大模型' },
+  anthropic: { name: 'Anthropic Claude', baseUrl: 'https://api.anthropic.com', wireApi: 'anthropic-messages', protocol: 'anthropic', testModel: 'claude-3-5-haiku-20241022', category: '国际前沿大模型' },
+  openrouter: { name: 'OpenRouter 全球聚合', baseUrl: 'https://openrouter.ai/api/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'openai/gpt-4o-mini', category: '国际前沿大模型' },
+  groq: { name: 'Groq 极速推理', baseUrl: 'https://api.groq.com/openai/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'llama-3.3-70b-versatile', category: '国际前沿大模型' },
+  mistral: { name: 'Mistral AI', baseUrl: 'https://api.mistral.ai/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'mistral-small-latest', category: '国际前沿大模型' },
+  xai: { name: 'xAI Grok', baseUrl: 'https://api.x.ai/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'grok-beta', category: '国际前沿大模型' },
+
+  // 本地与私有化部署
+  ollama: { name: 'Ollama 本地运行', baseUrl: 'http://127.0.0.1:11434/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'llama3:latest', category: '本地与私有化部署' },
+  lmstudio: { name: 'LM Studio 本地部署', baseUrl: 'http://127.0.0.1:1234/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'local-model', category: '本地与私有化部署' },
+  vllm: { name: 'vLLM 推理服务', baseUrl: 'http://127.0.0.1:8000/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'default', category: '本地与私有化部署' },
 };
 
 function initPresetSelect() {
   const select = $('providerPresetSelect');
   if (!select) return;
-  const options = ['<option value="">-- 选择预置模板（如 OpenAI、DeepSeek、OpenRouter 等） --</option>'];
-  Object.keys(PRESET_TEMPLATES).forEach((key) => {
-    options.push(`<option value="${key}">${PRESET_TEMPLATES[key].name} (${key})</option>`);
+
+  const categories = {
+    '国内主流大模型': [],
+    '国际前沿大模型': [],
+    '本地与私有化部署': [],
+  };
+
+  Object.entries(PRESET_TEMPLATES).forEach(([key, item]) => {
+    const cat = item.category || '其他';
+    if (!categories[cat]) categories[cat] = [];
+    categories[cat].push({ key, ...item });
+  });
+
+  const options = ['<option value="">-- 选择预置模板（如 DeepSeek、Qwen、OpenAI、Anthropic、Ollama 等） --</option>'];
+  Object.entries(categories).forEach(([categoryName, list]) => {
+    if (list.length === 0) return;
+    options.push(`<optgroup label="🌟 ${categoryName}">`);
+    list.forEach(t => {
+      options.push(`<option value="${t.key}">${t.name} (${t.key})</option>`);
+    });
+    options.push(`</optgroup>`);
   });
   select.innerHTML = options.join('');
 
@@ -4155,6 +4699,9 @@ function initPresetSelect() {
     $('providerInputWireApi').value = t.wireApi;
     $('providerInputProtocol').value = t.protocol;
     $('providerInputEnvKey').value = `${key.toUpperCase()}_API_KEY`;
+    if ($('providerInputTestModel')) {
+      $('providerInputTestModel').value = t.testModel || '';
+    }
   });
 }
 initPresetSelect();
@@ -4201,7 +4748,11 @@ window.openProviderDialog = async (id) => {
       const keyInfo = await window.hap.getProviderApiKey(p.id);
       if (statusChip) {
         if (keyInfo.isSet) {
-          statusChip.innerHTML = `<span style="color:#10b981;font-weight:600;">已配置密钥</span> 环境变量 <code>${esc(keyInfo.envKey)}</code> (掩码: ${esc(keyInfo.maskedValue)})，留空保存将保持原样`;
+          if (/^https?:\/\//i.test(keyInfo.value || '')) {
+            statusChip.innerHTML = `<span style="color:#ef4444;font-weight:600;">⚠️ 密钥格式异常</span> 环境变量 <code>${esc(keyInfo.envKey)}</code> 当前保存的值为 URL 网址而非实际密钥，请在此重新输入真实 API Key（如 sk-...）`;
+          } else {
+            statusChip.innerHTML = `<span style="color:#10b981;font-weight:600;">已配置密钥</span> 环境变量 <code>${esc(keyInfo.envKey)}</code> (掩码: ${esc(keyInfo.maskedValue)})，留空保存将保持原样`;
+          }
         } else {
           statusChip.innerHTML = `<span style="color:#f59e0b;font-weight:600;">尚未配置密钥</span> 环境变量 <code>${esc(keyInfo.envKey)}</code> 当前为空`;
         }
@@ -4232,6 +4783,13 @@ $('providerForm')?.addEventListener('submit', async (e) => {
   const form = e.currentTarget;
   const data = Object.fromEntries(new FormData(form));
   const providerId = data.id.trim();
+  const apiKey = data.apiKey?.trim();
+
+  if (apiKey && /^https?:\/\//i.test(apiKey)) {
+    showToast('API Key 不能为 URL 地址，请输入服务商提供的真实密钥凭据（如 sk-...）', 'error');
+    $('providerInputApiKey')?.focus();
+    return;
+  }
 
   try {
     // 1. 保存服务商
@@ -4239,7 +4797,7 @@ $('providerForm')?.addEventListener('submit', async (e) => {
       id: providerId,
       name: data.name?.trim(),
       baseUrl: data.baseUrl.trim(),
-      apiKey: data.apiKey?.trim() || undefined,
+      apiKey: apiKey || undefined,
       envKey: data.envKey?.trim() || undefined,
       wireApi: data.wireApi,
       protocol: data.protocol,
@@ -4322,6 +4880,15 @@ window.testProvider = async (targetId, clickBtn) => {
         return;
       }
 
+      if (apiKey && /^https?:\/\//i.test(apiKey)) {
+        showToast('API Key 不能为 URL 地址，请输入服务商提供的真实密钥（如 sk-...）', 'error');
+        if (statusChip) {
+          statusChip.innerHTML = '<span style="color:#ef4444;font-weight:600;">⚠️ API Key 错误：您填入的是 URL 地址，请在此填入实际密钥凭据</span>';
+        }
+        $('providerInputApiKey')?.focus();
+        return;
+      }
+
       if (statusChip) {
         statusChip.innerHTML = '<span style="color:#0284c7;">⏳ 正在与服务商建立握手连接...</span>';
       }
@@ -4372,6 +4939,49 @@ window.openModelDialog = (alias) => {
   form.reset();
   $('remoteModelPicker').style.display = 'none';
 
+  // 确保服务商下拉框已填充
+  const provSelect = $('modelProviderSelect');
+  if (provSelect && provSelect.options.length === 0 && state.providers?.length) {
+    provSelect.innerHTML = state.providers.map((p) => `
+      <option value="${esc(p.id)}">${esc(p.name || p.id)}</option>
+    `).join('');
+  }
+
+  // 重置特性多选框
+  ['modelCapTools', 'modelCapVision', 'modelCapReasoning', 'modelCapStreaming', 'modelCapLongctx'].forEach(id => {
+    if ($(id)) $(id).checked = false;
+  });
+  if ($('modelSetAsDefaultCb')) $('modelSetAsDefaultCb').checked = false;
+
+  const testBtn = $('testDialogModelBtn');
+  if (testBtn) {
+    testBtn.disabled = false;
+    testBtn.innerHTML = '⚡ 测试模型连通性与测速';
+    testBtn.onclick = async () => {
+      const a = $('modelInputAlias')?.value.trim();
+      if (!a) {
+        showToast('请先输入模型别名', 'warning');
+        return;
+      }
+      testBtn.disabled = true;
+      testBtn.innerHTML = '<span class="spinner" style="display:inline-block;width:10px;height:10px;border:2px solid #cbd5e1;border-top-color:#0284c7;border-radius:50%;margin-right:2px;vertical-align:middle;"></span>测速中...';
+      try {
+        const res = await window.hap.testModel(a);
+        modelLatencies.set(a, res);
+        if (res.ok) {
+          showToast(`模型 [${a}] 测速成功！延迟: ${res.latencyMs || 0}ms`, 'success');
+        } else {
+          showToast(`模型 [${a}] 测速失败：${res.error || '无响应'}`, 'error');
+        }
+      } catch (err) {
+        showToast(`测试失败：${err.message}`, 'error');
+      } finally {
+        testBtn.disabled = false;
+        testBtn.innerHTML = '⚡ 测试模型连通性与测速';
+      }
+    };
+  }
+
   if (alias) {
     const m = state.models.find((item) => item.alias === alias);
     if (!m) return;
@@ -4384,6 +4994,17 @@ window.openModelDialog = (alias) => {
     $('modelInputMaxOutput').value = m.maxOutputTokens || '';
     $('modelInputProtocol').value = m.protocol || '';
     $('deleteModelBtn').style.display = 'inline-block';
+
+    const caps = new Set(m.capabilities || []);
+    if ($('modelCapTools')) $('modelCapTools').checked = caps.has('tools');
+    if ($('modelCapVision')) $('modelCapVision').checked = caps.has('vision');
+    if ($('modelCapReasoning')) $('modelCapReasoning').checked = caps.has('reasoning');
+    if ($('modelCapStreaming')) $('modelCapStreaming').checked = caps.has('streaming');
+    if ($('modelCapLongctx')) $('modelCapLongctx').checked = caps.has('longctx');
+
+    if ($('modelSetAsDefaultCb')) {
+      $('modelSetAsDefaultCb').checked = (state.defaultModel === m.alias);
+    }
   } else {
     $('modelDialogTitle').textContent = '新增模型';
     $('modelInputAlias').readOnly = false;
@@ -4445,17 +5066,34 @@ $('modelForm')?.addEventListener('submit', async (e) => {
   const form = e.currentTarget;
   const data = Object.fromEntries(new FormData(form));
 
+  const caps = [];
+  if ($('modelCapTools')?.checked) caps.push('tools');
+  if ($('modelCapVision')?.checked) caps.push('vision');
+  if ($('modelCapReasoning')?.checked) caps.push('reasoning');
+  if ($('modelCapStreaming')?.checked) caps.push('streaming');
+  if ($('modelCapLongctx')?.checked) caps.push('longctx');
+
+  const alias = data.alias.trim();
+  const setAsDefault = $('modelSetAsDefaultCb')?.checked;
+
   try {
     await window.hap.upsertModel({
-      alias: data.alias.trim(),
+      alias,
       provider: data.provider.trim(),
       model: data.model.trim(),
       contextWindow: data.contextWindow ? Number(data.contextWindow) : undefined,
       maxOutputTokens: data.maxOutputTokens ? Number(data.maxOutputTokens) : undefined,
       protocol: data.protocol ? data.protocol : undefined,
+      capabilities: caps.length > 0 ? caps : undefined,
     });
+
+    if (setAsDefault) {
+      await window.hap.setDefaultModel(alias).catch(err => console.warn('设为主模型警告:', err));
+      state.defaultModel = alias;
+    }
+
     $('modelDialog').close();
-    showToast(`模型 ${data.alias} 保存成功`, 'success');
+    showToast(`模型 ${alias} 保存成功`, 'success');
     await refresh();
   } catch (error) {
     showToast('保存模型失败：' + error.message, 'error');
@@ -4519,26 +5157,52 @@ function switchView(view) {
 }
 window.switchView = switchView;
 
+const SETTINGS_VIEW_TAB_MAP = {
+  settings: 'providers',
+  providers: 'providers',
+  agents: 'agents',
+  skills: 'skills',
+  plugins: 'skills',
+  channels: 'channels',
+  wechat: 'channels',
+  tg: 'channels',
+  feishu: 'channels',
+  qq: 'channels',
+  dingtalk: 'channels',
+  schedules: 'schedules',
+  memory: 'memory',
+  host: 'host',
+  servers: 'servers',
+  projects: 'projects',
+  permissions: 'permissions',
+  system: 'system',
+  logs: 'system',
+  targets: 'system',
+};
+
 function show(view) {
-  if (view === 'channels') {
+  if (view === 'settings') {
+    const currentActiveView = document.querySelector('.view.active')?.id;
+    if (currentActiveView === 'settings') {
+      show('chat');
+      return;
+    }
+  }
+
+  const targetTab = SETTINGS_VIEW_TAB_MAP[view];
+  if (targetTab) {
     document.querySelectorAll('.view').forEach((item) => item.classList.toggle('active', item.id === 'settings'));
-    document.querySelectorAll('.nav').forEach((item) => item.classList.toggle('active', item.dataset.view === 'channels'));
-    window.switchSettingsTab('channels');
+    const navSettingsBtn = $('navSettingsBtn');
+    document.querySelectorAll('.nav').forEach((item) => item.classList.toggle('active', item === navSettingsBtn));
+    window.switchSettingsTab(targetTab);
+    if (['wechat', 'tg', 'feishu', 'qq', 'dingtalk'].includes(view)) {
+      window.switchSettingsSubTab(view);
+    }
     return;
   }
 
   document.querySelectorAll('.view').forEach((item) => item.classList.toggle('active', item.id === view));
   document.querySelectorAll('.nav').forEach((item) => item.classList.toggle('active', item.dataset.view === view));
-
-  if (view === 'servers') {
-    renderServers();
-  } else if (view === 'host') {
-    refreshHostView();
-  } else if (view === 'skills' || view === 'plugins') {
-    renderMarket();
-  } else if (view === 'logs') {
-    renderLogs(currentLogFilter);
-  }
 }
 
 document.querySelectorAll('.nav').forEach((btn) => {
@@ -4575,9 +5239,18 @@ $('importProjectBtn')?.addEventListener('click', async () => {
   }
 });
 
+// 所有弹窗只能点击叉关闭，点击空白地方不允许关闭，且禁用 Esc 键自动关闭
 document.querySelectorAll('dialog.modal').forEach((modal) => {
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) modal.close();
+  // 禁止按 Esc 键关闭弹窗
+  modal.addEventListener('cancel', (e) => {
+    e.preventDefault();
+  });
+
+  // 统一绑定弹窗内所有叉号关闭按钮 (.btn-close)
+  modal.querySelectorAll('.btn-close').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (modal.open) modal.close();
+    });
   });
 });
 
@@ -4838,10 +5511,6 @@ window.openImageLightbox = (src, title) => {
   if (closeBtn) {
     closeBtn.onclick = () => modal.close();
   }
-
-  modal.onclick = (e) => {
-    if (e.target === modal) modal.close();
-  };
 
   modal.showModal();
 };
@@ -5125,10 +5794,10 @@ async function renderServers() {
   // 4. 空状态友好渲染
   if (cachedServers.length === 0) {
     grid.innerHTML = `
-      <div class="card" style="grid-column: 1 / -1; padding: 42px 20px; text-align: center; color: var(--text-secondary); background: #ffffff; border-radius: 12px; border: 1px dashed #cbd5e1;">
+      <div class="card server-empty-card">
         <div style="margin-bottom: 12px; display:flex; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></div>
         <div style="font-weight: 700; font-size: 15px; color: var(--text-main); margin-bottom: 6px;">尚未添加任何远程服务器</div>
-        <div style="font-size: 13px; max-width: 440px; margin: 0 auto 18px auto; line-height: 1.5; color: #64748b;">
+        <div style="font-size: 13px; max-width: 440px; margin: 0 auto 18px auto; line-height: 1.5; color: var(--text-muted);">
           输入服务器 IP 与 SSH 凭据，即可一键自动化部署 HAP 守护进程，实现跨机器算力协同与实时操控。
         </div>
         <button type="button" class="btn primary" onclick="window.openServerDialog()" style="margin:0 auto;padding:7px 18px;font-size:13px;">
@@ -5155,12 +5824,12 @@ async function renderServers() {
     const uptimeStr = uptimeSec > 0 ? `${Math.floor(uptimeSec / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m` : '—';
 
     return `
-      <div class="card server-card" id="server-card-${esc(s.id)}" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,0.04);display:flex;flex-direction:column;gap:12px;">
+      <div class="card server-card" id="server-card-${esc(s.id)}">
         <div class="card-header" style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div class="card-title-wrap" style="cursor:pointer;" onclick="window.openServerDetailsModal('${esc(s.id)}')" title="点击查看服务器系统完整详情">
             <div class="card-title" style="font-size:14.5px;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:6px;">
               <span>${esc(s.name)}</span>
-              <span style="font-size:11px;color:#3b82f6;font-weight:normal;">[详情 ↗]</span>
+              <span style="font-size:11px;color:var(--primary);font-weight:normal;">[详情 ↗]</span>
             </div>
             <div class="card-subtitle" style="font-size:12px;color:var(--text-muted);font-family:var(--font-mono);">${esc(s.username)}@${esc(s.host)}:${esc(s.port)}</div>
           </div>
@@ -5187,7 +5856,7 @@ async function renderServers() {
               <span>CPU 占用</span>
               <strong style="color:var(--text-main);">${info ? `${cpuPercent}%` : '—'}</strong>
             </div>
-            <div class="server-meter-bar" style="height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+            <div class="server-meter-bar">
               <div class="server-meter-fill ${cpuPercent > 80 ? 'danger' : cpuPercent > 50 ? 'warn' : ''}" style="width:${info ? cpuPercent : 0}%;height:100%;background:${cpuPercent > 80 ? '#ef4444' : cpuPercent > 50 ? '#f59e0b' : '#3b82f6'};transition:width 0.3s;"></div>
             </div>
           </div>
@@ -5198,22 +5867,22 @@ async function renderServers() {
               <span>内存 占用</span>
               <strong style="color:var(--text-main);">${info && totalMem > 0 ? `${memPercent}% (${memUsedGb}/${memTotalGb}G)` : '—'}</strong>
             </div>
-            <div class="server-meter-bar" style="height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+            <div class="server-meter-bar">
               <div class="server-meter-fill ${memPercent > 85 ? 'danger' : memPercent > 60 ? 'warn' : ''}" style="width:${info ? memPercent : 0}%;height:100%;background:${memPercent > 85 ? '#ef4444' : memPercent > 60 ? '#f59e0b' : '#10b981'};transition:width 0.3s;"></div>
             </div>
           </div>
 
           <!-- 绑定的专属机器人状态徽标 -->
-          <div style="margin-top:4px;padding:6px 10px;background:#f8fafc;border-radius:6px;font-size:11.5px;display:flex;justify-content:space-between;align-items:center;border:1px dashed #cbd5e1;">
+          <div class="bound-bot-pill">
             <div style="display:flex;align-items:center;gap:6px;">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg>
-              <span style="color:#475569;">绑定机器人：</span>
+              <span style="color:var(--text-secondary);">绑定机器人：</span>
               ${(() => {
                 const boundBot = (cachedBots || []).find(b => b.id === s.boundBotId || b.boundServerId === s.id);
                 if (boundBot) {
-                  return `<strong style="color:#0284c7;">${esc(boundBot.name)}</strong> <span style="font-size:10px;color:#94a3b8;">(${esc(boundBot.platform)})</span>`;
+                  return `<strong style="color:var(--primary);">${esc(boundBot.name)}</strong> <span style="font-size:10px;color:var(--text-muted);">(${esc(boundBot.platform)})</span>`;
                 }
-                return '<span style="color:#94a3b8;">未绑定</span>';
+                return '<span style="color:var(--text-muted);">未绑定</span>';
               })()}
             </div>
             ${(() => {
@@ -5221,12 +5890,12 @@ async function renderServers() {
               if (boundBot) {
                 return `<span class="badge ${boundBot.enabled ? 'success' : 'neutral'}" style="font-size:10.5px;">${boundBot.enabled ? '在线' : '停止'}</span>`;
               }
-              return `<button type="button" class="btn text-btn" style="font-size:11px;color:#0284c7;padding:0;" onclick="window.openBotDialog('', '${escJs(s.id)}')">+ 绑定机器人</button>`;
+              return `<button type="button" class="btn text-btn" style="font-size:11px;color:var(--primary);padding:0;" onclick="window.openBotDialog('', '${escJs(s.id)}')">+ 绑定机器人</button>`;
             })()}
           </div>
         </div>
 
-        <div class="card-footer" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #f1f5f9;margin-top:auto;">
+        <div class="card-footer server-card-footer">
           <div style="display:flex;gap:6px;">
             <button type="button" class="btn primary" onclick="window.openServerDetailsModal('${esc(s.id)}')" style="padding:4px 10px;font-size:12px;" title="查看服务器完整硬件与系统详情">
               详情
@@ -5270,7 +5939,7 @@ window.openServerDialog = (id) => {
   if ($('serverInputId')) {
     $('serverInputId').value = server ? server.id : '';
     $('serverInputId').readOnly = isEdit;
-    $('serverInputId').style.background = isEdit ? '#f1f5f9' : '#ffffff';
+    $('serverInputId').style.background = isEdit ? 'var(--bg-subtle)' : 'var(--bg-surface)';
   }
   if ($('serverInputName')) $('serverInputName').value = server ? server.name : '';
   if ($('serverInputHost')) $('serverInputHost').value = server ? server.host : '';
@@ -5650,10 +6319,10 @@ window.renderBotInstancesGrid = () => {
 
   if (cachedBots.length === 0) {
     container.innerHTML = `
-      <div style="grid-column:1/-1;text-align:center;padding:36px 20px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;">
+      <div style="grid-column:1/-1;text-align:center;padding:36px 20px;background:var(--bg-surface);border:1px dashed var(--border-default);border-radius:var(--radius-lg);">
         <div style="margin-bottom:8px; display:flex; justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);margin-bottom:8px;"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg></div>
-        <div style="font-size:14px;font-weight:600;color:#334155;margin-bottom:4px;">暂无配置任何机器人实例</div>
-        <div style="font-size:12px;color:#64748b;margin-bottom:14px;">您可以为不同的服务器或业务场景创建多个专属机器人，直接在群内遥控目标服务器。</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text-main);margin-bottom:4px;">暂无配置任何机器人实例</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">您可以为不同的服务器或业务场景创建多个专属机器人，直接在群内遥控目标服务器。</div>
         <button type="button" class="btn primary" onclick="window.openBotDialog()" style="font-size:12.5px;padding:6px 16px;">
           + 立即添加第一个机器人
         </button>
@@ -5671,36 +6340,36 @@ window.renderBotInstancesGrid = () => {
     const serverLabel = boundServer ? `${boundServer.name || boundServer.id} (${boundServer.host || ''})` : (bot.boundServerId || '未绑定');
 
     return `
-      <div class="card" style="border:1px solid ${isRunning ? '#bae6fd' : '#e2e8f0'};background:#ffffff;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <div class="card" style="border:1px solid ${isRunning ? 'var(--primary-border)' : 'var(--border-default)'};background:var(--bg-surface);border-radius:var(--radius-lg);padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow-sm);">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div style="display:flex;align-items:center;gap:8px;">
             <span style="font-size:22px;">${getPlatformIcon(bot.platform)}</span>
             <div>
               <div style="display:flex;align-items:center;gap:6px;">
-                <strong style="font-size:14px;color:#0f172a;">${esc(bot.name || bot.id)}</strong>
+                <strong style="font-size:14px;color:var(--text-main);">${esc(bot.name || bot.id)}</strong>
                 <span class="badge ${isRunning ? 'success' : 'neutral'}" style="font-size:10px;">
                   ${isRunning ? '运行中' : '已停止'}
                 </span>
               </div>
-              <div style="font-size:11px;color:#64748b;font-family:var(--font-mono);margin-top:2px;">
+              <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-top:2px;">
                 ID: ${esc(bot.id)} | 平台: ${esc(getPlatformName(bot.platform))}
               </div>
             </div>
           </div>
         </div>
 
-        <div style="background:#f8fafc;padding:8px 10px;border-radius:6px;font-size:11.5px;display:flex;flex-direction:column;gap:4px;border:1px solid #f1f5f9;">
+        <div style="background:var(--bg-subtle);padding:8px 10px;border-radius:var(--radius-sm);font-size:11.5px;display:flex;flex-direction:column;gap:4px;border:1px solid var(--border-default);">
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="color:#64748b;">绑定服务器：</span>
-            <strong style="color:#0284c7;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(serverLabel)}">${esc(serverLabel)}</strong>
+            <span style="color:var(--text-muted);">绑定服务器：</span>
+            <strong style="color:var(--primary);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(serverLabel)}">${esc(serverLabel)}</strong>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="color:#64748b;">调度智能体：</span>
+            <span style="color:var(--text-muted);">调度智能体：</span>
             <span class="prop-chip" style="font-size:10.5px;">${esc(bot.defaultAgent || 'ops')}</span>
           </div>
         </div>
 
-        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:6px;border-top:1px solid #f1f5f9;margin-top:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:6px;border-top:1px solid var(--border-default);margin-top:auto;">
           <div style="display:flex;gap:6px;">
             <button type="button" class="btn ${isRunning ? 'secondary' : 'primary'}" style="font-size:11.5px;padding:3px 8px;" onclick="window.toggleBotStatus('${escJs(bot.id)}', ${!isRunning})">
               ${isRunning ? '停止' : '启动'}
@@ -5745,7 +6414,7 @@ window.openBotDialog = (botId, preselectedServerId) => {
   if (idInput) {
     idInput.value = bot ? bot.id : `bot-${Date.now().toString(36)}`;
     idInput.readOnly = isEdit;
-    idInput.style.background = isEdit ? '#f1f5f9' : '#ffffff';
+    idInput.style.background = isEdit ? 'var(--bg-subtle)' : 'var(--bg-surface)';
   }
   if ($('botInputName')) $('botInputName').value = bot ? bot.name : '';
   if ($('botInputPlatform')) $('botInputPlatform').value = bot ? bot.platform : 'telegram';
@@ -5949,11 +6618,15 @@ window.switchChannelTab = (tab) => {
     if (pane) pane.style.display = t.toLowerCase() === tab.toLowerCase() ? 'block' : 'none';
     if (btn) {
       if (t.toLowerCase() === tab.toLowerCase()) {
-        btn.style.background = '#0284c7';
+        btn.classList.add('active');
+        btn.style.background = 'var(--primary)';
         btn.style.color = '#ffffff';
+        btn.style.borderColor = 'var(--primary)';
       } else {
-        btn.style.background = '#ffffff';
-        btn.style.color = '#374151';
+        btn.classList.remove('active');
+        btn.style.background = 'var(--bg-surface)';
+        btn.style.color = 'var(--text-secondary)';
+        btn.style.borderColor = 'var(--border-default)';
       }
     }
   });
@@ -6183,21 +6856,21 @@ function renderRemoteProcessList(processList, serverId) {
     const startTime = proc?.startTime || '';
 
     return `
-      <div data-remote-process-row="${safePid}" style="display:flex; flex-direction:column; gap:7px; background:#f8fafc; padding:9px 10px; border-radius:6px; border:1px solid #e2e8f0; font-size:12px;">
+      <div data-remote-process-row="${safePid}" style="display:flex; flex-direction:column; gap:7px; background:var(--bg-subtle); padding:9px 10px; border-radius:var(--radius-sm); border:1px solid var(--border-default); font-size:12px;">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
           <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
             <strong style="color:var(--text-main); font-size:12.5px;">PID ${safePid || '--'}</strong>
-            <span style="color:#64748b;">用户 ${esc(user)}</span>
-            <span style="color:#64748b; font-family:var(--font-mono);">PPID ${safePpid || '--'}</span>
-            <span style="color:#64748b; font-family:var(--font-mono);">CPU ${cpu}% · MEM ${mem}%</span>
-            <span style="color:#94a3b8;">运行 ${fmtHostUptime(elapsed)}</span>
+            <span style="color:var(--text-muted);">用户 ${esc(user)}</span>
+            <span style="color:var(--text-muted); font-family:var(--font-mono);">PPID ${safePpid || '--'}</span>
+            <span style="color:var(--text-muted); font-family:var(--font-mono);">CPU ${cpu}% · MEM ${mem}%</span>
+            <span style="color:var(--text-muted);">运行 ${fmtHostUptime(elapsed)}</span>
           </div>
           <div style="display:flex; align-items:center; gap:5px; flex-shrink:0;">
             <button type="button" class="btn secondary remote-process-signal-btn" data-process-pid="${safePid}" data-process-start-time="${esc(startTime)}" data-process-signal="TERM" ${safePid ? '' : 'disabled'} style="font-size:10.5px; padding:3px 7px;">TERM</button>
             <button type="button" class="btn danger remote-process-signal-btn" data-process-pid="${safePid}" data-process-start-time="${esc(startTime)}" data-process-signal="KILL" ${safePid ? '' : 'disabled'} style="font-size:10.5px; padding:3px 7px;">KILL</button>
           </div>
         </div>
-        <code title="${esc(command)}" style="display:block; color:#334155; background:#eef2f7; border-radius:4px; padding:4px 6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(command)}</code>
+        <code title="${esc(command)}" style="display:block; color:var(--text-main); background:var(--bg-card); border-radius:var(--radius-xs); border:1px solid var(--border-default); padding:4px 6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(command)}</code>
         <div style="display:flex; justify-content:space-between; gap:8px; color:#94a3b8; font-size:10.5px; flex-wrap:wrap;">
           <span>启动: ${esc(formatRemoteProcessStartTime(startTime))}</span>
           <span>目标: ${esc(serverId || '--')}</span>
@@ -6346,12 +7019,12 @@ function renderLocalHostView(info) {
     const coreGrid = $('hostCoreGrid');
     if (coreGrid && info.cpu.perCore) {
       coreGrid.innerHTML = info.cpu.perCore.map(c => `
-        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:6px 8px; display:flex; flex-direction:column; gap:2px;">
+        <div style="background:var(--bg-subtle); border:1px solid var(--border-default); border-radius:var(--radius-sm); padding:6px 8px; display:flex; flex-direction:column; gap:2px;">
           <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; font-weight:600; color:var(--text-main);">
             <span>Core #${c.coreIndex}</span>
-            <span style="color:#3b82f6; font-family:var(--font-mono);">${c.speedMHz}MHz</span>
+            <span style="color:var(--primary); font-family:var(--font-mono);">${c.speedMHz}MHz</span>
           </div>
-          <div style="font-size:10px; color:#64748b; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+          <div style="font-size:10px; color:var(--text-muted); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
             ${esc(c.model.replace(/CPU @.*$/, '').trim())}
           </div>
         </div>
@@ -6399,15 +7072,15 @@ function renderLocalHostView(info) {
     if (partList && info.disk.partitions) {
       if ($('hostDiskPartCountBadge')) $('hostDiskPartCountBadge').textContent = `${info.disk.partitions.length} 个驱动器`;
       partList.innerHTML = info.disk.partitions.map(p => `
-        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; display:flex; flex-direction:column; gap:4px;">
+        <div style="background:var(--bg-subtle); border:1px solid var(--border-default); border-radius:var(--radius-sm); padding:8px 10px; display:flex; flex-direction:column; gap:4px;">
           <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:600; color:var(--text-main);">
             <span>驱动卷 <code>${esc(p.mount)}</code></span>
-            <span style="color:#0f172a; font-family:var(--font-mono);">${p.usedPercent}% (${fmtHostBytes(p.usedBytes)} / ${fmtHostBytes(p.totalBytes)})</span>
+            <span style="color:var(--primary); font-family:var(--font-mono);">${p.usedPercent}% (${fmtHostBytes(p.usedBytes)} / ${fmtHostBytes(p.totalBytes)})</span>
           </div>
-          <div style="width: 100%; height: 5px; background: #e2e8f0; border-radius: 3px; overflow:hidden;">
-            <div style="width: ${p.usedPercent}%; height: 100%; background: ${p.usedPercent > 85 ? '#ef4444' : p.usedPercent > 70 ? '#f59e0b' : '#3b82f6'};"></div>
+          <div class="progress-track" style="height: 5px;">
+            <div style="width: ${p.usedPercent}%; height: 100%; background: ${p.usedPercent > 85 ? 'var(--danger)' : p.usedPercent > 70 ? 'var(--warning)' : 'var(--primary)'};"></div>
           </div>
-          <div style="font-size:11px; color:#64748b; display:flex; justify-content:space-between;">
+          <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
             <span>可用空间: ${fmtHostBytes(p.freeBytes)}</span>
             <span>总容量: ${fmtHostBytes(p.totalBytes)}</span>
           </div>
@@ -6431,11 +7104,11 @@ function renderLocalHostView(info) {
           if (idx === 0) {
             rankBadge = '<span style="font-size:11px; font-weight:700; color:#b45309; background:#fef3c7; border:1px solid #fcd34d; border-radius:4px; min-width:24px; height:20px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">#1</span>';
           } else if (idx === 1) {
-            rankBadge = '<span style="font-size:11px; font-weight:700; color:#475569; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:4px; min-width:24px; height:20px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">#2</span>';
+            rankBadge = '<span style="font-size:11px; font-weight:700; color:var(--text-secondary); background:var(--bg-subtle); border:1px solid var(--border-default); border-radius:4px; min-width:24px; height:20px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">#2</span>';
           } else if (idx === 2) {
-            rankBadge = '<span style="font-size:11px; font-weight:700; color:#c2410c; background:#ffedd5; border:1px solid #fed7aa; border-radius:4px; min-width:24px; height:20px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">#3</span>';
+            rankBadge = '<span style="font-size:11px; font-weight:700; color:#c2410c; background:rgba(234, 88, 12, 0.12); border:1px solid rgba(234, 88, 12, 0.3); border-radius:4px; min-width:24px; height:20px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">#3</span>';
           } else {
-            rankBadge = `<span style="font-size:11px; font-weight:600; color:#64748b; background:#f8fafc; border:1px solid #e2e8f0; border-radius:4px; min-width:24px; height:20px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">#${idx + 1}</span>`;
+            rankBadge = `<span style="font-size:11px; font-weight:600; color:var(--text-muted); background:var(--bg-subtle); border:1px solid var(--border-default); border-radius:4px; min-width:24px; height:20px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">#${idx + 1}</span>`;
           }
 
           const actionBtn = isSelf
@@ -6443,13 +7116,13 @@ function renderLocalHostView(info) {
             : `<button type="button" class="btn danger local-process-kill-btn" onclick="window.requestLocalProcessKill(${p.pid}, '${escJs(parsed.title)}', '${escJs(p.memoryFormatted)}')" style="font-size:11px; padding:3px 9px; font-weight:600; display:inline-flex; align-items:center; gap:3px; flex-shrink:0; cursor:pointer;" title="一键强制结束此进程 (PID: ${p.pid})">⚡ Kill</button>`;
 
           return `
-            <div style="display:flex; justify-content:space-between; align-items:center; background:#ffffff; padding:8px 12px; border-radius:7px; border:1px solid #e2e8f0; gap:12px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-surface); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-default); gap:12px; box-shadow:var(--shadow-sm);">
               <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
                 ${rankBadge}
                 <div style="display:flex; flex-direction:column; min-width:0; flex:1;">
                   <div style="display:flex; align-items:center; gap:6px; min-width:0;">
                     <strong style="color:var(--text-main); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${esc(parsed.fullPath)}">${esc(parsed.title)}</strong>
-                    <span style="color:#64748b; font-size:10.5px; font-family:var(--font-mono); background:#f1f5f9; padding:1px 5px; border-radius:3px; flex-shrink:0; border:1px solid #e2e8f0;">PID ${p.pid}</span>
+                    <span style="color:var(--text-secondary); font-size:10.5px; font-family:var(--font-mono); background:var(--bg-subtle); padding:1px 5px; border-radius:3px; flex-shrink:0; border:1px solid var(--border-default);">PID ${p.pid}</span>
                   </div>
                   <div style="font-size:11px; color:#94a3b8; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:2px;" title="${esc(parsed.fullPath)}">
                     ${esc(parsed.fullPath)}
@@ -6486,9 +7159,9 @@ function renderLocalHostView(info) {
         netList.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:4px 0;">无活跃网络接口</div>';
       } else {
         netList.innerHTML = info.network.ips.map(n => `
-          <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:6px 10px; border-radius:6px; border:1px solid #e2e8f0; font-size:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-subtle); padding:6px 10px; border-radius:var(--radius-sm); border:1px solid var(--border-default); font-size:12px;">
             <span style="font-weight:600; color:var(--text-main); font-size:12px;">${esc(n.interface)}</span>
-            <span style="font-family:monospace; background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-weight:600; font-size:11.5px;">${esc(n.address)}</span>
+            <span style="font-family:var(--font-mono); background:var(--primary-subtle); color:var(--primary); padding:2px 6px; border-radius:var(--radius-xs); font-weight:600; font-size:11.5px; border:1px solid var(--primary-border);">${esc(n.address)}</span>
           </div>
         `).join('');
       }
@@ -6672,15 +7345,10 @@ async function handleScanDisk(server) {
 function filterDiskItemsByCategory(category) {
   currentDiskCategory = category;
   document.querySelectorAll('.disk-cat-btn').forEach(btn => {
-    if (btn.dataset.cat === category) {
-      btn.style.background = '#e0f2fe';
-      btn.style.color = '#0369a1';
-      btn.style.fontWeight = '600';
-    } else {
-      btn.style.background = '#f1f5f9';
-      btn.style.color = '#475569';
-      btn.style.fontWeight = '400';
-    }
+    btn.classList.toggle('active', btn.dataset.cat === category);
+    btn.style.background = '';
+    btn.style.color = '';
+    btn.style.fontWeight = '';
   });
 
   const listEl = $('diskItemsList');
@@ -6691,7 +7359,7 @@ function filterDiskItemsByCategory(category) {
     : currentDiskScanReport.items.filter(i => i.category === currentDiskCategory);
 
   if (items.length === 0) {
-    listEl.innerHTML = '<div style="color:#64748b; font-size:13px; text-align:center; padding:18px; background:#f8fafc; border-radius:8px; border:1px dashed #cbd5e1;">该分类下暂无可清理项目</div>';
+    listEl.innerHTML = '<div style="color:var(--text-muted); font-size:13px; text-align:center; padding:18px; background:var(--bg-surface); border-radius:var(--radius-md); border:1px dashed var(--border-default);">该分类下暂无可清理项目</div>';
     updateDiskSelectedSummary();
     return;
   }
@@ -6707,7 +7375,7 @@ function filterDiskItemsByCategory(category) {
   };
 
   listEl.innerHTML = items.map((item) => `
-    <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; transition:background 0.2s; gap:12px;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'">
+    <div class="disk-clean-card" style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-surface); border:1px solid var(--border-default); border-radius:var(--radius-md); padding:10px 14px; transition:all var(--ease-snappy); gap:12px;">
       <div style="display:flex; align-items:center; gap:12px; min-width:0; flex:1;">
         <input type="checkbox" class="disk-item-chk" data-id="${esc(item.id)}" data-size="${item.sizeBytes}" data-safety="${item.safety}" ${item.safety === 'safe' ? 'checked' : ''} style="width:16px; height:16px; cursor:pointer;" onchange="window.updateDiskSelectedSummary()" />
         <span style="display:inline-flex; align-items:center; flex-shrink:0; color:var(--text-secondary);">${categoryIcons[item.category] || categoryIcons.custom}</span>
@@ -6719,8 +7387,8 @@ function filterDiskItemsByCategory(category) {
           </div>
           <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
             <span>${esc(item.description)}</span>
-            <code style="font-size:11px; color:#475569; background:#e2e8f0; padding:1px 4px; border-radius:4px; max-width:320px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${esc(item.path)}">${esc(item.path)}</code>
-            <button type="button" class="btn text-btn" style="font-size:11px; padding:0 4px; color:#2563eb;" onclick="copyText('${esc(item.path)}', '路径')">复制</button>
+            <code style="font-size:11px; color:var(--text-secondary); background:var(--bg-card); border:1px solid var(--border-default); padding:1px 4px; border-radius:4px; max-width:320px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${esc(item.path)}">${esc(item.path)}</code>
+            <button type="button" class="btn text-btn" style="font-size:11px; padding:0 4px; color:var(--primary);" onclick="copyText('${esc(item.path)}', '路径')">复制</button>
           </div>
         </div>
       </div>
@@ -7010,14 +7678,14 @@ function renderServerOpsAttachments() {
   tray.innerHTML = currentServerOpsAttachments.map((item, index) => {
     const isImg = item.kind === 'image' || (item.mimeType && item.mimeType.startsWith('image/'));
     const previewHtml = isImg
-      ? `<img src="${esc(item.dataUrl || item.path)}" style="width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid #cbd5e1;flex-shrink:0;" />`
-      : `<div style="width:32px;height:32px;border-radius:6px;background:#eff6ff;color:#2563eb;display:grid;place-items:center;flex-shrink:0;"></div>`;
-    return `<div style="position:relative;display:inline-flex;align-items:center;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:4px 8px;gap:8px;max-width:220px;flex-shrink:0;">
+      ? `<img src="${esc(item.dataUrl || item.path)}" class="attachment-thumb-img" />`
+      : `<div class="attachment-doc-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg></div>`;
+    return `<div class="composer-attachment-item">
       ${previewHtml}
-      <div style="display:flex;flex-direction:column;overflow:hidden;font-size:11.5px;line-height:1.3;">
-        <span style="font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(item.fileName)}</span>
+      <div class="attachment-meta">
+        <span class="attachment-name">${esc(item.fileName)}</span>
       </div>
-      <button type="button" onclick="window.removeServerOpsAttachment(${index})" style="width:18px;height:18px;border-radius:50%;background:rgba(15,23,42,0.6);color:#fff;border:none;font-size:10px;cursor:pointer;margin-left:auto;"></button>
+      <button type="button" class="attachment-remove-btn" onclick="window.removeServerOpsAttachment(${index})">×</button>
     </div>`;
   }).join('');
 }
@@ -7252,7 +7920,8 @@ window.switchSettingsTab = (tabId) => {
     btn.classList.toggle('active', btn.dataset.tab === tabId);
   });
 
-  ['providers', 'channels', 'projects', 'permissions', 'system'].forEach(t => {
+  const allTabs = ['providers', 'agents', 'skills', 'channels', 'schedules', 'memory', 'host', 'servers', 'projects', 'permissions', 'system'];
+  allTabs.forEach(t => {
     const pane = $('settingsPane_' + t);
     if (pane) pane.style.display = t === tabId ? 'block' : 'none';
   });
@@ -7260,18 +7929,30 @@ window.switchSettingsTab = (tabId) => {
   if (tabId === 'providers') {
     renderProviders();
     renderModels();
+  } else if (tabId === 'agents') {
+    renderAgents();
+  } else if (tabId === 'skills') {
+    renderMarket();
   } else if (tabId === 'channels') {
     window.loadBotInstances();
     const activeSubBtn = document.querySelector('.channel-subtab-btn.active');
     const currentSub = activeSubBtn ? activeSubBtn.dataset.subtab : 'wechat';
     window.switchSettingsSubTab(currentSub || 'wechat');
+  } else if (tabId === 'schedules') {
+    renderSchedules();
+  } else if (tabId === 'memory') {
+    renderMemories();
+  } else if (tabId === 'host') {
+    refreshHostView();
+  } else if (tabId === 'servers') {
+    renderServers();
   } else if (tabId === 'projects') {
     renderProjects();
   } else if (tabId === 'permissions') {
     renderPermissions();
   } else if (tabId === 'system') {
     renderTargets();
-    renderLogs();
+    renderLogs(currentLogFilter);
   }
 };
 
@@ -7353,11 +8034,11 @@ function renderCurrentDialogModels() {
     return;
   }
   container.innerHTML = currentDialogModels.map((m, idx) => `
-    <span style="background:#e0f2fe;color:#0369a1;padding:3px 8px;border-radius:6px;font-size:12px;display:inline-flex;align-items:center;gap:6px;border:1px solid #bae6fd;">
+    <span class="model-dialog-pill">
       <strong>${esc(m.alias)}</strong>
-      ${m.model && m.model !== m.alias ? `<span style="color:#64748b;font-size:11px;">(${esc(m.model)})</span>` : ''}
-      ${m.contextWindow ? `<span style="font-size:10px;background:#bae6fd;padding:1px 3px;border-radius:3px;">${(m.contextWindow/1024).toFixed(0)}k</span>` : ''}
-      <span style="cursor:pointer;font-weight:bold;margin-left:2px;color:#ef4444;" title="移除此模型" onclick="window.removeModelFromDialog(${idx})">×</span>
+      ${m.model && m.model !== m.alias ? `<span style="color:var(--text-muted);font-size:11px;">(${esc(m.model)})</span>` : ''}
+      ${m.contextWindow ? `<span class="model-ctx-badge">${(m.contextWindow/1024).toFixed(0)}k</span>` : ''}
+      <span class="model-dialog-remove" title="移除此模型" onclick="window.removeModelFromDialog(${idx})">×</span>
     </span>
   `).join('');
 }
@@ -7404,12 +8085,12 @@ window.fetchAndSyncModelsForProvider = async (providerId, clickBtn) => {
     $('quickModelSyncTitle').textContent = `从 [${providerId}] 获取到 ${res.models.length} 个模型`;
     const listEl = $('quickModelSyncList');
     listEl.innerHTML = res.models.map((name) => `
-      <label style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;font-size:12.5px;cursor:pointer;transition:background 0.1s;">
+      <label style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:6px;font-size:12.5px;cursor:pointer;transition:background 0.1s;">
         <div style="display:flex;align-items:center;gap:10px;">
           <input type="checkbox" class="quick-model-cb" data-model="${esc(name)}" checked style="width:15px;height:15px;" />
-          <strong style="color:#0f172a;">${esc(name)}</strong>
+          <strong style="color:var(--text-main);">${esc(name)}</strong>
         </div>
-        <span class="prop-chip" style="font-size:11px;color:#0284c7;background:#f0f9ff;">${esc(name.split('/').pop())}</span>
+        <span class="prop-chip" style="font-size:11px;color:var(--primary);background:var(--primary-subtle);">${esc(name.split('/').pop())}</span>
       </label>
     `).join('');
 
@@ -7478,21 +8159,40 @@ $('fetchRemoteModelsInDialogBtn')?.addEventListener('click', async () => {
       showToast(`成功获取到 ${res.models.length} 个可用模型！`, 'success');
       const poolBox = $('remoteModelPoolBox');
       const chipsBox = $('remoteModelChips');
+      const filterInput = $('remoteModelFilterInput');
       if (poolBox && chipsBox) {
         poolBox.style.display = 'block';
-        chipsBox.innerHTML = res.models.map(name => `
-          <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="window.addModelToDialogFromRemote('${escJs(name)}')">+ ${esc(name)}</button>
-        `).join('');
+
+        const renderChips = (filterText = '') => {
+          const kw = filterText.toLowerCase();
+          const filtered = res.models.filter(name => !kw || name.toLowerCase().includes(kw));
+          if (filtered.length === 0) {
+            chipsBox.innerHTML = '<span style="font-size:11.5px;color:var(--text-muted);font-style:italic;padding:4px;">未匹配到相关模型</span>';
+            return;
+          }
+          chipsBox.innerHTML = filtered.map(name => `
+            <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="window.addModelToDialogFromRemote('${escJs(name)}')">+ ${esc(name)}</button>
+          `).join('');
+        };
+
+        renderChips();
+
+        if (filterInput) {
+          filterInput.value = '';
+          filterInput.oninput = (e) => renderChips(e.target.value.trim());
+        }
 
         $('addAllRemoteModelsBtn').onclick = () => {
-          res.models.forEach(name => {
+          const kw = (filterInput?.value || '').trim().toLowerCase();
+          const toAdd = kw ? res.models.filter(name => name.toLowerCase().includes(kw)) : res.models;
+          toAdd.forEach(name => {
             if (!currentDialogModels.some(m => m.model === name || m.alias === name)) {
               currentDialogModels.push({ alias: name.split('/').pop(), model: name, contextWindow: 64000 });
             }
           });
           renderCurrentDialogModels();
           poolBox.style.display = 'none';
-          showToast(`已批量添加 ${res.models.length} 个模型`, 'success');
+          showToast(`已批量添加 ${toAdd.length} 个模型`, 'success');
         };
       }
     } else {
@@ -7936,7 +8636,7 @@ function renderMarket(query = '', tab = activeMarketTab) {
 
   if (filtered.length === 0) {
     container.innerHTML = `
-      <div class="empty-card" style="grid-column:1/-1;padding:48px 20px;text-align:center;color:var(--text-muted);background:#ffffff;border-radius:12px;border:1px dashed #cbd5e1;">
+      <div class="empty-card" style="grid-column:1/-1;padding:48px 20px;text-align:center;color:var(--text-muted);background:var(--bg-surface);border-radius:12px;border:1px dashed var(--border-strong);">
         <div style="margin-bottom:10px; display:flex; justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);margin-bottom:8px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></div>
         <div style="font-size:15px;font-weight:700;color:var(--text-main);margin-bottom:6px;">未检索到匹配的插件或技能</div>
         <div style="font-size:12.5px;max-width:400px;margin:0 auto 16px auto;">您可以清空搜索条件，或者点击上方按钮安装热门 MCP 或导入 GitHub Skill</div>
@@ -8305,19 +9005,19 @@ function renderPresetMcpModal() {
   grid.innerHTML = PRESET_MCP_CATALOG.map(p => {
     const isInstalled = installedIds.has(p.id);
     return `
-      <div class="card" style="padding:14px;background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;display:flex;flex-direction:column;gap:8px;">
+      <div class="card" style="padding:14px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;flex-direction:column;gap:8px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <div style="display:flex;align-items:center;gap:8px;">
             <span style="font-size:20px;">${p.icon}</span>
             <div>
-              <div style="font-weight:700;font-size:13.5px;color:#0f172a;">${esc(p.name)}</div>
-              <div style="font-size:11px;color:#64748b;">${esc(p.tags.join(' · '))}</div>
+              <div style="font-weight:700;font-size:13.5px;color:var(--text-main);">${esc(p.name)}</div>
+              <div style="font-size:11px;color:var(--text-muted);">${esc(p.tags.join(' · '))}</div>
             </div>
           </div>
           <span class="badge ${isInstalled ? 'success' : 'neutral'}" style="font-size:10.5px;">${isInstalled ? '已在列表中' : '未添加'}</span>
         </div>
-        <div style="font-size:12px;color:#475569;line-height:1.4;">${esc(p.desc)}</div>
-        <div style="font-family:var(--font-mono);font-size:10.5px;background:#f8fafc;padding:4px 8px;border-radius:4px;border:1px solid #e2e8f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+        <div style="font-size:12px;color:var(--text-secondary);line-height:1.4;">${esc(p.desc)}</div>
+        <div style="font-family:var(--font-mono);font-size:10.5px;background:var(--bg-subtle);padding:4px 8px;border-radius:var(--radius-xs);border:1px solid var(--border-default);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
           ${p.command} ${p.args.join(' ')}
         </div>
         <div style="display:flex;justify-content:flex-end;margin-top:auto;padding-top:6px;">
@@ -8387,18 +9087,18 @@ async function renderSchedules() {
 
     if (list.length === 0) {
       grid.innerHTML = `
-        <div style="grid-column:1/-1;padding:32px;text-align:center;background:#ffffff;border:1px dashed #cbd5e1;border-radius:10px;color:var(--text-muted);font-size:13px;">
+        <div style="grid-column:1/-1;padding:32px;text-align:center;background:var(--bg-surface);border:1px dashed var(--border-strong);border-radius:10px;color:var(--text-muted);font-size:13px;">
           暂无配置的定时任务。点击右上角「+ 新建定时任务」由智能体按周期自动工作。
         </div>
       `;
     } else {
       grid.innerHTML = list.map(job => `
-        <div class="card schedule-card" style="padding:14px;background:#ffffff;border:1px solid ${job.enabled ? 'var(--border-default)' : '#e2e8f0'};border-radius:10px;opacity:${job.enabled ? 1 : 0.75};">
+        <div class="card schedule-card" style="padding:14px;background:var(--bg-surface);border:1px solid ${job.enabled ? 'var(--border-default)' : 'var(--border-subtle)'};border-radius:10px;opacity:${job.enabled ? 1 : 0.75};">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
             <div>
               <strong style="font-size:14px;color:var(--text-main);">${esc(job.name)}</strong>
               <div style="margin-top:4px;display:flex;align-items:center;gap:6px;">
-                <span class="prop-chip" style="font-family:var(--font-mono);font-size:11.5px;color:#0284c7;background:#f0f9ff;">⏰ ${esc(job.cron)}</span>
+                <span class="prop-chip" style="font-family:var(--font-mono);font-size:11.5px;color:var(--primary);background:var(--primary-subtle);">⏰ ${esc(job.cron)}</span>
                 <span class="prop-chip" style="font-size:11.5px;">${esc(job.agent || 'coder')}</span>
               </div>
             </div>
@@ -8408,12 +9108,12 @@ async function renderSchedules() {
             </label>
           </div>
 
-          <div style="font-size:12px;color:#475569;background:#f8fafc;padding:8px 10px;border-radius:6px;margin:8px 0;line-height:1.4;word-break:break-all;">
+          <div style="font-size:12px;color:var(--text-secondary);background:var(--bg-subtle);border:1px solid var(--border-default);padding:8px 10px;border-radius:var(--radius-sm);margin:8px 0;line-height:1.4;word-break:break-all;">
             ${esc(job.prompt)}
           </div>
 
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid #f1f5f9;">
-            <span style="font-size:11px;color:#94a3b8;">${job.lastRunAt ? '上次执行: ' + new Date(job.lastRunAt).toLocaleTimeString() : '尚未执行'}</span>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid var(--border-default);">
+            <span style="font-size:11px;color:var(--text-muted);">${job.lastRunAt ? '上次执行: ' + new Date(job.lastRunAt).toLocaleTimeString() : '尚未执行'}</span>
             <div style="display:flex;gap:6px;">
               <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="window.runScheduleNow('${escJs(job.id)}')">立即执行</button>
               <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="window.openEditScheduleDialog('${escJs(job.id)}')">编辑</button>
@@ -8429,7 +9129,7 @@ async function renderSchedules() {
         historyList.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);">暂无执行记录</div>';
       } else {
         historyList.innerHTML = history.slice(0, 15).map(h => `
-          <div style="padding:8px 10px;margin-bottom:6px;background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;display:flex;justify-content:space-between;align-items:center;">
+          <div style="padding:8px 10px;margin-bottom:6px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:6px;display:flex;justify-content:space-between;align-items:center;">
             <div>
               <span class="badge ${h.status === 'success' ? 'success' : 'danger'}" style="margin-right:6px;font-size:10.5px;">${h.status === 'success' ? '成功' : '失败'}</span>
               <strong style="font-size:12px;">${esc(h.scheduleName || h.scheduleId)}</strong>
@@ -8608,21 +9308,21 @@ function renderEnvVarsList(list) {
   container.innerHTML = filtered.map(item => {
     const masked = item.value ? maskKeySnippet(item.value) : '';
     return `
-      <div class="card" style="padding:10px 14px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;display:flex;flex-direction:column;gap:6px;" data-env-key="${esc(item.key)}">
+      <div class="card" style="padding:10px 14px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:8px;display:flex;flex-direction:column;gap:6px;" data-env-key="${esc(item.key)}">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
           <div style="display:flex;align-items:center;gap:8px;">
-            <strong style="font-size:13.5px;color:#0f172a;">${esc(item.label || item.key)}</strong>
-            <code style="font-size:11.5px;background:#f1f5f9;padding:2px 6px;border-radius:4px;color:#0284c7;">${esc(item.key)}</code>
+            <strong style="font-size:13.5px;color:var(--text-main);">${esc(item.label || item.key)}</strong>
+            <code style="font-size:11.5px;background:var(--bg-subtle);border:1px solid var(--border-subtle);padding:2px 6px;border-radius:4px;color:var(--primary);">${esc(item.key)}</code>
             <span class="badge ${item.isSet ? 'success' : 'warn'}" style="font-size:11px;">
               ${item.isSet ? '已配置' : '未配置'}
             </span>
           </div>
-          <div style="font-size:11.5px;color:#64748b;">${esc(item.desc || '')}</div>
+          <div style="font-size:11.5px;color:var(--text-secondary);">${esc(item.desc || '')}</div>
         </div>
         <div style="display:grid;grid-template-columns: 1fr auto;gap:8px;align-items:center;">
           <div style="display:flex;position:relative;align-items:center;">
-            <input type="password" class="env-val-input" id="envVal_${esc(item.key)}" data-raw="${esc(item.value)}" value="${esc(item.value)}" placeholder="${item.isSet ? '已配置: ' + esc(masked) : '在此粘贴 API Key / 凭据密钥...'}" style="width:100%;box-sizing:border-box;font-size:12.5px;padding:5px 65px 5px 10px;border-radius:6px;border:1px solid #cbd5e1;" />
-            <button type="button" class="btn text-btn toggle-env-eye" style="position:absolute;right:6px;font-size:11px;padding:2px 6px;color:#0284c7;" onclick="window.toggleEnvInputEye('${escJs(item.key)}')">显示</button>
+            <input type="password" class="env-val-input" id="envVal_${esc(item.key)}" data-raw="${esc(item.value)}" value="${esc(item.value)}" placeholder="${item.isSet ? '已配置: ' + esc(masked) : '在此粘贴 API Key / 凭据密钥...'}" style="width:100%;box-sizing:border-box;font-size:12.5px;padding:5px 65px 5px 10px;border-radius:6px;border:1px solid var(--border-default);background:var(--bg-surface);color:var(--text-main);" />
+            <button type="button" class="btn text-btn toggle-env-eye" style="position:absolute;right:6px;font-size:11px;padding:2px 6px;color:var(--primary);" onclick="window.toggleEnvInputEye('${escJs(item.key)}')">显示</button>
           </div>
           <div style="display:flex;gap:6px;">
             <button type="button" class="btn primary" style="font-size:11.5px;padding:4px 10px;" onclick="window.saveSingleEnvVar('${escJs(item.key)}')">保存</button>
@@ -9171,13 +9871,13 @@ window.refreshHostView = async () => {
         const diskUsed = diskTotal - diskFree;
         const diskPct = diskTotal > 0 ? Math.round((diskUsed / diskTotal) * 100) : 0;
         partList.innerHTML = `
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; font-size:12px;">
+          <div style="background:var(--bg-subtle); border:1px solid var(--border-default); border-radius:var(--radius-sm); padding:8px 10px; font-size:12px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
               <strong>/ (主文件系统根挂载)</strong>
-              <span style="font-family:var(--font-mono); font-weight:600; color:#0284c7;">${diskTotal > 0 ? `${diskPct}%` : '未知'}</span>
+              <span style="font-family:var(--font-mono); font-weight:600; color:var(--primary);">${diskTotal > 0 ? `${diskPct}%` : '未知'}</span>
             </div>
-            <div style="width:100%; height:4px; background:#e2e8f0; border-radius:2px; overflow:hidden; margin-bottom:4px;">
-              <div style="width:${diskPct}%; height:100%; background:#0284c7;"></div>
+            <div class="progress-track" style="height:4px; margin-bottom:4px;">
+              <div style="width:${diskPct}%; height:100%; background:var(--primary);"></div>
             </div>
             <div style="font-size:11px; color:#64748b; display:flex; justify-content:space-between;">
               <span>已用: ${diskTotal > 0 ? fmtHostBytes(diskUsed) : '不可用'}</span>
@@ -9421,10 +10121,10 @@ function renderOpsScriptsGrid() {
 
   grid.innerHTML = filtered.map(item => {
     return `
-      <div class="card" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,0.03);display:flex;flex-direction:column;justify-content:space-between;gap:12px;">
+      <div class="card" style="background:var(--bg-surface);border:1px solid var(--border-default);border-radius:12px;padding:16px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;justify-content:space-between;gap:12px;">
         <div>
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-            <div style="width:34px;height:34px;border-radius:8px;background:#f1f5f9;display:grid;place-items:center;font-size:17px;">
+            <div style="width:34px;height:34px;border-radius:8px;background:var(--bg-subtle);border:1px solid var(--border-subtle);display:grid;place-items:center;font-size:17px;">
               ${item.icon}
             </div>
             <div>
@@ -9439,7 +10139,7 @@ function renderOpsScriptsGrid() {
           </p>
         </div>
 
-        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #f1f5f9;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--border-subtle);">
           <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
             ${item.cmd ? esc(item.cmd) : '引导式交互向导'}
           </div>
@@ -10234,7 +10934,7 @@ async function renderMemories(searchQuery = '') {
 
     if (filtered.length === 0) {
       listEl.innerHTML = `
-        <div style="padding:32px;text-align:center;background:#ffffff;border:1px dashed #cbd5e1;border-radius:10px;color:var(--text-muted);font-size:13px;">
+        <div style="padding:32px;text-align:center;background:var(--bg-surface);border:1px dashed var(--border-strong);border-radius:10px;color:var(--text-muted);font-size:13px;">
           暂无符合条件的记忆条目。点击右上角「+ 添加记忆条目」为智能体沉淀偏好与规则。
         </div>
       `;
@@ -10242,17 +10942,17 @@ async function renderMemories(searchQuery = '') {
     }
 
     const catMap = {
-      preference: { label: '用户偏好', color: '#0284c7', bg: '#f0f9ff' },
-      architecture: { label: '架构约束', color: '#7c3aed', bg: '#f5f3ff' },
-      convention: { label: '代码规范', color: '#16a34a', bg: '#f0fdf4' },
-      domain: { label: '业务背景', color: '#ea580c', bg: '#fff7ed' },
-      custom: { label: '自定义', color: '#475569', bg: '#f8fafc' },
+      preference: { label: '用户偏好', color: 'var(--primary)', bg: 'var(--primary-subtle)' },
+      architecture: { label: '架构约束', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)' },
+      convention: { label: '代码规范', color: 'var(--success)', bg: 'var(--success-subtle)' },
+      domain: { label: '业务背景', color: 'var(--warning)', bg: 'var(--warning-subtle)' },
+      custom: { label: '自定义', color: 'var(--text-secondary)', bg: 'var(--bg-subtle)' },
     };
 
     listEl.innerHTML = filtered.map(m => {
       const cat = catMap[m.category] || catMap.custom;
       return `
-        <div class="card" style="padding:12px 16px;background:#ffffff;border:1px solid var(--border-default);border-radius:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+        <div class="card" style="padding:12px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--radius-md);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
           <div style="flex:1;">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
               <span class="prop-chip" style="background:${cat.bg};color:${cat.color};font-weight:600;font-size:11px;">${cat.label}</span>

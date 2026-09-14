@@ -48,90 +48,22 @@
         </div>
       </div>
 
-      <div class="projects-filter-bar" id="projectsFilterBar" style="display:none;padding:4px 10px 8px;">
-        <input type="text" id="projectsFilterInput" placeholder="过滤项目或会话..." style="width:100%;font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid var(--border-default);background:var(--bg-surface);color:var(--text-main);outline:none;box-sizing:border-box;" />
+      <div class="projects-filter-bar" id="projectsFilterBar" style="display:none;">
+        <input type="text" id="projectsFilterInput" class="filter-input" placeholder="过滤项目或会话..." />
       </div>
 
       <div class="projects-tree-section" id="projectsTreeContainer">
         <!-- 动态树形渲染项目与会话 -->
       </div>
 
-      <!-- 侧边栏底部独立模块导航 -->
-      
-      <!-- 侧边栏底部精简结构化导航面板 -->
-      
-      <!-- 侧边栏底部精简日常导航 -->
-      <div class="sidebar-bottom-panel">
-        <div class="nav active" data-view="chat" id="navChatBtn">
-          <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-          <span>对话工作台</span>
-        </div>
-        <div class="nav" data-view="host" id="navHostBtn">
-          <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-            <line x1="8" y1="21" x2="16" y2="21"/>
-            <line x1="12" y1="17" x2="12" y2="21"/>
-          </svg>
-          <span>计算节点全景大盘</span>
-        </div>
-        <div class="nav" data-view="servers" id="navServersBtn">
-          <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
-            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
-            <line x1="6" y1="6" x2="6.01" y2="6"/>
-            <line x1="6" y1="18" x2="6.01" y2="18"/>
-          </svg>
-          <span>远程服务器集群</span>
-        </div>
-        <div class="nav" data-view="agents" id="navAgentsBtn">
-          <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-          <span>智能体角色管理</span>
-        </div>
-        <div class="nav" data-view="skills" id="navSkillsBtn">
-          <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-          </svg>
-          <span>Skill & MCP 市场</span>
-        </div>
-        <div class="nav" data-view="schedules" id="navSchedulesBtn">
-          <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-          </svg>
-          <span>自动化定时任务</span>
-        </div>
-        <div class="nav" data-view="memory" id="navMemoryBtn">
-          <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"/>
-            <line x1="9" y1="21" x2="15" y2="21"/>
-          </svg>
-          <span>智能体记忆库</span>
-        </div>
-
-        <div style="height:1px;background:#e0f2fe;margin:4px 0;"></div>
-
-        <!-- 综合设置中心入口 -->
-        <div class="nav" data-view="settings" id="navSettingsBtn">
-          <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <!-- 侧边栏底部：左下角仅保留系统设置中心按钮 -->
+      <div class="sidebar-bottom-panel sidebar-settings-only">
+        <div class="nav nav-settings-btn" data-view="settings" id="navSettingsBtn" title="系统设置中心 (Settings)">
+          <svg class="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"/>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
-          <span>系统设置中心</span>
-        </div>
-
-        <!-- 底部配置路径快速复制 -->
-        <div class="config-footer-row" id="configPathBtn" title="点击复制完整配置文件路径">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-          </svg>
-          <span id="configPathText">~/.hap/config.toml</span>
+          <span class="nav-text">系统设置</span>
         </div>
       </div>
     </aside>
@@ -297,9 +229,9 @@
                   </button>
                   <input type="file" id="chatFileInput" multiple accept="image/*,.txt,.md,.json,.ts,.js,.py,.pdf,.log,.html,.css,.sql" style="display:none;" />
 
-                  <button type="button" class="composer-attach-btn" id="aiGenImageBtn" title="一键生成 AI 图像 (插画、架构概念图、UI 设计图、壁纸等)" style="color:#0284c7;background:#f0f9ff;border-color:#bae6fd;">
+                  <button type="button" class="composer-attach-btn ai-gen-btn" id="aiGenImageBtn" title="一键生成 AI 图像 (插画、架构概念图、UI 设计图、壁纸等)">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"></circle><circle cx="17.5" cy="10.5" r=".5"></circle><circle cx="8.5" cy="7.5" r=".5"></circle><circle cx="6.5" cy="12.5" r=".5"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path></svg>
-                    <span style="font-weight:600;">AI 生图</span>
+                    <span>AI 生图</span>
                   </button>
 
                   <span class="composer-hint-tag">
@@ -325,609 +257,6 @@
               </div>
             </form>
             <div class="disclaimer-text">HAP 智能体自主编排执行。请审查关键代码与指令变更。</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 独立视图: Skill & MCP 统一扩展生态中心 -->
-      <section id="skills" class="view">
-        <div class="page-container">
-          <!-- 顶部现代化横幅与操作台 -->
-          <div class="market-header-banner">
-            <div>
-              <div style="display:flex;align-items:center;gap:10px;">
-                <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg, #6366f1 0%, #a855f7 100%);color:#fff;display:grid;place-items:center;box-shadow:0 3px 10px rgba(99,102,241,0.25);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></div>
-                <div>
-                  <h2 class="page-title" style="margin:0;font-size:18px;">Skill & MCP 扩展生态市场</h2>
-                  <p class="page-subtitle" style="margin:2px 0 0 0;font-size:12px;">融合 GitHub 专家技能包与 Model Context Protocol (MCP) 标准插件，赋予智能体任意外部能力</p>
-                </div>
-              </div>
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button id="openMcpPlaygroundBtn" class="btn primary" style="font-size:12.5px;padding:6px 14px;background:linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);color:#fff;border:none;">
-                ⚡ MCP 调试台
-              </button>
-              <button id="openPresetMcpModalBtn" class="btn secondary" style="font-size:12.5px;padding:6px 14px;">
-                热门 MCP 插件库
-              </button>
-              <button id="openAddPluginModalBtn" class="btn secondary" style="font-size:12.5px;padding:6px 14px;">
-                + 添加自定义 MCP
-              </button>
-              <button id="openInstallSkillModalBtn" class="btn primary" style="font-size:12.5px;padding:6px 14px;">
-                + 从 GitHub 安装 Skill
-              </button>
-            </div>
-          </div>
-
-          <!-- 分类筛选选项卡与检索工具栏 -->
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:14px;">
-            <div class="market-tabs-bar" id="marketTabsBar">
-              <button type="button" class="market-tab-btn active" data-market-tab="all">
-                <span>全部生态</span>
-                <span class="market-tab-badge" id="tabCountAll">0</span>
-              </button>
-              <button type="button" class="market-tab-btn" data-market-tab="mcp">
-                <span>MCP 插件</span>
-                <span class="market-tab-badge" id="tabCountMcp">0</span>
-              </button>
-              <button type="button" class="market-tab-btn" data-market-tab="skill">
-                <span>Skills 技能</span>
-                <span class="market-tab-badge" id="tabCountSkill">0</span>
-              </button>
-              <button type="button" class="market-tab-btn" data-market-tab="builtin">
-                <span>内置工具</span>
-                <span class="market-tab-badge" id="tabCountBuiltin">0</span>
-              </button>
-              <button type="button" class="market-tab-btn" data-market-tab="active">
-                <span>仅看已启用</span>
-                <span class="market-tab-badge" id="tabCountActive">0</span>
-              </button>
-              <button type="button" class="market-tab-btn" data-market-tab="playground">
-                <span>⚡ MCP 调试台</span>
-                <span class="market-tab-badge" id="tabCountMcpTools" style="background:#e0e7ff;color:#4338ca;">0</span>
-              </button>
-            </div>
-
-            <div style="display:flex;align-items:center;gap:8px;min-width:280px;flex:1;max-width:420px;">
-              <input type="text" id="marketSearchInput" placeholder="搜索生态插件 (如 GitHub, Docker, Postgres, React)..." style="width:100%;font-size:12.5px;padding:7px 12px;" />
-            </div>
-          </div>
-
-          <!-- 统一网格列表 -->
-          <div id="marketEcoGrid" class="market-eco-grid">
-            <!-- 动态渲染现代化卡片 -->
-          </div>
-
-          <!-- MCP 可视化调试台 (Playground) 面板 -->
-          <div id="mcpPlaygroundPanel" class="mcp-playground-container" style="display:none;">
-            <!-- 左侧：MCP 工具目录清单 -->
-            <div class="mcp-sidebar-pane">
-              <div class="mcp-sidebar-head">
-                <div style="display:flex;align-items:center;gap:6px;">
-                  <span style="font-weight:700;font-size:12.5px;">MCP 工具清单</span>
-                  <span class="mcp-tool-badge" id="mcpToolTotalCount">0 个</span>
-                </div>
-                <button type="button" class="btn text-btn" id="refreshMcpPlaygroundBtn" style="font-size:11.5px;padding:3px 6px;" title="重新连接与扫描 MCP 服务器暴露的工具">
-                  🔄 刷新
-                </button>
-              </div>
-              <div class="mcp-search-wrap">
-                <input type="text" id="mcpPlaygroundSearchInput" placeholder="按工具名或服务商搜索..." style="width:100%;font-size:12px;padding:6px 10px;" />
-              </div>
-              <div id="mcpPlaygroundToolsList" class="mcp-tools-list">
-                <div style="padding:16px;text-align:center;color:var(--text-muted);font-size:12px;">
-                  正在加载 MCP 服务器工具...
-                </div>
-              </div>
-            </div>
-
-            <!-- 右侧：交互式参数配置与调试台 -->
-            <div class="mcp-main-pane">
-              <!-- 空状态 -->
-              <div id="mcpPlaygroundEmptyState" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;color:var(--text-muted);text-align:center;">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.4;margin-bottom:12px;">
-                  <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
-                </svg>
-                <div style="font-size:14px;font-weight:600;color:var(--text-main);margin-bottom:4px;">请在左侧选择 MCP 工具</div>
-                <div style="font-size:12px;max-width:360px;">点击任意 MCP 工具可浏览其 JSON Schema 参数定义并进行一键填参与在线执行测试</div>
-              </div>
-
-              <!-- 调试工作区 -->
-              <div id="mcpPlaygroundActiveWorkbench" style="display:none;flex-direction:column;height:100%;">
-                <div class="mcp-workbench-head">
-                  <div>
-                    <div style="display:flex;align-items:center;gap:8px;">
-                      <span id="mcpActiveToolName" style="font-family:var(--font-mono);font-size:15px;font-weight:700;color:var(--primary);">tool_name</span>
-                      <span id="mcpActiveToolServer" class="mcp-tool-badge">server</span>
-                    </div>
-                    <div id="mcpActiveToolDesc" style="font-size:12px;color:var(--text-muted);margin-top:6px;line-height:1.5;"></div>
-                  </div>
-                </div>
-
-                <div class="mcp-workbench-body">
-                  <!-- Schema 参数说明表 -->
-                  <div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                      <span style="font-size:12.5px;font-weight:700;">参数定义 (Parameter Schema)</span>
-                      <span style="font-size:11px;color:var(--text-muted);">JSON Schema 标准定义</span>
-                    </div>
-                    <div id="mcpActiveToolSchemaTableWrap" style="overflow-x:auto;border-radius:var(--radius-sm);border:1px solid var(--border-default);">
-                      <table class="mcp-schema-table">
-                        <thead>
-                          <tr>
-                            <th style="width:160px;">字段名 (Field)</th>
-                            <th style="width:100px;">类型 (Type)</th>
-                            <th style="width:80px;">必填</th>
-                            <th>说明与约束 (Description)</th>
-                          </tr>
-                        </thead>
-                        <tbody id="mcpActiveToolSchemaBody">
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  <!-- 调用输入实参 (Arguments Payload) -->
-                  <div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                      <label style="font-size:12.5px;font-weight:700;">执行入参 (JSON Payload)</label>
-                      <div style="display:flex;gap:6px;">
-                        <button type="button" class="btn text-btn" id="mcpFormatJsonBtn" style="font-size:11.5px;padding:2px 6px;">格式化 JSON</button>
-                        <button type="button" class="btn text-btn" id="mcpResetArgsBtn" style="font-size:11.5px;padding:2px 6px;">填充模板</button>
-                      </div>
-                    </div>
-                    <textarea id="mcpToolArgsEditor" class="mcp-json-editor" rows="6" placeholder="{&#10;  // 请输入工具调用参数 JSON&#10;}"></textarea>
-                    
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
-                      <div id="mcpExecutionStatusTag" style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
-                        <span>就绪</span>
-                      </div>
-                      <button type="button" class="btn primary" id="executeMcpToolBtn" style="display:inline-flex;align-items:center;gap:6px;padding:7px 18px;font-weight:600;">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                        <span>发起测试调用</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- 执行返回结果 (Execution Output) -->
-                  <div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                      <span style="font-size:12.5px;font-weight:700;">响应输出 (Response Result)</span>
-                      <button type="button" class="btn text-btn" id="copyMcpOutputBtn" style="font-size:11.5px;padding:2px 6px;">复制结果</button>
-                    </div>
-                    <pre class="mcp-output-pre" id="mcpToolOutputPre"><code>（点击【发起测试调用】运行当前工具）</code></pre>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 独立视图: 智能体角色管理 (Agents) -->
-      <section id="agents" class="view">
-        <div class="page-container">
-          <div class="page-header-row agent-page-header">
-            <div>
-              <h2 class="page-title">智能体角色管理</h2>
-              <p class="page-subtitle">配置各个专项智能体（Coder、Researcher、Reviewer、Ops、Writer 等）的主模型、工作区与工具权限</p>
-            </div>
-            <div class="page-header-actions">
-              <button type="button" class="btn primary" id="addAgentBtn">新增角色</button>
-            </div>
-          </div>
-
-          <div id="agentList" class="grid"></div>
-        </div>
-      </section>
-
-      <!-- 独立视图: 远程服务器与节点管理 (Remote Servers) -->
-      
-      <!-- 独立视图: 本机系统全景监控中心 (Host System Diagnostics & Monitor) -->
-      <section id="host" class="view">
-        <div class="page-container">
-          <!-- 顶部标题与操作栏 -->
-          <div class="page-header-row" style="margin-bottom:16px;flex-wrap:wrap;gap:12px;">
-            <div>
-              <div style="display:flex;align-items:center;gap:10px;">
-                <div class="agent-avatar-badge" style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;box-shadow:0 3px 10px rgba(14,165,233,0.25);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
-                <div>
-                  <h2 class="page-title" style="font-size:18px;margin:0;" id="panoramaMainTitle">计算节点全景监控大盘 (Node Panorama)</h2>
-                  <p class="page-subtitle" style="margin:2px 0 0 0;font-size:12.5px;" id="panoramaMainSub">多机硬件指标全景看板 · 支持本机宿主与所有远程服务器节点无缝切换与毫秒级监控</p>
-                </div>
-              </div>
-            </div>
-            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-              <!-- 节点选择器 -->
-              <div style="display:flex;align-items:center;gap:6px;background:#ffffff;padding:5px 12px;border-radius:8px;border:1px solid #cbd5e1;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-                <span style="font-size:12px;font-weight:600;color:var(--text-secondary);">监控节点:</span>
-                <select id="panoramaNodeSelect" style="border:none;background:transparent;font-size:12.5px;font-weight:700;color:#0284c7;outline:none;cursor:pointer;min-width:180px;">
-                  <option value="local">本机宿主环境 (Local Host)</option>
-                </select>
-              </div>
-
-              <!-- 节点机器人配置入口 -->
-              <button type="button" class="btn primary" onclick="window.openNodeBotConfigModal()" style="font-size:12.5px;padding:6px 14px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);display:flex;align-items:center;gap:6px;">
-                <span>节点机器人与告警设置</span>
-              </button>
-
-              <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-secondary);cursor:pointer;background:#f8fafc;padding:5px 10px;border-radius:8px;border:1px solid #e2e8f0;">
-                <input type="checkbox" id="hostAutoRefreshToggle" checked />
-                <span>自动轮询 (3s)</span>
-              </label>
-              <button id="refreshHostBtn" class="btn primary" style="font-size:12.5px;padding:6px 14px;">
-                立即刷新
-              </button>
-            </div>
-          </div>
-
-          
-          <!-- 节点专属智能体与告警机器人实时状态卡片 -->
-          <div class="card" id="panoramaBotCard" style="margin-bottom:18px;background:linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);border:1px solid #bbf7d0;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(16,185,129,0.06);">
-            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-              <div style="display:flex;align-items:center;gap:12px;">
-                <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:#fff;display:grid;place-items:center;box-shadow:0 2px 6px rgba(16,185,129,0.3);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg></div>
-                <div>
-                  <div style="display:flex;align-items:center;gap:8px;">
-                    <strong style="font-size:14.5px;color:var(--text-main);" id="panoramaBotTitle">节点专属智能体与告警机器人</strong>
-                    <span id="panoramaBotStatusBadge" class="badge success" style="font-size:11px;">● 已配置并监听</span>
-                  </div>
-                  <p style="margin:2px 0 0 0;font-size:12px;color:var(--text-secondary);" id="panoramaBotSub">
-                    绑定智能体: ops (全栈智能运维专家) | 告警通道: 飞书自定义机器人 | 异常自愈: 已开启
-                  </p>
-                </div>
-              </div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button type="button" class="btn primary" onclick="window.openNodeBotConfigModal()" style="font-size:12px;padding:6px 14px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                  机器人设置
-                </button>
-                <button type="button" class="btn secondary" onclick="window.testNodeBotAlert()" style="font-size:12px;padding:6px 12px;">
-                  测试推送
-                </button>
-                <button type="button" class="btn secondary" onclick="window.chatWithNodeAgent()" style="font-size:12px;padding:6px 12px;">
-                  呼叫专属 Agent
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- 4 大核心 KPI 指标卡片 -->
-          <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 18px;">
-            <!-- CPU 指标卡 -->
-            <div class="card" style="padding: 16px; display:flex; flex-direction:column; gap:8px;">
-              <div style="font-size: 12px; color: var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
-                <span>CPU 整体负载</span>
-                <span id="hostCpuCoresBadge" class="badge info">-- 核心</span>
-              </div>
-              <div style="display:flex;align-items:baseline;gap:8px;">
-                <div style="font-size: 28px; font-weight: 700; color: var(--text-main); font-family:var(--font-mono);" id="hostCpuPercent">--%</div>
-                <div style="font-size: 11.5px; color: var(--text-muted);" id="hostCpuSpeed">-- MHz</div>
-              </div>
-              <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow:hidden;">
-                <div id="hostCpuBar" style="width: 0%; height: 100%; background: #3b82f6; transition: width 0.3s;"></div>
-              </div>
-              <div style="font-size: 11px; color: var(--text-muted); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" id="hostCpuModel">--</div>
-            </div>
-
-            <!-- 物理内存指标卡 -->
-            <div class="card" style="padding: 16px; display:flex; flex-direction:column; gap:8px;">
-              <div style="font-size: 12px; color: var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
-                <span>物理内存 (RAM)</span>
-                <span id="hostMemPercentBadge" class="badge">--%</span>
-              </div>
-              <div style="display:flex;align-items:baseline;gap:8px;">
-                <div style="font-size: 28px; font-weight: 700; color: var(--text-main); font-family:var(--font-mono);" id="hostMemUsed">-- GB</div>
-                <div style="font-size: 11.5px; color: var(--text-muted);" id="hostMemTotalBrief">/ -- GB</div>
-              </div>
-              <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow:hidden;">
-                <div id="hostMemBar" style="width: 0%; height: 100%; background: #10b981; transition: width 0.3s;"></div>
-              </div>
-              <div style="font-size: 11px; color: var(--text-muted);" id="hostMemTotal">空闲: -- GB</div>
-            </div>
-
-            <!-- 进程与虚拟机内存指标卡 -->
-            <div class="card" style="padding: 16px; display:flex; flex-direction:column; gap:8px;">
-              <div style="font-size: 12px; color: var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
-                <span>Node.js 进程 RSS 内存</span>
-                <span id="hostProcessPidBadge" class="badge neutral">PID: --</span>
-              </div>
-              <div style="font-size: 28px; font-weight: 700; color: var(--text-main); font-family:var(--font-mono);" id="hostProcessRss">-- MB</div>
-              <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow:hidden;">
-                <div id="hostHeapBar" style="width: 0%; height: 100%; background: #8b5cf6; transition: width 0.3s;"></div>
-              </div>
-              <div style="font-size: 11px; color: var(--text-muted);" id="hostProcessHeap">堆使用: -- MB / -- MB</div>
-            </div>
-
-            <!-- 系统运行时间指标卡 -->
-            <div class="card" style="padding: 16px; display:flex; flex-direction:column; gap:8px;">
-              <div style="font-size: 12px; color: var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
-                <span>⏱️ 系统连续运行</span>
-                <span id="hostLoadAvgBadge" class="badge neutral">负载: --</span>
-              </div>
-              <div style="font-size: 20px; font-weight: 700; color: var(--text-main); margin-top:2px;" id="hostSystemUptime">--</div>
-              <div style="font-size: 12px; color: var(--text-secondary); margin-top:auto;" id="hostProcessUptime">Codex 服务运行: --</div>
-              <div style="font-size: 11px; color: var(--text-muted);" id="hostTimestamp">更新于: --</div>
-            </div>
-          </div>
-
-          <!-- 第二行: CPU 多核拓扑分布 + 磁盘卷分区 -->
-          <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
-            <!-- CPU 多核分布 -->
-            <div class="card" style="padding: 18px; display:flex; flex-direction:column; gap:12px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-default); padding-bottom: 8px;">
-                <div style="font-weight: 700; font-size: 14px; color: var(--text-main); display:flex; align-items:center; gap:6px;">
-                  <span>CPU 多核负载图谱</span>
-                </div>
-                <span id="hostCpuCoreCountBadge" class="badge info">-- 逻辑核心</span>
-              </div>
-              <div id="hostCoreGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap:8px; max-height:220px; overflow-y:auto; padding:2px;">
-                <!-- 动态渲染多核状态 -->
-              </div>
-            </div>
-
-            <!-- 磁盘多分区存储 -->
-            <div class="card" style="padding: 18px; display:flex; flex-direction:column; gap:12px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-default); padding-bottom: 8px;">
-                <div style="font-weight: 700; font-size: 14px; color: var(--text-main); display:flex; align-items:center; gap:6px;">
-                  <span>磁盘驱动器与分区卷</span>
-                </div>
-                <span id="hostDiskPartCountBadge" class="badge neutral">-- 个卷</span>
-              </div>
-              <div id="hostPartitionList" style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto; padding:2px;">
-                <!-- 动态渲染分区列表 -->
-              </div>
-            </div>
-          </div>
-
-          <!-- 第三行: 活跃进程 Top 榜 + 公网 IP / 地理位置与网卡 -->
-          <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
-            <!-- 活跃高消耗进程 Top 榜 -->
-            <div class="card" style="padding: 18px; display:flex; flex-direction:column; gap:12px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-default); padding-bottom: 8px;">
-                <div style="font-weight: 700; font-size: 14px; color: var(--text-main); display:flex; align-items:center; gap:6px;">
-                  <span id="hostProcessListTitle">本机内存占用 Top 活跃进程</span>
-                </div>
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <span id="hostProcessModeBadge" class="badge success">本机 · 可控</span>
-                  <button type="button" id="hostProcessRefreshBtn" class="btn secondary" style="font-size:11px;padding:3px 8px;" title="刷新进程列表">刷新</button>
-                </div>
-              </div>
-              <div id="hostTopProcessList" style="display:flex; flex-direction:column; gap:6px; max-height:290px; overflow-y:auto;">
-                <!-- 动态渲染进程列表 -->
-              </div>
-            </div>
-
-            <!-- 公网 IP 归属地与网络接口 -->
-            <div class="card" style="padding: 18px; display:flex; flex-direction:column; gap:12px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-default); padding-bottom: 8px;">
-                <div style="font-weight: 700; font-size: 14px; color: var(--text-main); display:flex; align-items:center; gap:6px;">
-                  <span>公网出口与 IP 地理位置</span>
-                </div>
-                <span id="hostIpGeoBadge" class="badge success">探测中...</span>
-              </div>
-              <div id="hostIpGeoDetails" style="font-size: 13px; color: var(--text-main); line-height: 1.6; background:#f8fafc; padding:10px 12px; border-radius:6px; border:1px solid #e2e8f0;">
-                正在探测公网出口与运营商归属...
-              </div>
-              <div style="font-weight: 600; font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">
-                本地与虚拟网络接口 (IPs):
-              </div>
-              <div id="hostNetworkList" style="display:flex; flex-direction:column; gap:5px; max-height:120px; overflow-y:auto;">
-                <!-- 动态渲染网卡列表 -->
-              </div>
-            </div>
-          </div>
-
-          <!-- 第四行: 操作系统与 Node.js 底层规格 -->
-          <div class="card" style="padding: 18px; display:flex; flex-direction:column; gap:12px; margin-bottom: 18px;">
-            <div style="font-weight: 700; font-size: 14px; color: var(--text-main); border-bottom: 1px solid var(--border-default); padding-bottom: 8px; display:flex; justify-content:space-between; align-items:center;">
-              <span>操作系统与运行时底层环境规格 (System & Runtime Specs)</span>
-              <span id="hostPlatformBadge" class="badge neutral">--</span>
-            </div>
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; font-size: 12.5px;">
-              <div style="background:#f8fafc; padding:10px 14px; border-radius:6px; border:1px solid #e2e8f0; display:flex; flex-direction:column; gap:6px;">
-                <div><span style="color:#64748b;">主机名:</span> <strong id="hostHostname" style="color:#0f172a;">--</strong></div>
-                <div><span style="color:#64748b;">当前运行用户:</span> <span id="hostUsername">--</span></div>
-                <div><span style="color:#64748b;">操作系统版本:</span> <span id="hostOsFull">--</span></div>
-                <div><span style="color:#64748b;">架构与字节序:</span> <span id="hostArch">--</span></div>
-              </div>
-              <div style="background:#f8fafc; padding:10px 14px; border-radius:6px; border:1px solid #e2e8f0; display:flex; flex-direction:column; gap:6px;">
-                <div><span style="color:#64748b;">Node.js 运行时:</span> <strong id="hostNodeVersion" style="color:#0f172a;">--</strong></div>
-                <div><span style="color:#64748b;">V8 引擎版本:</span> <span id="hostV8Version">--</span></div>
-                <div><span style="color:#64748b;">libuv / OpenSSL:</span> <span id="hostUvVersion">--</span></div>
-                <div><span style="color:#64748b;">工作根目录:</span> <code id="hostCwd" style="font-size:11px;">--</code></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 第五行: AI 智能磁盘扫描与深度瘦身看板 (AI Smart Disk Scanner & Storage Analyzer) -->
-          <div class="card" style="padding: 22px; display:flex; flex-direction:column; gap:16px; margin-bottom: 24px; border: 1px solid #cbd5e1; background: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-bottom: 1px solid var(--border-default); padding-bottom: 14px;">
-              <div style="display:flex; align-items:center; gap:12px;">
-                <div style="width:40px; height:40px; border-radius:10px; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); color:#fff; display:grid; place-items:center; box-shadow: 0 2px 8px rgba(99,102,241,0.3);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg></div>
-                <div>
-                  <div style="font-size: 16px; font-weight: 700; color: var(--text-main); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <span>AI 智能全盘扫描与深度瘦身 (AI Smart Disk Scanner)</span>
-                    <span id="diskCleanableTotalBadge" class="badge warning" style="display:none; font-size:12px;">发现可释放: --</span>
-                    <span id="diskRootsBadge" class="badge success" style="display:none; font-size:11.5px;">系统: 当前系统 · 根目录: 自动识别</span>
-                  </div>
-                  <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
-                    <span id="diskScannerScopeText">当前系统 · 根目录: 自动识别</span>，深度扫描系统临时文件、包管理器缓存 (npm/pip/cargo)、工程构建残留与应用日志
-                  </div>
-                </div>
-              </div>
-              <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button id="scanDiskBtn" class="btn primary" style="background:linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border:none; font-size:12.5px; padding:6px 16px; box-shadow: 0 2px 6px rgba(79,70,229,0.25);">
-                  从根目录开始全盘扫描
-                </button>
-                <button id="safeCleanDiskBtn" class="btn primary" style="background:#16a34a; border-color:#16a34a; font-size:12.5px; display:none;">
-                  仅清理安全项 (Safe)
-                </button>
-                <button id="allCleanDiskBtn" class="btn danger" style="font-size:12.5px; display:none;">
-                  深度全量清理 (All)
-                </button>
-                <button id="askAiDiskPlanBtn" class="btn secondary" style="font-size:12.5px;" title="将全盘扫描报告发送给 AI 智能体生成专业清理建议">
-                  咨询 AI 智能体建议
-                </button>
-              </div>
-            </div>
-
-            <!-- AI 智能体检进度与动态雷达条 -->
-            <div id="diskScanProgressBox" style="display:none; background:#f1f5f9; border-radius:8px; padding:12px 16px; border:1px solid #e2e8f0;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <div style="font-size:12.5px; font-weight:600; color:#334155; display:flex; align-items:center; gap:8px;">
-                  <span style="display:inline-block; animation:spin 1s linear infinite;">⏳</span>
-                  <span id="diskScanProgressText">正在从系统根目录全盘扫描...</span>
-                </div>
-                <span style="font-size:11.5px; color:#64748b;">全盘深度体检中</span>
-              </div>
-              <div style="width:100%; height:6px; background:#cbd5e1; border-radius:3px; overflow:hidden;">
-                <div id="diskScanProgressBar" style="width:40%; height:100%; background:linear-gradient(90deg, #6366f1, #a855f7); animation:indeterminate 1.5s infinite linear;"></div>
-              </div>
-            </div>
-
-            <!-- AI 诊断评估卡片与结果容器 -->
-            <div id="diskScanResultContainer" style="display:none;">
-              <!-- 顶部 AI 诊断卡片 -->
-              <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 18px; margin-bottom: 14px; display:flex; gap:16px; align-items:center;">
-                <div style="text-align:center; padding: 6px 14px; background:#ffffff; border-radius:8px; border:1px solid #cbd5e1; flex-shrink:0;">
-                  <div style="font-size:11px; color:#64748b; font-weight:600;">全盘健康分</div>
-                  <div id="diskHealthScore" style="font-size:26px; font-weight:800; color:#16a34a; font-family:var(--font-mono);">95</div>
-                  <div id="diskHealthLevel" class="badge success" style="font-size:10px;">空间充裕</div>
-                </div>
-                <div style="flex:1;">
-                  <div style="font-size:13px; font-weight:700; color:#0f172a; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
-                    <span>AI 智能诊断结论与清理策略</span>
-                  </div>
-                  <div id="diskAiDiagnosisText" style="font-size:12.5px; color:#475569; line-height:1.55;">
-                    正在生成 AI 诊断分析...
-                  </div>
-                </div>
-              </div>
-
-              <!-- 2 栏容量指标 -->
-              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 14px;">
-                <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 14px;">
-                  <div style="font-size:12px; color:#166534; font-weight:600;">安全可清 (零副作用):</div>
-                  <div style="font-size:18px; font-weight:700; color:#15803d; font-family:var(--font-mono);" id="diskSafeSize">0 MB</div>
-                  <div style="font-size:11px; color:#16a34a; margin-top:2px;">根目录 Temp、包管理器缓存、系统临时日志、浏览器静态缓存</div>
-                </div>
-                <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:10px 14px;">
-                  <div style="font-size:12px; color:#92400e; font-weight:600;">建议确认 (工程与容器):</div>
-                  <div style="font-size:18px; font-weight:700; color:#b45309; font-family:var(--font-mono);" id="diskReviewSize">0 MB</div>
-                  <div style="font-size:11px; color:#d97706; margin-top:2px;">工程构建产物 (dist/target/.next)、Docker 悬空镜像</div>
-                </div>
-              </div>
-
-              <!-- 分类过滤栏 (Category Filter Tabs) -->
-              <div class="disk-filter-tabs-row" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">
-                <button type="button" class="btn text-btn disk-cat-btn active" data-cat="all" style="font-size:12px; padding:4px 10px; border-radius:6px; background:#e0f2fe; color:#0369a1; font-weight:600;">全部 (<span id="catCount_all">0</span>)</button>
-                <button type="button" class="btn text-btn disk-cat-btn" data-cat="system_root" style="font-size:12px; padding:4px 10px; border-radius:6px; background:#f1f5f9; color:#475569;">根目录与系统 (<span id="catCount_system_root">0</span>)</button>
-                <button type="button" class="btn text-btn disk-cat-btn" data-cat="package_cache" style="font-size:12px; padding:4px 10px; border-radius:6px; background:#f1f5f9; color:#475569;">开发依赖缓存 (<span id="catCount_package_cache">0</span>)</button>
-                <button type="button" class="btn text-btn disk-cat-btn" data-cat="build_artifact" style="font-size:12px; padding:4px 10px; border-radius:6px; background:#f1f5f9; color:#475569;">工程构建产物 (<span id="catCount_build_artifact">0</span>)</button>
-                <button type="button" class="btn text-btn disk-cat-btn" data-cat="browser_app" style="font-size:12px; padding:4px 10px; border-radius:6px; background:#f1f5f9; color:#475569;">应用与浏览器 (<span id="catCount_browser_app">0</span>)</button>
-                <button type="button" class="btn text-btn disk-cat-btn" data-cat="temp_logs" style="font-size:12px; padding:4px 10px; border-radius:6px; background:#f1f5f9; color:#475569;">崩溃与日志 (<span id="catCount_temp_logs">0</span>)</button>
-                <button type="button" class="btn text-btn disk-cat-btn" data-cat="docker_prune" style="font-size:12px; padding:4px 10px; border-radius:6px; background:#f1f5f9; color:#475569;">Docker (<span id="catCount_docker_prune">0</span>)</button>
-              </div>
-
-              <!-- 交互式清单操作栏 -->
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding: 6px 2px;">
-                <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-secondary);">
-                  <button type="button" class="btn text-btn" id="diskSelectAllBtn" style="font-size:12px; padding:2px 4px; color:var(--accent);">全选</button>
-                  <span>|</span>
-                  <button type="button" class="btn text-btn" id="diskSelectSafeBtn" style="font-size:12px; padding:2px 4px; color:var(--accent);">仅选安全项</button>
-                  <span>|</span>
-                  <button type="button" class="btn text-btn" id="diskSelectNoneBtn" style="font-size:12px; padding:2px 4px; color:var(--text-muted);">取消勾选</button>
-                  <span id="diskSelectedSummary" style="margin-left:8px; font-weight:600; color:var(--text-main);">已选择 0 项</span>
-                </div>
-                <button type="button" class="btn primary" id="cleanSelectedBtn" style="font-size:12px; padding:4px 14px;">
-                  一键清理选中项
-                </button>
-              </div>
-
-              <!-- 动态垃圾项清单 -->
-              <div id="diskItemsList" style="display:flex; flex-direction:column; gap:8px;">
-                <!-- 动态渲染扫描项 -->
-              </div>
-            </div>
-
-            <!-- 空状态提示 -->
-            <div id="diskEmptyState" style="text-align:center; padding: 30px 20px; background:#f8fafc; border-radius:8px; border:1px dashed #cbd5e1;">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);margin-bottom:8px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <div style="font-size:14px; font-weight:600; color:var(--text-main);">尚未进行 AI 智能全盘体检</div>
-              <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
-                <span id="diskEmptyStateScopeText">点击右上角「从根目录开始全盘扫描」排查当前系统下的系统根目录、包管理器缓存、构建残留与临时日志</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 独立视图: 远程服务器集群概览 (Servers Overview) -->
-      <section id="servers" class="view">
-        <div class="page-container">
-          <div class="page-header-row">
-            <div>
-              <h2 class="page-title">远程服务器与计算节点</h2>
-              <p class="page-subtitle">集中管理多台云主机与物理机，点击任意服务器卡片进入专属运维与管理控制台</p>
-            </div>
-            <div style="display:flex;gap:8px;">
-              <button id="refreshServersBtn" class="btn secondary">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-                刷新状态
-              </button>
-              <button id="addServerBtn" class="btn primary">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                + 添加服务器
-              </button>
-            </div>
-          </div>
-
-          <!-- 本机宿主计算节点实时卡片 (Local Host System Node) -->
-          <div class="card host-node-card" style="margin-bottom:20px;background:linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);border:1px solid #bae6fd;border-radius:14px;box-shadow:0 2px 10px rgba(14,165,233,0.06);">
-            <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid #e0f2fe;flex-wrap:wrap;gap:10px;">
-              <div style="display:flex;align-items:center;gap:12px;">
-                <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;font-size:18px;">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                </div>
-                <div>
-                  <div style="display:flex;align-items:center;gap:8px;">
-                    <strong style="font-size:14.5px;color:var(--text-main);" id="localHostCardName">本机宿主系统 (Local Host System)</strong>
-                    <span class="badge success" style="font-size:10.5px;">● 在线 (本地直接控制)</span>
-                  </div>
-                  <div style="font-size:11.5px;color:var(--text-muted);" id="localHostCardSub">当前 CodexConnect 运行的物理环境</div>
-                </div>
-              </div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button type="button" class="btn primary" onclick="show('host')" style="font-size:12px;padding:6px 14px;">
-                  进入本机全景桌面 ↗
-                </button>
-              </div>
-            </div>
-            <div class="card-body" style="padding:14px 20px;">
-              <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;font-size:12.5px;">
-                <div class="server-stat-pill">
-                  <span style="color:var(--text-secondary);">操作系统:</span>
-                  <strong id="localHostCardOs" style="margin-left:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">--</strong>
-                </div>
-                <div class="server-stat-pill">
-                  <span style="color:var(--text-secondary);">CPU 负载:</span>
-                  <strong id="localHostCardCpu" style="margin-left:4px;">--%</strong>
-                </div>
-                <div class="server-stat-pill">
-                  <span style="color:var(--text-secondary);">物理内存:</span>
-                  <strong id="localHostCardMem" style="margin-left:4px;">-- GB</strong>
-                </div>
-                <div class="server-stat-pill">
-                  <span style="color:var(--text-secondary);">进程 PID:</span>
-                  <strong id="localHostCardPid" style="margin-left:4px;">--</strong>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 远程服务器卡片网格 -->
-          <div id="serverCardsGrid" class="cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(350px, 1fr));gap:16px;margin-bottom:24px;">
-            <!-- 动态渲染服务器卡片 -->
           </div>
         </div>
       </section>
@@ -984,8 +313,8 @@
 
           <!-- Tab 1: 智能运维 Copilot (Agent Ops) -->
           <div id="sdPane_ops" class="sd-pane" style="display:block;">
-            <div class="card" style="margin-bottom:16px;border:1px solid #bae6fd;box-shadow:0 4px 16px rgba(14,165,233,0.06);">
-              <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%);padding:12px 18px;">
+            <div class="ops-assistant-card">
+              <div class="server-ops-header">
                 <div style="display:flex;align-items:center;gap:10px;">
                   <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;">OPS</div>
                   <div>
@@ -1005,25 +334,25 @@
               <div class="card-body" style="padding:16px;">
                 <!-- 快捷动作 Chips -->
                 <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
-                  <button type="button" class="btn secondary" onclick="window.sdQuickAction('硬件巡检')" style="font-size:12px;padding:5px 12px;background:#f8fafc;border-color:#bae6fd;color:#0284c7;">
+                  <button type="button" class="btn text-btn ops-action-chip" onclick="window.sdQuickAction('硬件巡检')">
                     全盘硬件与负载巡检
                   </button>
-                  <button type="button" class="btn secondary" onclick="window.sdQuickAction('升级守护进程')" style="font-size:12px;padding:5px 12px;background:#f8fafc;border-color:#bae6fd;color:#0284c7;">
+                  <button type="button" class="btn text-btn ops-action-chip" onclick="window.sdQuickAction('升级守护进程')">
                     升级与重启 HAP 守护进程
                   </button>
-                  <button type="button" class="btn secondary" onclick="window.sdQuickAction('排查服务')" style="font-size:12px;padding:5px 12px;background:#f8fafc;border-color:#bae6fd;color:#0284c7;">
+                  <button type="button" class="btn text-btn ops-action-chip" onclick="window.sdQuickAction('排查服务')">
                     排查 Docker 与后台服务
                   </button>
-                  <button type="button" class="btn secondary" onclick="window.sdQuickAction('清理磁盘')" style="font-size:12px;padding:5px 12px;background:#f8fafc;border-color:#bae6fd;color:#0284c7;">
+                  <button type="button" class="btn text-btn ops-action-chip" onclick="window.sdQuickAction('清理磁盘')">
                     清理临时垃圾与释放磁盘
                   </button>
-                  <button type="button" class="btn secondary" onclick="window.sdQuickAction('查看日志')" style="font-size:12px;padding:5px 12px;background:#f8fafc;border-color:#bae6fd;color:#0284c7;">
+                  <button type="button" class="btn text-btn ops-action-chip" onclick="window.sdQuickAction('查看日志')">
                     排查近 50 行运行日志
                   </button>
                 </div>
 
                 <!-- 交互输入栏 -->
-                <div class="composer-island-card" style="margin-bottom:12px;border:1px solid #bae6fd;">
+                <div class="composer-island-card" style="margin-bottom:12px;">
                   <textarea id="sdOpsInputText" class="composer-textarea" rows="2" placeholder="在此输入运维指令（如：检查 80 端口占用并重启 nginx、分析内存泄漏原因...）" style="min-height:50px;"></textarea>
                   <div class="composer-bottom-bar">
                     <div class="composer-bottom-left">
@@ -1073,7 +402,7 @@
             </div>
 
             <div class="card" style="padding:16px;">
-              <div style="font-weight:700;font-size:13.5px;margin-bottom:12px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">
+              <div style="font-weight:700;font-size:13.5px;margin-bottom:12px;border-bottom:1px solid var(--border-default);padding-bottom:8px;">
                 系统网络与环境信息
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:12.5px;">
@@ -1115,13 +444,13 @@
             </div>
 
             <!-- 底部自定义 Shell 指令下发栏 -->
-            <div class="card" style="padding:16px;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;">
+            <div class="card" style="padding:16px;">
               <div style="font-weight:700;font-size:13.5px;margin-bottom:4px;color:var(--text-main);display:flex;align-items:center;gap:6px;">
                 <span>下发自定义远程 Shell 指令</span>
                 <span style="font-size:11.5px;color:var(--text-muted);font-weight:normal;">(在当前选中的目标节点免密执行)</span>
               </div>
               <div style="display:flex;gap:8px;margin-top:10px;">
-                <input id="sdCustomCommandInput" placeholder="输入任意 Linux Shell 命令，例如: uptime, uname -a, systemctl status nginx, free -h..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;font-family:var(--font-mono);" />
+                <input id="sdCustomCommandInput" placeholder="输入任意 Linux Shell 命令，例如: uptime, uname -a, systemctl status nginx, free -h..." style="flex:1;font-family:var(--font-mono);" />
                 <button type="button" class="btn primary" onclick="window.sdRunCustomCommand()" style="padding:8px 18px;font-size:13px;">
                   下发执行
                 </button>
@@ -1149,114 +478,47 @@
         </div>
       </section>
 
-      <!-- 独立视图 10: 运行日志 (Logs) -->
-      
-      <!-- 独立视图: 自动化定时任务 (Schedules) -->
-      <section id="schedules" class="view">
-        <div class="page-container">
-          <div class="page-header-row">
-            <div>
-              <h2 class="page-title">自动化定时任务与 Cron 编排</h2>
-              <p class="page-subtitle">设定周期性任务，由智能体自动拉取代码、生成每日复盘、健康巡检或发送多渠道通知</p>
-            </div>
-            <div class="page-header-actions">
-              <button type="button" class="btn primary" onclick="window.openAddScheduleDialog()">+ 新建定时任务</button>
-            </div>
-          </div>
-
-          <div class="card" style="margin-bottom:16px;">
-            <div class="card-header">
-              <span style="font-weight:700;font-size:14px;color:var(--text-main);">活跃定时任务列表</span>
-            </div>
-            <div class="card-body" style="padding:16px;">
-              <div id="schedulesGrid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:12px;">
-                <!-- 动态渲染定时任务列表 -->
-              </div>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-header">
-              <span style="font-weight:700;font-size:14px;color:var(--text-main);">最近定时任务执行记录</span>
-            </div>
-            <div class="card-body" style="padding:14px;">
-              <div id="scheduleHistoryList" style="font-size:12.5px;color:var(--text-secondary);max-height:240px;overflow-y:auto;">
-                暂无执行记录
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 独立视图: 智能体记忆库 (Memory) -->
-      <section id="memory" class="view">
-        <div class="page-container">
-          <div class="page-header-row">
-            <div>
-              <h2 class="page-title">智能体持久化多层记忆库</h2>
-              <p class="page-subtitle">跨会话沉淀用户开发习惯、架构约束、工程规范与重要偏好</p>
-            </div>
-            <div class="page-header-actions">
-              <button type="button" class="btn secondary" onclick="window.rebuildMemoryIndex()">重建索引</button>
-              <button type="button" class="btn primary" onclick="window.openAddMemoryDialog()">+ 添加记忆条目</button>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-body" style="padding:16px;">
-              <div style="margin-bottom:12px;display:flex;gap:8px;">
-                <input id="memorySearchInput" placeholder="按关键字搜索记忆条目..." style="flex:1;" />
-                <select id="memoryAgentFilter" style="width:150px;">
-                  <option value="">全部智能体</option>
-                </select>
-              </div>
-              <div id="memoryList" style="display:flex;flex-direction:column;gap:8px;">
-                <!-- 动态渲染记忆卡片 -->
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="logs" class="view">
-        <div class="page-container">
-          <div class="page-header-row">
-            <div>
-              <h2 class="page-title">运行日志</h2>
-              <p class="page-subtitle">记录服务商连通测试、配置同步与智能体执行事件</p>
-            </div>
-            <button id="clearLogsBtn" class="btn secondary">清空日志</button>
-          </div>
-
-          <div class="page-actions-bar">
-            <div class="filter-group" style="display:flex;gap:6px;">
-              <button class="filter-btn active btn secondary" data-filter="all" style="padding:4px 10px;font-size:12px;">全部</button>
-              <button class="filter-btn btn secondary" data-filter="error" style="padding:4px 10px;font-size:12px;">仅错误</button>
-              <button class="filter-btn btn secondary" data-filter="info" style="padding:4px 10px;font-size:12px;">仅信息</button>
-            </div>
-          </div>
-
-          <div id="logList" class="stack log-stack" style="display:flex;flex-direction:column;gap:8px;"></div>
-        </div>
-      </section>
-    
       <!-- 独立视图: 综合设置中心 (Settings Hub) -->
       <section id="settings" class="view">
         <div class="page-container">
-          <div class="page-header-row">
+          <div class="page-header-row" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
             <div>
-              <h2 class="page-title">系统设置中心</h2>
-              <p class="page-subtitle">集中管理模型服务商、多通道通信网关、工作区项目库、安全权限与运行日志</p>
+              <h2 class="page-title" style="margin:0;font-size:20px;font-weight:700;">系统设置中心</h2>
+              <p class="page-subtitle" style="margin:4px 0 0 0;font-size:12.5px;color:var(--text-muted);">集中管理模型服务商、智能体角色、Skill & MCP 扩展、消息通道、定时任务、计算节点与安全策略</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <button type="button" class="btn secondary" id="backToChatBtn" onclick="show('chat')" style="font-size:12.5px;padding:6px 14px;display:inline-flex;align-items:center;gap:6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                返回对话工作台
+              </button>
             </div>
           </div>
 
           <!-- 设置中心选项卡切换栏 -->
-          <div class="settings-nav-tabs" style="display:flex;gap:8px;border-bottom:1px solid #e0f2fe;padding-bottom:12px;margin-bottom:20px;overflow-x:auto;">
+          <div class="settings-nav-tabs">
             <button type="button" class="settings-tab-btn active" data-tab="providers" onclick="window.switchSettingsTab('providers')">
               模型与服务商
             </button>
+            <button type="button" class="settings-tab-btn" data-tab="agents" onclick="window.switchSettingsTab('agents')">
+              智能体角色
+            </button>
+            <button type="button" class="settings-tab-btn" data-tab="skills" onclick="window.switchSettingsTab('skills')">
+              Skill & MCP 市场
+            </button>
             <button type="button" class="settings-tab-btn" data-tab="channels" onclick="window.switchSettingsTab('channels')">
               机器人与消息通道
+            </button>
+            <button type="button" class="settings-tab-btn" data-tab="schedules" onclick="window.switchSettingsTab('schedules')">
+              自动化定时任务
+            </button>
+            <button type="button" class="settings-tab-btn" data-tab="memory" onclick="window.switchSettingsTab('memory')">
+              智能体记忆库
+            </button>
+            <button type="button" class="settings-tab-btn" data-tab="host" onclick="window.switchSettingsTab('host')">
+              计算节点全景大盘
+            </button>
+            <button type="button" class="settings-tab-btn" data-tab="servers" onclick="window.switchSettingsTab('servers')">
+              远程服务器集群
             </button>
             <button type="button" class="settings-tab-btn" data-tab="projects" onclick="window.switchSettingsTab('projects')">
               工作区项目库
@@ -1271,24 +533,315 @@
 
           <!-- Tab 1 内容: AI 服务商与模型一站式管理 -->
           <div id="settingsPane_providers" class="settings-pane" style="display:block;">
-            <div class="card">
-              <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-                <div>
-                  <div style="font-weight:700;font-size:14.5px;">AI 服务商与模型一站式管理 (Providers & Models)</div>
-                  <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">统一管理 OpenAI、Anthropic、DeepSeek 等服务商及其下属 AI 模型，支持一键在线拉取或手动录入</div>
+            <div class="card" style="border:none;box-shadow:none;background:transparent;">
+              <!-- 顶部现代卡片式统计看板 -->
+              <div class="provider-metrics-grid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
+                <div class="card metric-stat-card" style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);">
+                  <div style="width:38px;height:38px;border-radius:8px;background:#f0f9ff;color:#0284c7;display:grid;place-items:center;font-size:18px;flex-shrink:0;">🏢</div>
+                  <div>
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">已配置服务商</div>
+                    <div style="font-size:19px;font-weight:700;color:var(--text-main);margin-top:2px;" id="statTotalProviders">0</div>
+                  </div>
                 </div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                  <button type="button" class="btn secondary" id="openEnvManagerBtn" onclick="window.openEnvManagerModal()">全局环境变量管理</button>
-                  <button type="button" class="btn primary" onclick="window.openProviderDialog()">+ 添加 AI 服务商与模型</button>
+                <div class="card metric-stat-card" style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);">
+                  <div style="width:38px;height:38px;border-radius:8px;background:#ecfdf5;color:#10b981;display:grid;place-items:center;font-size:18px;flex-shrink:0;">🟢</div>
+                  <div>
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">连通正常服务商</div>
+                    <div style="font-size:19px;font-weight:700;color:#10b981;margin-top:2px;" id="statHealthyProviders">0</div>
+                  </div>
+                </div>
+                <div class="card metric-stat-card" style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);">
+                  <div style="width:38px;height:38px;border-radius:8px;background:#faf5ff;color:#a855f7;display:grid;place-items:center;font-size:18px;flex-shrink:0;">🤖</div>
+                  <div>
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">已收录模型总数</div>
+                    <div style="font-size:19px;font-weight:700;color:var(--text-main);margin-top:2px;" id="statTotalModels">0</div>
+                  </div>
+                </div>
+                <div class="card metric-stat-card" style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);">
+                  <div style="width:38px;height:38px;border-radius:8px;background:#fffbeb;color:#f59e0b;display:grid;place-items:center;font-size:18px;flex-shrink:0;">★</div>
+                  <div style="min-width:0;flex:1;">
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">全局默认主模型</div>
+                    <div style="font-size:14px;font-weight:700;color:var(--text-main);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="statDefaultModel">未设置</div>
+                  </div>
                 </div>
               </div>
-              <div class="card-body" style="padding:16px;">
-                <div id="providersTable" class="table-container"></div>
+
+              <!-- 控制台主卡片 -->
+              <div class="card" style="border:1px solid var(--border-default);border-radius:12px;box-shadow:var(--shadow-sm);background:var(--bg-surface);overflow:hidden;">
+                <!-- 顶部功能与切换条 -->
+                <div style="padding:14px 16px;border-bottom:1px solid var(--border-subtle);background:var(--bg-surface);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+                  <!-- 左侧双重视角切换 -->
+                  <div class="view-switch-segmented" style="display:inline-flex;background:var(--bg-subtle);padding:3px;border-radius:8px;border:1px solid var(--border-default);">
+                    <button type="button" class="btn-segmented active" id="viewModeProvidersBtn" onclick="window.switchProviderModelView('providers')" style="padding:5px 14px;font-size:12.5px;font-weight:600;border:none;border-radius:6px;cursor:pointer;transition:all 0.15s;">
+                      🏢 按服务商分组
+                    </button>
+                    <button type="button" class="btn-segmented" id="viewModeModelsBtn" onclick="window.switchProviderModelView('models')" style="padding:5px 14px;font-size:12.5px;font-weight:600;border:none;border-radius:6px;cursor:pointer;transition:all 0.15s;">
+                      📋 全量模型综合目录
+                    </button>
+                  </div>
+
+                  <!-- 右侧全局操作按钮组 -->
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                    <button type="button" class="btn secondary" id="testAllProvidersBtn" onclick="window.testAllProviders(this)" style="font-size:12px;padding:6px 12px;display:inline-flex;align-items:center;gap:4px;">
+                      ⚡ 一键测全部服务商
+                    </button>
+                    <button type="button" class="btn secondary" id="clearDefaultProvidersBtn" onclick="window.clearDefaultProviders()" style="font-size:12px;padding:6px 12px;">
+                      清空内置预置
+                    </button>
+                    <button type="button" class="btn secondary" id="openEnvManagerBtn" onclick="window.openEnvManagerModal()" style="font-size:12px;padding:6px 12px;">
+                      🔑 全局环境变量
+                    </button>
+                    <button type="button" class="btn secondary" id="addModelQuickBtn" onclick="window.openModelDialog()" style="font-size:12px;padding:6px 12px;">
+                      + 录入单个模型
+                    </button>
+                    <button type="button" class="btn primary" onclick="window.openProviderDialog()" style="font-size:12px;padding:6px 14px;">
+                      + 添加 AI 服务商
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 实时检索与多维筛选过滤栏 -->
+                <div style="padding:12px 16px;background:var(--bg-subtle);border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+                  <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:260px;max-width:440px;">
+                    <input type="text" id="pmSearchInput" oninput="window.onProviderModelSearch(this.value)" placeholder="搜索服务商名、ID、模型别名或真实模型 (如 deepseek, gpt-4o, qwen)..." style="width:100%;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border-default);background:var(--bg-surface);" />
+                  </div>
+
+                  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <!-- 状态筛选 -->
+                    <select id="pmStatusFilter" onchange="window.onProviderModelFilterChange()" style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--border-default);background:var(--bg-surface);color:var(--text-secondary);">
+                      <option value="all">全部连通状态</option>
+                      <option value="ok">🟢 连通正常 (就绪)</option>
+                      <option value="missing_credentials">⚠️ 缺少凭据 (API Key)</option>
+                      <option value="unknown">⏳ 待测试探测</option>
+                    </select>
+
+                    <!-- 能力筛选 (主要用于模型视图) -->
+                    <select id="pmCapabilityFilter" onchange="window.onProviderModelFilterChange()" style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--border-default);background:var(--bg-surface);color:var(--text-secondary);">
+                      <option value="all">全部能力特性</option>
+                      <option value="tools">🛠️ 工具调用 (Tools)</option>
+                      <option value="vision">👁️ 视觉能力 (Vision)</option>
+                      <option value="reasoning">🧠 深度思考 (Reasoning)</option>
+                      <option value="streaming">⚡ 流式传输 (Streaming)</option>
+                      <option value="longctx">📜 长上下文 (LongCtx)</option>
+                    </select>
+
+                    <!-- 批量操作栏 (当有勾选时显示) -->
+                    <div id="providerBatchBar" style="display:none;align-items:center;gap:6px;">
+                      <button type="button" class="btn secondary" id="selectAllProvidersBtn" style="font-size:11px;padding:4px 8px;">全选</button>
+                      <button type="button" class="btn danger" id="batchDeleteProvidersBtn" style="font-size:11px;padding:4px 8px;">批量删除</button>
+                    </div>
+                    <div id="modelBatchBar" style="display:none;align-items:center;gap:6px;">
+                      <button type="button" class="btn secondary" id="selectAllModelsBtn" style="font-size:11px;padding:4px 8px;">全选模型</button>
+                      <button type="button" class="btn danger" id="batchDeleteModelsBtn" style="font-size:11px;padding:4px 8px;">批量删除</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 视图 1: 按服务商分组卡片列表 -->
+                <div id="providersViewWrap" class="card-body" style="padding:16px;">
+                  <div id="providersTable" class="table-container"></div>
+                </div>
+
+                <!-- 视图 2: 全量模型综合目录列表 -->
+                <div id="modelsViewWrap" class="card-body" style="padding:16px;display:none;">
+                  <div id="modelsTable" class="table-container"></div>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Tab 2 内容: 机器人与多通道通信中心 (Multi-Bot & Channels) -->
+          <!-- Tab 2 内容: 智能体角色管理 (Agents) -->
+          <div id="settingsPane_agents" class="settings-pane" style="display:none;">
+            <section id="agents">
+              <div class="page-header-row agent-page-header">
+                <div>
+                  <h2 class="page-title">智能体角色管理</h2>
+                  <p class="page-subtitle">配置各个专项智能体（Coder、Researcher、Reviewer、Ops、Writer 等）的主模型、工作区与工具权限</p>
+                </div>
+                <div class="page-header-actions">
+                  <button type="button" class="btn primary" id="addAgentBtn">新增角色</button>
+                </div>
+              </div>
+
+              <div id="agentList" class="grid"></div>
+            </section>
+            <!-- 独立视图: 远程服务器 -->
+          </div>
+
+          <!-- Tab 3 内容: Skill & MCP 扩展生态市场 -->
+          <div id="settingsPane_skills" class="settings-pane" style="display:none;">
+            <!-- 顶部现代化横幅与操作台 -->
+            <div class="market-header-banner">
+              <div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg, #6366f1 0%, #a855f7 100%);color:#fff;display:grid;place-items:center;box-shadow:0 3px 10px rgba(99,102,241,0.25);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></div>
+                  <div>
+                    <h2 class="page-title" style="margin:0;font-size:18px;">Skill & MCP 扩展生态市场</h2>
+                    <p class="page-subtitle" style="margin:2px 0 0 0;font-size:12px;">融合 GitHub 专家技能包与 Model Context Protocol (MCP) 标准插件，赋予智能体任意外部能力</p>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button id="openMcpPlaygroundBtn" class="btn primary" style="font-size:12.5px;padding:6px 14px;background:linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);color:#fff;border:none;">
+                  ⚡ MCP 调试台
+                </button>
+                <button id="openPresetMcpModalBtn" class="btn secondary" style="font-size:12.5px;padding:6px 14px;">
+                  热门 MCP 插件库
+                </button>
+                <button id="openAddPluginModalBtn" class="btn secondary" style="font-size:12.5px;padding:6px 14px;">
+                  + 添加自定义 MCP
+                </button>
+                <button id="openInstallSkillModalBtn" class="btn primary" style="font-size:12.5px;padding:6px 14px;">
+                  + 从 GitHub 安装 Skill
+                </button>
+              </div>
+            </div>
+
+            <!-- 分类筛选选项卡与检索工具栏 -->
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:14px;">
+              <div class="market-tabs-bar" id="marketTabsBar">
+                <button type="button" class="market-tab-btn active" data-market-tab="all">
+                  <span>全部生态</span>
+                  <span class="market-tab-badge" id="tabCountAll">0</span>
+                </button>
+                <button type="button" class="market-tab-btn" data-market-tab="mcp">
+                  <span>MCP 插件</span>
+                  <span class="market-tab-badge" id="tabCountMcp">0</span>
+                </button>
+                <button type="button" class="market-tab-btn" data-market-tab="skill">
+                  <span>Skills 技能</span>
+                  <span class="market-tab-badge" id="tabCountSkill">0</span>
+                </button>
+                <button type="button" class="market-tab-btn" data-market-tab="builtin">
+                  <span>内置工具</span>
+                  <span class="market-tab-badge" id="tabCountBuiltin">0</span>
+                </button>
+                <button type="button" class="market-tab-btn" data-market-tab="active">
+                  <span>仅看已启用</span>
+                  <span class="market-tab-badge" id="tabCountActive">0</span>
+                </button>
+                <button type="button" class="market-tab-btn" data-market-tab="playground">
+                  <span>⚡ MCP 调试台</span>
+                  <span class="market-tab-badge" id="tabCountMcpTools" style="background:#e0e7ff;color:#4338ca;">0</span>
+                </button>
+              </div>
+
+              <div style="display:flex;align-items:center;gap:8px;min-width:280px;flex:1;max-width:420px;">
+                <input type="text" id="marketSearchInput" placeholder="搜索生态插件 (如 GitHub, Docker, Postgres, React)..." style="width:100%;font-size:12.5px;padding:7px 12px;" />
+              </div>
+            </div>
+
+            <!-- 统一网格列表 -->
+            <div id="marketEcoGrid" class="market-eco-grid">
+              <!-- 动态渲染现代化卡片 -->
+            </div>
+
+            <!-- MCP 可视化调试台 (Playground) 面板 -->
+            <div id="mcpPlaygroundPanel" class="mcp-playground-container" style="display:none;">
+              <!-- 左侧：MCP 工具目录清单 -->
+              <div class="mcp-sidebar-pane">
+                <div class="mcp-sidebar-head">
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="font-weight:700;font-size:12.5px;">MCP 工具清单</span>
+                    <span class="mcp-tool-badge" id="mcpToolTotalCount">0 个</span>
+                  </div>
+                  <button type="button" class="btn text-btn" id="refreshMcpPlaygroundBtn" style="font-size:11.5px;padding:3px 6px;" title="重新连接与扫描 MCP 服务器暴露的工具">
+                    🔄 刷新
+                  </button>
+                </div>
+                <div class="mcp-search-wrap">
+                  <input type="text" id="mcpPlaygroundSearchInput" placeholder="按工具名或服务商搜索..." style="width:100%;font-size:12px;padding:6px 10px;" />
+                </div>
+                <div id="mcpPlaygroundToolsList" class="mcp-tools-list">
+                  <div style="padding:16px;text-align:center;color:var(--text-muted);font-size:12px;">
+                    正在加载 MCP 服务器工具...
+                  </div>
+                </div>
+              </div>
+
+              <!-- 右侧：交互式参数配置与调试台 -->
+              <div class="mcp-main-pane">
+                <!-- 空状态 -->
+                <div id="mcpPlaygroundEmptyState" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;color:var(--text-muted);text-align:center;">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.4;margin-bottom:12px;">
+                    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                  </svg>
+                  <div style="font-size:14px;font-weight:600;color:var(--text-main);margin-bottom:4px;">请在左侧选择 MCP 工具</div>
+                  <div style="font-size:12px;max-width:360px;">点击任意 MCP 工具可浏览其 JSON Schema 参数定义并进行一键填参与在线执行测试</div>
+                </div>
+
+                <!-- 调试工作区 -->
+                <div id="mcpPlaygroundActiveWorkbench" style="display:none;flex-direction:column;height:100%;">
+                  <div class="mcp-workbench-head">
+                    <div>
+                      <div style="display:flex;align-items:center;gap:8px;">
+                        <span id="mcpActiveToolName" style="font-family:var(--font-mono);font-size:15px;font-weight:700;color:var(--primary);">tool_name</span>
+                        <span id="mcpActiveToolServer" class="mcp-tool-badge">server</span>
+                      </div>
+                      <div id="mcpActiveToolDesc" style="font-size:12px;color:var(--text-muted);margin-top:6px;line-height:1.5;"></div>
+                    </div>
+                  </div>
+
+                  <div class="mcp-workbench-body">
+                    <!-- Schema 参数说明表 -->
+                    <div>
+                      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <span style="font-size:12.5px;font-weight:700;">参数定义 (Parameter Schema)</span>
+                        <span style="font-size:11px;color:var(--text-muted);">JSON Schema 标准定义</span>
+                      </div>
+                      <div id="mcpActiveToolSchemaTableWrap" style="overflow-x:auto;border-radius:var(--radius-sm);border:1px solid var(--border-default);">
+                        <table class="mcp-schema-table">
+                          <thead>
+                            <tr>
+                              <th style="width:160px;">字段名 (Field)</th>
+                              <th style="width:100px;">类型 (Type)</th>
+                              <th style="width:80px;">必填</th>
+                              <th>说明与约束 (Description)</th>
+                            </tr>
+                          </thead>
+                          <tbody id="mcpActiveToolSchemaBody">
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <!-- 调用输入实参 (Arguments Payload) -->
+                    <div>
+                      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <label style="font-size:12.5px;font-weight:700;">执行入参 (JSON Payload)</label>
+                        <div style="display:flex;gap:6px;">
+                          <button type="button" class="btn text-btn" id="mcpFormatJsonBtn" style="font-size:11.5px;padding:2px 6px;">格式化 JSON</button>
+                          <button type="button" class="btn text-btn" id="mcpResetArgsBtn" style="font-size:11.5px;padding:2px 6px;">填充模板</button>
+                        </div>
+                      </div>
+                      <textarea id="mcpToolArgsEditor" class="mcp-json-editor" rows="6" placeholder="{&#10;  // 请输入工具调用参数 JSON&#10;}"></textarea>
+                      
+                      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+                        <div id="mcpExecutionStatusTag" style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
+                          <span>就绪</span>
+                        </div>
+                        <button type="button" class="btn primary" id="executeMcpToolBtn" style="display:inline-flex;align-items:center;gap:6px;padding:7px 18px;font-weight:600;">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                          <span>发起测试调用</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- 执行返回结果 (Execution Output) -->
+                    <div>
+                      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <span style="font-size:12.5px;font-weight:700;">响应输出 (Response Result)</span>
+                        <button type="button" class="btn text-btn" id="copyMcpOutputBtn" style="font-size:11.5px;padding:2px 6px;">复制结果</button>
+                      </div>
+                      <pre class="mcp-output-pre" id="mcpToolOutputPre"><code>（点击【发起测试调用】运行当前工具）</code></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 4 内容: 机器人与多通道通信中心 (Multi-Bot & Channels) -->
           <div id="settingsPane_channels" class="settings-pane" style="display:none;">
             <!-- 多机器人实例管理横幅与操作区 -->
             <div class="card" style="margin-bottom:16px;">
@@ -1386,7 +939,7 @@
                     </div>
 
                     <!-- 企业微信专属字段 -->
-                    <div id="wxWeComFields" style="display:none;flex-direction:column;gap:10px;background:#f8fafc;padding:12px;border-radius:8px;border:1px solid #e2e8f0;">
+                    <div id="wxWeComFields" class="channel-info-box" style="display:none;flex-direction:column;gap:10px;">
                       <div class="form-group">
                         <label style="font-size:11.5px;font-weight:600;">企业微信企业 ID (CorpID)</label>
                         <input id="wxCorpIdInput" placeholder="例如：wwa1b2c3d4e5f6..." />
@@ -1445,13 +998,13 @@
 
                 <!-- 右侧扫码与实时消息卡片 -->
                 <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
-                  <div style="font-weight:700;font-size:13.5px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
+                  <div style="font-weight:700;font-size:13.5px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border-default);padding-bottom:8px;">
                     <span>扫码登录与交互面板</span>
                     <button type="button" class="btn secondary" id="openAddWxContactDialogBtn" style="font-size:11.5px;padding:2px 8px;">+ 添加微信路由规则</button>
                   </div>
 
                   <!-- 二维码展示区 -->
-                  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:180px;background:#f8fafc;border-radius:10px;border:1px dashed #cbd5e1;padding:16px;">
+                  <div class="channel-qr-wrap">
                     <div id="wxQrPlaceholder" style="text-align:center;color:var(--text-muted);font-size:12px;">
                       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);margin-bottom:6px;"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
                       <div>点击上方【启动微信服务】后，将在此实时生成微信登录二维码</div>
@@ -1467,13 +1020,13 @@
                   <!-- 联系人列表 -->
                   <div style="display:flex;flex-direction:column;gap:4px;">
                     <div style="font-weight:600;font-size:12px;color:var(--text-secondary);">已路由好友与群聊</div>
-                    <div id="wxContactsList" style="max-height:120px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:6px;font-size:11.5px;background:#ffffff;"></div>
+                    <div id="wxContactsList" style="max-height:120px;overflow-y:auto;border:1px solid var(--border-default);border-radius:6px;padding:6px;font-size:11.5px;background:var(--bg-surface);"></div>
                   </div>
 
                   <!-- 实时消息流 -->
                   <div style="display:flex;flex-direction:column;gap:4px;flex:1;">
                     <div style="font-weight:600;font-size:12px;color:var(--text-secondary);">微信实时消息流</div>
-                    <div id="wxMessageFeed" style="min-height:130px;max-height:180px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px;background:#f8fafc;font-size:11.5px;"></div>
+                    <div id="wxMessageFeed" style="min-height:130px;max-height:180px;overflow-y:auto;border:1px solid var(--border-default);border-radius:6px;padding:8px;background:var(--bg-subtle);font-size:11.5px;"></div>
                   </div>
 
                   <!-- 模拟测试消息 -->
@@ -1563,11 +1116,11 @@
 
                 <!-- 右侧指令指南与消息监控 -->
                 <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
-                  <div style="font-weight:700;font-size:13.5px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
+                  <div style="font-weight:700;font-size:13.5px;border-bottom:1px solid var(--border-default);padding-bottom:8px;">
                     <span>Telegram 常用指令与协同手册</span>
                   </div>
 
-                  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:12px;">
+                  <div class="channel-info-box" style="display:flex;flex-direction:column;gap:8px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;">
                       <code>/start</code>
                       <span style="color:var(--text-muted);">唤醒机器人并展示可用命令列表</span>
@@ -1592,7 +1145,7 @@
 
                   <div style="display:flex;flex-direction:column;gap:4px;flex:1;">
                     <div style="font-weight:600;font-size:12px;color:var(--text-secondary);">Telegram 实时交互流</div>
-                    <div id="tgMsgFeed" style="min-height:160px;max-height:220px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px;background:#f8fafc;font-size:11.5px;">
+                    <div id="tgMsgFeed" class="channel-feed-box">
                       <div style="color:var(--text-muted);text-align:center;padding:24px 0;">机器人就绪后，在 Telegram 客户端发送指令将在此同步呈现</div>
                     </div>
                   </div>
@@ -1616,7 +1169,7 @@
 
               <div class="channel-split-grid">
                 <div class="card" style="padding:16px;">
-                  <div style="font-weight:700;font-size:13.5px;margin-bottom:12px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
+                  <div style="font-weight:700;font-size:13.5px;margin-bottom:12px;border-bottom:1px solid var(--border-default);padding-bottom:8px;">
                     <span>飞书开放平台应用凭据</span>
                   </div>
                   <form id="feishuConfigForm" style="display:flex;flex-direction:column;gap:12px;">
@@ -1647,10 +1200,10 @@
                 </div>
 
                 <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
-                  <div style="font-weight:700;font-size:13.5px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
+                  <div style="font-weight:700;font-size:13.5px;border-bottom:1px solid var(--border-default);padding-bottom:8px;">
                     <span>飞书事件订阅与 Webhook 回调地址</span>
                   </div>
-                  <div style="background:#f8fafc;padding:12px;border-radius:8px;border:1px solid #e2e8f0;font-size:12px;line-height:1.6;">
+                  <div class="channel-info-box">
                     <div style="color:var(--text-secondary);font-weight:600;">事件请求网址 (Request URL):</div>
                     <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
                       <input id="feishuWebhookUrlDisplay" readonly value="http://127.0.0.1:8765/api/channels/feishu/events" style="flex:1;font-family:var(--font-mono);font-size:11.5px;" />
@@ -1680,7 +1233,7 @@
 
               <div class="channel-split-grid">
                 <div class="card" style="padding:16px;">
-                  <div style="font-weight:700;font-size:13.5px;margin-bottom:12px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
+                  <div style="font-weight:700;font-size:13.5px;margin-bottom:12px;border-bottom:1px solid var(--border-default);padding-bottom:8px;">
                     <span>OneBot 协议连接配置</span>
                   </div>
                   <form id="qqConfigForm" style="display:flex;flex-direction:column;gap:12px;">
@@ -1707,10 +1260,10 @@
                 </div>
 
                 <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
-                  <div style="font-weight:700;font-size:13.5px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
+                  <div style="font-weight:700;font-size:13.5px;border-bottom:1px solid var(--border-default);padding-bottom:8px;">
                     <span>QQ 实时消息流与测试</span>
                   </div>
-                  <div id="qqMsgFeed" style="min-height:180px;max-height:240px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px;background:#f8fafc;font-size:11.5px;">
+                  <div id="qqMsgFeed" class="channel-feed-box" style="min-height:180px;max-height:240px;">
                     <div style="color:var(--text-muted);text-align:center;padding:24px 0;">连接 OneBot 服务后，QQ 消息与群聊指令将在此实时输出</div>
                   </div>
                   <div style="display:flex;gap:8px;">
@@ -1737,7 +1290,7 @@
 
               <div class="channel-split-grid">
                 <div class="card" style="padding:16px;">
-                  <div style="font-weight:700;font-size:13.5px;margin-bottom:12px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
+                  <div style="font-weight:700;font-size:13.5px;margin-bottom:12px;border-bottom:1px solid var(--border-default);padding-bottom:8px;">
                     <span>钉钉应用凭据</span>
                   </div>
                   <form id="dingtalkConfigForm" style="display:flex;flex-direction:column;gap:12px;">
@@ -1764,13 +1317,13 @@
                 </div>
 
                 <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
-                  <div style="font-weight:700;font-size:13.5px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
+                  <div style="font-weight:700;font-size:13.5px;border-bottom:1px solid var(--border-default);padding-bottom:8px;">
                     <span>钉钉回调与互动卡片</span>
                   </div>
-                  <div style="background:#f8fafc;padding:12px;border-radius:8px;border:1px solid #e2e8f0;font-size:12px;line-height:1.6;">
+                  <div class="channel-info-box">
                     <div style="color:var(--text-secondary);font-weight:600;">钉钉 HTTP 回调地址:</div>
                     <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
-                      <input id="dingWebhookUrlDisplay" readonly value="http://127.0.0.1:8765/api/channels/dingtalk/callback" style="flex:1;background:#fff;font-family:var(--font-mono);font-size:11.5px;padding:6px 8px;border-radius:6px;border:1px solid #cbd5e1;" />
+                      <input id="dingWebhookUrlDisplay" readonly value="http://127.0.0.1:8765/api/channels/dingtalk/callback" style="flex:1;font-family:var(--font-mono);font-size:11.5px;padding:6px 8px;" />
                       <button type="button" class="btn secondary" onclick="copyText($('dingWebhookUrlDisplay')?.value, '钉钉回调地址')" style="font-size:11.5px;padding:5px 10px;">复制</button>
                     </div>
                     <div style="margin-top:10px;color:var(--text-muted);font-size:11px;">
@@ -1782,7 +1335,476 @@
             </div>
           </div>
 
-          <!-- Tab 3 内容: 工作区项目库 -->
+          <!-- Tab 5 内容: 自动化定时任务与 Cron 编排 -->
+          <div id="settingsPane_schedules" class="settings-pane" style="display:none;">
+            <div class="page-header-row">
+              <div>
+                <h2 class="page-title">自动化定时任务与 Cron 编排</h2>
+                <p class="page-subtitle">设定周期性任务，由智能体自动拉取代码、生成每日复盘、健康巡检或发送多渠道通知</p>
+              </div>
+              <div class="page-header-actions">
+                <button type="button" class="btn primary" onclick="window.openAddScheduleDialog()">+ 新建定时任务</button>
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:16px;">
+              <div class="card-header">
+                <span style="font-weight:700;font-size:14px;color:var(--text-main);">活跃定时任务列表</span>
+              </div>
+              <div class="card-body" style="padding:16px;">
+                <div id="schedulesGrid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:12px;">
+                  <!-- 动态渲染定时任务列表 -->
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <span style="font-weight:700;font-size:14px;color:var(--text-main);">最近定时任务执行记录</span>
+              </div>
+              <div class="card-body" style="padding:14px;">
+                <div id="scheduleHistoryList" style="font-size:12.5px;color:var(--text-secondary);max-height:240px;overflow-y:auto;">
+                  暂无执行记录
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 6 内容: 智能体持久化多层记忆库 -->
+          <div id="settingsPane_memory" class="settings-pane" style="display:none;">
+            <div class="page-header-row">
+              <div>
+                <h2 class="page-title">智能体持久化多层记忆库</h2>
+                <p class="page-subtitle">跨会话沉淀用户开发习惯、架构约束、工程规范与重要偏好</p>
+              </div>
+              <div class="page-header-actions">
+                <button type="button" class="btn secondary" onclick="window.rebuildMemoryIndex()">重建索引</button>
+                <button type="button" class="btn primary" onclick="window.openAddMemoryDialog()">+ 添加记忆条目</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-body" style="padding:16px;">
+                <div style="margin-bottom:12px;display:flex;gap:8px;">
+                  <input id="memorySearchInput" placeholder="按关键字搜索记忆条目..." style="flex:1;" />
+                  <select id="memoryAgentFilter" style="width:150px;">
+                    <option value="">全部智能体</option>
+                  </select>
+                </div>
+                <div id="memoryList" style="display:flex;flex-direction:column;gap:8px;">
+                  <!-- 动态渲染记忆卡片 -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 7 内容: 计算节点全景监控大盘 -->
+          <div id="settingsPane_host" class="settings-pane" style="display:none;">
+            <!-- 顶部标题与操作栏 -->
+            <div class="page-header-row" style="margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+              <div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div class="agent-avatar-badge" style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;box-shadow:0 3px 10px rgba(14,165,233,0.25);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
+                  <div>
+                    <h2 class="page-title" style="font-size:18px;margin:0;" id="panoramaMainTitle">计算节点全景监控大盘 (Node Panorama)</h2>
+                    <p class="page-subtitle" style="margin:2px 0 0 0;font-size:12.5px;" id="panoramaMainSub">多机硬件指标全景看板 · 支持本机宿主与所有远程服务器节点无缝切换与毫秒级监控</p>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <!-- 节点选择器 -->
+                <div class="node-picker-box">
+                  <span style="font-size:12px;font-weight:600;color:var(--text-secondary);">监控节点:</span>
+                  <select id="panoramaNodeSelect">
+                    <option value="local">本机宿主环境 (Local Host)</option>
+                  </select>
+                </div>
+
+                <!-- 节点机器人配置入口 -->
+                <button type="button" class="btn primary" onclick="window.openNodeBotConfigModal()" style="font-size:12.5px;padding:6px 14px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);display:flex;align-items:center;gap:6px;">
+                  <span>节点机器人与告警设置</span>
+                </button>
+
+                <label class="checkbox-pill">
+                  <input type="checkbox" id="hostAutoRefreshToggle" checked />
+                  <span>自动轮询 (3s)</span>
+                </label>
+                <button id="refreshHostBtn" class="btn primary" style="font-size:12.5px;padding:6px 14px;">
+                  立即刷新
+                </button>
+              </div>
+            </div>
+
+            <!-- 节点专属智能体与告警机器人实时状态卡片 -->
+            <div class="card panorama-bot-card" id="panoramaBotCard">
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:#fff;display:grid;place-items:center;box-shadow:0 2px 6px rgba(16,185,129,0.3);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg></div>
+                  <div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <strong style="font-size:14.5px;color:var(--text-main);" id="panoramaBotTitle">节点专属智能体与告警机器人</strong>
+                      <span id="panoramaBotStatusBadge" class="badge success" style="font-size:11px;">● 已配置并监听</span>
+                    </div>
+                    <p style="margin:2px 0 0 0;font-size:12px;color:var(--text-secondary);" id="panoramaBotSub">
+                      绑定智能体: ops (全栈智能运维专家) | 告警通道: 飞书自定义机器人 | 异常自愈: 已开启
+                    </p>
+                  </div>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button type="button" class="btn primary" onclick="window.openNodeBotConfigModal()" style="font-size:12px;padding:6px 14px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                    机器人设置
+                  </button>
+                  <button type="button" class="btn secondary" onclick="window.testNodeBotAlert()" style="font-size:12px;padding:6px 12px;">
+                    测试推送
+                  </button>
+                  <button type="button" class="btn secondary" onclick="window.chatWithNodeAgent()" style="font-size:12px;padding:6px 12px;">
+                    呼叫专属 Agent
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4 大核心 KPI 指标卡片 -->
+            <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 18px;">
+              <!-- CPU 指标卡 -->
+              <div class="card metric-card">
+                <div class="metric-card-header">
+                  <span>CPU 整体负载</span>
+                  <span id="hostCpuCoresBadge" class="badge info">-- 核心</span>
+                </div>
+                <div class="metric-val-row">
+                  <div class="metric-number" id="hostCpuPercent">--%</div>
+                  <div class="metric-sub" id="hostCpuSpeed">-- MHz</div>
+                </div>
+                <div class="progress-track">
+                  <div id="hostCpuBar" style="width: 0%; height: 100%; background: #3b82f6; transition: width 0.3s;"></div>
+                </div>
+                <div style="font-size: 11px; color: var(--text-muted); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" id="hostCpuModel">--</div>
+              </div>
+
+              <!-- 物理内存指标卡 -->
+              <div class="card metric-card">
+                <div class="metric-card-header">
+                  <span>物理内存 (RAM)</span>
+                  <span id="hostMemPercentBadge" class="badge">--%</span>
+                </div>
+                <div class="metric-val-row">
+                  <div class="metric-number" id="hostMemUsed">-- GB</div>
+                  <div class="metric-sub" id="hostMemTotalBrief">/ -- GB</div>
+                </div>
+                <div class="progress-track">
+                  <div id="hostMemBar" style="width: 0%; height: 100%; background: #10b981; transition: width 0.3s;"></div>
+                </div>
+                <div style="font-size: 11px; color: var(--text-muted);" id="hostMemTotal">空闲: -- GB</div>
+              </div>
+
+              <!-- 进程与虚拟机内存指标卡 -->
+              <div class="card metric-card">
+                <div class="metric-card-header">
+                  <span>Node.js 进程 RSS 内存</span>
+                  <span id="hostProcessPidBadge" class="badge neutral">PID: --</span>
+                </div>
+                <div class="metric-number" id="hostProcessRss">-- MB</div>
+                <div class="progress-track">
+                  <div id="hostHeapBar" style="width: 0%; height: 100%; background: #8b5cf6; transition: width 0.3s;"></div>
+                </div>
+                <div style="font-size: 11px; color: var(--text-muted);" id="hostProcessHeap">堆使用: -- MB / -- MB</div>
+              </div>
+
+              <!-- 系统运行时间指标卡 -->
+              <div class="card metric-card">
+                <div class="metric-card-header">
+                  <span>⏱️ 系统连续运行</span>
+                  <span id="hostLoadAvgBadge" class="badge neutral">负载: --</span>
+                </div>
+                <div style="font-size: 20px; font-weight: 700; color: var(--text-main); margin-top:2px;" id="hostSystemUptime">--</div>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-top:auto;" id="hostProcessUptime">Codex 服务运行: --</div>
+                <div style="font-size: 11px; color: var(--text-muted);" id="hostTimestamp">更新于: --</div>
+              </div>
+            </div>
+
+            <!-- 第二行: CPU 多核拓扑分布 + 磁盘卷分区 -->
+            <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+              <!-- CPU 多核分布 -->
+              <div class="card dashboard-card">
+                <div class="dashboard-card-header">
+                  <div class="dashboard-card-title">
+                    <span>CPU 多核负载图谱</span>
+                  </div>
+                  <span id="hostCpuCoreCountBadge" class="badge info">-- 逻辑核心</span>
+                </div>
+                <div id="hostCoreGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap:8px; max-height:220px; overflow-y:auto; padding:2px;">
+                  <!-- 动态渲染多核状态 -->
+                </div>
+              </div>
+
+              <!-- 磁盘多分区存储 -->
+              <div class="card dashboard-card">
+                <div class="dashboard-card-header">
+                  <div class="dashboard-card-title">
+                    <span>磁盘驱动器与分区卷</span>
+                  </div>
+                  <span id="hostDiskPartCountBadge" class="badge neutral">-- 个卷</span>
+                </div>
+                <div id="hostPartitionList" style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto; padding:2px;">
+                  <!-- 动态渲染分区列表 -->
+                </div>
+              </div>
+            </div>
+
+            <!-- 第三行: 活跃进程 Top 榜 + 公网 IP / 地理位置与网卡 -->
+            <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+              <!-- 活跃高消耗进程 Top 榜 -->
+              <div class="card dashboard-card">
+                <div class="dashboard-card-header">
+                  <div class="dashboard-card-title">
+                    <span id="hostProcessListTitle">本机内存占用 Top 活跃进程</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span id="hostProcessModeBadge" class="badge success">本机 · 可控</span>
+                    <button type="button" id="hostProcessRefreshBtn" class="btn secondary" style="font-size:11px;padding:3px 8px;" title="刷新进程列表">刷新</button>
+                  </div>
+                </div>
+                <div id="hostTopProcessList" style="display:flex; flex-direction:column; gap:6px; max-height:290px; overflow-y:auto;">
+                  <!-- 动态渲染进程列表 -->
+                </div>
+              </div>
+
+              <!-- 公网 IP 归属地与网络接口 -->
+              <div class="card dashboard-card">
+                <div class="dashboard-card-header">
+                  <div class="dashboard-card-title">
+                    <span>公网出口与 IP 地理位置</span>
+                  </div>
+                  <span id="hostIpGeoBadge" class="badge success">探测中...</span>
+                </div>
+                <div id="hostIpGeoDetails" class="geo-details-box">
+                  正在探测公网出口与运营商归属...
+                </div>
+                <div style="font-weight: 600; font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">
+                  本地与虚拟网络接口 (IPs):
+                </div>
+                <div id="hostNetworkList" style="display:flex; flex-direction:column; gap:5px; max-height:120px; overflow-y:auto;">
+                  <!-- 动态渲染网卡列表 -->
+                </div>
+              </div>
+            </div>
+
+            <!-- 第四行: 操作系统与 Node.js 底层规格 -->
+            <div class="card dashboard-card" style="margin-bottom: 18px;">
+              <div class="dashboard-card-header">
+                <div class="dashboard-card-title">
+                  <span>操作系统与运行时底层环境规格 (System & Runtime Specs)</span>
+                </div>
+                <span id="hostPlatformBadge" class="badge neutral">--</span>
+              </div>
+              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; font-size: 12.5px;">
+                <div class="specs-box">
+                  <div><span style="color:var(--text-muted);">主机名:</span> <strong id="hostHostname" style="color:var(--text-main);">--</strong></div>
+                  <div><span style="color:var(--text-muted);">当前运行用户:</span> <span id="hostUsername">--</span></div>
+                  <div><span style="color:var(--text-muted);">操作系统版本:</span> <span id="hostOsFull">--</span></div>
+                  <div><span style="color:var(--text-muted);">架构与字节序:</span> <span id="hostArch">--</span></div>
+                </div>
+                <div class="specs-box">
+                  <div><span style="color:var(--text-muted);">Node.js 运行时:</span> <strong id="hostNodeVersion" style="color:var(--text-main);">--</strong></div>
+                  <div><span style="color:var(--text-muted);">V8 引擎版本:</span> <span id="hostV8Version">--</span></div>
+                  <div><span style="color:var(--text-muted);">libuv / OpenSSL:</span> <span id="hostUvVersion">--</span></div>
+                  <div><span style="color:var(--text-muted);">工作根目录:</span> <code id="hostCwd" style="font-size:11px;">--</code></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 第五行: AI 智能磁盘扫描与深度瘦身看板 (AI Smart Disk Scanner & Storage Analyzer) -->
+            <div class="card disk-clean-card">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-bottom: 1px solid var(--border-default); padding-bottom: 14px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <div style="width:40px; height:40px; border-radius:10px; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); color:#fff; display:grid; place-items:center; box-shadow: 0 2px 8px rgba(99,102,241,0.3);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg></div>
+                  <div>
+                    <div style="font-size: 16px; font-weight: 700; color: var(--text-main); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                      <span>AI 智能全盘扫描与深度瘦身 (AI Smart Disk Scanner)</span>
+                      <span id="diskCleanableTotalBadge" class="badge warning" style="display:none; font-size:12px;">发现可释放: --</span>
+                      <span id="diskRootsBadge" class="badge success" style="display:none; font-size:11.5px;">系统: 当前系统 · 根目录: 自动识别</span>
+                    </div>
+                    <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
+                      <span id="diskScannerScopeText">当前系统 · 根目录: 自动识别</span>，深度扫描系统临时文件、包管理器缓存 (npm/pip/cargo)、工程构建残留与应用日志
+                    </div>
+                  </div>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button id="scanDiskBtn" class="btn primary" style="background:linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border:none; font-size:12.5px; padding:6px 16px; box-shadow: 0 2px 6px rgba(79,70,229,0.25);">
+                    从根目录开始全盘扫描
+                  </button>
+                  <button id="safeCleanDiskBtn" class="btn primary" style="background:#16a34a; border-color:#16a34a; font-size:12.5px; display:none;">
+                    仅清理安全项 (Safe)
+                  </button>
+                  <button id="allCleanDiskBtn" class="btn danger" style="font-size:12.5px; display:none;">
+                    深度全量清理 (All)
+                  </button>
+                  <button id="askAiDiskPlanBtn" class="btn secondary" style="font-size:12.5px;" title="将全盘扫描报告发送给 AI 智能体生成专业清理建议">
+                    咨询 AI 智能体建议
+                  </button>
+                </div>
+              </div>
+
+              <!-- AI 智能体检进度与动态雷达条 -->
+              <div id="diskScanProgressBox" class="disk-scan-progress" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <div style="font-size:12.5px; font-weight:600; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                    <span style="display:inline-block; animation:spin 1s linear infinite;">⏳</span>
+                    <span id="diskScanProgressText">正在从系统根目录全盘扫描...</span>
+                  </div>
+                  <span style="font-size:11.5px; color:var(--text-muted);">全盘深度体检中</span>
+                </div>
+                <div class="progress-track" style="height:6px;">
+                  <div id="diskScanProgressBar" style="width:40%; height:100%; background:linear-gradient(90deg, #6366f1, #a855f7); animation:indeterminate 1.5s infinite linear;"></div>
+                </div>
+              </div>
+
+              <!-- AI 诊断评估卡片与结果容器 -->
+              <div id="diskScanResultContainer" style="display:none;">
+                <!-- 顶部 AI 诊断卡片 -->
+                <div class="ai-diagnosis-card">
+                  <div class="health-score-box">
+                    <div style="font-size:11px; color:var(--text-muted); font-weight:600;">全盘健康分</div>
+                    <div id="diskHealthScore" style="font-size:26px; font-weight:800; color:var(--success); font-family:var(--font-mono);">95</div>
+                    <div id="diskHealthLevel" class="badge success" style="font-size:10px;">空间充裕</div>
+                  </div>
+                  <div style="flex:1;">
+                    <div style="font-size:13px; font-weight:700; color:var(--text-main); margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                      <span>AI 智能诊断结论与清理策略</span>
+                    </div>
+                    <div id="diskAiDiagnosisText" style="font-size:12.5px; color:var(--text-secondary); line-height:1.55;">
+                      正在生成 AI 诊断分析...
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 2 栏容量指标 -->
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 14px;">
+                  <div class="disk-metric-card safe">
+                    <div class="metric-title">安全可清 (零副作用):</div>
+                    <div class="metric-val" id="diskSafeSize">0 MB</div>
+                    <div class="metric-desc">根目录 Temp、包管理器缓存、系统临时日志、浏览器静态缓存</div>
+                  </div>
+                  <div class="disk-metric-card review">
+                    <div class="metric-title">建议确认 (工程与容器):</div>
+                    <div class="metric-val" id="diskReviewSize">0 MB</div>
+                    <div class="metric-desc">工程构建产物 (dist/target/.next)、Docker 悬空镜像</div>
+                  </div>
+                </div>
+
+                <!-- 分类过滤栏 (Category Filter Tabs) -->
+                <div class="disk-filter-tabs-row" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; border-bottom:1px solid var(--border-default); padding-bottom:8px;">
+                  <button type="button" class="btn text-btn disk-cat-btn active" data-cat="all">全部 (<span id="catCount_all">0</span>)</button>
+                  <button type="button" class="btn text-btn disk-cat-btn" data-cat="system_root">根目录与系统 (<span id="catCount_system_root">0</span>)</button>
+                  <button type="button" class="btn text-btn disk-cat-btn" data-cat="package_cache">开发依赖缓存 (<span id="catCount_package_cache">0</span>)</button>
+                  <button type="button" class="btn text-btn disk-cat-btn" data-cat="build_artifact">工程构建产物 (<span id="catCount_build_artifact">0</span>)</button>
+                  <button type="button" class="btn text-btn disk-cat-btn" data-cat="browser_app">应用与浏览器 (<span id="catCount_browser_app">0</span>)</button>
+                  <button type="button" class="btn text-btn disk-cat-btn" data-cat="temp_logs">崩溃与日志 (<span id="catCount_temp_logs">0</span>)</button>
+                  <button type="button" class="btn text-btn disk-cat-btn" data-cat="docker_prune">Docker (<span id="catCount_docker_prune">0</span>)</button>
+                </div>
+
+                <!-- 交互式清单操作栏 -->
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding: 6px 2px;">
+                  <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-secondary);">
+                    <button type="button" class="btn text-btn" id="diskSelectAllBtn" style="font-size:12px; padding:2px 4px; color:var(--accent);">全选</button>
+                    <span>|</span>
+                    <button type="button" class="btn text-btn" id="diskSelectSafeBtn" style="font-size:12px; padding:2px 4px; color:var(--accent);">仅选安全项</button>
+                    <span>|</span>
+                    <button type="button" class="btn text-btn" id="diskSelectNoneBtn" style="font-size:12px; padding:2px 4px; color:var(--text-muted);">取消勾选</button>
+                    <span id="diskSelectedSummary" style="margin-left:8px; font-weight:600; color:var(--text-main);">已选择 0 项</span>
+                  </div>
+                  <button type="button" class="btn primary" id="cleanSelectedBtn" style="font-size:12px; padding:4px 14px;">
+                    一键清理选中项
+                  </button>
+                </div>
+
+                <!-- 动态垃圾项清单 -->
+                <div id="diskItemsList" style="display:flex; flex-direction:column; gap:8px;">
+                  <!-- 动态渲染扫描项 -->
+                </div>
+              </div>
+
+              <!-- 空状态提示 -->
+              <div id="diskEmptyState" class="disk-empty-state">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);margin-bottom:8px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <div style="font-size:14px; font-weight:600; color:var(--text-main);">尚未进行 AI 智能全盘体检</div>
+                <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+                  <span id="diskEmptyStateScopeText">点击右上角「从根目录开始全盘扫描」排查当前系统下的系统根目录、包管理器缓存、构建残留与临时日志</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 8 内容: 远程服务器集群概览 -->
+          <div id="settingsPane_servers" class="settings-pane" style="display:none;">
+            <div class="page-header-row">
+              <div>
+                <h2 class="page-title">远程服务器与计算节点</h2>
+                <p class="page-subtitle">集中管理多台云主机与物理机，点击任意服务器卡片进入专属运维与管理控制台</p>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button id="refreshServersBtn" class="btn secondary">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                  刷新状态
+                </button>
+                <button id="addServerBtn" class="btn primary">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  + 添加服务器
+                </button>
+              </div>
+            </div>
+
+            <!-- 本机宿主计算节点实时卡片 (Local Host System Node) -->
+            <div class="card host-node-card">
+              <div class="card-header host-node-header">
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;font-size:18px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                  </div>
+                  <div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <strong style="font-size:14.5px;color:var(--text-main);" id="localHostCardName">本机宿主系统 (Local Host System)</strong>
+                      <span class="badge success" style="font-size:10.5px;">● 在线 (本地直接控制)</span>
+                    </div>
+                    <div style="font-size:11.5px;color:var(--text-muted);" id="localHostCardSub">当前 CodexConnect 运行的物理环境</div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button type="button" class="btn primary" onclick="window.switchSettingsTab('host')" style="font-size:12px;padding:6px 14px;">
+                    进入全景监控大盘 ↗
+                  </button>
+                </div>
+              </div>
+              <div class="card-body" style="padding:14px 20px;">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;font-size:12.5px;">
+                  <div class="server-stat-pill">
+                    <span style="color:var(--text-secondary);">操作系统:</span>
+                    <strong id="localHostCardOs" style="margin-left:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">--</strong>
+                  </div>
+                  <div class="server-stat-pill">
+                    <span style="color:var(--text-secondary);">CPU 负载:</span>
+                    <strong id="localHostCardCpu" style="margin-left:4px;">--%</strong>
+                  </div>
+                  <div class="server-stat-pill">
+                    <span style="color:var(--text-secondary);">物理内存:</span>
+                    <strong id="localHostCardMem" style="margin-left:4px;">-- GB</strong>
+                  </div>
+                  <div class="server-stat-pill">
+                    <span style="color:var(--text-secondary);">进程 PID:</span>
+                    <strong id="localHostCardPid" style="margin-left:4px;">--</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 远程服务器卡片网格 -->
+            <div id="serverCardsGrid" class="cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(350px, 1fr));gap:16px;margin-bottom:24px;">
+              <!-- 动态渲染服务器卡片 -->
+            </div>
+          </div>
+
+          <!-- Tab 9 内容: 工作区项目库 -->
           <div id="settingsPane_projects" class="settings-pane" style="display:none;">
             <div class="card">
               <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
@@ -1817,13 +1839,16 @@
             </div>
           </div>
 
-          <!-- Tab 5 内容: CLI 同步与运行日志 -->
+          <!-- Tab 11 内容: CLI 同步与运行日志 -->
           <div id="settingsPane_system" class="settings-pane" style="display:none;">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
               <div class="card">
-                <div class="card-header">
-                  <div style="font-weight:700;font-size:14px;">CLI 目标环境与切换器</div>
-                  <div style="font-size:11.5px;color:var(--text-muted);">无缝对齐本地 CLI 工具与全局模型协议线制</div>
+                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                  <div>
+                    <div style="font-weight:700;font-size:14px;">CLI 目标环境与切换器</div>
+                    <div style="font-size:11.5px;color:var(--text-muted);">无缝对齐本地 CLI 工具与全局模型协议线制</div>
+                  </div>
+                  <button type="button" class="btn secondary" id="configPathBtn" style="font-size:11.5px;padding:3px 8px;" title="复制配置文件路径">复制配置路径</button>
                 </div>
                 <div class="card-body" style="padding:14px;">
                   <div id="targetsContainer"></div>
@@ -1836,10 +1861,18 @@
                     <div style="font-weight:700;font-size:14px;">系统运行日志</div>
                     <div style="font-size:11.5px;color:var(--text-muted);">实时追踪后台调度、IPC 通信与智能体执行追踪</div>
                   </div>
-                  <button type="button" class="btn secondary" onclick="window.hap.clearLogs?.()" style="font-size:11.5px;padding:3px 8px;">清空日志</button>
+                  <button type="button" class="btn secondary" id="clearLogsBtn" style="font-size:11.5px;padding:3px 8px;">清空日志</button>
                 </div>
                 <div class="card-body" style="padding:14px;">
-                  <div id="logsViewer" style="max-height:360px;overflow-y:auto;font-family:var(--font-mono);font-size:11.5px;background:#f8fafc;padding:10px;border-radius:8px;border:1px solid #e2e8f0;"></div>
+                  <div class="page-actions-bar" style="margin-bottom:10px;">
+                    <div class="filter-group" style="display:flex;gap:6px;">
+                      <button class="filter-btn active btn secondary" data-filter="all" style="padding:3px 8px;font-size:11.5px;">全部</button>
+                      <button class="filter-btn btn secondary" data-filter="error" style="padding:3px 8px;font-size:11.5px;">仅错误</button>
+                      <button class="filter-btn btn secondary" data-filter="info" style="padding:3px 8px;font-size:11.5px;">仅信息</button>
+                    </div>
+                  </div>
+                  <div id="logList" class="stack log-stack" style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;"></div>
+                  <div id="logsViewer" class="code-preview-box" style="display:none;"></div>
                 </div>
               </div>
             </div>
@@ -1967,7 +2000,7 @@
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">
           已从服务商云端成功获取到以下可用模型，请勾选您想在平台中启用的模型：
         </div>
-        <div id="quickModelSyncList" style="max-height:280px;overflow-y:auto;background:#f8fafc;padding:10px;border-radius:8px;border:1px solid #e2e8f0;display:flex;flex-direction:column;gap:6px;">
+        <div id="quickModelSyncList" class="model-sync-list">
           <!-- 动态模型复选框列表 -->
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px;border-top:1px solid var(--border-default);margin-top:12px;">
@@ -2112,11 +2145,11 @@
         </div>
 
         <!-- 服务商名下模型手动填写与云端拉取管理区域 -->
-        <div style="margin-top:14px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+        <div class="env-drawer-box" style="margin-top:14px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
             <div>
-              <strong style="font-size:13px;color:#0f172a;">配置此服务商的模型 (Models)</strong>
-              <div style="font-size:11.5px;color:#64748b;margin-top:2px;">可手动填写模型名称并添加，或一键自动拉取服务商在线模型</div>
+              <strong style="font-size:13px;color:var(--text-main);">配置此服务商的模型 (Models)</strong>
+              <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">可手动填写模型名称并添加，或一键自动拉取服务商在线模型</div>
             </div>
             <button type="button" class="btn secondary" id="fetchRemoteModelsInDialogBtn" style="font-size:11.5px;padding:4px 10px;">
               <span id="fetchRemoteBtnTextInDialog">一键从服务商获取模型</span>
@@ -2124,31 +2157,34 @@
           </div>
 
           <!-- 远端可用模型待选池 -->
-          <div id="remoteModelPoolBox" style="display:none;margin-bottom:10px;padding:8px 10px;background:#ffffff;border:1px dashed #0284c7;border-radius:6px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-              <span style="font-size:11.5px;font-weight:600;color:#0284c7;">点击快速添加模型（或点击右侧全部导入）：</span>
-              <button type="button" class="btn text-btn" id="addAllRemoteModelsBtn" style="font-size:11px;color:#0284c7;">+ 全部添加</button>
+          <div id="remoteModelPoolBox" style="display:none;margin-bottom:10px;padding:8px 10px;background:var(--primary-subtle);border:1px dashed var(--primary-border);border-radius:var(--radius-sm);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px;">
+              <span style="font-size:11.5px;font-weight:600;color:var(--primary);">点击快速添加模型（或点击右侧全部导入）：</span>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <input type="text" id="remoteModelFilterInput" placeholder="过滤模型名 (如 deepseek, gpt)..." style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border-default);width:160px;" />
+                <button type="button" class="btn text-btn" id="addAllRemoteModelsBtn" style="font-size:11px;color:var(--primary);white-space:nowrap;">+ 全部添加</button>
+              </div>
             </div>
-            <div id="remoteModelChips" style="display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow-y:auto;"></div>
+            <div id="remoteModelChips" style="display:flex;flex-wrap:wrap;gap:6px;max-height:140px;overflow-y:auto;"></div>
           </div>
 
           <!-- 手动添加模型输入行 -->
           <div style="display:grid;grid-template-columns: 1.5fr 1fr 0.8fr auto;gap:6px;align-items:center;margin-bottom:8px;">
-            <input type="text" id="manualModelNameInput" placeholder="真实模型名 (如 deepseek-chat, gpt-4o, qwen-plus)" style="font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid #cbd5e1;" />
-            <input type="text" id="manualModelAliasInput" placeholder="显示别名 (可选，如 ds-chat)" style="font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid #cbd5e1;" />
-            <input type="number" id="manualModelContextInput" placeholder="上下文 (64000)" style="font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid #cbd5e1;" />
+            <input type="text" id="manualModelNameInput" placeholder="真实模型名 (如 deepseek-chat, gpt-4o, qwen-plus)" style="font-size:12px;padding:6px 8px;border-radius:6px;" />
+            <input type="text" id="manualModelAliasInput" placeholder="显示别名 (可选，如 ds-chat)" style="font-size:12px;padding:6px 8px;border-radius:6px;" />
+            <input type="number" id="manualModelContextInput" placeholder="上下文 (64000)" style="font-size:12px;padding:6px 8px;border-radius:6px;" />
             <button type="button" class="btn primary" id="addManualModelBtn" style="font-size:11.5px;padding:6px 12px;white-space:nowrap;">+ 手动添加</button>
           </div>
 
           <!-- 当前已添加模型列表 -->
           <div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-              <div style="font-size:11.5px;font-weight:600;color:#475569;">当前已包含的模型列表 (<span id="currentDialogModelsCount">0</span>)：</div>
-              <button type="button" class="btn text-btn" id="clearAllProviderModelsBtn" style="font-size:11.5px;color:#ef4444;padding:2px 6px;cursor:pointer;background:none;border:none;display:none;align-items:center;gap:3px;" title="一键清除当前列表中所有已包含的模型">
+              <div style="font-size:11.5px;font-weight:600;color:var(--text-secondary);">当前已包含的模型列表 (<span id="currentDialogModelsCount">0</span>)：</div>
+              <button type="button" class="btn text-btn" id="clearAllProviderModelsBtn" style="font-size:11.5px;color:var(--danger);padding:2px 6px;cursor:pointer;background:none;border:none;display:none;align-items:center;gap:3px;" title="一键清除当前列表中所有已包含的模型">
                 一键清除全部模型
               </button>
             </div>
-            <div id="currentProviderModelsList" style="display:flex;flex-wrap:wrap;gap:6px;min-height:30px;align-items:center;background:#ffffff;padding:6px 8px;border-radius:6px;border:1px solid #e2e8f0;"></div>
+            <div id="currentProviderModelsList" style="display:flex;flex-wrap:wrap;gap:6px;min-height:30px;align-items:center;background:var(--bg-surface);padding:6px 8px;border-radius:var(--radius-sm);border:1px solid var(--border-default);"></div>
           </div>
         </div>
 
@@ -2219,11 +2255,30 @@
               <option value="hermes-native">hermes-native</option>
             </select>
           </div>
+
+          <div class="form-group full-width">
+            <label>模型能力标签 (Capabilities)</label>
+            <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:4px;padding:8px 12px;background:var(--bg-subtle);border:1px solid var(--border-default);border-radius:6px;font-size:12px;">
+              <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapTools" checked /> 🛠️ 工具调用 (Tools)</label>
+              <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapVision" /> 👁️ 视觉理解 (Vision)</label>
+              <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapReasoning" /> 🧠 深度思考推理 (Reasoning)</label>
+              <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapStreaming" checked /> ⚡ 流式输出 (Streaming)</label>
+              <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapLongctx" /> 📜 超长上下文 (LongCtx)</label>
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--primary);">
+              <input type="checkbox" id="modelSetAsDefaultCb" />
+              设为全局默认主模型 (Global Default Model)
+            </label>
+          </div>
         </div>
 
         <div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px;border-top:1px solid var(--border-default);">
           <button type="button" class="btn danger" id="deleteModelBtn">删除模型</button>
           <div style="display:flex;gap:8px;">
+            <button type="button" class="btn secondary" id="testDialogModelBtn" style="font-size:12px;">测试该模型</button>
             <button type="button" class="btn secondary" id="cancelModelDialogBtn">取消</button>
             <button type="submit" class="btn primary">保存</button>
           </div>
@@ -2371,7 +2426,7 @@
           <div style="display:flex;gap:8px;align-items:center;">
             <button type="button" class="codeblock-btn" id="codeViewerCopyBtn">复制代码</button>
             <button type="button" class="codeblock-btn" id="codeViewerOpenVsCodeBtn">VS Code 打开</button>
-            <button type="button" class="codeblock-btn" id="closeCodeViewerBtn" style="font-size:14px;"></button>
+            <button type="button" class="btn-close" id="closeCodeViewerBtn" aria-label="关闭" title="关闭" style="color:#a1a1aa;width:26px;height:26px;flex:0 0 26px;font-size:16px;"></button>
           </div>
         </div>
         <div class="code-viewer-body">
@@ -2416,7 +2471,7 @@
 
         <div id="gitRepoState" style="display:flex;flex-direction:column;flex:1;min-height:0;margin-top:10px;">
           <!-- 冲突预警提示横幅 -->
-          <div id="gitConflictAlertBanner" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div id="gitConflictAlertBanner" class="git-conflict-banner">
             <div style="display:flex;align-items:center;gap:6px;">
               <span style="font-size:14px;">⚠️</span>
               <span><strong>检测到代码合并冲突！</strong>存在未合并的冲突文件，请查看下方标有「冲突」的文件。</span>
@@ -2428,7 +2483,7 @@
           </div>
 
           <!-- 左右分栏：左侧文件列表，右侧 Diff 代码对比 -->
-          <div class="git-split-container" style="display:grid;grid-template-columns:290px 1fr;gap:12px;flex:1;min-height:280px;max-height:420px;border:1px solid var(--border-default);border-radius:var(--radius-sm);overflow:hidden;background:#ffffff;">
+          <div class="git-split-container">
             <!-- 左侧：改动文件清单 -->
             <div style="background:var(--bg-main);border-right:1px solid var(--border-default);display:flex;flex-direction:column;min-height:0;">
               <div style="padding:8px 10px;border-bottom:1px solid var(--border-default);display:flex;justify-content:space-between;align-items:center;">
@@ -2501,7 +2556,7 @@
           <div style="display:flex;gap:8px;align-items:center;">
             <button type="button" class="codeblock-btn" id="gitDiffCopyBtn">复制 Diff</button>
             <button type="button" class="codeblock-btn" id="gitDiffOpenVsCodeBtn">VS Code 打开对比</button>
-            <button type="button" class="codeblock-btn" id="closeGitDiffModalBtn" style="font-size:14px;"></button>
+            <button type="button" class="btn-close" id="closeGitDiffModalBtn" aria-label="关闭" title="关闭" style="color:#a1a1aa;width:26px;height:26px;flex:0 0 26px;font-size:16px;"></button>
           </div>
         </div>
         <div class="code-viewer-body" style="background:#1e1e1e;">
@@ -2525,7 +2580,7 @@
           <div class="lightbox-tools">
             <button type="button" class="codeblock-btn" id="lightboxCopyBtn">复制图片</button>
             <button type="button" class="codeblock-btn" id="lightboxDownloadBtn">下载原图</button>
-            <button type="button" class="codeblock-btn" id="closeLightboxBtn" style="font-size:14px;"></button>
+            <button type="button" class="btn-close" id="closeLightboxBtn" aria-label="关闭" title="关闭" style="color:#a1a1aa;width:26px;height:26px;flex:0 0 26px;font-size:16px;"></button>
           </div>
         </div>
         <div class="lightbox-body">
@@ -2637,43 +2692,43 @@
         <div style="flex:1;overflow-y:auto;padding-right:4px;display:flex;flex-direction:column;gap:14px;">
           <!-- 4 大指标卡片 -->
           <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;">
-            <div class="card" style="padding:12px;background:#f8fafc;border:1px solid #e2e8f0;">
+            <div class="metric-stat-card">
               <div style="font-size:11.5px;color:var(--text-secondary);display:flex;justify-content:space-between;">
                 <span>CPU 整体负载</span>
                 <span id="serverDetailsCpuCores" class="badge info" style="font-size:10px;">-- 核</span>
               </div>
               <div style="font-size:24px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin:4px 0;" id="serverDetailsCpuPercent">--%</div>
-              <div style="height:5px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+              <div class="metric-stat-track">
                 <div id="serverDetailsCpuBar" style="width:0%;height:100%;background:#3b82f6;transition:width 0.3s;"></div>
               </div>
               <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="serverDetailsCpuModel">--</div>
             </div>
 
-            <div class="card" style="padding:12px;background:#f8fafc;border:1px solid #e2e8f0;">
+            <div class="metric-stat-card">
               <div style="font-size:11.5px;color:var(--text-secondary);display:flex;justify-content:space-between;">
                 <span>物理内存 (RAM)</span>
                 <span id="serverDetailsMemBadge" class="badge" style="font-size:10px;">--%</span>
               </div>
               <div style="font-size:24px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin:4px 0;" id="serverDetailsMemUsed">-- GB</div>
-              <div style="height:5px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+              <div class="metric-stat-track">
                 <div id="serverDetailsMemBar" style="width:0%;height:100%;background:#10b981;transition:width 0.3s;"></div>
               </div>
               <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px;" id="serverDetailsMemTotal">总量: -- GB</div>
             </div>
 
-            <div class="card" style="padding:12px;background:#f8fafc;border:1px solid #e2e8f0;">
+            <div class="metric-stat-card">
               <div style="font-size:11.5px;color:var(--text-secondary);display:flex;justify-content:space-between;">
                 <span>主磁盘卷存储 (Disk)</span>
                 <span id="serverDetailsDiskBadge" class="badge neutral" style="font-size:10px;">/</span>
               </div>
               <div style="font-size:24px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin:4px 0;" id="serverDetailsDiskFree">-- GB</div>
-              <div style="height:5px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+              <div class="metric-stat-track">
                 <div id="serverDetailsDiskBar" style="width:0%;height:100%;background:#8b5cf6;transition:width 0.3s;"></div>
               </div>
               <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px;" id="serverDetailsDiskTotal">总空间: -- GB</div>
             </div>
 
-            <div class="card" style="padding:12px;background:#f8fafc;border:1px solid #e2e8f0;">
+            <div class="metric-stat-card">
               <div style="font-size:11.5px;color:var(--text-secondary);display:flex;justify-content:space-between;">
                 <span>系统运行时间</span>
                 <span class="badge success" style="font-size:10px;">Uptime</span>
@@ -2690,10 +2745,10 @@
                 <span>操作系统与内核参数</span>
               </div>
               <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;">
-                <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">操作系统发行版:</span><strong id="serverDetailsOsFull">--</strong></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">CPU 核心架构:</span><span id="serverDetailsArch" style="font-family:var(--font-mono);">--</span></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">主机名 (Hostname):</span><span id="serverDetailsHostname" style="font-weight:600;">--</span></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">系统负载 (Load Avg):</span><span id="serverDetailsLoadAvg" style="font-family:var(--font-mono);">--</span></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">操作系统发行版:</span><strong id="serverDetailsOsFull">--</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">CPU 核心架构:</span><span id="serverDetailsArch" style="font-family:var(--font-mono);">--</span></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">主机名 (Hostname):</span><span id="serverDetailsHostname" style="font-weight:600;">--</span></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">系统负载 (Load Avg):</span><span id="serverDetailsLoadAvg" style="font-family:var(--font-mono);">--</span></div>
               </div>
             </div>
 
@@ -2702,10 +2757,10 @@
                 <span>HAP 守护进程与通讯连接</span>
               </div>
               <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;">
-                <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">守护进程端口:</span><strong id="serverDetailsDaemonPort" style="color:#10b981;font-family:var(--font-mono);">9527</strong></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">SSH 登录账户:</span><span id="serverDetailsSshUser">root</span></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">认证鉴权模式:</span><span id="serverDetailsAuthType">password</span></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">Node.js 运行时:</span><span id="serverDetailsNodeVer" style="font-family:var(--font-mono);">--</span></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">守护进程端口:</span><strong id="serverDetailsDaemonPort" style="color:#10b981;font-family:var(--font-mono);">9527</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">SSH 登录账户:</span><span id="serverDetailsSshUser">root</span></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">认证鉴权模式:</span><span id="serverDetailsAuthType">password</span></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Node.js 运行时:</span><span id="serverDetailsNodeVer" style="font-family:var(--font-mono);">--</span></div>
               </div>
             </div>
           </div>
@@ -2755,43 +2810,43 @@
         <div style="flex:1;overflow-y:auto;padding-right:4px;display:flex;flex-direction:column;gap:14px;">
           <!-- 4 大指标卡片 -->
           <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;">
-            <div class="card" style="padding:12px;background:#f8fafc;border:1px solid #e2e8f0;">
+            <div class="metric-stat-card">
               <div style="font-size:11.5px;color:var(--text-secondary);display:flex;justify-content:space-between;">
                 <span>CPU 整体负载</span>
                 <span id="hostModalCpuCores" class="badge info" style="font-size:10px;">-- 核心</span>
               </div>
               <div style="font-size:24px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin:4px 0;" id="hostModalCpuPercent">--%</div>
-              <div style="height:5px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+              <div class="metric-stat-track">
                 <div id="hostModalCpuBar" style="width:0%;height:100%;background:#3b82f6;transition:width 0.3s;"></div>
               </div>
               <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="hostModalCpuModel">--</div>
             </div>
 
-            <div class="card" style="padding:12px;background:#f8fafc;border:1px solid #e2e8f0;">
+            <div class="metric-stat-card">
               <div style="font-size:11.5px;color:var(--text-secondary);display:flex;justify-content:space-between;">
                 <span>物理内存 (RAM)</span>
                 <span id="hostModalMemBadge" class="badge" style="font-size:10px;">--%</span>
               </div>
               <div style="font-size:24px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin:4px 0;" id="hostModalMemUsed">-- GB</div>
-              <div style="height:5px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+              <div class="metric-stat-track">
                 <div id="hostModalMemBar" style="width:0%;height:100%;background:#10b981;transition:width 0.3s;"></div>
               </div>
               <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px;" id="hostModalMemTotal">空闲: -- GB</div>
             </div>
 
-            <div class="card" style="padding:12px;background:#f8fafc;border:1px solid #e2e8f0;">
+            <div class="metric-stat-card">
               <div style="font-size:11.5px;color:var(--text-secondary);display:flex;justify-content:space-between;">
                 <span>Node.js 进程 RSS</span>
                 <span id="hostModalProcessPid" class="badge neutral" style="font-size:10px;">PID: --</span>
               </div>
               <div style="font-size:24px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin:4px 0;" id="hostModalProcessRss">-- MB</div>
-              <div style="height:5px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+              <div class="metric-stat-track">
                 <div id="hostModalHeapBar" style="width:0%;height:100%;background:#8b5cf6;transition:width 0.3s;"></div>
               </div>
               <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px;" id="hostModalProcessHeap">堆: -- MB</div>
             </div>
 
-            <div class="card" style="padding:12px;background:#f8fafc;border:1px solid #e2e8f0;">
+            <div class="metric-stat-card">
               <div style="font-size:11.5px;color:var(--text-secondary);display:flex;justify-content:space-between;">
                 <span>系统运行时间</span>
                 <span class="badge success" style="font-size:10px;">Uptime</span>
@@ -2806,20 +2861,20 @@
             <div class="card" style="padding:14px;">
               <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--text-main);">操作系统与机器参数</div>
               <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;">
-                <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">操作系统版本:</span><strong id="hostModalOs">--</strong></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">硬件架构:</span><span id="hostModalArch" style="font-family:var(--font-mono);">--</span></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">当前登录用户:</span><span id="hostModalUser">--</span></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">主机名 (Hostname):</span><span id="hostModalHostname" style="font-weight:600;">--</span></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">操作系统版本:</span><strong id="hostModalOs">--</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">硬件架构:</span><span id="hostModalArch" style="font-family:var(--font-mono);">--</span></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">当前登录用户:</span><span id="hostModalUser">--</span></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">主机名 (Hostname):</span><span id="hostModalHostname" style="font-weight:600;">--</span></div>
               </div>
             </div>
 
             <div class="card" style="padding:14px;">
               <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--text-main);">Node.js 运行时与网络接口</div>
               <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;">
-                <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">Node.js 版本:</span><strong id="hostModalNodeVer" style="color:#10b981;font-family:var(--font-mono);">--</strong></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">V8 引擎 / libuv:</span><span id="hostModalV8Ver">--</span></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">主要网卡 IPv4:</span><span id="hostModalIp" style="font-family:var(--font-mono);font-weight:600;">--</span></div>
-                <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">工作目录 (Cwd):</span><code id="hostModalCwd" style="font-size:10.5px;">--</code></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Node.js 版本:</span><strong id="hostModalNodeVer" style="color:#10b981;font-family:var(--font-mono);">--</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">V8 引擎 / libuv:</span><span id="hostModalV8Ver">--</span></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">主要网卡 IPv4:</span><span id="hostModalIp" style="font-family:var(--font-mono);font-weight:600;">--</span></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">工作目录 (Cwd):</span><code id="hostModalCwd" style="font-size:10.5px;">--</code></div>
               </div>
             </div>
           </div>
@@ -2889,16 +2944,16 @@
     <!-- 弹窗 7: 确认弹窗 (Confirm Dialog) -->
     <!-- 弹窗: 现代化确认对话框 (Modern Confirm Modal) -->
     <dialog id="confirmDialog" class="modal modal-sm">
-      <div class="modal-form-wrap" style="padding:28px 24px;text-align:center;background:#ffffff;">
-        <div id="confirmIconWrap" style="width:48px;height:48px;border-radius:50%;background:#eff6ff;color:#0284c7;display:grid;place-items:center;margin:0 auto 16px auto;box-shadow:0 4px 12px rgba(14,165,233,0.15);transition:all 0.2s ease;">
+      <div class="modal-form-wrap" style="padding:28px 24px;text-align:center;">
+        <div id="confirmIconWrap" style="width:48px;height:48px;border-radius:50%;background:var(--primary-subtle);color:var(--primary);display:grid;place-items:center;margin:0 auto 16px auto;box-shadow:0 4px 12px var(--accent-glow);transition:all 0.2s ease;">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
             <line x1="12" y1="9" x2="12" y2="13"/>
             <line x1="12" y1="17" x2="12.01" y2="17"/>
           </svg>
         </div>
-        <h3 id="confirmTitle" style="margin:0 0 8px 0;font-size:16px;font-weight:700;color:#0f172a;">确认操作</h3>
-        <p id="confirmMessage" style="margin:0 0 22px 0;font-size:13px;line-height:1.6;color:#64748b;">确定要执行此操作吗？该操作不可撤销。</p>
+        <h3 id="confirmTitle" style="margin:0 0 8px 0;font-size:16px;font-weight:700;color:var(--text-main);">确认操作</h3>
+        <p id="confirmMessage" style="margin:0 0 22px 0;font-size:13px;line-height:1.6;color:var(--text-muted);">确定要执行此操作吗？该操作不可撤销。</p>
         <div style="display:flex;justify-content:center;gap:12px;">
           <button type="button" class="btn secondary" id="confirmCancelBtn" style="min-width:90px;padding:8px 16px;">取消</button>
           <button type="button" class="btn primary" id="confirmOkBtn" style="min-width:90px;padding:8px 16px;">确认</button>
@@ -2908,7 +2963,7 @@
 
     <!-- 弹窗: AI 生图与视觉创作中心 (AI Image Studio) -->
     <dialog id="aiImageGenModal" class="modal modal-lg">
-      <div class="modal-form-wrap" style="max-width:880px;background:#ffffff;">
+      <div class="modal-form-wrap" style="max-width:880px;">
         <div class="modal-header-row" style="margin-bottom:14px;">
           <div style="display:flex;align-items:center;gap:10px;">
             <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"></circle><circle cx="17.5" cy="10.5" r=".5"></circle><circle cx="8.5" cy="7.5" r=".5"></circle><circle cx="6.5" cy="12.5" r=".5"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path></svg></div>
@@ -3000,20 +3055,20 @@
           </div>
 
           <!-- 右侧预览与操作区域 -->
-          <div style="display:flex;flex-direction:column;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;min-height:360px;justify-content:center;align-items:center;position:relative;" id="imageGenPreviewWrap">
+          <div class="preview-canvas-box" id="imageGenPreviewWrap">
             <!-- 空状态 -->
             <div id="imageGenEmptyBox" style="text-align:center;color:var(--text-muted);padding:30px 16px;">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);margin-bottom:8px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-              <div style="font-weight:600;font-size:13.5px;color:#334155;margin-bottom:4px;">画面预览画布</div>
-              <div style="font-size:12px;color:#64748b;max-width:240px;margin:0 auto;">输入画面描述并选择生图模型，点击「立即生成 AI 图像」，高分辨率渲染图像将即时在此展示</div>
+              <div style="font-weight:600;font-size:13.5px;color:var(--text-main);margin-bottom:4px;">画面预览画布</div>
+              <div style="font-size:12px;color:var(--text-muted);max-width:240px;margin:0 auto;">输入画面描述并选择生图模型，点击「立即生成 AI 图像」，高分辨率渲染图像将即时在此展示</div>
             </div>
 
             <!-- 生成中 Loading 状态 -->
             <div id="imageGenLoadingBox" style="display:none;text-align:center;padding:30px 16px;width:100%;">
-              <div class="spinner" style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#0284c7;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 14px auto;"></div>
-              <div style="font-weight:700;font-size:14px;color:#0284c7;" id="imageGenLoadingText">AI 引擎正在精心绘制中...</div>
-              <div style="font-size:11.5px;color:#64748b;margin-top:4px;margin-bottom:14px;" id="imageGenLoadingSubtext">正在调度生图模型生成高分辨率画面，通常需 2~8 秒</div>
-              <button type="button" class="btn secondary" id="cancelGeneratingImgBtn" style="font-size:11.5px;padding:4px 12px;color:#ef4444;border-color:#fca5a5;">中止本次生成</button>
+              <div class="spinner" style="width:36px;height:36px;border:3px solid var(--border-default);border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 14px auto;"></div>
+              <div style="font-weight:700;font-size:14px;color:var(--primary);" id="imageGenLoadingText">AI 引擎正在精心绘制中...</div>
+              <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;margin-bottom:14px;" id="imageGenLoadingSubtext">正在调度生图模型生成高分辨率画面，通常需 2~8 秒</div>
+              <button type="button" class="btn secondary" id="cancelGeneratingImgBtn" style="font-size:11.5px;padding:4px 12px;color:var(--danger);border-color:var(--danger-border);">中止本次生成</button>
             </div>
 
             <!-- 生成成功结果 -->
@@ -3024,14 +3079,14 @@
               </div>
 
               <div style="width:100%;margin-top:10px;display:flex;flex-direction:column;gap:8px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#64748b;">
+                <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text-muted);">
                   <span id="imageGenInfoPrompt" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;"></span>
                   <span id="imageGenInfoMeta">1024x1024</span>
                 </div>
                 <div style="display:grid;grid-template-columns: 1fr 1fr 1.2fr;gap:6px;">
                   <button type="button" class="btn secondary" style="font-size:12px;padding:6px 8px;" id="downloadGenImgBtn">下载图片</button>
                   <button type="button" class="btn secondary" style="font-size:12px;padding:6px 8px;" id="copyGenImgUriBtn">复制路径</button>
-                  <button type="button" class="btn primary" style="font-size:12px;padding:6px 8px;background:#0284c7;" id="insertGenImgToChatBtn">插入对话</button>
+                  <button type="button" class="btn primary" style="font-size:12px;padding:6px 8px;" id="insertGenImgToChatBtn">插入对话</button>
                 </div>
               </div>
             </div>
@@ -3046,7 +3101,7 @@
 
     <!-- 弹窗: 全局 AI 环境变量配置中心 (Global Environment Variables Manager) -->
     <dialog id="envManagerModal" class="modal modal-lg">
-      <div class="modal-form-wrap" style="max-width:920px;background:#ffffff;">
+      <div class="modal-form-wrap" style="max-width:920px;">
         <div class="modal-header-row" style="margin-bottom:12px;">
           <div style="display:flex;align-items:center;gap:10px;">
             <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-1.5 1.5L14 9l-1.5-1.5M9 13l-4 4a3 3 0 1 0 4 4l4-4"></path></svg></div>
@@ -3059,13 +3114,13 @@
         </div>
 
         <!-- 顶部统计与操作栏 -->
-        <div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;padding:10px 14px;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <div class="env-header-bar">
           <div style="display:flex;align-items:center;gap:12px;">
-            <div style="font-size:13px;color:#334155;">
+            <div style="font-size:13px;color:var(--text-main);">
               <span>已配置密钥：</span>
               <strong id="envSetCount" style="color:#10b981;font-size:15px;">0</strong>
               <span style="color:#94a3b8;margin:0 4px;">/</span>
-              <span id="envTotalCount" style="color:#64748b;">0</span>
+              <span id="envTotalCount" style="color:var(--text-muted);">0</span>
             </div>
             <span class="badge success" style="font-size:11px;" id="envStatusBadge">本地配置就绪</span>
           </div>
@@ -3076,9 +3131,9 @@
         </div>
 
         <!-- 批量导入 .env 抽屉区域 -->
-        <div id="batchEnvImportBox" style="display:none;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;padding:12px;margin-bottom:14px;">
-          <div style="font-size:12.5px;font-weight:600;margin-bottom:6px;color:#1e293b;">批量粘贴 .env 内容 (支持 KEY=VALUE 格式)：</div>
-          <textarea id="batchEnvTextarea" rows="4" style="width:100%;box-sizing:border-box;font-family:monospace;font-size:12px;padding:8px;border-radius:6px;border:1px solid #cbd5e1;" placeholder="DEEPSEEK_API_KEY=sk-...\nOPENAI_API_KEY=sk-...\nANTHROPIC_API_KEY=sk-..."></textarea>
+        <div id="batchEnvImportBox" class="env-drawer-box" style="display:none;">
+          <div style="font-size:12.5px;font-weight:600;margin-bottom:6px;color:var(--text-main);">批量粘贴 .env 内容 (支持 KEY=VALUE 格式)：</div>
+          <textarea id="batchEnvTextarea" rows="4" style="width:100%;box-sizing:border-box;font-family:monospace;font-size:12px;padding:8px;border-radius:6px;border:1px solid var(--border-default);" placeholder="DEEPSEEK_API_KEY=sk-...\nOPENAI_API_KEY=sk-...\nANTHROPIC_API_KEY=sk-..."></textarea>
           <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
             <button type="button" class="btn secondary" style="font-size:12px;padding:4px 10px;" id="cancelBatchEnvBtn">取消</button>
             <button type="button" class="btn primary" style="font-size:12px;padding:4px 12px;" id="doBatchImportEnvBtn">解析并保存</button>
@@ -3086,8 +3141,8 @@
         </div>
 
         <!-- 新增单个自定义变量 -->
-        <div id="addCustomEnvBox" style="display:none;background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:12px;margin-bottom:14px;">
-          <div style="font-size:12.5px;font-weight:600;margin-bottom:8px;color:#1e293b;">新增自定义环境变量：</div>
+        <div id="addCustomEnvBox" class="env-drawer-box" style="display:none;">
+          <div style="font-size:12.5px;font-weight:600;margin-bottom:8px;color:var(--text-main);">新增自定义环境变量：</div>
           <div style="display:grid;grid-template-columns: 1fr 1.5fr auto;gap:8px;align-items:center;">
             <input type="text" id="newEnvKeyInput" placeholder="例如：CUSTOM_API_KEY" style="font-size:12.5px;padding:6px 10px;" />
             <input type="password" id="newEnvValInput" placeholder="在此粘贴密钥值 (Value)" style="font-size:12.5px;padding:6px 10px;" />
@@ -3158,8 +3213,8 @@
               </select>
             </div>
 
-            <div class="form-group full-width" style="background:#f8fafc;padding:12px;border-radius:8px;border:1px solid #e2e8f0;">
-              <div style="font-weight:600;font-size:12.5px;margin-bottom:8px;color:#1e293b;">高级安全选项：</div>
+            <div class="form-group full-width env-drawer-box">
+              <div style="font-weight:600;font-size:12.5px;margin-bottom:8px;color:var(--text-main);">高级安全选项：</div>
               <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;">
                 <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
                   <input type="checkbox" id="sslRedirectHttps" checked />
@@ -3219,8 +3274,8 @@
               <input id="proxyTargetInput" placeholder="例如: http://127.0.0.1:3000 或 http://127.0.0.1:9527" value="http://127.0.0.1:3000" required />
             </div>
 
-            <div class="form-group full-width" style="background:#f8fafc;padding:12px;border-radius:8px;border:1px solid #e2e8f0;">
-              <div style="font-weight:600;font-size:12.5px;margin-bottom:8px;color:#1e293b;">高级反代特性开关：</div>
+            <div class="form-group full-width env-drawer-box">
+              <div style="font-weight:600;font-size:12.5px;margin-bottom:8px;color:var(--text-main);">高级反代特性开关：</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12.5px;">
                 <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
                   <input type="checkbox" id="proxyWsToggle" checked />
@@ -3280,7 +3335,7 @@
             <span>下发执行指令：</span>
             <span id="execModalDuration" style="font-family:var(--font-mono);">耗时: 0ms</span>
           </div>
-          <div id="execModalCmdBox" style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:6px;padding:8px 12px;font-family:var(--font-mono);font-size:12px;color:#1e293b;word-break:break-all;max-height:65px;overflow-y:auto;">
+          <div id="execModalCmdBox" class="code-preview-box">
             --
           </div>
         </div>
@@ -3369,8 +3424,8 @@
         </div>
 
         <!-- 平台专属凭据输入动态区 -->
-        <div style="margin-top:12px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
-          <div style="font-size:12px;font-weight:600;color:#334155;margin-bottom:8px;">平台通信凭据与鉴权参数：</div>
+        <div class="env-drawer-box" style="margin-top:12px;">
+          <div style="font-size:12px;font-weight:600;color:var(--text-main);margin-bottom:8px;">平台通信凭据与鉴权参数：</div>
           
           <div id="botFields_telegram" class="bot-platform-fields">
             <div class="form-group">
@@ -3522,8 +3577,8 @@
             </div>
 
             <!-- 告警触发阈值与自动自愈配置 -->
-            <div class="form-group full-width" style="background:#f8fafc;padding:12px 14px;border-radius:8px;border:1px solid #e2e8f0;">
-              <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#1e293b;display:flex;align-items:center;gap:6px;">
+            <div class="form-group full-width env-drawer-box">
+              <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:var(--text-main);display:flex;align-items:center;gap:6px;">
                 <span>智能告警触发条件与 AI 自动化自愈：</span>
               </div>
               <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:10px;font-size:12.5px;">
@@ -3688,11 +3743,11 @@
               <label style="font-size:12.5px;font-weight:600;">自定义团队规范提示词 (Custom Rules Prompt)</label>
             </div>
             <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;flex-wrap:wrap;">
-              <span style="font-size:11px;color:#64748b;">快捷追加要求：</span>
-              <button type="button" class="btn text-btn commit-preset-chip" data-preset="scope" style="font-size:10.5px;padding:2px 6px;background:#f1f5f9;border-radius:4px;color:#475569;">+ 强制模块 Scope</button>
-              <button type="button" class="btn text-btn commit-preset-chip" data-preset="brief" style="font-size:10.5px;padding:2px 6px;background:#f1f5f9;border-radius:4px;color:#475569;">+ 首行不超过 50 字</button>
-              <button type="button" class="btn text-btn commit-preset-chip" data-preset="bullets" style="font-size:10.5px;padding:2px 6px;background:#f1f5f9;border-radius:4px;color:#475569;">+ 附带改动要点清单</button>
-              <button type="button" class="btn text-btn commit-preset-chip" data-preset="jira" style="font-size:10.5px;padding:2px 6px;background:#f1f5f9;border-radius:4px;color:#475569;">+ 关联 Issue 编号</button>
+              <span style="font-size:11px;color:var(--text-muted);">快捷追加要求：</span>
+              <button type="button" class="btn text-btn commit-preset-chip" data-preset="scope">+ 强制模块 Scope</button>
+              <button type="button" class="btn text-btn commit-preset-chip" data-preset="brief">+ 首行不超过 50 字</button>
+              <button type="button" class="btn text-btn commit-preset-chip" data-preset="bullets">+ 附带改动要点清单</button>
+              <button type="button" class="btn text-btn commit-preset-chip" data-preset="jira">+ 关联 Issue 编号</button>
             </div>
             <textarea id="commitRuleCustomPromptInput" rows="3" placeholder="输入团队个性化 Git 提交约束，例如：使用动词开头，说明为什么做此更改；首行不超过50个字；重大改动在首行标注 BREAKING CHANGE: ..." style="width:100%;padding:8px 10px;font-size:12px;font-family:var(--font-sans);border:1px solid var(--border-default);border-radius:var(--radius-sm);resize:none;"></textarea>
             <span style="font-size:11px;color:var(--text-muted);margin-top:2px;">

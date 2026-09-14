@@ -8,7 +8,7 @@ import { execa } from 'execa';
 import { AgentOrchestrator } from '../agent/index.js';
 import { WeChatChannel } from '../channels/wechat.js';
 import { ChannelManager, TelegramChannel, createChannelHost, parseCommand, HELP_TEXT, ChannelContactStore, WeChatContactStore, FeishuChannel, QQChannel, type ChannelContact, type ChannelChatMessage, type ChannelName, type WeChatContact, type WeChatChatMessage } from '../channels/index.js';
-import { BUILTIN_PROVIDERS, ConfigResolver, ConfigWriter, loadConfig, resolveConfigPath, sanitizeModelRef, type ModelPatch, type ProviderPatch, type ResolvedAgent, type ResolvedProvider } from '../config/index.js';
+import { BUILTIN_MODELS, BUILTIN_PROVIDERS, ConfigResolver, ConfigWriter, loadConfig, resolveConfigPath, sanitizeModelRef, type ModelPatch, type ProviderPatch, type ResolvedAgent, type ResolvedProvider } from '../config/index.js';
 import { describeError, type Attachment, type ProtocolName, type WireApi } from '../domain/index.js';
 import { planInjection, writeInjection, type InjectionTarget } from '../inject/index.js';
 import { ProviderRegistry } from '../providers/index.js';
@@ -78,12 +78,13 @@ interface GuiState {
   projects: GuiProject[];
   hiddenProviders?: string[];
   hiddenModels?: string[];
+  defaultProvidersCleared?: boolean;
   skills?: GuiSkill[];
   plugins?: GuiPlugin[];
   permissions?: GuiPermissionConfig;
 }
 
-const DATA_DIR = join(homedir(), '.hap', 'gui');
+const DATA_DIR = process.env.HAP_GUI_DATA_DIR || join(homedir(), '.hap', 'gui');
 const STATE_PATH = join(DATA_DIR, 'state.json');
 const ENV_PATH = join(DATA_DIR, 'env.json');
 const IMAGES_DIR = join(DATA_DIR, 'generated_images');
@@ -378,6 +379,7 @@ function readState(): GuiState {
   let projects: GuiProject[] = [];
   let hiddenProviders: string[] = [];
   let hiddenModels: string[] = [];
+  let defaultProvidersCleared = true;
   let skills = DEFAULT_SKILLS;
   let plugins = DEFAULT_PLUGINS;
   let permissions = DEFAULT_PERMISSIONS;
@@ -388,6 +390,7 @@ function readState(): GuiState {
       projects = Array.isArray(raw.projects) ? raw.projects : [];
       hiddenProviders = Array.isArray(raw.hiddenProviders) ? raw.hiddenProviders : [];
       hiddenModels = Array.isArray(raw.hiddenModels) ? raw.hiddenModels : [];
+      defaultProvidersCleared = raw.defaultProvidersCleared ?? true;
       if (raw.skills && raw.skills.length > 0) skills = raw.skills;
       if (raw.plugins && raw.plugins.length > 0) {
         // 合并已有与新增的官方预设
@@ -403,7 +406,7 @@ function readState(): GuiState {
       if (raw.permissions) permissions = raw.permissions;
     } catch {}
   } else {
-    // 仅在首次创建状态文件时，默认初始化当前工作区为初始工程
+    // 仅在首次创建状态文件时，默认初始化当前工作区为初始工程，并清空默认内置服务商
     const cwd = process.cwd();
     const defaultProject: GuiProject = {
       id: randomUUID(),
@@ -412,20 +415,31 @@ function readState(): GuiState {
       addedAt: new Date().toISOString(),
     };
     projects = [defaultProject];
+    hiddenProviders = Object.keys(BUILTIN_PROVIDERS);
+    hiddenModels = Object.keys(BUILTIN_MODELS);
+    defaultProvidersCleared = true;
     writeState({
       projects,
       hiddenProviders,
       hiddenModels,
+      defaultProvidersCleared,
       skills,
       plugins,
       permissions,
     });
   }
 
+  // 若处于默认服务商已清空模式且隐藏列表为空（如升级兼容），则默认隐藏全部内置项
+  if (defaultProvidersCleared && hiddenProviders.length === 0) {
+    hiddenProviders = Object.keys(BUILTIN_PROVIDERS);
+    hiddenModels = Object.keys(BUILTIN_MODELS);
+  }
+
   return {
     projects,
     hiddenProviders,
     hiddenModels,
+    defaultProvidersCleared,
     skills,
     plugins,
     permissions,
@@ -544,6 +558,7 @@ export class GuiService {
     return {
       configPath: this.configPath,
       defaultAgentId,
+      defaultModel: resolver.resolveDefaultModel(),
       projects: state.projects,
       providers,
       models,
@@ -825,6 +840,46 @@ export class GuiService {
     return { ok: true, count: ids.length };
   }
 
+  clearDefaultProviders(): object {
+    const builtinIds = Object.keys(BUILTIN_PROVIDERS);
+    const builtinModelAliases = Object.keys(BUILTIN_MODELS);
+    const state = readState();
+    state.hiddenProviders = Array.from(new Set([...(state.hiddenProviders || []), ...builtinIds]));
+    state.hiddenModels = Array.from(new Set([...(state.hiddenModels || []), ...builtinModelAliases]));
+    state.defaultProvidersCleared = true;
+    writeState(state);
+
+    const writer = new ConfigWriter(this.configPath);
+    for (const id of builtinIds) {
+      try {
+        writer.removeProvider(id);
+      } catch {
+        // 允许预置项不存在于 config.toml 中
+      }
+    }
+    for (const alias of builtinModelAliases) {
+      try {
+        writer.removeModel(alias);
+      } catch {
+        // 忽略
+      }
+    }
+    this.info(`已清空全部默认服务商 (${builtinIds.length} 个) 及内置模型`);
+    return { ok: true, clearedProvidersCount: builtinIds.length, clearedModelsCount: builtinModelAliases.length };
+  }
+
+  restoreDefaultProviders(): object {
+    const builtinIds = new Set(Object.keys(BUILTIN_PROVIDERS));
+    const builtinModelAliases = new Set(Object.keys(BUILTIN_MODELS));
+    const state = readState();
+    state.hiddenProviders = (state.hiddenProviders || []).filter((id) => !builtinIds.has(id));
+    state.hiddenModels = (state.hiddenModels || []).filter((m) => !builtinModelAliases.has(m));
+    state.defaultProvidersCleared = false;
+    writeState(state);
+    this.info('已恢复默认服务商预置');
+    return { ok: true };
+  }
+
   upsertModel(input: GuiModelInput): object {
     const alias = input.alias.trim();
     if (!alias) throw new Error('模型别名不能为空');
@@ -839,6 +894,7 @@ export class GuiService {
       context_window: input.contextWindow,
       max_output_tokens: input.maxOutputTokens,
       protocol: input.protocol,
+      capabilities: input.capabilities,
     };
     const writer = new ConfigWriter(this.configPath);
     writer.upsertModel(alias, patch);
@@ -901,6 +957,93 @@ export class GuiService {
     const result = new ConfigWriter(this.configPath).setGlobals({ defaultAgent: id });
     this.info('已设置默认智能体：' + id);
     return result;
+  }
+
+  setDefaultModel(rawAlias: string): object {
+    const alias = rawAlias.trim();
+    if (!alias) throw new Error('模型标识不能为空');
+    const resolver = this.resolver();
+    const models = resolver.resolveModels();
+    const found = models.get(alias) || [...models.values()].find((m) => m.alias === alias || m.fullName === alias);
+    if (!found) {
+      throw new Error(`模型 "${alias}" 未在已注册模型目录中找到，无法设为默认模型`);
+    }
+    const result = new ConfigWriter(this.configPath).setGlobals({ defaultModel: alias });
+    this.info('已设置全局默认模型：' + alias);
+    return result;
+  }
+
+  async testModel(rawAlias: string): Promise<{ ok: boolean; latencyMs?: number; preview?: string; error?: string }> {
+    const alias = rawAlias.trim();
+    if (!alias) return { ok: false, error: '请指定要测试的模型名称' };
+
+    const resolver = this.resolver();
+    const models = resolver.resolveModels();
+    const modelEntry = models.get(alias) || [...models.values()].find((m) => m.alias === alias || m.fullName === alias);
+    if (!modelEntry) {
+      return { ok: false, error: `未在模型目录中找到模型 "${alias}"` };
+    }
+
+    const providerId = modelEntry.providerId;
+    const provider = resolver.resolveProviders().get(providerId);
+    if (!provider) {
+      return { ok: false, error: `模型所属服务商 "${providerId}" 未找到` };
+    }
+
+    const saved = readSavedEnv();
+    const envKey = provider.envKey || `${providerId.toUpperCase()}_API_KEY`;
+    const apiKey = (provider.envKey ? process.env[provider.envKey] || saved[provider.envKey] : undefined)
+      || process.env[envKey] || saved[envKey] || process.env[`${providerId.toUpperCase()}_API_KEY`];
+
+    const tempEnv: Record<string, string> = { ...(process.env as Record<string, string>) };
+    if (apiKey) {
+      tempEnv[envKey] = apiKey;
+    }
+
+    const tempMap = new Map<string, ResolvedProvider>([[providerId, provider]]);
+    const registry = new ProviderRegistry(tempMap, { env: tempEnv });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    const started = Date.now();
+
+    try {
+      let preview = '';
+      const realModelName = modelEntry.model || modelEntry.alias;
+      for await (const event of registry.client(providerId).send(
+        {
+          model: realModelName,
+          messages: [{ role: 'user', content: 'Say "OK"' }],
+          params: {},
+          maxTokens: 16,
+        },
+        controller.signal
+      )) {
+        if (event.type === 'text_delta') {
+          preview += event.text;
+        } else if (event.type === 'finish') {
+          break;
+        }
+      }
+      const latencyMs = Date.now() - started;
+      this.info(`测试模型 ${alias} (${realModelName}) 成功，耗时 ${latencyMs}ms`);
+      return {
+        ok: true,
+        latencyMs,
+        preview: preview.trim() || 'OK',
+      };
+    } catch (err) {
+      const msg = describeError(err);
+      const isTimeout = msg.includes('aborted') || msg.includes('timeout') || controller.signal.aborted;
+      const errorText = isTimeout ? '模型请求超时 (12s)' : msg;
+      this.error(`测试模型 ${alias} 失败：${errorText}`);
+      return {
+        ok: false,
+        latencyMs: Date.now() - started,
+        error: errorText,
+      };
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   removeAgent(rawId: string): object {
