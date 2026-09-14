@@ -92,4 +92,49 @@ export function registerMemoryCommands(root: Command, globals: () => GlobalOptio
         fail(`未找到记忆：${id}`);
       }
     });
+
+  mem
+    .command('update <id>')
+    .description('更新一条长期记忆')
+    .option('--title <title>', '新标题')
+    .option('--content <content>', '新正文')
+    .option('--category <category>', '新类别')
+    .option('--tags <tags>', '新标签，逗号分隔')
+    .option('--workspace <path>', '工作区')
+    .option('--agent-id <id>', '指定智能体')
+    .action(async (id, opts) => {
+      const ctx = new CliContext(globals());
+      const patch: Record<string, unknown> = {};
+      if (opts.title !== undefined) patch.title = opts.title;
+      if (opts.content !== undefined) patch.content = opts.content;
+      if (opts.category !== undefined) patch.category = opts.category as MemoryCategory;
+      if (opts.tags !== undefined) patch.tags = opts.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean);
+      if (opts.workspace !== undefined) patch.workspace = opts.workspace;
+      if (opts.agentId !== undefined) patch.agentId = opts.agentId;
+      const card = await store.updateMemoryWithEmbedding(id, patch);
+      if (!card) { fail(`未找到记忆：${id}`); return; }
+      emit(ctx, `✓ 已更新记忆：${card.title}`, card);
+    });
+
+  mem
+    .command('rebuild')
+    .description('重建全部记忆向量索引')
+    .action(async () => {
+      const ctx = new CliContext(globals());
+      const count = await store.rebuildEmbeddings();
+      emit(ctx, `✓ 已重建 ${count} 条记忆的向量索引`, { count });
+    });
+
+  mem
+    .command('extract <taskId>')
+    .description('从任务文本提炼长期记忆')
+    .requiredOption('--input <text>', '用户输入')
+    .requiredOption('--output <text>', '助手输出')
+    .option('--agent-id <id>', '智能体 ID', '')
+    .option('--workspace <path>', '工作区')
+    .action(async (taskId, opts) => {
+      const ctx = new CliContext(globals());
+      const cards = await store.extractTaskMemory({ taskId, agentId: opts.agentId, workspace: opts.workspace, userInput: opts.input, assistantOutput: opts.output });
+      emit(ctx, `✓ 已提炼 ${cards.length} 条长期记忆`, cards);
+    });
 }

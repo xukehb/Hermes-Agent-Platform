@@ -76,6 +76,8 @@ function registerIpc(): void {
   ipcMain.handle('gui:addMemory', (_event, input) => invoke(() => service.addMemory(input)));
   ipcMain.handle('gui:searchMemories', (_event, payload) => invoke(() => service.searchMemories(payload.query, payload.limit)));
   ipcMain.handle('gui:removeMemory', (_event, id) => invoke(() => service.removeMemory(id)));
+  ipcMain.handle('gui:updateMemory', (_event, payload) => invoke(() => service.updateMemory(payload.id, payload.patch)));
+  ipcMain.handle('gui:rebuildMemoryEmbeddings', () => invoke(() => service.rebuildMemoryEmbeddings()));
   ipcMain.handle('gui:findDefinition', (_event, payload) => invoke(() => service.findDefinition(payload.symbol, payload.workspace)));
   ipcMain.handle('gui:findReferences', (_event, payload) => invoke(() => service.findReferences(payload.symbol, payload.workspace)));
   ipcMain.handle('gui:listSymbols', (_event, file) => invoke(() => service.listSymbols(file)));

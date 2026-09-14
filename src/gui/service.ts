@@ -1757,13 +1757,7 @@ export class GuiService {
     return MemoryStore.getInstance().listMemories(category);
   }
 
-  async addMemory(input: {
-    category: MemoryCard['category'];
-    title: string;
-    content: string;
-    tags?: string[];
-    workspace?: string;
-  }): Promise<MemoryCard> {
+  async addMemory(input: Parameters<MemoryStore['addMemory']>[0]): Promise<MemoryCard> {
     const card = await MemoryStore.getInstance().addMemory(input);
     this.info(`已存入长期记忆: [${card.category}] ${card.title}`);
     return card;
@@ -1771,6 +1765,14 @@ export class GuiService {
 
   async searchMemories(query: string, limit: number = 5) {
     return MemoryStore.getInstance().searchMemories({ text: query, limit });
+  }
+
+  async updateMemory(id: string, patch: Parameters<MemoryStore['updateMemory']>[1]): Promise<MemoryCard | undefined> {
+    return MemoryStore.getInstance().updateMemoryWithEmbedding(id, patch);
+  }
+
+  async rebuildMemoryEmbeddings(): Promise<{ count: number }> {
+    return { count: await MemoryStore.getInstance().rebuildEmbeddings() };
   }
 
   removeMemory(id: string): { ok: boolean } {

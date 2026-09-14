@@ -10,7 +10,7 @@ import { AgentOrchestrator } from '../agent/index.js';
 import { BUILTIN_PROVIDERS, ConfigResolver, loadConfig, resolveConfigPath } from '../config/index.js';
 import { removeAgent, upsertAgent, type GuiAgentInput } from '../gui/agent-operations.js';
 import { ScheduleStore, SchedulerEngine } from '../scheduler/index.js';
-import { MemoryStore } from '../memory/index.js';
+import { MemoryStore, type MemoryCategory } from '../memory/index.js';
 import { RemoteClientManager, RemoteServerStore, type RemoteServerConfig } from '../remote/index.js';
 import { getHostSystemInfo, scanLocalDisk, cleanLocalDisk, lookupIpGeo } from '../system/index.js';
 import { parseUnifiedDiff } from '../tools/diff-parser.js';
@@ -415,10 +415,55 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
     return c.json({ ok: true, data: list });
   });
 
+  app.get('/api/memories/search', async (c) => {
+    const text = c.req.query('q') || '';
+    const categoryValue = c.req.query('category');
+    const category = ['preference', 'fact', 'case', 'architecture', 'convention', 'domain', 'custom'].includes(categoryValue || '')
+      ? categoryValue as MemoryCategory
+      : undefined;
+    const results = await MemoryStore.getInstance().searchMemories({
+      text,
+      category,
+      agentId: c.req.query('agentId') || undefined,
+      workspace: c.req.query('workspace') || undefined,
+      limit: Number(c.req.query('limit')) || 5,
+    });
+    return c.json({ ok: true, data: results });
+  });
+
   app.post('/api/memories', async (c) => {
     const body = await c.req.json();
+    if (!body || typeof body.title !== 'string' || typeof body.content !== 'string' || typeof body.category !== 'string') {
+      return c.json({ ok: false, error: '记忆必须包含 title、content、category' }, 400);
+    }
     const card = await MemoryStore.getInstance().addMemory(body);
     return c.json({ ok: true, data: card });
+  });
+
+  app.patch('/api/memories/:id', async (c) => {
+    const body = await c.req.json();
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return c.json({ ok: false, error: '记忆更新参数必须是对象' }, 400);
+    const card = await MemoryStore.getInstance().updateMemoryWithEmbedding(c.req.param('id'), body);
+    if (!card) return c.json({ ok: false, error: '未找到记忆' }, 404);
+    return c.json({ ok: true, data: card });
+  });
+
+  app.delete('/api/memories/:id', (c) => {
+    const id = c.req.param('id');
+    const ok = MemoryStore.getInstance().removeMemory(id);
+    return c.json({ ok, data: { id } }, ok ? 200 : 404);
+  });
+
+  app.post('/api/memories/rebuild', async (c) => {
+    const count = await MemoryStore.getInstance().rebuildEmbeddings();
+    return c.json({ ok: true, data: { count } });
+  });
+
+  app.post('/api/memories/extract', async (c) => {
+    const body = await c.req.json();
+    if (!body || typeof body.taskId !== 'string' || typeof body.agentId !== 'string' || typeof body.userInput !== 'string' || typeof body.assistantOutput !== 'string') return c.json({ ok: false, error: '提炼参数不完整' }, 400);
+    const cards = await MemoryStore.getInstance().extractTaskMemory(body);
+    return c.json({ ok: true, data: cards });
   });
 
   // 6. 远程服务器接口
@@ -682,6 +727,7 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
             const query = category ? '?category=' + encodeURIComponent(category) : '';
             return readApi(await fetch('/api/memories' + query, { headers: authHeader }));
           },
+          searchMemories: async (query, limit) => readApi(await fetch('/api/memories/search?q=' + encodeURIComponent(query) + '&limit=' + encodeURIComponent(String(limit || 5)), { headers: authHeader })),
           addMemory: async (input) => {
             return readApi(await fetch('/api/memories', {
               method: 'POST',
@@ -689,6 +735,15 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
               body: JSON.stringify(input)
             }));
           },
+          updateMemory: async (id, patch) => readApi(await fetch('/api/memories/' + encodeURIComponent(id), {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json', ...authHeader }, body: JSON.stringify(patch)
+          })),
+          removeMemory: async (id) => readApi(await fetch('/api/memories/' + encodeURIComponent(id), {
+            method: 'DELETE', headers: authHeader
+          })),
+          rebuildMemoryEmbeddings: async () => readApi(await fetch('/api/memories/rebuild', {
+            method: 'POST', headers: authHeader
+          })),
           getTelegramConfig: async () => ({ enabled: false, mode: 'polling', defaultAgent: 'ops', running: false }),
           getWeChatConfig: async () => ({ enabled: false, mode: 'ilink_bot', defaultAgent: 'ops', running: false, status: 'idle' }),
           gitDiff: async (projectPath, file) => {

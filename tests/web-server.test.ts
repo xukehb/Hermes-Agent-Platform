@@ -410,4 +410,39 @@ describe('Headless Web Workbench Server', () => {
 
     expect(requests).toEqual(['/api/host/sysinfo']);
   });
+
+  it('supports complete memory CRUD, search, rebuild, and extraction endpoints', async () => {
+    const app = createWebApp();
+    const created = await app.request('/api/memories', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Web memory test', content: '项目必须使用 ESM 模块', category: 'preference', agentId: 'coder' }),
+    });
+    expect(created.status).toBe(200);
+    const card = (await created.json()).data;
+    expect(card.layer).toBe('semantic');
+
+    const updated = await app.request(`/api/memories/${card.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: '项目必须使用 ESM 模块并统一 TypeScript' }),
+    });
+    expect(updated.status).toBe(200);
+
+    const search = await app.request('/api/memories/search?q=TypeScript&agentId=coder');
+    expect(search.status).toBe(200);
+    expect((await search.json()).data).toEqual(expect.arrayContaining([expect.objectContaining({ memory: expect.objectContaining({ id: card.id }) })]));
+
+    const rebuild = await app.request('/api/memories/rebuild', { method: 'POST' });
+    expect(rebuild.status).toBe(200);
+
+    const extracted = await app.request('/api/memories/extract', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ taskId: 'web-task', agentId: 'coder', userInput: '请遵守项目规范', assistantOutput: '项目必须统一使用 TypeScript 和 ESM 模块' }),
+    });
+    expect(extracted.status).toBe(200);
+    const extractedCards = (await extracted.json()).data as Array<{ id: string }>;
+    expect(extractedCards.length).toBeGreaterThan(0);
+    for (const item of extractedCards) await app.request(`/api/memories/${item.id}`, { method: 'DELETE' });
+
+    const removed = await app.request(`/api/memories/${card.id}`, { method: 'DELETE' });
+    expect(removed.status).toBe(200);
+  });
 });

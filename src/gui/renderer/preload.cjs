@@ -61,6 +61,8 @@ contextBridge.exposeInMainWorld('hap', {
   addMemory: (input) => call('gui:addMemory', input),
   searchMemories: (query, limit) => call('gui:searchMemories', { query, limit }),
   removeMemory: (id) => call('gui:removeMemory', id),
+  updateMemory: (id, patch) => call('gui:updateMemory', { id, patch }),
+  rebuildMemoryEmbeddings: () => call('gui:rebuildMemoryEmbeddings'),
   findDefinition: (symbol, workspace) => call('gui:findDefinition', { symbol, workspace }),
   findReferences: (symbol, workspace) => call('gui:findReferences', { symbol, workspace }),
   listSymbols: (file) => call('gui:listSymbols', file),
