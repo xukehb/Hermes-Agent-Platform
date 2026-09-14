@@ -73,6 +73,13 @@ function registerIpc(): void {
   ipcMain.handle('gui:getGitAuthInfo', (_event, projectPath) => invoke(() => service.getGitAuthInfo(projectPath)));
   ipcMain.handle('gui:configureGitSsh', (_event, projectPath) => invoke(() => service.configureGitSsh(projectPath)));
   ipcMain.handle('gui:configureGitToken', (_event, payload) => invoke(() => service.configureGitToken(payload.projectPath, payload.username, payload.token)));
+  ipcMain.handle('gui:gitListBranches', (_event, projectPath) => invoke(() => service.gitListBranches(projectPath)));
+  ipcMain.handle('gui:gitCheckoutBranch', (_event, payload) => invoke(() => service.gitCheckoutBranch(payload.projectPath, payload.branchName, payload.createNew)));
+  ipcMain.handle('gui:gitMergeBranch', (_event, payload) => invoke(() => service.gitMergeBranch(payload.projectPath, payload.targetBranch, payload.options)));
+  ipcMain.handle('gui:gitMergeAbort', (_event, projectPath) => invoke(() => service.gitMergeAbort(projectPath)));
+  ipcMain.handle('gui:gitRebaseBranch', (_event, payload) => invoke(() => service.gitRebaseBranch(payload.projectPath, payload.targetBranch)));
+  ipcMain.handle('gui:gitRebaseAbort', (_event, projectPath) => invoke(() => service.gitRebaseAbort(projectPath)));
+  ipcMain.handle('gui:gitRebaseContinue', (_event, projectPath) => invoke(() => service.gitRebaseContinue(projectPath)));
   ipcMain.handle('gui:gitDiff', (_event, payload) => invoke(() => service.gitDiff(payload.projectPath, payload.file)));
   ipcMain.handle('gui:getVisualDiff', (_event, payload) => invoke(() => service.getVisualDiff(payload.projectPath, payload.file)));
   ipcMain.handle('gui:revertFileDiff', (_event, payload) => invoke(() => service.revertFileDiff(payload.projectPath, payload.file)));

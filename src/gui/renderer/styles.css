@@ -6363,5 +6363,89 @@ body.sidebar-collapsed .sidebar-bottom-panel.sidebar-settings-only .nav-settings
   gap: 5px;
 }
 
+/* ==========================================================================
+   Git 分支管理与协同弹窗专属样式 (Git Branch Modal)
+   ========================================================================== */
+.git-branch-hero-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  gap: 12px;
+}
+
+.git-branch-icon-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--primary-subtle);
+  border: 1px solid var(--primary-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.git-branch-list-container {
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  display: flex;
+  flex-direction: column;
+}
+
+.git-branch-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-default);
+  transition: background-color 0.15s ease;
+  font-size: 12px;
+}
+
+.git-branch-item:last-child {
+  border-bottom: none;
+}
+
+.git-branch-item:hover {
+  background: var(--bg-hover);
+}
+
+.git-branch-item.is-current {
+  background: var(--primary-subtle);
+}
+
+.git-branch-item-name {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-main);
+}
+
+.git-branch-item-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 240px;
+}
+
+.git-branch-create-box {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+
+
 
 

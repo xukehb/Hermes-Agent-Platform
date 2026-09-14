@@ -171,6 +171,8 @@ export interface GuiGitStatus {
   totalAdditions: number;
   totalDeletions: number;
   recentCommits: Array<{ hash: string; message: string }>;
+  isMerging?: boolean | undefined;
+  isRebasing?: boolean | undefined;
 }
 
 // 多机器人实例平台与数据模型

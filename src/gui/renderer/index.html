@@ -2456,7 +2456,11 @@
         <div style="padding:4px 0 10px 0;border-bottom:1px solid var(--border-default);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
           <div style="display:flex;align-items:center;gap:12px;font-size:12px;">
             <div><span style="color:var(--text-muted);">工程：</span><strong id="gitProjectPathText" style="font-family:var(--font-mono);">-</strong></div>
-            <div><span style="color:var(--text-muted);">分支：</span><strong id="gitBranchBadge" class="prop-chip" style="color:var(--accent);">main</strong></div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="color:var(--text-muted);">分支：</span>
+              <strong id="gitBranchBadge" class="prop-chip" style="color:var(--accent);cursor:pointer;" title="点击管理分支、合并或变基">main</strong>
+              <button type="button" class="btn small secondary" id="openBranchManagerBtn" title="切换分支、创建新分支、合并 (Merge) 或变基 (Rebase)" style="padding:2px 8px;font-size:11px;height:22px;display:inline-flex;align-items:center;gap:4px;">🌿 分支与协同 ▾</button>
+            </div>
             <div><span style="color:var(--text-muted);">远端：</span><span id="gitRemoteUrlText" style="font-family:var(--font-mono);color:var(--text-secondary);">-</span></div>
           </div>
           <div id="gitSummaryStatsBadge" style="font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--text-main);">
@@ -2470,13 +2474,16 @@
         </div>
 
         <div id="gitRepoState" style="display:flex;flex-direction:column;flex:1;min-height:0;margin-top:10px;">
-          <!-- 冲突预警提示横幅 -->
-          <div id="gitConflictAlertBanner" class="git-conflict-banner">
+          <!-- 冲突预警/合并变基状态提示横幅 -->
+          <div id="gitConflictAlertBanner" class="git-conflict-banner" style="display:none;">
             <div style="display:flex;align-items:center;gap:6px;">
               <span style="font-size:14px;">⚠️</span>
-              <span><strong>检测到代码合并冲突！</strong>存在未合并的冲突文件，请查看下方标有「冲突」的文件。</span>
+              <span id="gitConflictAlertText"><strong>检测到代码冲突！</strong>存在未合并的冲突文件，请查看下方标有「冲突」的文件。</span>
             </div>
-            <div style="display:flex;gap:6px;">
+            <div style="display:flex;gap:6px;align-items:center;" id="gitConflictActionGroup">
+              <button type="button" class="btn secondary" id="gitAbortMergeBtn" style="display:none;font-size:11px;padding:2px 8px;color:var(--danger);border-color:var(--danger);" title="终止本次合并并恢复现场">终止合并 (--abort)</button>
+              <button type="button" class="btn secondary" id="gitAbortRebaseBtn" style="display:none;font-size:11px;padding:2px 8px;color:var(--danger);border-color:var(--danger);" title="终止本次变基并恢复现场">终止变基 (--abort)</button>
+              <button type="button" class="btn primary" id="gitContinueRebaseBtn" style="display:none;font-size:11px;padding:2px 8px;background:#0284c7;border-color:#0284c7;" title="冲突已解决并暂存后继续变基">继续变基 (--continue)</button>
               <button type="button" class="btn secondary" onclick="window.openVsCodeForProject?.()" style="font-size:11px;padding:2px 8px;">VS Code 解决冲突</button>
               <button type="button" class="btn primary" onclick="window.askAiResolveConflicts?.()" style="font-size:11px;padding:2px 8px;background:#e11d48;border-color:#be123c;">🤖 唤醒 AI 智能解决</button>
             </div>
@@ -2686,6 +2693,178 @@
             🚀 立即测试推送
           </button>
           <button type="button" class="btn secondary" id="closeGitAuthModalFooterBtn">关闭</button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- 弹窗 8: Git 分支管理与高级协同 (Git Branch & Workflow Modal) -->
+    <dialog id="gitBranchModal" class="modal modal-md">
+      <div class="modal-form-wrap">
+        <div class="modal-header-row">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="6" y1="3" x2="6" y2="15"/>
+                <circle cx="18" cy="6" r="3"/>
+                <circle cx="6" cy="18" r="3"/>
+                <path d="M18 9a9 9 0 0 1-9 9"/>
+              </svg>
+              <h2>Git 分支协同与版本演进</h2>
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:3px;">
+              分支切换 · 新建分支 · 分支合并 (Merge) · 分支变基 (Rebase)
+            </div>
+          </div>
+          <button type="button" class="btn-close" id="closeGitBranchModalBtn" aria-label="关闭" title="关闭"></button>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <!-- 当前分支卡片 -->
+          <div class="git-branch-hero-card">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="git-branch-icon-badge">🌿</div>
+              <div>
+                <div style="font-size:11.5px;color:var(--text-muted);">当前所在分支</div>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:2px;">
+                  <span id="gitBranchCurrentName" style="font-size:15px;font-weight:700;color:var(--primary);font-family:var(--font-mono);">main</span>
+                  <span id="gitBranchCurrentStatusBadge" class="prop-chip" style="font-size:11px;">干净工作区</span>
+                </div>
+              </div>
+            </div>
+            <div id="gitBranchWorkflowState" style="font-size:12px;display:none;"></div>
+          </div>
+
+          <!-- 分支功能 Tab 切换 -->
+          <div class="git-auth-tab-bar">
+            <button type="button" class="git-auth-tab-btn active" id="branchTabSwitchBtn">
+              <span>🔀</span> 分支列表与切换
+            </button>
+            <button type="button" class="git-auth-tab-btn" id="branchTabMergeBtn">
+              <span>🌿</span> 分支合并 (Merge)
+            </button>
+            <button type="button" class="git-auth-tab-btn" id="branchTabRebaseBtn">
+              <span>🔄</span> 分支变基 (Rebase)
+            </button>
+          </div>
+
+          <!-- Tab 1: 分支列表与切换 / 新建 -->
+          <div id="branchPanelSwitch" style="display:flex;flex-direction:column;gap:12px;">
+            <!-- 搜索与筛选 -->
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input type="search" id="branchSearchInput" placeholder="🔍 搜索本地或远程分支..." style="flex:1;" />
+              <button type="button" class="btn secondary" id="refreshBranchListBtn" title="刷新分支列表" style="padding:6px 10px;font-size:12px;">
+                🔄 刷新
+              </button>
+            </div>
+
+            <!-- 分支列表容器 -->
+            <div class="git-branch-list-container" id="gitBranchListContainer">
+              <div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">
+                正在加载分支数据...
+              </div>
+            </div>
+
+            <!-- 底部新建分支表单 -->
+            <div class="git-branch-create-box">
+              <div style="font-size:12px;font-weight:600;color:var(--text-main);margin-bottom:6px;display:flex;align-items:center;gap:5px;">
+                <span>✨</span> 基于当前分支创建并切换新分支：
+              </div>
+              <div style="display:flex;gap:8px;">
+                <input type="text" id="newBranchNameInput" placeholder="输入新分支名称，如 feat/login 或 fix/ui-bug" style="flex:1;" />
+                <button type="button" class="btn primary" id="createNewBranchBtn" style="white-space:nowrap;padding:6px 14px;font-weight:600;">
+                  创建并检出
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 2: 分支合并 (Merge) -->
+          <div id="branchPanelMerge" style="display:none;flex-direction:column;gap:14px;">
+            <div class="git-auth-info-tip">
+              <span style="font-size:14px;flex-shrink:0;">💡</span>
+              <div>
+                <strong>分支合并工作流：</strong>将选定分支的代码改动合并到当前分支 (<code id="mergeCurrentBranchLabel" style="font-weight:700;">main</code>)。若产生冲突，界面将高亮标红并提供协同解决方案。
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:0;">
+              <label style="font-size:12px;font-weight:600;margin-bottom:6px;display:block;">选择待合并的目标分支：</label>
+              <select id="mergeTargetBranchSelect" class="form-select" style="width:100%;">
+                <option value="">正在加载分支列表...</option>
+              </select>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:8px;background:var(--bg-subtle);padding:12px;border-radius:var(--radius-sm);border:1px solid var(--border-default);">
+              <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+                <input type="checkbox" id="mergeNoFfCheckbox" checked />
+                <span><strong>强制创建合并提交 (--no-ff)</strong>：生成独立的 Merge 节点（推荐）</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+                <input type="checkbox" id="mergeSquashCheckbox" />
+                <span><strong>压缩合并 (--squash)</strong>：将分支的所有提交浓缩为一个未提交的代码变更</span>
+              </label>
+            </div>
+
+            <div style="display:flex;gap:10px;align-items:center;">
+              <button type="button" class="btn primary" id="executeMergeBtn" style="flex:1;padding:8px 14px;font-weight:600;">
+                🌿 执行分支合并 (git merge)
+              </button>
+              <button type="button" class="btn secondary" id="abortMergeModalBtn" style="display:none;padding:8px 14px;color:var(--danger);border-color:var(--danger);">
+                终止合并 (--abort)
+              </button>
+            </div>
+          </div>
+
+          <!-- Tab 3: 分支变基 (Rebase) -->
+          <div id="branchPanelRebase" style="display:none;flex-direction:column;gap:14px;">
+            <div class="git-auth-info-tip">
+              <span style="font-size:14px;flex-shrink:0;">🔄</span>
+              <div>
+                <strong>分支变基工作流：</strong>将当前分支 (<code id="rebaseCurrentBranchLabel" style="font-weight:700;">main</code>) 的提交序列整体“移动变基”到目标基底分支之后，形成线性干净的提交历史。
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:0;">
+              <label style="font-size:12px;font-weight:600;margin-bottom:6px;display:block;">选择目标基底分支 (Rebase Onto)：</label>
+              <select id="rebaseTargetBranchSelect" class="form-select" style="width:100%;">
+                <option value="">正在加载分支列表...</option>
+              </select>
+            </div>
+
+            <div class="git-auth-steps-box">
+              <div class="git-auth-steps-title">
+                <span>⚠️</span> 变基操作规范与提醒：
+              </div>
+              <div>· 推荐在个人特性分支上将基底变基到 <code>origin/main</code> 或 <code>main</code> 以同步主干；</div>
+              <div>· 切勿对多人共享的公共主干分支进行变基操作，避免改写公共历史；</div>
+              <div>· 遇冲突变基将自动暂停，在解决冲突并暂存后点击“继续变基”即可完成。</div>
+            </div>
+
+            <div style="display:flex;gap:10px;align-items:center;">
+              <button type="button" class="btn primary" id="executeRebaseBtn" style="flex:1;padding:8px 14px;font-weight:600;">
+                🔄 开始执行变基 (git rebase)
+              </button>
+            </div>
+
+            <!-- 变基冲突时的操作控制栏 -->
+            <div id="rebaseInProgressControls" style="display:none;flex-direction:column;gap:8px;background:rgba(239, 68, 68, 0.08);border:1px solid rgba(239, 68, 68, 0.3);padding:12px;border-radius:var(--radius-sm);">
+              <div style="font-size:12px;font-weight:600;color:var(--danger);display:flex;align-items:center;gap:6px;">
+                <span>⚠️ 当前变基处于暂停状态（检测到代码冲突）：</span>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button type="button" class="btn primary" id="continueRebaseModalBtn" style="flex:1;background:var(--primary);font-size:12px;">
+                  解决冲突后继续变基 (--continue)
+                </button>
+                <button type="button" class="btn secondary" id="abortRebaseModalBtn" style="color:var(--danger);font-size:12px;">
+                  终止变基并恢复现场 (--abort)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:16px;margin-top:16px;border-top:1px solid var(--border-default);">
+          <button type="button" class="btn secondary" id="closeGitBranchModalFooterBtn">关闭</button>
         </div>
       </div>
     </dialog>

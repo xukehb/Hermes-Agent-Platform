@@ -1597,8 +1597,20 @@ export class GuiService {
         totalAdditions: 0,
         totalDeletions: 0,
         recentCommits: [],
+        isMerging: false,
+        isRebasing: false,
       };
     }
+
+    let isMerging = false;
+    let isRebasing = false;
+    try {
+      const gitDirRes = await execa('git', ['rev-parse', '--git-dir'], { cwd: projectPath });
+      const gitDir = gitDirRes.stdout.trim();
+      const absGitDir = isAbsolute(gitDir) ? gitDir : join(projectPath, gitDir);
+      isMerging = existsSync(join(absGitDir, 'MERGE_HEAD'));
+      isRebasing = existsSync(join(absGitDir, 'rebase-merge')) || existsSync(join(absGitDir, 'rebase-apply'));
+    } catch {}
 
     let branch = 'main';
     try {
@@ -1707,6 +1719,8 @@ export class GuiService {
       totalAdditions,
       totalDeletions,
       recentCommits,
+      isMerging,
+      isRebasing,
     };
   }
 
@@ -1891,6 +1905,259 @@ export class GuiService {
 
     this.info(`Git 凭据已保存至系统 (用户: ${cleanUsername})`);
     return { ok: true, message: 'GitHub 凭据已成功保存！' };
+  }
+
+  async gitListBranches(projectPath: string): Promise<{
+    ok: boolean;
+    currentBranch: string;
+    localBranches: Array<{ name: string; isCurrent: boolean; upstream?: string | undefined; lastCommit?: string | undefined }>;
+    remoteBranches: Array<{ name: string; lastCommit?: string | undefined }>;
+    isMerging: boolean;
+    isRebasing: boolean;
+  }> {
+    if (!projectPath) throw new Error('未指定项目路径');
+
+    let currentBranch = 'main';
+    try {
+      const bRes = await execa('git', ['branch', '--show-current'], { cwd: projectPath });
+      currentBranch = bRes.stdout.trim() || 'HEAD';
+    } catch {}
+
+    let isMerging = false;
+    let isRebasing = false;
+    try {
+      const gitDirRes = await execa('git', ['rev-parse', '--git-dir'], { cwd: projectPath });
+      const gitDir = gitDirRes.stdout.trim();
+      const absGitDir = isAbsolute(gitDir) ? gitDir : join(projectPath, gitDir);
+      isMerging = existsSync(join(absGitDir, 'MERGE_HEAD'));
+      isRebasing = existsSync(join(absGitDir, 'rebase-merge')) || existsSync(join(absGitDir, 'rebase-apply'));
+    } catch {}
+
+    const localBranches: Array<{ name: string; isCurrent: boolean; upstream?: string | undefined; lastCommit?: string | undefined }> = [];
+    const remoteBranches: Array<{ name: string; lastCommit?: string | undefined }> = [];
+
+    try {
+      const res = await execa(
+        'git',
+        ['branch', '-a', '--format=%(refname)|%(refname:short)|%(HEAD)|%(upstream:short)|%(subject)'],
+        { cwd: projectPath, env: { ...process.env, LC_ALL: 'C' } }
+      );
+      const lines = res.stdout.split('\n').map((l) => l.trim()).filter(Boolean);
+
+      const seenLocal = new Set<string>();
+      const seenRemote = new Set<string>();
+
+      for (const line of lines) {
+        const parts = line.split('|');
+        const refName = parts[0]?.trim() || '';
+        const shortName = parts[1]?.trim() || '';
+        const headMarker = parts[2]?.trim();
+        const upstream = parts[3]?.trim() || undefined;
+        const lastCommit = parts[4]?.trim() || undefined;
+
+        if (!shortName || shortName === 'origin' || shortName.endsWith('/HEAD')) {
+          continue;
+        }
+
+        if (refName.startsWith('refs/remotes/')) {
+          if (!seenRemote.has(shortName)) {
+            seenRemote.add(shortName);
+            remoteBranches.push({
+              name: shortName,
+              lastCommit,
+            });
+          }
+        } else {
+          if (!seenLocal.has(shortName)) {
+            seenLocal.add(shortName);
+            localBranches.push({
+              name: shortName,
+              isCurrent: headMarker === '*' || shortName === currentBranch,
+              upstream,
+              lastCommit,
+            });
+          }
+        }
+      }
+    } catch (error) {
+      this.error(`获取分支列表异常: ${error}`);
+    }
+
+    return {
+      ok: true,
+      currentBranch,
+      localBranches,
+      remoteBranches,
+      isMerging,
+      isRebasing,
+    };
+  }
+
+  async gitCheckoutBranch(
+    projectPath: string,
+    branchName: string,
+    createNew?: boolean
+  ): Promise<{ ok: boolean; currentBranch: string; message: string }> {
+    if (!projectPath) throw new Error('未指定项目路径');
+    if (!branchName || !branchName.trim()) throw new Error('分支名称不能为空');
+    const target = branchName.trim();
+    try {
+      if (createNew) {
+        await execa('git', ['checkout', '-b', target], {
+          cwd: projectPath,
+          env: { ...process.env, LC_ALL: 'C' },
+        });
+        this.info(`已创建并切换到新分支 [${projectPath}]: ${target}`);
+        return { ok: true, currentBranch: target, message: `已成功创建并切换至新分支「${target}」` };
+      } else {
+        await execa('git', ['checkout', target], {
+          cwd: projectPath,
+          env: { ...process.env, LC_ALL: 'C' },
+        });
+        this.info(`已切换分支 [${projectPath}]: ${target}`);
+        return { ok: true, currentBranch: target, message: `已成功切换至分支「${target}」` };
+      }
+    } catch (error: any) {
+      const msg = error?.stderr || error?.stdout || error?.message || String(error);
+      if (
+        msg.includes('Your local changes to the following files would be overwritten') ||
+        msg.includes('本地修改')
+      ) {
+        throw new Error('切换分支失败：本地有未提交的代码修改，与目标分支存在冲突。请先在提交面板提交或暂存更改。');
+      }
+      throw new Error(`切换分支失败: ${msg}`);
+    }
+  }
+
+  async gitMergeBranch(
+    projectPath: string,
+    targetBranch: string,
+    options?: { noFf?: boolean; squash?: boolean }
+  ): Promise<{ ok: boolean; message: string; hasConflict: boolean }> {
+    if (!projectPath) throw new Error('未指定项目路径');
+    if (!targetBranch || !targetBranch.trim()) throw new Error('未指定待合并的分支');
+
+    const args = ['merge'];
+    if (options?.noFf) args.push('--no-ff');
+    if (options?.squash) args.push('--squash');
+    args.push(targetBranch.trim());
+
+    try {
+      const res = await execa('git', args, {
+        cwd: projectPath,
+        env: { ...process.env, LC_ALL: 'C' },
+      });
+      this.info(`已合并分支 [${projectPath}]: ${targetBranch}`);
+      return { ok: true, hasConflict: false, message: res.stdout || '分支合并成功！' };
+    } catch (error: any) {
+      const msg = error?.stderr || error?.stdout || error?.message || String(error);
+      if (
+        msg.includes('CONFLICT') ||
+        msg.includes('Automatic merge failed') ||
+        msg.includes('冲突') ||
+        msg.includes('自动合并失败')
+      ) {
+        return {
+          ok: false,
+          hasConflict: true,
+          message: '⚠️ 合并时检测到代码冲突！冲突文件已在列表中标红，请解决冲突后提交，或点击「终止合并」。',
+        };
+      }
+      throw new Error(`合并分支失败: ${msg}`);
+    }
+  }
+
+  async gitMergeAbort(projectPath: string): Promise<{ ok: boolean; message: string }> {
+    if (!projectPath) throw new Error('未指定项目路径');
+    try {
+      await execa('git', ['merge', '--abort'], { cwd: projectPath });
+      this.info(`已终止合并 [${projectPath}]`);
+      return { ok: true, message: '已成功终止合并，工作区已安全恢复到合并前状态。' };
+    } catch (error: any) {
+      throw new Error(`终止合并失败: ${error?.message || error}`);
+    }
+  }
+
+  async gitRebaseBranch(
+    projectPath: string,
+    targetBranch: string
+  ): Promise<{ ok: boolean; message: string; hasConflict: boolean }> {
+    if (!projectPath) throw new Error('未指定项目路径');
+    if (!targetBranch || !targetBranch.trim()) throw new Error('未指定变基基底分支');
+
+    try {
+      const res = await execa('git', ['rebase', targetBranch.trim()], {
+        cwd: projectPath,
+        env: {
+          ...process.env,
+          LC_ALL: 'C',
+          GIT_EDITOR: 'true',
+        },
+      });
+      this.info(`已完成变基 [${projectPath}]: onto ${targetBranch}`);
+      return { ok: true, hasConflict: false, message: res.stdout || '变基完成！' };
+    } catch (error: any) {
+      const msg = error?.stderr || error?.stdout || error?.message || String(error);
+      if (
+        msg.includes('CONFLICT') ||
+        msg.includes('could not apply') ||
+        msg.includes('Resolve all conflicts manually') ||
+        msg.includes('冲突') ||
+        msg.includes('无法应用') ||
+        msg.includes('手动解决所有冲突')
+      ) {
+        return {
+          ok: false,
+          hasConflict: true,
+          message: '⚠️ 变基过程中产生代码冲突，变基已暂停！请解决冲突并暂存后点击「继续变基」，或点击「终止变基」。',
+        };
+      }
+      throw new Error(`变基失败: ${msg}`);
+    }
+  }
+
+  async gitRebaseAbort(projectPath: string): Promise<{ ok: boolean; message: string }> {
+    if (!projectPath) throw new Error('未指定项目路径');
+    try {
+      await execa('git', ['rebase', '--abort'], { cwd: projectPath });
+      this.info(`已终止变基 [${projectPath}]`);
+      return { ok: true, message: '已成功终止变基，工作区已恢复到变基前状态。' };
+    } catch (error: any) {
+      throw new Error(`终止变基失败: ${error?.message || error}`);
+    }
+  }
+
+  async gitRebaseContinue(
+    projectPath: string
+  ): Promise<{ ok: boolean; message: string; hasConflict: boolean }> {
+    if (!projectPath) throw new Error('未指定项目路径');
+    try {
+      const res = await execa('git', ['rebase', '--continue'], {
+        cwd: projectPath,
+        env: {
+          ...process.env,
+          LC_ALL: 'C',
+          GIT_EDITOR: 'true',
+        },
+      });
+      this.info(`继续变基成功 [${projectPath}]`);
+      return { ok: true, hasConflict: false, message: res.stdout || '继续变基成功！' };
+    } catch (error: any) {
+      const msg = error?.stderr || error?.stdout || error?.message || String(error);
+      if (
+        msg.includes('CONFLICT') ||
+        msg.includes('could not apply') ||
+        msg.includes('冲突') ||
+        msg.includes('无法应用')
+      ) {
+        return {
+          ok: false,
+          hasConflict: true,
+          message: '⚠️ 仍存在未解决的变基冲突，请将冲突全部标记解决并暂存后再次继续。',
+        };
+      }
+      throw new Error(`继续变基失败: ${msg}`);
+    }
   }
 
   async gitInit(projectPath: string): Promise<{ ok: boolean; summary: string }> {

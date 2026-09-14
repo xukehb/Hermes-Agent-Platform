@@ -1812,8 +1812,33 @@ function renderGitModalContent() {
 
   const hasConflict = Array.isArray(currentGitStatus.changedFiles) && currentGitStatus.changedFiles.some((f) => f.status.includes('U') || f.status === 'AA' || f.status === 'DD');
   const conflictBanner = $('gitConflictAlertBanner');
+  const alertText = $('gitConflictAlertText');
+  const abortMergeBtn = $('gitAbortMergeBtn');
+  const abortRebaseBtn = $('gitAbortRebaseBtn');
+  const continueRebaseBtn = $('gitContinueRebaseBtn');
+
   if (conflictBanner) {
-    conflictBanner.style.display = hasConflict ? 'flex' : 'none';
+    if (currentGitStatus.isMerging) {
+      conflictBanner.style.display = 'flex';
+      if (alertText) alertText.innerHTML = '<strong>正在进行分支合并！</strong>检测到代码冲突，请解决冲突后提交，或点击「终止合并」。';
+      if (abortMergeBtn) abortMergeBtn.style.display = 'inline-block';
+      if (abortRebaseBtn) abortRebaseBtn.style.display = 'none';
+      if (continueRebaseBtn) continueRebaseBtn.style.display = 'none';
+    } else if (currentGitStatus.isRebasing) {
+      conflictBanner.style.display = 'flex';
+      if (alertText) alertText.innerHTML = '<strong>正在进行分支变基 (Rebase)！</strong>变基已暂停。解决冲突并暂存后点击「继续变基」，或点击「终止变基」。';
+      if (abortMergeBtn) abortMergeBtn.style.display = 'none';
+      if (abortRebaseBtn) abortRebaseBtn.style.display = 'inline-block';
+      if (continueRebaseBtn) continueRebaseBtn.style.display = 'inline-block';
+    } else if (hasConflict) {
+      conflictBanner.style.display = 'flex';
+      if (alertText) alertText.innerHTML = '<strong>检测到代码冲突！</strong>存在未合并的冲突文件，请查看下方标有「冲突」的文件。';
+      if (abortMergeBtn) abortMergeBtn.style.display = 'none';
+      if (abortRebaseBtn) abortRebaseBtn.style.display = 'none';
+      if (continueRebaseBtn) continueRebaseBtn.style.display = 'none';
+    } else {
+      conflictBanner.style.display = 'none';
+    }
   }
 
   const list = $('gitChangedFilesList');
@@ -2571,6 +2596,373 @@ $('gitAuthTestPushBtn')?.addEventListener('click', async () => {
     renderGitModalContent();
   } catch (error) {
     showToast('测试推送失败：' + (error.message || String(error)), 'error');
+  }
+});
+
+// ==========================================================================
+// Git 分支协同与版本演进控制 (Branch Checkout, Create, Merge, Rebase)
+// ==========================================================================
+
+let cachedBranchData = null;
+
+async function openGitBranchModal() {
+  if (!currentActiveProject) {
+    showToast('未选定工程', 'warning');
+    return;
+  }
+  const modal = $('gitBranchModal');
+  if (!modal) return;
+
+  switchBranchModalTab('switch');
+  modal.showModal();
+
+  await refreshBranchModalData();
+}
+
+function switchBranchModalTab(tabName) {
+  const switchBtn = $('branchTabSwitchBtn');
+  const mergeBtn = $('branchTabMergeBtn');
+  const rebaseBtn = $('branchTabRebaseBtn');
+
+  const panelSwitch = $('branchPanelSwitch');
+  const panelMerge = $('branchPanelMerge');
+  const panelRebase = $('branchPanelRebase');
+
+  switchBtn?.classList.toggle('active', tabName === 'switch');
+  mergeBtn?.classList.toggle('active', tabName === 'merge');
+  rebaseBtn?.classList.toggle('active', tabName === 'rebase');
+
+  if (panelSwitch) panelSwitch.style.display = tabName === 'switch' ? 'flex' : 'none';
+  if (panelMerge) panelMerge.style.display = tabName === 'merge' ? 'flex' : 'none';
+  if (panelRebase) panelRebase.style.display = tabName === 'rebase' ? 'flex' : 'none';
+}
+
+async function refreshBranchModalData() {
+  if (!currentActiveProject) return;
+  const listContainer = $('gitBranchListContainer');
+  if (listContainer) {
+    listContainer.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">正在加载分支数据...</div>';
+  }
+
+  try {
+    const data = await window.hap.gitListBranches(currentActiveProject);
+    cachedBranchData = data;
+
+    if ($('gitBranchCurrentName')) $('gitBranchCurrentName').textContent = data.currentBranch || 'HEAD';
+    if ($('mergeCurrentBranchLabel')) $('mergeCurrentBranchLabel').textContent = data.currentBranch || 'HEAD';
+    if ($('rebaseCurrentBranchLabel')) $('rebaseCurrentBranchLabel').textContent = data.currentBranch || 'HEAD';
+
+    const statusBadge = $('gitBranchCurrentStatusBadge');
+    if (statusBadge) {
+      if (data.isMerging) {
+        statusBadge.textContent = '合并进行中';
+        statusBadge.style.color = 'var(--danger)';
+      } else if (data.isRebasing) {
+        statusBadge.textContent = '变基暂停中';
+        statusBadge.style.color = 'var(--warning)';
+      } else {
+        statusBadge.textContent = '常规就绪';
+        statusBadge.style.color = 'var(--success)';
+      }
+    }
+
+    const abortMergeModalBtn = $('abortMergeModalBtn');
+    if (abortMergeModalBtn) {
+      abortMergeModalBtn.style.display = data.isMerging ? 'inline-block' : 'none';
+    }
+
+    const rebaseInProgressControls = $('rebaseInProgressControls');
+    if (rebaseInProgressControls) {
+      rebaseInProgressControls.style.display = data.isRebasing ? 'flex' : 'none';
+    }
+
+    renderBranchListItems($('branchSearchInput')?.value || '');
+    populateBranchSelects(data);
+  } catch (error) {
+    showToast('获取分支数据失败: ' + (error.message || String(error)), 'error');
+    if (listContainer) {
+      listContainer.innerHTML = `<div style="padding:20px;text-align:center;color:var(--danger);font-size:12px;">加载失败: ${esc(error.message || String(error))}</div>`;
+    }
+  }
+}
+
+function renderBranchListItems(filterText) {
+  const container = $('gitBranchListContainer');
+  if (!container || !cachedBranchData) return;
+
+  const query = (filterText || '').trim().toLowerCase();
+  const currentBranch = cachedBranchData.currentBranch;
+
+  const locals = (cachedBranchData.localBranches || []).filter((b) => !query || b.name.toLowerCase().includes(query));
+  const remotes = (cachedBranchData.remoteBranches || []).filter((b) => !query || b.name.toLowerCase().includes(query));
+
+  if (locals.length === 0 && remotes.length === 0) {
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">未检索到匹配的分支</div>';
+    return;
+  }
+
+  let html = '';
+
+  if (locals.length > 0) {
+    html += '<div style="padding:5px 12px;font-size:11px;font-weight:700;color:var(--text-muted);background:var(--bg-subtle);">本地分支 (Local)</div>';
+    html += locals.map((b) => {
+      const isCurrent = b.isCurrent || b.name === currentBranch;
+      return `
+        <div class="git-branch-item ${isCurrent ? 'is-current' : ''}">
+          <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;">
+            <div class="git-branch-item-name">
+              <span>${isCurrent ? '●' : '○'}</span>
+              <span>${esc(b.name)}</span>
+              ${isCurrent ? '<span class="prop-chip" style="font-size:10px;padding:1px 5px;color:var(--primary);">当前</span>' : ''}
+              ${b.upstream ? `<span style="font-size:10.5px;color:var(--text-muted);font-weight:normal;">➔ ${esc(b.upstream)}</span>` : ''}
+            </div>
+            ${b.lastCommit ? `<div class="git-branch-item-meta" title="${esc(b.lastCommit)}">${esc(b.lastCommit)}</div>` : ''}
+          </div>
+          <div>
+            ${!isCurrent ? `<button type="button" class="btn small secondary" onclick="handleCheckoutBranch('${esc(b.name)}')" style="padding:2px 10px;font-size:11.5px;">切换</button>` : '<span style="font-size:11px;color:var(--primary);font-weight:600;">正在使用</span>'}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  if (remotes.length > 0) {
+    html += '<div style="padding:5px 12px;font-size:11px;font-weight:700;color:var(--text-muted);background:var(--bg-subtle);margin-top:4px;">远程追踪分支 (Remote)</div>';
+    html += remotes.map((b) => {
+      return `
+        <div class="git-branch-item">
+          <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;">
+            <div class="git-branch-item-name" style="color:var(--text-secondary);">
+              <span>🌐</span>
+              <span>${esc(b.name)}</span>
+            </div>
+            ${b.lastCommit ? `<div class="git-branch-item-meta" title="${esc(b.lastCommit)}">${esc(b.lastCommit)}</div>` : ''}
+          </div>
+          <div>
+            <button type="button" class="btn small secondary" onclick="handleCheckoutBranch('${esc(b.name)}')" style="padding:2px 10px;font-size:11.5px;">检出</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  container.innerHTML = html;
+}
+
+function populateBranchSelects(data) {
+  const mergeSelect = $('mergeTargetBranchSelect');
+  const rebaseSelect = $('rebaseTargetBranchSelect');
+
+  const current = data.currentBranch;
+  const allBranches = [
+    ...(data.localBranches || []).map((b) => b.name).filter((name) => name !== current),
+    ...(data.remoteBranches || []).map((b) => b.name),
+  ];
+
+  const renderOptions = (branches) => {
+    if (branches.length === 0) {
+      return '<option value="">暂无其他可选分支</option>';
+    }
+    return branches.map((b) => `<option value="${esc(b)}">${esc(b)}</option>`).join('');
+  };
+
+  if (mergeSelect) mergeSelect.innerHTML = renderOptions(allBranches);
+  if (rebaseSelect) rebaseSelect.innerHTML = renderOptions(allBranches);
+}
+
+// 暴露全局分支切换处理
+window.handleCheckoutBranch = async function (branchName) {
+  if (!currentActiveProject || !branchName) return;
+  showToast(`正在切换分支至 ${branchName}...`, 'info');
+  try {
+    const res = await window.hap.gitCheckoutBranch(currentActiveProject, branchName, false);
+    showToast(res.message || `已成功切换到分支 ${branchName}`, 'success');
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
+    await refreshBranchModalData();
+  } catch (error) {
+    showToast('切换分支失败：' + (error.message || String(error)), 'error');
+  }
+};
+
+// 分支管理弹窗事件绑定
+$('openBranchManagerBtn')?.addEventListener('click', () => openGitBranchModal());
+$('gitBranchBadge')?.addEventListener('click', () => openGitBranchModal());
+$('closeGitBranchModalBtn')?.addEventListener('click', () => $('gitBranchModal')?.close());
+$('closeGitBranchModalFooterBtn')?.addEventListener('click', () => $('gitBranchModal')?.close());
+
+$('branchTabSwitchBtn')?.addEventListener('click', () => switchBranchModalTab('switch'));
+$('branchTabMergeBtn')?.addEventListener('click', () => switchBranchModalTab('merge'));
+$('branchTabRebaseBtn')?.addEventListener('click', () => switchBranchModalTab('rebase'));
+
+$('branchSearchInput')?.addEventListener('input', (e) => {
+  renderBranchListItems(e.target.value);
+});
+
+$('refreshBranchListBtn')?.addEventListener('click', () => {
+  refreshBranchModalData();
+});
+
+$('createNewBranchBtn')?.addEventListener('click', async () => {
+  if (!currentActiveProject) return;
+  const input = $('newBranchNameInput');
+  const branchName = input?.value?.trim();
+  if (!branchName) {
+    showToast('请输入新分支名称', 'warning');
+    input?.focus();
+    return;
+  }
+
+  showToast(`正在创建并检出新分支 ${branchName}...`, 'info');
+  try {
+    const res = await window.hap.gitCheckoutBranch(currentActiveProject, branchName, true);
+    showToast(res.message || `已成功创建并切换至新分支 ${branchName}`, 'success');
+    if (input) input.value = '';
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
+    await refreshBranchModalData();
+  } catch (error) {
+    showToast('创建分支失败：' + (error.message || String(error)), 'error');
+  }
+});
+
+$('executeMergeBtn')?.addEventListener('click', async () => {
+  if (!currentActiveProject) return;
+  const target = $('mergeTargetBranchSelect')?.value;
+  if (!target) {
+    showToast('请选择待合并的目标分支', 'warning');
+    return;
+  }
+  const noFf = $('mergeNoFfCheckbox')?.checked;
+  const squash = $('mergeSquashCheckbox')?.checked;
+
+  showToast(`正在合并分支 ${target} 到当前分支...`, 'info');
+  try {
+    const res = await window.hap.gitMergeBranch(currentActiveProject, target, { noFf, squash });
+    if (res.hasConflict) {
+      showToast(res.message, 'warning');
+    } else {
+      showToast(res.message || '分支合并成功！', 'success');
+    }
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
+    await refreshBranchModalData();
+  } catch (error) {
+    showToast('合并失败：' + (error.message || String(error)), 'error');
+  }
+});
+
+$('abortMergeModalBtn')?.addEventListener('click', async () => {
+  if (!currentActiveProject) return;
+  showToast('正在终止合并...', 'info');
+  try {
+    const res = await window.hap.gitMergeAbort(currentActiveProject);
+    showToast(res.message || '已终止合并', 'success');
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
+    await refreshBranchModalData();
+  } catch (error) {
+    showToast('终止合并失败：' + (error.message || String(error)), 'error');
+  }
+});
+
+$('gitAbortMergeBtn')?.addEventListener('click', async () => {
+  if (!currentActiveProject) return;
+  showToast('正在终止合并...', 'info');
+  try {
+    const res = await window.hap.gitMergeAbort(currentActiveProject);
+    showToast(res.message || '已终止合并', 'success');
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
+  } catch (error) {
+    showToast('终止合并失败：' + (error.message || String(error)), 'error');
+  }
+});
+
+$('executeRebaseBtn')?.addEventListener('click', async () => {
+  if (!currentActiveProject) return;
+  const target = $('rebaseTargetBranchSelect')?.value;
+  if (!target) {
+    showToast('请选择目标基底分支', 'warning');
+    return;
+  }
+
+  showToast(`正在将当前分支变基到 ${target}...`, 'info');
+  try {
+    const res = await window.hap.gitRebaseBranch(currentActiveProject, target);
+    if (res.hasConflict) {
+      showToast(res.message, 'warning');
+    } else {
+      showToast(res.message || '变基完成！', 'success');
+    }
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
+    await refreshBranchModalData();
+  } catch (error) {
+    showToast('变基失败：' + (error.message || String(error)), 'error');
+  }
+});
+
+$('abortRebaseModalBtn')?.addEventListener('click', async () => {
+  if (!currentActiveProject) return;
+  showToast('正在终止变基...', 'info');
+  try {
+    const res = await window.hap.gitRebaseAbort(currentActiveProject);
+    showToast(res.message || '已终止变基', 'success');
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
+    await refreshBranchModalData();
+  } catch (error) {
+    showToast('终止变基失败：' + (error.message || String(error)), 'error');
+  }
+});
+
+$('gitAbortRebaseBtn')?.addEventListener('click', async () => {
+  if (!currentActiveProject) return;
+  showToast('正在终止变基...', 'info');
+  try {
+    const res = await window.hap.gitRebaseAbort(currentActiveProject);
+    showToast(res.message || '已终止变基', 'success');
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
+  } catch (error) {
+    showToast('终止变基失败：' + (error.message || String(error)), 'error');
+  }
+});
+
+$('continueRebaseModalBtn')?.addEventListener('click', async () => {
+  if (!currentActiveProject) return;
+  showToast('正在继续执行变基...', 'info');
+  try {
+    const res = await window.hap.gitRebaseContinue(currentActiveProject);
+    if (res.hasConflict) {
+      showToast(res.message, 'warning');
+    } else {
+      showToast(res.message || '继续变基成功！', 'success');
+    }
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
+    await refreshBranchModalData();
+  } catch (error) {
+    showToast('继续变基失败：' + (error.message || String(error)), 'error');
+  }
+});
+
+$('gitContinueRebaseBtn')?.addEventListener('click', async () => {
+  if (!currentActiveProject) return;
+  showToast('正在继续执行变基...', 'info');
+  try {
+    const res = await window.hap.gitRebaseContinue(currentActiveProject);
+    if (res.hasConflict) {
+      showToast(res.message, 'warning');
+    } else {
+      showToast(res.message || '继续变基成功！', 'success');
+    }
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
+    await refreshBranchModalData();
+  } catch (error) {
+    showToast('继续变基失败：' + (error.message || String(error)), 'error');
   }
 });
 
