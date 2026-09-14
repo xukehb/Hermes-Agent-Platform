@@ -220,3 +220,10 @@
 - `exec_command`：用 Pillow 将已生成图标转换为 `build/icon.png`、`build/icon.ico`、`build/icon.icns`；确认三者可读取。
 - `exec_command`：专项测试 24 项、`npm run build`、`npm run lint` 通过；Linux `electron-builder --linux dir` 打包完成，`app.asar` 中可列出运行时图标。
 - `git restore`：仅恢复本轮打包命令改写的 `release/builder-debug.yml`，未处理其他用户改动。
+## 2026-09-14 生图成功后异常修复（Codex）
+
+- `sed`：读取 `systematic-debugging`、`test-driven-development` 技能及相关源码。
+- `rg`：检索 `loadProjectFiles`、项目树刷新入口和生图测试；确认全仓仅有一处调用且没有定义。
+- `git status/diff/log/blame`：确认问题位于当前未提交的生图插件改动，不覆盖用户已有修改。
+- 根因：图片生成成功后调用不存在的 `loadProjectFiles`，随后被生图异常处理器误报为生成失败。
+- 决策：项目树不包含文件列表，成功分支已完成消息保存和渲染，删除无效调用是符合现有架构的单点修复。

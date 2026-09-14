@@ -115,7 +115,7 @@ export type {
   RemoteExecResult,
 } from '../remote/types.js';
 
-// Skill 市场数据结构 (关联 GitHub 开源市场)
+// Skill 市场数据结构 (关联 GitHub 开源市场与自定义生图扩展技能)
 export interface GuiSkill {
   id: string;
   name: string;
@@ -127,6 +127,10 @@ export interface GuiSkill {
   installed: boolean;
   enabled: boolean;
   version?: string;
+  category?: 'image' | 'dev' | 'ops' | string;
+  promptTemplate?: string; // 技能提示词增强公式，如 "{{prompt}}, cyberpunk neon style..."
+  negativePrompt?: string; // 负向提示词
+  style?: string; // 对应风格
 }
 
 // 插件市场 (MCP / Builtin Plugins)

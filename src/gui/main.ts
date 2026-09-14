@@ -59,6 +59,7 @@ function registerIpc(): void {
   ipcMain.handle('gui:generateImage', (_event, payload) => invoke(() => service.generateImage(payload)));
   ipcMain.handle('gui:listSkills', () => invoke(() => service.listSkills()));
   ipcMain.handle('gui:installSkill', (_event, repoUrl) => invoke(() => service.installSkill(repoUrl)));
+  ipcMain.handle('gui:importSkill', (_event, payload) => invoke(() => service.importSkill(payload)));
   ipcMain.handle('gui:toggleSkill', (_event, payload) => invoke(() => service.toggleSkill(payload.id, payload.enabled)));
   ipcMain.handle('gui:uninstallSkill', (_event, id) => invoke(() => service.uninstallSkill(id)));
   ipcMain.handle('gui:listPlugins', () => invoke(() => service.listPlugins()));

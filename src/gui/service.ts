@@ -266,6 +266,96 @@ const DEFAULT_SKILLS: GuiSkill[] = [
     enabled: false,
     version: '1.1.4',
   },
+  {
+    id: 'img-skill-cyberpunk',
+    name: '赛博朋克霓虹机能 (Cyberpunk Neo-Glow)',
+    description: '强化未来主义都市机能感、高动态范围霓虹冷暖光交织、细致金属质感与全息投影细节',
+    repo: 'image-skills/cyberpunk-glow',
+    author: 'Hermes Studio',
+    stars: 1850,
+    tags: ['生图', 'Cyberpunk', 'Style'],
+    installed: true,
+    enabled: true,
+    version: '1.0.0',
+    category: 'image',
+    promptTemplate: 'cyberpunk aesthetic, vibrant neon reflections, futuristic tech details, volumetric lighting, unreal engine 5 render, cinematic 8k, {{prompt}}',
+    style: 'cyberpunk',
+  },
+  {
+    id: 'img-skill-photoreal',
+    name: '大师级胶片写实人像 (Master Film Portrait)',
+    description: '模拟哈苏中画幅胶片相机质感、自然柔光微距、皮肤细腻纹理与浅景深虚化',
+    repo: 'image-skills/film-portrait',
+    author: 'Hermes Studio',
+    stars: 2420,
+    tags: ['生图', 'Portrait', 'Photoreal'],
+    installed: true,
+    enabled: true,
+    version: '1.0.0',
+    category: 'image',
+    promptTemplate: 'shot on Hasselblad H6D-100c, 85mm f/1.4 lens, natural skin texture, soft rim lighting, shallow depth of field, photorealistic, raw candid style, {{prompt}}',
+    style: 'photorealistic',
+  },
+  {
+    id: 'img-skill-anime',
+    name: '新海诚唯美动漫风景 (Makoto Shinkai Anime)',
+    description: '呈现澄澈通透的天空与积雨云、高饱和青橙色调、细腻逆光与日系唯美画风',
+    repo: 'image-skills/anime-shinkai',
+    author: 'Hermes Studio',
+    stars: 3100,
+    tags: ['生图', 'Anime', 'Landscape'],
+    installed: true,
+    enabled: true,
+    version: '1.0.0',
+    category: 'image',
+    promptTemplate: 'Makoto Shinkai style, CoMix Wave Films aesthetic, dramatic sky and cumulus clouds, vibrant teal and orange lighting, anime masterpiece, {{prompt}}',
+    style: 'anime',
+  },
+  {
+    id: 'img-skill-isometric',
+    name: '等距轴测 3D 架构设计 (Isometric 3D)',
+    description: '采用等距轴测视角、整洁现代微缩建筑/设备、柔和黏土质感与立体影棚布光',
+    repo: 'image-skills/isometric-3d',
+    author: 'Hermes Studio',
+    stars: 1560,
+    tags: ['生图', '3D', 'Isometric'],
+    installed: true,
+    enabled: true,
+    version: '1.0.0',
+    category: 'image',
+    promptTemplate: 'isometric 3D render, blender 3d, clean architectural model, soft ambient occlusion, minimalist modern design, orthographic view, {{prompt}}',
+    style: '3d-render',
+  },
+  {
+    id: 'img-skill-ink',
+    name: '东方意境水墨丹青 (Oriental Ink Wash)',
+    description: '融合传统水墨留白、宣纸宣染渐变、写意山水笔触与淡雅东方美学',
+    repo: 'image-skills/ink-wash',
+    author: 'Hermes Studio',
+    stars: 1290,
+    tags: ['生图', 'Traditional', 'Art'],
+    installed: true,
+    enabled: true,
+    version: '1.0.0',
+    category: 'image',
+    promptTemplate: 'traditional Chinese ink wash painting, shan shui style, Xuan paper texture, elegant brushstrokes, atmospheric mist, minimalist poetic composition, {{prompt}}',
+    style: 'watercolor',
+  },
+  {
+    id: 'img-skill-pixel',
+    name: '复古 16-Bit 像素艺术 (Retro 16-Bit Pixel)',
+    description: '经典 90 年代街机与点阵像素美学、限定复古色盘搭配与细腻像素阴影',
+    repo: 'image-skills/pixel-art',
+    author: 'Hermes Studio',
+    stars: 1430,
+    tags: ['生图', 'Pixel', 'Retro'],
+    installed: true,
+    enabled: true,
+    version: '1.0.0',
+    category: 'image',
+    promptTemplate: '16-bit pixel art, retro gaming aesthetic, clean sprite work, vibrant limited color palette, detailed pixel shading, {{prompt}}',
+    style: 'digital-art',
+  },
 ];
 
 const DEFAULT_PLUGINS: GuiPlugin[] = [
@@ -390,8 +480,16 @@ function readState(): GuiState {
       projects = Array.isArray(raw.projects) ? raw.projects : [];
       hiddenProviders = Array.isArray(raw.hiddenProviders) ? raw.hiddenProviders : [];
       hiddenModels = Array.isArray(raw.hiddenModels) ? raw.hiddenModels : [];
-      defaultProvidersCleared = raw.defaultProvidersCleared ?? true;
-      if (raw.skills && raw.skills.length > 0) skills = raw.skills;
+      if (raw.skills && raw.skills.length > 0) {
+        const existingSkillIds = new Set(raw.skills.map((s) => s.id));
+        const mergedSkills = [...raw.skills];
+        for (const ds of DEFAULT_SKILLS) {
+          if (!existingSkillIds.has(ds.id)) {
+            mergedSkills.push(ds);
+          }
+        }
+        skills = mergedSkills;
+      }
       if (raw.plugins && raw.plugins.length > 0) {
         // 合并已有与新增的官方预设
         const existingIds = new Set(raw.plugins.map((p) => p.id));
@@ -1521,6 +1619,43 @@ export class GuiService {
     return { ok: true };
   }
 
+  importSkill(skillData: Partial<GuiSkill>): GuiSkill {
+    const name = skillData.name?.trim();
+    if (!name) throw new Error('Skill 名称不能为空');
+
+    const state = readState();
+    const skills = state.skills || DEFAULT_SKILLS;
+    const id = skillData.id?.trim() || `skill-custom-${Date.now()}`;
+
+    const newSkill: GuiSkill = {
+      id,
+      name,
+      description: skillData.description?.trim() || '自定义生图或能力扩展 Skill',
+      repo: skillData.repo || 'local/custom-skill',
+      author: skillData.author || 'Custom',
+      stars: skillData.stars || 100,
+      tags: Array.isArray(skillData.tags) && skillData.tags.length > 0 ? skillData.tags : ['Image', 'Custom'],
+      installed: true,
+      enabled: true,
+      version: skillData.version || '1.0.0',
+      category: skillData.category || 'image',
+      promptTemplate: skillData.promptTemplate?.trim() || '',
+      negativePrompt: skillData.negativePrompt?.trim() || '',
+      style: skillData.style || 'vivid',
+    };
+
+    const existingIdx = skills.findIndex((s) => s.id === id);
+    if (existingIdx >= 0) {
+      skills[existingIdx] = newSkill;
+    } else {
+      skills.unshift(newSkill);
+    }
+    state.skills = skills;
+    writeState(state);
+    this.info(`已成功导入 Skill: ${newSkill.name} (${id})`);
+    return newSkill;
+  }
+
   // ==========================================================================
   // 插件市场服务 (MCP / Builtin Plugins)
   // ==========================================================================
@@ -1883,8 +2018,16 @@ export class GuiService {
 
     const cleanUsername = username.trim();
     const cleanToken = token.trim();
-
     await execa('git', ['config', '--global', 'credential.helper', 'store']);
+
+    // 清除已有的 github.com 缓存，避免旧失效 Token 残留导致鉴权失败
+    try {
+      await execa('git', ['credential', 'reject'], {
+        input: 'protocol=https\nhost=github.com\n\n',
+      });
+    } catch {
+      // 容错继续
+    }
 
     const credentialPayload = `protocol=https\nhost=github.com\nusername=${cleanUsername}\npassword=${cleanToken}\n\n`;
     await execa('git', ['credential', 'approve'], {

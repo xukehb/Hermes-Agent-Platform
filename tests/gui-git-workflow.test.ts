@@ -32,9 +32,12 @@ describe('GuiService Git Branch, Merge, Rebase & Auth Workflow', () => {
   let configPath: string;
   let repoDir: string;
   let service: GuiService;
+  let origHome: string | undefined;
 
   beforeEach(() => {
+    origHome = process.env.HOME;
     testDir = mkdtempSync(join(tmpdir(), 'hap-git-test-'));
+    process.env.HOME = testDir;
     configPath = join(testDir, 'config.toml');
     const configContent = [
       'default_agent = "assistant"',
@@ -67,6 +70,7 @@ describe('GuiService Git Branch, Merge, Rebase & Auth Workflow', () => {
   });
 
   afterEach(() => {
+    process.env.HOME = origHome;
     rmSync(testDir, { recursive: true, force: true });
   });
 

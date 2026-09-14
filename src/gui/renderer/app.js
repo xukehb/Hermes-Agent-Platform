@@ -225,6 +225,14 @@ function loadSavedSessions() {
     if (raw) {
       const list = JSON.parse(raw);
       if (Array.isArray(list) && list.length > 0) {
+        // 安全清洗：重置所有会话的生成状态，避免因窗口重载或异常导致悬挂残留
+        for (const s of list) {
+          if (s) {
+            s.isGenerating = false;
+            s.liveContent = '';
+            s.liveReasoning = '';
+          }
+        }
         return list;
       }
     }
@@ -249,7 +257,15 @@ let currentSessionId = localStorage.getItem(ACTIVE_SESSION_STORAGE_KEY) || sessi
 
 function saveSessionsToStorage() {
   try {
-    localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(sessions));
+    // 永远不要将瞬态的 isGenerating / liveContent / generatingPlugin 写入持久化磁盘
+    const serializable = sessions.map((s) => ({
+      ...s,
+      isGenerating: false,
+      generatingPlugin: null,
+      liveContent: '',
+      liveReasoning: '',
+    }));
+    localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(serializable));
     localStorage.setItem(ACTIVE_SESSION_STORAGE_KEY, currentSessionId);
   } catch (e) {
     console.error('保存会话失败:', e);
@@ -913,6 +929,24 @@ window.switchSession = (id) => {
       currentActiveProject = target.projectPath;
     }
   }
+  // 目标会话自愈：若最后一条消息已是 assistant 且无未决流式内容，自动重置生成状态
+  const lastMsg = target?.messages?.[target.messages.length - 1];
+  if (target?.isGenerating && lastMsg && lastMsg.role === 'assistant' && !target.liveContent && !target.liveReasoning) {
+    target.isGenerating = false;
+    target.generatingPlugin = null;
+  }
+
+  // 同步目标会话生成状态到底部按钮
+  const isGen = Boolean(target?.isGenerating);
+  const stopBtn = $('stopChatBtn');
+  const sendBtn = $('sendChatBtn');
+  if (stopBtn) stopBtn.style.display = isGen ? 'inline-flex' : 'none';
+  if (sendBtn) sendBtn.style.display = isGen ? 'none' : 'inline-flex';
+
+  if (!chatInput?.value?.trim() && activeComposerPlugin) {
+    clearActiveComposerPlugin();
+  }
+
   saveSessionsToStorage();
   show('chat');
   renderProjectsTree();
@@ -1028,6 +1062,15 @@ function renderCurrentSessionMessages() {
   if (!container) return;
 
   const session = currentSession();
+  if (!session) return;
+
+  // 自动化自愈防护：如果会话标记为生成中，但最后一条消息已是 assistant 完整输出，且没有活跃 liveContent，强制重置
+  const lastMsg = session.messages && session.messages.length > 0 ? session.messages[session.messages.length - 1] : null;
+  if (session.isGenerating && lastMsg && lastMsg.role === 'assistant' && !session.liveContent && !session.liveReasoning) {
+    session.isGenerating = false;
+    session.generatingPlugin = null;
+    setChatGenerating(false, session);
+  }
 
   // 更新顶部工作区指示器
   const proj = state.projects.find((p) => normPath(p.path) === normPath(currentActiveProject));
@@ -1115,9 +1158,17 @@ function renderCurrentSessionMessages() {
         attachmentsHtml = `<div class="user-attachments-grid">${itemsHtml}</div>`;
       }
 
+      const pluginBadgeHtml = m.plugin ? `
+        <div class="chat-plugin-badge">
+          <span>${m.plugin.icon || '🎨'}</span>
+          <span>${esc(m.plugin.title || m.plugin.name || 'AI 生图插件')}</span>
+        </div>
+      ` : '';
+
       return `
         <div class="msg-row user">
           <div class="user-bubble-wrapper">
+            ${pluginBadgeHtml}
             ${attachmentsHtml}
             ${m.content ? `<div class="user-bubble">${esc(m.content)}</div>` : ''}
             <div class="user-meta-row">
@@ -1190,46 +1241,88 @@ function renderCurrentSessionMessages() {
   }).join('');
 
   if (session.isGenerating) {
-    const hasLiveThinking = Boolean(session.liveReasoning);
-    const hasLiveText = Boolean(session.liveContent);
+    if (session.generatingPlugin && session.generatingPlugin.id === 'image-gen') {
+      const plugin = session.generatingPlugin;
+      const skill = plugin.skill;
+      const prompt = plugin.prompt || '';
+      const enhancedPrompt = plugin.enhancedPrompt || prompt;
 
-    messagesHtml += `
-      <div class="msg-row assistant waiting-row" id="activeStreamingRow">
-        <div class="assistant-container">
-          <div class="assistant-avatar">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-            </svg>
-          </div>
-          <div class="assistant-content">
-            <div id="streamingReasoningBox" style="${hasLiveThinking ? '' : 'display:none;'}">
-              <details class="thinking-box" open>
-                <summary class="thinking-header">
-                  <div class="thinking-title-row">
-                    <span class="thinking-pulse-dot" style="margin-right:6px;"></span>
-                    <span>深度思考中...</span>
+      messagesHtml += `
+        <div class="msg-row assistant waiting-row" id="activeStreamingRow">
+          <div class="assistant-container">
+            <div class="assistant-avatar" style="background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;">🎨</div>
+            <div class="assistant-content" style="max-width:85%;">
+              <div class="plugin-executing-card" id="pluginExecCard_${esc(session.id)}">
+                <div class="plugin-executing-header">
+                  <span class="plugin-executing-icon">🎨</span>
+                  <span style="font-weight:600;">AI 生图插件正在精心绘制中...</span>
+                  <span class="plugin-pulse-dot"></span>
+                </div>
+                ${skill ? `
+                  <div class="plugin-executing-skill-banner">
+                    <div class="plugin-executing-skill-title">⚡ 正在应用生图技能：${esc(skill.name)}</div>
+                    <div class="plugin-executing-skill-desc">${esc(skill.description || '视觉画质增强与风格微调')}</div>
+                    <div class="plugin-executing-skill-prompt">🪄 增强合成提示词：${esc(enhancedPrompt)}</div>
+                    ${plugin.explicitModel ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">⚙️ 指定模型：<code>${esc(plugin.explicitModel)}</code></div>` : ''}
                   </div>
-                  <svg class="thinking-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <polyline points="6 9 12 15 18 9"/>
-                  </svg>
-                </summary>
-                <div class="thinking-content" id="streamingReasoningContent">
-                  ${renderMarkdownContent(session.liveReasoning || '')}
+                ` : `
+                  <div class="plugin-executing-desc" style="font-size:12.5px;color:var(--text-main);margin-top:2px;">
+                    正在调用图像生成引擎渲染高画质画面：“<strong>${esc(prompt)}</strong>”
+                    ${plugin.explicitModel ? `<div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">⚙️ 指定模型：<code>${esc(plugin.explicitModel)}</code></div>` : ''}
+                  </div>
+                `}
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--text-muted);border-top:1px solid var(--border-subtle);padding-top:6px;">
+                  <span>💡 画面通常需数秒生成，切换到其他工程会话仍在后台持续绘制</span>
+                  <button type="button" class="btn secondary" style="font-size:11px;padding:2px 8px;border-radius:4px;color:var(--danger);border-color:var(--danger-border);" onclick="window.forceStopGenerating(event)">中止本次生图</button>
                 </div>
-              </details>
-            </div>
-            <div id="streamingContentText">
-              ${hasLiveText ? renderMarkdownContent(session.liveContent) + '<span class="streaming-cursor"></span>' : `
-                <div class="thinking-loading-pill">
-                  <span class="thinking-pulse-dot"></span>
-                  <span>正在深度思考与执行中...</span>
-                </div>
-              `}
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    `;
+      `;
+    } else {
+      const hasLiveThinking = Boolean(session.liveReasoning);
+      const hasLiveText = Boolean(session.liveContent);
+
+      messagesHtml += `
+        <div class="msg-row assistant waiting-row" id="activeStreamingRow">
+          <div class="assistant-container">
+            <div class="assistant-avatar">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
+            </div>
+            <div class="assistant-content">
+              <div id="streamingReasoningBox" style="${hasLiveThinking ? '' : 'display:none;'}">
+                <details class="thinking-box" open>
+                  <summary class="thinking-header">
+                    <div class="thinking-title-row">
+                      <span class="thinking-pulse-dot" style="margin-right:6px;"></span>
+                      <span>深度思考中...</span>
+                    </div>
+                    <svg class="thinking-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </summary>
+                  <div class="thinking-content" id="streamingReasoningContent">
+                    ${renderMarkdownContent(session.liveReasoning || '')}
+                  </div>
+                </details>
+              </div>
+              <div id="streamingContentText">
+                ${hasLiveText ? renderMarkdownContent(session.liveContent) + '<span class="streaming-cursor"></span>' : `
+                  <div class="thinking-loading-pill" title="正在深度思考与执行中，若已输出可点击 ✕ 强制清除">
+                    <span class="thinking-pulse-dot"></span>
+                    <span>正在深度思考与执行中...</span>
+                    <button type="button" class="pill-cancel-btn" onclick="window.forceStopGenerating(event)" title="强制清除悬挂状态">✕</button>
+                  </div>
+                `}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
   }
 
   container.innerHTML = messagesHtml;
@@ -1252,8 +1345,13 @@ function startNewChat() {
     updatedAt: new Date().toISOString(),
     pinned: false,
     messages: [],
+    isGenerating: false,
+    generatingPlugin: null,
+    liveContent: '',
+    liveReasoning: '',
   });
   currentSessionId = newId;
+  setChatGenerating(false);
   saveSessionsToStorage();
   show('chat');
   renderProjectsTree();
@@ -1263,6 +1361,7 @@ function startNewChat() {
   currentAttachments = [];
   renderComposerAttachments();
   updateComposerState();
+  if (typeof clearActiveComposerPlugin === 'function') clearActiveComposerPlugin();
   chatInput?.focus();
 }
 
@@ -6209,29 +6308,596 @@ function updateComposerState() {
   chatInput.style.height = 'auto';
   chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
   if (sendBtn) {
-    sendBtn.disabled = !chatInput.value.trim() && currentAttachments.length === 0;
+    sendBtn.disabled = !chatInput.value.trim() && currentAttachments.length === 0 && !activeComposerPlugin;
+  }
+}
+
+// ============================================================================
+// @ 插件与智能体联动体系 (Mention & Plugins System - ChatGPT Desktop 风格)
+// ============================================================================
+
+const COMPOSER_PLUGINS = [
+  {
+    id: 'image-gen',
+    name: 'AI 生图',
+    mention: '@生图',
+    aliases: ['@image', '@img', '@draw', '@生图', '@画图'],
+    icon: '🎨',
+    title: 'AI 图像生成 (Image Studio)',
+    badge: '内置插件',
+    desc: '文生图插件：输入描述实时绘制高画质画面并直接呈现在对话流中',
+    placeholder: '输入生图画面描述词 (Prompt)，如：一只赛博朋克风格的机械猫咪，电影级光影...',
+    action: 'plugin',
+  },
+  {
+    id: 'code-search',
+    name: '工作区检索',
+    mention: '@检索',
+    aliases: ['@search', '@find', '@代码'],
+    icon: '🔍',
+    title: '工程与代码检索',
+    badge: '内置插件',
+    desc: '全局检索当前工程的代码实现、函数定义与架构上下文',
+    placeholder: '输入要搜索的代码关键字、函数名或技术特征...',
+    action: 'mention',
+  },
+  {
+    id: 'web-search',
+    name: '联网搜索',
+    mention: '@联网',
+    aliases: ['@web', '@google', '@联网'],
+    icon: '🌐',
+    title: '实时网络与技术资料搜索',
+    badge: '内置插件',
+    desc: '调用互联网搜索引擎获取最新技术资料与开源文档',
+    placeholder: '输入要实时联网查询的技术主题或疑问...',
+    action: 'mention',
+  },
+  {
+    id: 'git-commit',
+    name: 'Git 助手',
+    mention: '@Git',
+    aliases: ['@git', '@commit'],
+    icon: '🛠️',
+    title: 'Git 审查与提交规范',
+    badge: '内置工具',
+    desc: '审查工作区 Diff 差异并依据规范文档生成标准 Commit',
+    placeholder: '输入针对当前 Git 变更的分析或提交意图...',
+    action: 'mention',
+  },
+];
+
+let activeComposerPlugin = null;
+let mentionMatches = [];
+let mentionSelectedIndex = 0;
+
+function getAllMentionCandidates() {
+  const list = [...COMPOSER_PLUGINS];
+
+  // 1. 添加可直接通过 @ 选用的生图技能 (Image Skills)
+  if (Array.isArray(state?.skills)) {
+    for (const skill of state.skills) {
+      if (!skill || !skill.id) continue;
+      if (skill.category === 'image' || (skill.tags && skill.tags.includes('生图'))) {
+        const shortName = (skill.name || '').split(/[\s·(（]/)[0] || skill.name;
+        list.push({
+          id: `skill:${skill.id}`,
+          name: `${skill.name}`,
+          mention: `@${shortName}`,
+          aliases: [`@${skill.id}`, `@${skill.name}`, `@${shortName}`],
+          icon: '⚡',
+          title: `${skill.name} (生图技能)`,
+          badge: '生图 Skill',
+          desc: skill.description || '视觉风格微调与提示词增强',
+          placeholder: `[技能: ${skill.name}] 输入画面主体与细节描述...`,
+          action: 'image-skill',
+          skillId: skill.id,
+          skill: skill,
+        });
+      }
+    }
+  }
+
+  // 2. 添加智能体角色
+  if (Array.isArray(state?.agents)) {
+    for (const agent of state.agents) {
+      if (!agent || !agent.id) continue;
+      list.push({
+        id: `agent:${agent.id}`,
+        name: agent.name || agent.id,
+        mention: `@${agent.name || agent.id}`,
+        aliases: [`@${agent.id}`, `@${agent.name}`],
+        icon: '🤖',
+        title: `${agent.name || agent.id} (智能体)`,
+        badge: 'Agent 角色',
+        desc: agent.description || agent.systemPrompt?.slice(0, 50) || '专业智能体角色分工协作',
+        placeholder: `给智能体 ${agent.name || agent.id} 下发专业分工任务...`,
+        action: 'agent',
+        agentId: agent.id,
+      });
+    }
+  }
+  return list;
+}
+
+function setActiveComposerPlugin(plugin) {
+  activeComposerPlugin = plugin;
+  renderActivePluginTray();
+  const input = $('chatInput');
+  if (input) {
+    if (plugin) {
+      input.placeholder = plugin.placeholder || '给智能体下发任务...';
+    } else {
+      input.placeholder = '给智能体下发开发、修复或审查任务... (支持输入 @ 选择插件/智能体, Enter 发送)';
+    }
+  }
+}
+
+function clearActiveComposerPlugin() {
+  setActiveComposerPlugin(null);
+}
+
+function renderActivePluginTray() {
+  const tray = $('composerPluginTray');
+  if (!tray) return;
+  if (!activeComposerPlugin) {
+    tray.style.display = 'none';
+    tray.innerHTML = '';
+    return;
+  }
+  tray.style.display = 'flex';
+  const skillNameTag = activeComposerPlugin.skill
+    ? `<span class="plugin-badge-tag" style="background:rgba(2,132,199,0.12);color:var(--primary);">⚡ ${esc(activeComposerPlugin.skill.name)}</span>`
+    : '';
+  tray.innerHTML = `
+    <div class="composer-active-plugin" id="composerActivePluginBadge">
+      <span class="plugin-badge-icon">${activeComposerPlugin.icon || '🧩'}</span>
+      <span class="plugin-badge-title">${esc(activeComposerPlugin.name)}</span>
+      <span class="plugin-badge-tag">${esc(activeComposerPlugin.badge || '插件')}</span>
+      ${skillNameTag}
+      ${activeComposerPlugin.id === 'image-gen' ? `<button type="button" class="plugin-badge-btn" id="activePluginConfigBtn" title="配置生图服务商、模型与技能">⚙️ 设置</button>` : ''}
+      <button type="button" class="plugin-badge-btn plugin-badge-close" id="activePluginRemoveBtn" title="移除当前插件引用">✕</button>
+    </div>
+  `;
+
+  $('activePluginConfigBtn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (activeComposerPlugin.skillId && $('imageGenSkillSelect')) {
+      $('imageGenSkillSelect').value = activeComposerPlugin.skillId;
+      updateImageSkillDetailCard();
+    }
+    $('aiGenImageBtn')?.click();
+  });
+
+  $('activePluginRemoveBtn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    clearActiveComposerPlugin();
+    $('chatInput')?.focus();
+  });
+}
+
+function closeMentionMenu() {
+  const menu = $('composerMentionMenu');
+  if (menu) {
+    menu.style.display = 'none';
+    menu.innerHTML = '';
+  }
+  mentionMatches = [];
+  mentionSelectedIndex = 0;
+}
+
+function renderMentionMenu(query = '') {
+  const menu = $('composerMentionMenu');
+  if (!menu) return;
+  const candidates = getAllMentionCandidates();
+  const q = query.toLowerCase().trim();
+
+  mentionMatches = candidates.filter(item => {
+    if (!q) return true;
+    return item.name.toLowerCase().includes(q)
+      || item.mention.toLowerCase().includes(q)
+      || (item.title && item.title.toLowerCase().includes(q))
+      || (item.desc && item.desc.toLowerCase().includes(q))
+      || (item.aliases && item.aliases.some(a => a.toLowerCase().includes(q)));
+  });
+
+  if (mentionMatches.length === 0) {
+    closeMentionMenu();
+    return;
+  }
+
+  if (mentionSelectedIndex >= mentionMatches.length) {
+    mentionSelectedIndex = 0;
+  }
+
+  menu.style.display = 'flex';
+  menu.innerHTML = `
+    <div class="composer-mention-header">
+      <span>🧩 选择插件或智能体 (键入筛选, ↑↓ 导航, Enter 选中)</span>
+      <span>${mentionMatches.length} 项可选</span>
+    </div>
+    <div class="composer-mention-list" id="composerMentionList">
+      ${mentionMatches.map((item, idx) => `
+        <div class="composer-mention-item ${idx === mentionSelectedIndex ? 'active' : ''}" data-index="${idx}">
+          <div class="composer-mention-item-icon">${item.icon || '🧩'}</div>
+          <div class="composer-mention-item-info">
+            <div class="composer-mention-item-top">
+              <span class="composer-mention-item-name">${esc(item.name)}</span>
+              <span class="composer-mention-item-badge">${esc(item.badge || '插件')}</span>
+              <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">${esc(item.mention)}</span>
+            </div>
+            <div class="composer-mention-item-desc">${esc(item.desc || '')}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  menu.querySelectorAll('.composer-mention-item').forEach(el => {
+    const idx = parseInt(el.getAttribute('data-index') || '0', 10);
+    el.addEventListener('mouseenter', () => {
+      mentionSelectedIndex = idx;
+      menu.querySelectorAll('.composer-mention-item').forEach((item, i) => {
+        item.classList.toggle('active', i === idx);
+      });
+    });
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      chooseMentionCandidate(mentionMatches[idx]);
+    });
+  });
+}
+
+function chooseMentionCandidate(candidate) {
+  if (!candidate) return;
+  const input = $('chatInput');
+  if (!input) return;
+
+  if (candidate.id === 'image-gen') {
+    setActiveComposerPlugin(candidate);
+    input.value = input.value.replace(/(?:^|\s)@[^\s]*$/, '').trim();
+    showToast('已激活 🎨 AI 生图插件', 'info');
+  } else if (candidate.action === 'image-skill') {
+    setActiveComposerPlugin({
+      id: 'image-gen',
+      name: `AI 生图 · ${candidate.skill.name}`,
+      icon: '🎨',
+      badge: '生图 Skill',
+      skillId: candidate.skill.id,
+      skill: candidate.skill,
+      placeholder: `[技能: ${candidate.skill.name}] 输入画面主体与细节描述...`,
+    });
+    input.value = input.value.replace(/(?:^|\s)@[^\s]*$/, '').trim();
+    showToast(`已激活 🎨 AI 生图插件（技能：${candidate.skill.name}）`, 'info');
+  } else if (candidate.action === 'agent' && candidate.agentId) {
+    const select = $('chatAgentSelect');
+    if (select) {
+      select.value = candidate.agentId;
+      select.dispatchEvent(new Event('change'));
+    }
+    input.value = input.value.replace(/(?:^|\s)@[^\s]*$/, '').trim();
+    showToast(`已切换至智能体：${candidate.name}`, 'info');
+  } else {
+    const beforeAt = input.value.replace(/(?:^|\s)@[^\s]*$/, (m) => m.startsWith(' ') ? ' ' : '');
+    input.value = beforeAt + `${candidate.mention} `;
+  }
+
+  closeMentionMenu();
+  updateComposerState();
+  input.focus();
+}
+
+function initComposerMentionSystem() {
+  const input = $('chatInput');
+  if (!input) return;
+
+  input.addEventListener('input', () => {
+    const val = input.value;
+    const caretPos = input.selectionStart || val.length;
+    const textBeforeCaret = val.slice(0, caretPos);
+    const atMatch = textBeforeCaret.match(/(?:^|\s)@([^\s]*)$/);
+
+    if (atMatch) {
+      const query = atMatch[1] || '';
+      renderMentionMenu(query);
+    } else {
+      closeMentionMenu();
+    }
+  });
+
+  input.addEventListener('keydown', (e) => {
+    const menu = $('composerMentionMenu');
+    const isMenuOpen = menu && menu.style.display !== 'none' && mentionMatches.length > 0;
+
+    if (isMenuOpen) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        mentionSelectedIndex = (mentionSelectedIndex + 1) % mentionMatches.length;
+        const currentQuery = $('chatInput')?.value?.match(/(?:^|\s)@([^\s]*)$/)?.[1] || '';
+        renderMentionMenu(currentQuery);
+        const activeItem = menu.querySelector(`.composer-mention-item[data-index="${mentionSelectedIndex}"]`);
+        activeItem?.scrollIntoView({ block: 'nearest' });
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        mentionSelectedIndex = (mentionSelectedIndex - 1 + mentionMatches.length) % mentionMatches.length;
+        const currentQuery = $('chatInput')?.value?.match(/(?:^|\s)@([^\s]*)$/)?.[1] || '';
+        renderMentionMenu(currentQuery);
+        const activeItem = menu.querySelector(`.composer-mention-item[data-index="${mentionSelectedIndex}"]`);
+        activeItem?.scrollIntoView({ block: 'nearest' });
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        chooseMentionCandidate(mentionMatches[mentionSelectedIndex]);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeMentionMenu();
+        return;
+      }
+    }
+
+    if (e.key === 'Backspace' && activeComposerPlugin && !input.value) {
+      clearActiveComposerPlugin();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#chatForm')) {
+      closeMentionMenu();
+    }
+  });
+}
+
+function synthesizePromptWithSkill(rawPrompt, skill) {
+  if (!rawPrompt) return '';
+  if (!skill || !skill.promptTemplate) return rawPrompt;
+  const tpl = skill.promptTemplate.trim();
+  if (!tpl) return rawPrompt;
+  if (tpl.includes('{{prompt}}')) {
+    return tpl.replace(/\{\{prompt\}\}/g, rawPrompt);
+  }
+  return `${rawPrompt}, ${tpl}`;
+}
+
+async function executeImageGenPlugin(promptText, targetSessionId, explicitSkill, explicitModel) {
+  const getTargetSession = () => sessions.find((s) => s.id === targetSessionId) || currentSession();
+  const session = getTargetSession();
+  if (!session) return;
+
+  const finalPrompt = promptText?.trim();
+  if (!finalPrompt) {
+    session.isGenerating = false;
+    session.generatingPlugin = null;
+    session.messages.push({
+      role: 'assistant',
+      content: `### 🎨 AI 生图插件已就绪\n\n请输入您想绘制的画面描述词 (Prompt)，例如：\n- \`@生图 一只未来科技感的多功能桌面小助手，柔和微光，三维数字艺术\`\n- \`@生图 现代极简风格的仪表盘 UI 设计概念图，暗黑主题\`\n- \`@生图 航天员在火星表面遥望地球日落，电影级写实光影\`\n\n> 💡 提示：您也可以点击下方工具栏的 **「🎨 AI 生图」** 按钮，自由挑选灵感预置词、导入或选择专属技能 (Skill) 与宽高比。`,
+      timestamp: new Date().toISOString(),
+    });
+    session.updatedAt = new Date().toISOString();
+    saveSessionsToStorage();
+    if (currentSessionId === session.id) {
+      renderCurrentSessionMessages();
+      setChatGenerating(false, session);
+    }
+    clearActiveComposerPlugin();
+    updateComposerState();
+    showToast('请输入画面提示词，例如：@生图 赛博朋克猫咪', 'info');
+    return;
+  }
+
+  // 1. 查找当前激活或关联的生图技能 (Skill)
+  const skill = explicitSkill
+    || activeComposerPlugin?.skill
+    || (state?.skills || []).find(s => s.id === activeComposerPlugin?.skillId)
+    || (state?.skills || []).find(s => s.id === $('imageGenSkillSelect')?.value);
+
+  // 2. 根据技能合成增强后的提示词
+  const enhancedPrompt = synthesizePromptWithSkill(finalPrompt, skill);
+
+  let providerId = $('imageGenProviderSelect')?.value || '';
+  let model = explicitModel || $('imageGenModelSelect')?.value || '';
+  if (model === 'manual:manual') {
+    model = $('manualImageModelInput')?.value?.trim() || '';
+  }
+
+  // 如果用户明确指定了模型（如 gpt-image-2.5），优先在已配置模型库匹配对应 Provider
+  if (explicitModel) {
+    const allModels = Array.isArray(state?.models) ? state.models : [];
+    const expLower = explicitModel.toLowerCase();
+    const matched = allModels.find(m => {
+      const name = (m.model || m.modelName || m.alias || '').toLowerCase();
+      return name === expLower || name.includes(expLower) || expLower.includes(name);
+    });
+    if (matched) {
+      providerId = matched.providerId || matched.provider || providerId;
+      model = matched.model || matched.modelName || matched.alias;
+    }
+  }
+
+  if (!providerId || !model) {
+    const allProviders = Array.isArray(state?.providers) ? state.providers : [];
+    const allModels = Array.isArray(state?.models) ? state.models : [];
+
+    const imgModel = allModels.find(m => {
+      const name = (m.model || m.modelName || m.alias || '').toLowerCase();
+      return name.includes('dall-e') || name.includes('flux') || name.includes('image') || name.includes('cogview') || name.includes('sd');
+    });
+
+    if (imgModel) {
+      providerId = imgModel.providerId || imgModel.provider;
+      model = model || imgModel.model || imgModel.modelName || imgModel.alias;
+    } else if (allProviders.length > 0) {
+      providerId = providerId || allProviders[0].id;
+      const candidate = allModels.find(m => (m.providerId || m.provider) === providerId);
+      model = model || (candidate ? (candidate.model || candidate.modelName || candidate.alias) : 'dall-e-3');
+    }
+  }
+
+  // 同步目标会话生成状态
+  const curTarget = getTargetSession();
+  if (curTarget) {
+    curTarget.isGenerating = true;
+    curTarget.generatingPlugin = {
+      id: 'image-gen',
+      prompt: finalPrompt,
+      enhancedPrompt,
+      skill,
+      explicitModel,
+      startTime: curTarget.generatingPlugin?.startTime || Date.now(),
+    };
+    if (currentSessionId === curTarget.id) {
+      renderCurrentSessionMessages();
+    }
+  }
+
+  try {
+    const res = await window.hap.generateImage({
+      prompt: enhancedPrompt,
+      providerId: providerId || undefined,
+      model: model || undefined,
+      workspace: currentActiveProject || undefined,
+      size: '1024x1024',
+      aspectRatio: '1:1',
+      style: skill?.style || 'vivid',
+    });
+
+    const finishSession = getTargetSession();
+    if (!finishSession) return;
+
+    if (res.ok && (res.imageUrl || res.localUri)) {
+      lastGeneratedImage = res;
+      res.skillUsed = skill;
+      const imgUrl = res.imageUrl || res.localUri;
+      const engineText = res.engineUsed || (model ? `${providerId} (${model})` : 'Flux / SDXL');
+
+      // 明确说明应用了什么 Skill，并展示增强前后的提示词
+      const skillSection = skill ? [
+        `> ⚡ **应用技能 (Skill)**：**${esc(skill.name)}**`,
+        `> 📖 **技能说明**：${esc(skill.description || '视觉风格优化与画质提升')}`,
+        `> 📝 **原始描述**：${esc(finalPrompt)}`,
+        `> 🪄 **技能增强提示词**：\`${esc(enhancedPrompt)}\``,
+      ].join('\n') : `> 📝 **画面描述**：${esc(finalPrompt)}`;
+
+      const replyContent = `### 🎨 AI 视觉创作完成\n\n> 🧩 **插件**：AI 生图 (Image Studio)\n${skillSection}\n> ⚙️ **渲染模型**：\`${esc(engineText)}\`  |  **分辨率**：\`${res.width || 1024}x${res.height || 1024}\`\n\n![${esc(finalPrompt)}](${imgUrl})`;
+
+      finishSession.messages.push({
+        role: 'assistant',
+        content: replyContent,
+        timestamp: new Date().toISOString(),
+      });
+      finishSession.updatedAt = new Date().toISOString();
+      finishSession.isGenerating = false;
+      finishSession.generatingPlugin = null;
+      saveSessionsToStorage();
+      if (currentSessionId === finishSession.id) {
+        renderCurrentSessionMessages();
+        setChatGenerating(false, finishSession);
+      }
+      showToast('🎨 AI 图像生成成功！', 'success');
+    } else {
+      throw new Error(res.error || '生成失败，请检查生图服务商配置');
+    }
+  } catch (err) {
+    const errSession = getTargetSession();
+    const errorMsg = err.message || '生图服务异常';
+    const replyContent = `⚠️ **AI 生图插件执行异常**：${errorMsg}\n\n> 💡 提示：可点击输入框底部的 **「🎨 AI 生图」** 按钮，检查或选择可用的生图服务商与模型名称。`;
+
+    if (errSession) {
+      errSession.messages.push({
+        role: 'assistant',
+        content: replyContent,
+        timestamp: new Date().toISOString(),
+      });
+      errSession.updatedAt = new Date().toISOString();
+      errSession.isGenerating = false;
+      errSession.generatingPlugin = null;
+      saveSessionsToStorage();
+      if (currentSessionId === errSession.id) {
+        renderCurrentSessionMessages();
+        setChatGenerating(false, errSession);
+      }
+    }
+    showToast('生图失败: ' + errorMsg, 'error');
+  } finally {
+    const finalSession = getTargetSession();
+    if (finalSession) {
+      finalSession.isGenerating = false;
+      finalSession.generatingPlugin = null;
+    }
+    clearActiveComposerPlugin();
+    updateComposerState();
+    if (currentSessionId === targetSessionId) {
+      setChatGenerating(false, finalSession);
+      const threadContainer = $('chatThreadContainer');
+      if (threadContainer) threadContainer.scrollTop = threadContainer.scrollHeight;
+    }
   }
 }
 
 chatInput?.addEventListener('input', updateComposerState);
 updateComposerState();
+initComposerMentionSystem();
 
 chatInput?.addEventListener('keydown', (e) => {
+  const menu = $('composerMentionMenu');
+  const isMenuOpen = menu && menu.style.display !== 'none' && mentionMatches.length > 0;
+  if (isMenuOpen && (e.key === 'Enter' || e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Escape' || e.key === 'Tab')) {
+    return; // 让 initComposerMentionSystem 处理
+  }
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
-    if (chatInput.value.trim() || currentAttachments.length > 0) {
+    if (chatInput.value.trim() || currentAttachments.length > 0 || activeComposerPlugin) {
       $('chatForm').requestSubmit();
     }
   }
 });
 
-function setChatGenerating(isGen) {
-  const session = currentSession();
-  session.isGenerating = isGen;
+window.forceStopGenerating = (event) => {
+  if (event) event.stopPropagation();
+  for (const s of sessions) {
+    if (s) {
+      s.isGenerating = false;
+      s.generatingPlugin = null;
+      s.liveContent = '';
+      s.liveReasoning = '';
+    }
+  }
+  setChatGenerating(false);
+  saveSessionsToStorage();
+  renderCurrentSessionMessages();
+  showToast('已清除任务执行与思考状态', 'info');
+};
+
+function setChatGenerating(isGen, targetSession) {
+  const session = targetSession || currentSession();
+  if (session) {
+    session.isGenerating = isGen;
+    if (!isGen) {
+      session.generatingPlugin = null;
+      session.liveContent = '';
+      session.liveReasoning = '';
+    }
+  }
+  if (!isGen && !targetSession) {
+    for (const s of sessions) {
+      if (s) {
+        s.isGenerating = false;
+        s.generatingPlugin = null;
+        s.liveContent = '';
+        s.liveReasoning = '';
+      }
+    }
+  }
+  const cur = currentSession();
+  const curIsGen = Boolean(cur?.isGenerating);
   const stopBtn = $('stopChatBtn');
   const sendBtn = $('sendChatBtn');
-  if (stopBtn) stopBtn.style.display = isGen ? 'inline-flex' : 'none';
-  if (sendBtn) sendBtn.style.display = isGen ? 'none' : 'inline-flex';
+  if (stopBtn) stopBtn.style.display = curIsGen ? 'inline-flex' : 'none';
+  if (sendBtn) sendBtn.style.display = curIsGen ? 'none' : 'inline-flex';
 }
 
 window.hap?.onChatStream?.((data) => {
@@ -6244,7 +6910,7 @@ window.hap?.onChatStream?.((data) => {
     const content = $('streamingReasoningContent');
     if (box) box.style.display = '';
     if (content) content.innerHTML = renderMarkdownContent(session.liveReasoning);
-  } else if (data.type === 'token_delta' || data.type === 'token') {
+  } else if (data.type === 'token_delta' || data.type === 'token' || data.type === 'text') {
     session.liveContent = (session.liveContent || '') + (data.text || '');
     const contentText = $('streamingContentText');
     if (contentText) {
@@ -6264,13 +6930,28 @@ $('stopChatBtn')?.addEventListener('click', async () => {
     await window.hap.abortChat();
   } catch (err) {
     showToast('中断请求失败: ' + err.message, 'error');
+  } finally {
+    for (const s of sessions) {
+      if (s) {
+        s.isGenerating = false;
+        s.generatingPlugin = null;
+        s.liveContent = '';
+        s.liveReasoning = '';
+      }
+    }
+    setChatGenerating(false);
+    saveSessionsToStorage();
+    renderCurrentSessionMessages();
   }
 });
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && currentSession()?.isGenerating) {
-    e.preventDefault();
-    $('stopChatBtn')?.click();
+  if (e.key === 'Escape') {
+    const cur = currentSession();
+    if (cur?.isGenerating) {
+      e.preventDefault();
+      $('stopChatBtn')?.click();
+    }
   }
 });
 
@@ -6278,18 +6959,153 @@ $('chatForm')?.addEventListener('submit', async (event) => {
   event.preventDefault();
   const text = chatInput.value.trim();
   const attachmentsToSend = [...currentAttachments];
-  if (!text && attachmentsToSend.length === 0) return;
+  if (!text && attachmentsToSend.length === 0 && !activeComposerPlugin) return;
+
+  const currentActiveSession = currentSession();
+  if (currentActiveSession?.isGenerating) {
+    showToast('当前会话正在深度思考与执行中，请稍候或点击「停止生成」...', 'info');
+    return;
+  }
+
+  // 检测是否为 @生图 插件请求 或 @生图技能 请求
+  const isImagePluginActive = activeComposerPlugin?.id === 'image-gen';
+  const isImageMention = /^(?:@生图|@image|@img|@draw|@画图)\b/i.test(text);
+  const matchedSkillMention = (state?.skills || []).find(s => {
+    if (s.category !== 'image' && (!s.tags || !s.tags.includes('生图'))) return false;
+    const shortName = (s.name || '').split(/[\s·(（]/)[0];
+    return text.startsWith(`@${s.name}`) || (shortName && text.startsWith(`@${shortName}`)) || text.startsWith(`@${s.id}`);
+  });
+
+  if (isImagePluginActive || isImageMention || matchedSkillMention) {
+    let rawPrompt = text;
+    let skillToUse = activeComposerPlugin?.skill || matchedSkillMention;
+
+    if (matchedSkillMention) {
+      const shortName = (matchedSkillMention.name || '').split(/[\s·(（]/)[0];
+      const re = new RegExp(`^@((${matchedSkillMention.name})|(${shortName})|(${matchedSkillMention.id}))\\s*`, 'i');
+      rawPrompt = text.replace(re, '').trim();
+    } else if (isImageMention) {
+      rawPrompt = text.replace(/^(?:@生图|@image|@img|@draw|@画图)\s*/i, '').trim();
+    }
+
+    // 提取显式指定的模型（例如：调用gpt-image-2.5生成一张剑仙图片 / 使用 dall-e-3 / --model flux）
+    let explicitModel = '';
+    const modelFlagsRegex = /(?:--model|-m)\s+([a-zA-Z0-9_./-]+)/i;
+    const modelKeywordRegex = /(?:(?:请?调用|使用|通过|以|用|采用|模型\s*[:：=]?)\s*([a-zA-Z0-9_./-]+)\s*(?:(?:来|去)?(?:生成|绘制|画|作图|做图|制作|渲染))?\s*)/i;
+
+    const flagMatch = rawPrompt.match(modelFlagsRegex);
+    if (flagMatch) {
+      explicitModel = flagMatch[1];
+      rawPrompt = rawPrompt.replace(flagMatch[0], '').trim();
+    } else {
+      const kwMatch = rawPrompt.match(modelKeywordRegex);
+      if (kwMatch) {
+        const candidate = kwMatch[1];
+        const isLikelyModel = /[-./\d]/.test(candidate) ||
+          ['gpt', 'flux', 'dall', 'sd', 'sdxl', 'cogview', 'imagen', 'midjourney'].some(k => candidate.toLowerCase().includes(k)) ||
+          (state?.models || []).some(m => (m.model || m.modelName || m.alias || '').toLowerCase() === candidate.toLowerCase());
+        if (isLikelyModel) {
+          explicitModel = candidate;
+          rawPrompt = rawPrompt.replace(kwMatch[0], '').trim();
+        }
+      }
+    }
+    // 提取自然语言中指定的生图技能（例如：--skill 赛博朋克 / 技能: 赛博朋克 / 使用 东方水墨 技能）
+    if (!skillToUse && Array.isArray(state?.skills)) {
+      const skillFlagsRegex = /(?:--skill|-s)\s+([^\s,，]+)/i;
+      const skillKeywordRegex = /(?:(?:技能|skill)\s*[:：=]\s*([^\s,，]+))|(?:(?:使用|应用|采用|调用|配合|搭配)\s*([^\s,，]+)\s*(?:生图)?(?:技能|skill))/i;
+
+      let candidateSkillWord = '';
+      let matchToRemove = '';
+
+      const flagMatch = rawPrompt.match(skillFlagsRegex);
+      if (flagMatch && flagMatch[1]) {
+        candidateSkillWord = flagMatch[1];
+        matchToRemove = flagMatch[0];
+      } else {
+        const kwMatch = rawPrompt.match(skillKeywordRegex);
+        if (kwMatch) {
+          candidateSkillWord = kwMatch[1] || kwMatch[2] || '';
+          matchToRemove = kwMatch[0];
+        }
+      }
+
+      if (candidateSkillWord) {
+        const wordLower = candidateSkillWord.toLowerCase();
+        const found = state.skills.find(s => {
+          if (s.category !== 'image' && (!s.tags || !s.tags.includes('生图'))) return false;
+          const sName = (s.name || '').toLowerCase();
+          const sId = (s.id || '').toLowerCase();
+          const shortName = sName.split(/[\s·(（]/)[0];
+          return sName.includes(wordLower) || wordLower.includes(shortName) || sId.includes(wordLower);
+        });
+        if (found) {
+          skillToUse = found;
+          rawPrompt = rawPrompt.replace(matchToRemove, '').trim();
+        }
+      }
+    }
+
+    rawPrompt = rawPrompt.replace(/^[，,、\s]+|[，,、\s]+$/g, '').trim();
+
+    chatInput.value = '';
+    currentAttachments = [];
+    renderComposerAttachments();
+    clearActiveComposerPlugin();
+    updateComposerState();
+    closeMentionMenu();
+
+    const session = currentSession();
+    const targetSessionId = session.id;
+    session.liveContent = '';
+    session.liveReasoning = '';
+    setChatGenerating(true, session);
+    if (session.messages.length === 0) {
+      session.title = '🎨 ' + (rawPrompt ? rawPrompt.slice(0, 20) : 'AI 生图');
+    }
+    session.updatedAt = new Date().toISOString();
+    session.projectPath = currentActiveProject;
+
+    const pluginBadgeTitle = skillToUse
+      ? `AI 生图 · 技能: ${skillToUse.name}`
+      : (explicitModel ? `AI 生图 · 模型: ${explicitModel}` : 'AI 生图插件');
+
+    session.generatingPlugin = {
+      id: 'image-gen',
+      title: pluginBadgeTitle,
+      prompt: rawPrompt,
+      enhancedPrompt: synthesizePromptWithSkill(rawPrompt, skillToUse),
+      skill: skillToUse,
+      explicitModel: explicitModel || undefined,
+      startTime: Date.now(),
+    };
+
+    const userMessageContent = text.startsWith('@') ? text : `@生图 ${text}`;
+    session.messages.push({
+      role: 'user',
+      content: userMessageContent,
+      plugin: { id: 'image-gen', title: pluginBadgeTitle, icon: '🎨' },
+      timestamp: new Date().toISOString(),
+    });
+    saveSessionsToStorage();
+    renderCurrentSessionMessages();
+    renderProjectsTree();
+
+    await executeImageGenPlugin(rawPrompt, targetSessionId, skillToUse, explicitModel);
+    return;
+  }
 
   chatInput.value = '';
   currentAttachments = [];
   renderComposerAttachments();
   updateComposerState();
+  closeMentionMenu();
 
   const session = currentSession();
   const targetSessionId = session.id;
   session.liveContent = '';
   session.liveReasoning = '';
-  setChatGenerating(true);
+  setChatGenerating(true, session);
   if (session.messages.length === 0) {
     session.title = text ? text.slice(0, 22) : (attachmentsToSend[0]?.fileName || '图片分析');
   }
@@ -6369,7 +7185,8 @@ $('chatForm')?.addEventListener('submit', async (event) => {
     if (!reply) {
       reply = '智能体已执行完毕。';
     }
-    setChatGenerating(false);
+    setChatGenerating(false, session);
+    session.isGenerating = false;
     session.liveContent = '';
     session.liveReasoning = '';
     session.messages.push({
@@ -6381,7 +7198,8 @@ $('chatForm')?.addEventListener('submit', async (event) => {
     session.updatedAt = new Date().toISOString();
     saveSessionsToStorage();
   } catch (error) {
-    setChatGenerating(false);
+    setChatGenerating(false, session);
+    session.isGenerating = false;
     const partialReply = session.liveContent ? session.liveContent + '\n\n' : '';
     session.liveContent = '';
     session.liveReasoning = '';
@@ -6393,6 +7211,11 @@ $('chatForm')?.addEventListener('submit', async (event) => {
     session.updatedAt = new Date().toISOString();
     saveSessionsToStorage();
     showToast('对话执行已结束：' + error.message, 'info');
+  } finally {
+    setChatGenerating(false, session);
+    session.isGenerating = false;
+    session.liveContent = '';
+    session.liveReasoning = '';
   }
 
   if (currentSessionId === targetSessionId) {
@@ -10215,6 +11038,48 @@ function initAiImageStudio() {
   const modal = $('aiImageGenModal');
   if (!modal) return;
 
+  function populateImageGenSkills(selectedSkillId = '') {
+    const select = $('imageGenSkillSelect');
+    if (!select) return;
+    const skills = (state?.skills || []).filter(s => s.category === 'image' || (s.tags && s.tags.includes('生图')));
+
+    const currentValue = selectedSkillId || select.value || '';
+    select.innerHTML = '<option value="">(无预置技能 - 默认原生画面描述)</option>' +
+      skills.map(s => `<option value="${esc(s.id)}" ${s.id === currentValue ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
+
+    updateImageSkillDetailCard();
+  }
+  window.populateImageGenSkills = populateImageGenSkills;
+
+  function updateImageSkillDetailCard() {
+    const select = $('imageGenSkillSelect');
+    const card = $('imageSkillDetailCard');
+    if (!select || !card) return;
+
+    const skillId = select.value;
+    const skill = (state?.skills || []).find(s => s.id === skillId);
+
+    if (!skill) {
+      card.style.display = 'none';
+      return;
+    }
+
+    card.style.display = 'flex';
+    if ($('imageSkillDetailTitle')) $('imageSkillDetailTitle').textContent = skill.name;
+    if ($('imageSkillDetailCategory')) $('imageSkillDetailCategory').textContent = skill.style ? `风格: ${skill.style}` : '生图 Skill';
+    if ($('imageSkillDetailDesc')) $('imageSkillDetailDesc').textContent = skill.description || '视觉风格微调与画质优化';
+    if ($('imageSkillDetailTemplate')) {
+      $('imageSkillDetailTemplate').textContent = skill.promptTemplate
+        ? `修饰模板: ${skill.promptTemplate}`
+        : '无额外修饰模板';
+    }
+
+    if (skill.style && $('imageGenStyleSelect')) {
+      const opt = Array.from($('imageGenStyleSelect').options).find(o => o.value === skill.style);
+      if (opt) $('imageGenStyleSelect').value = skill.style;
+    }
+  }
+
   // 点击对话框底部的 "AI 生图" 按钮打开生图弹窗
   $('aiGenImageBtn')?.addEventListener('click', () => {
     const chatInputVal = $('chatInput')?.value.trim();
@@ -10222,7 +11087,13 @@ function initAiImageStudio() {
       $('imageGenPromptInput').value = chatInputVal;
     }
     populateImageGenProviders();
+    populateImageGenSkills();
     modal.showModal();
+  });
+
+  $('imageGenSkillSelect')?.addEventListener('change', updateImageSkillDetailCard);
+  $('openImportSkillModalBtn')?.addEventListener('click', () => {
+    $('importSkillModal')?.showModal();
   });
 
   $('imageGenModelSelect')?.addEventListener('change', () => {
@@ -10290,7 +11161,12 @@ function initAiImageStudio() {
       return;
     }
 
-    const style = $('imageGenStyleSelect')?.value || 'vivid';
+    // 获取选择的 Skill 并合成提示词
+    const selectedSkillId = $('imageGenSkillSelect')?.value;
+    const selectedSkill = (state?.skills || []).find(s => s.id === selectedSkillId);
+    const finalPromptWithSkill = synthesizePromptWithSkill(prompt, selectedSkill);
+
+    const style = selectedSkill?.style || $('imageGenStyleSelect')?.value || 'vivid';
     const ratioSelect = $('imageGenRatioSelect');
     const ratio = ratioSelect?.value || '1:1';
     const size = ratioSelect?.selectedOptions?.[0]?.getAttribute('data-size') || '1024x1024';
@@ -10314,7 +11190,7 @@ function initAiImageStudio() {
 
     try {
       const res = await window.hap.generateImage({
-        prompt,
+        prompt: finalPromptWithSkill,
         providerId,
         model,
         style,
@@ -10326,13 +11202,14 @@ function initAiImageStudio() {
 
       if (res.ok && (res.imageUrl || res.localUri)) {
         lastGeneratedImage = res;
+        res.skillUsed = selectedSkill;
         const imgUrl = res.imageUrl || res.localUri;
         const imgEl = $('imageGenResultImg');
         imgEl.src = imgUrl;
         $('imageGenLoadingBox').style.display = 'none';
         $('imageGenResultBox').style.display = 'flex';
         $('imageGenEngineBadge').textContent = res.engineUsed || 'Flux SDXL';
-        $('imageGenInfoPrompt').textContent = `“${res.prompt}”`;
+        $('imageGenInfoPrompt').textContent = selectedSkill ? `[${selectedSkill.name}] “${prompt}”` : `“${res.prompt}”`;
         $('imageGenInfoMeta').textContent = `${res.width}x${res.height} (${ratio})`;
         showToast(`AI 图像生成成功！耗时 ${elapsedSec}s`, 'success');
 
@@ -10398,7 +11275,203 @@ function initAiImageStudio() {
   });
 }
 
+function initImportSkillModal() {
+  const modal = $('importSkillModal');
+  if (!modal) return;
+
+  const openBtns = [$('openImportSkillModalBtn'), $('openImportSkillModalFromMarketBtn')];
+  openBtns.forEach(btn => {
+    btn?.addEventListener('click', () => {
+      $('importSkillForm')?.reset();
+      switchImportTab('file');
+      modal.showModal();
+    });
+  });
+
+  $('closeImportSkillModalBtn')?.addEventListener('click', () => modal.close());
+  $('cancelImportSkillBtn')?.addEventListener('click', () => modal.close());
+
+  function switchImportTab(tab) {
+    $('importSkillTabFile')?.classList.toggle('active', tab === 'file');
+    $('importSkillTabPaste')?.classList.toggle('active', tab === 'paste');
+    $('importSkillTabForm')?.classList.toggle('active', tab === 'form');
+
+    if ($('importSkillFileBox')) $('importSkillFileBox').style.display = tab === 'file' ? 'block' : 'none';
+    if ($('importSkillPasteBox')) $('importSkillPasteBox').style.display = tab === 'paste' ? 'block' : 'none';
+  }
+
+  $('importSkillTabFile')?.addEventListener('click', () => switchImportTab('file'));
+  $('importSkillTabPaste')?.addEventListener('click', () => switchImportTab('paste'));
+  $('importSkillTabForm')?.addEventListener('click', () => switchImportTab('form'));
+
+  const fileBox = $('importSkillFileBox');
+  const fileInput = $('importSkillFileInput');
+  fileBox?.addEventListener('click', () => fileInput?.click());
+
+  fileBox?.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    fileBox.classList.add('dragover');
+  });
+  fileBox?.addEventListener('dragleave', () => fileBox.classList.remove('dragover'));
+  fileBox?.addEventListener('drop', (e) => {
+    e.preventDefault();
+    fileBox.classList.remove('dragover');
+    if (e.dataTransfer?.files?.[0]) {
+      handleSkillFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  fileInput?.addEventListener('change', () => {
+    if (fileInput.files?.[0]) {
+      handleSkillFile(fileInput.files[0]);
+    }
+  });
+
+  function handleSkillFile(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = String(e.target?.result || '');
+      parseAndPopulateSkillData(content, file.name);
+    };
+    reader.readAsText(file);
+  }
+
+  $('importSkillContentInput')?.addEventListener('input', () => {
+    const content = $('importSkillContentInput')?.value?.trim();
+    if (content && content.startsWith('{') && content.endsWith('}')) {
+      parseAndPopulateSkillData(content);
+    }
+  });
+
+  function parseAndPopulateSkillData(rawText, fileName = '') {
+    try {
+      if (rawText.trim().startsWith('{')) {
+        const data = JSON.parse(rawText);
+        if (data.name && $('importSkillNameInput')) $('importSkillNameInput').value = data.name;
+        if (data.id && $('importSkillIdInput')) $('importSkillIdInput').value = data.id;
+        if (data.category && $('importSkillCategorySelect')) $('importSkillCategorySelect').value = data.category;
+        if (data.style && $('importSkillStyleSelect')) $('importSkillStyleSelect').value = data.style;
+        if (data.description && $('importSkillDescInput')) $('importSkillDescInput').value = data.description;
+        if (data.promptTemplate && $('importSkillPromptTemplateInput')) $('importSkillPromptTemplateInput').value = data.promptTemplate;
+        if (data.negativePrompt && $('importSkillNegativePromptInput')) $('importSkillNegativePromptInput').value = data.negativePrompt;
+        if (data.tags && $('importSkillTagsInput')) {
+          $('importSkillTagsInput').value = Array.isArray(data.tags) ? data.tags.join(', ') : String(data.tags);
+        }
+        showToast('已成功解析 Skill JSON 配置', 'success');
+        switchImportTab('form');
+        return;
+      }
+    } catch {
+      // 容错继续
+    }
+
+    let name = fileName.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+    let desc = '';
+    let template = '';
+    let style = 'vivid';
+    let tags = '生图, Custom';
+
+    const yamlMatch = rawText.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    if (yamlMatch) {
+      const yamlLines = yamlMatch[1].split('\n');
+      for (const line of yamlLines) {
+        const [k, ...v] = line.split(':');
+        if (!k || v.length === 0) continue;
+        const key = k.trim().toLowerCase();
+        const val = v.join(':').trim().replace(/^["']|["']$/g, '');
+        if (key === 'name') name = val;
+        if (key === 'description' || key === 'desc') desc = val;
+        if (key === 'style') style = val;
+        if (key === 'tags') tags = val;
+        if (key === 'template' || key === 'prompt') template = val;
+      }
+      const rest = rawText.slice(yamlMatch[0].length).trim();
+      if (!template && rest) template = rest;
+    } else {
+      const h1Match = rawText.match(/^#\s+(.+)$/m);
+      if (h1Match) name = h1Match[1].trim();
+
+      const codeBlockMatch = rawText.match(/```(?:prompt|text|markdown)?\r?\n([\s\S]*?)\r?\n```/);
+      if (codeBlockMatch) {
+        template = codeBlockMatch[1].trim();
+      } else {
+        template = rawText.trim();
+      }
+      desc = `从 ${fileName || '外部规则文档'} 导入的生图技能`;
+    }
+
+    if (name && $('importSkillNameInput')) $('importSkillNameInput').value = name;
+    if (desc && $('importSkillDescInput')) $('importSkillDescInput').value = desc;
+    if (template && $('importSkillPromptTemplateInput')) $('importSkillPromptTemplateInput').value = template;
+    if (tags && $('importSkillTagsInput')) $('importSkillTagsInput').value = tags;
+    if (style && $('importSkillStyleSelect')) $('importSkillStyleSelect').value = style;
+    showToast('已从文档提取技能模版与参数', 'success');
+    switchImportTab('form');
+  }
+
+  $('importSkillForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = $('importSkillNameInput')?.value?.trim();
+    if (!name) {
+      showToast('请输入技能名称', 'warning');
+      return;
+    }
+
+    const desc = $('importSkillDescInput')?.value?.trim() || '自定义生图或能力扩展技能';
+    const category = $('importSkillCategorySelect')?.value || 'image';
+    const style = $('importSkillStyleSelect')?.value || 'vivid';
+    const promptTemplate = $('importSkillPromptTemplateInput')?.value?.trim() || '';
+    const negativePrompt = $('importSkillNegativePromptInput')?.value?.trim() || '';
+    const id = $('importSkillIdInput')?.value?.trim() || `img-skill-${Date.now()}`;
+    const tagsRaw = $('importSkillTagsInput')?.value?.trim();
+    const tags = tagsRaw ? tagsRaw.split(/[,，]/).map(t => t.trim()).filter(Boolean) : ['生图', 'Custom'];
+
+    const submitBtn = $('doImportSkillSubmitBtn');
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+      const imported = await window.hap.importSkill({
+        id,
+        name,
+        description: desc,
+        category,
+        style,
+        promptTemplate,
+        negativePrompt,
+        tags,
+        enabled: true,
+        installed: true,
+      });
+
+      if (!Array.isArray(state.skills)) state.skills = [];
+      const idx = state.skills.findIndex(s => s.id === imported.id);
+      if (idx >= 0) {
+        state.skills[idx] = imported;
+      } else {
+        state.skills.unshift(imported);
+      }
+
+      renderSkills();
+      if (window.populateImageGenSkills) {
+        window.populateImageGenSkills(imported.id);
+      }
+      if ($('imageGenSkillSelect')) {
+        $('imageGenSkillSelect').value = imported.id;
+        $('imageGenSkillSelect').dispatchEvent(new Event('change'));
+      }
+
+      showToast(`技能「${imported.name}」导入成功！`, 'success');
+      modal.close();
+    } catch (err) {
+      showToast('导入失败：' + err.message, 'error');
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
+  });
+}
+
 initAiImageStudio();
+initImportSkillModal();
 
 // ==========================================================================
 // 计算节点全景监控控制器 (Universal Node & Server Panorama Controller)

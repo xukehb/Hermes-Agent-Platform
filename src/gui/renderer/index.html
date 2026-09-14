@@ -209,8 +209,14 @@
               <!-- 多模态附件预览栏 -->
               <div id="composerAttachmentsTray" class="composer-attachments-tray" style="display:none;"></div>
 
+              <!-- 仿 ChatGPT 风格的激活插件胶囊托盘 (Active Plugin Tray) -->
+              <div id="composerPluginTray" class="composer-plugin-tray" style="display:none;"></div>
+
+              <!-- @ 呼出插件与智能体悬浮菜单 (Mention Popover Menu) -->
+              <div id="composerMentionMenu" class="composer-mention-menu" style="display:none;" role="listbox" aria-label="插件与智能体候选菜单"></div>
+
               <div class="composer-text-area-wrap">
-                <textarea id="chatInput" class="composer-textarea" rows="1" placeholder="给智能体下发开发、修复或审查任务... (支持粘贴图片/拖拽文件, Enter 发送)"></textarea>
+                <textarea id="chatInput" class="composer-textarea" rows="1" placeholder="给智能体下发开发、修复或审查任务... (支持输入 @ 选择插件/智能体, Enter 发送)"></textarea>
                 <div id="composerDropOverlay" class="composer-drop-overlay" style="display:none;">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
@@ -693,6 +699,9 @@
                 </button>
                 <button id="openInstallSkillModalBtn" class="btn primary" style="font-size:12.5px;padding:6px 14px;">
                   + 从 GitHub 安装 Skill
+                </button>
+                <button id="openImportSkillModalFromMarketBtn" class="btn secondary" style="font-size:12.5px;padding:6px 14px;">
+                  📥 导入自定义/生图 Skill
                 </button>
               </div>
             </div>
@@ -2037,6 +2046,106 @@
         </div>
       </form>
     </dialog>
+ 
+    <!-- 弹窗: 导入自定义与生图技能 (Import Skill Modal) -->
+    <dialog id="importSkillModal" class="modal modal-md">
+      <form id="importSkillForm" class="modal-form-wrap" style="max-width:680px;">
+        <div class="modal-header-row">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff;display:grid;place-items:center;font-size:16px;">⚡</div>
+            <div>
+              <h2 style="margin:0;font-size:16px;font-weight:700;">导入技能 (Import Skill)</h2>
+              <p style="margin:2px 0 0 0;font-size:12px;color:var(--text-muted);">导入或自定义 AI 生图视觉技能、智能体提示词模版或业务扩展能力</p>
+            </div>
+          </div>
+          <button type="button" class="btn-close" id="closeImportSkillModalBtn" aria-label="关闭" title="关闭"></button>
+        </div>
+
+        <!-- 导入方式切换: 上传文件 / 粘贴内容 / 手动表单 -->
+        <div class="import-skill-tabs" style="display:flex;gap:8px;margin-bottom:12px;border-bottom:1px solid var(--border-default);padding-bottom:8px;">
+          <button type="button" class="btn secondary active" id="importSkillTabFile" style="font-size:12px;padding:4px 10px;">📁 文件导入 (.json / .md)</button>
+          <button type="button" class="btn secondary" id="importSkillTabPaste" style="font-size:12px;padding:4px 10px;">📋 粘贴 JSON / Markdown</button>
+          <button type="button" class="btn secondary" id="importSkillTabForm" style="font-size:12px;padding:4px 10px;">✏️ 手动填写表单</button>
+        </div>
+
+        <!-- 文件导入区域 -->
+        <div id="importSkillFileBox" class="import-drop-box" style="margin-bottom:12px;padding:16px;border:2px dashed var(--border-default);border-radius:8px;text-align:center;background:var(--bg-secondary);cursor:pointer;">
+          <input type="file" id="importSkillFileInput" accept=".json,.md,.yaml,.yml,.txt" style="display:none;" />
+          <div style="font-size:24px;margin-bottom:4px;">📥</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text-main);">点击选择或拖拽 Skill 文件至此</div>
+          <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">支持 .json 配置文件或带 Frontmatter/Prompt 的 .md 技能规则文件</div>
+        </div>
+
+        <!-- 粘贴内容区域 -->
+        <div id="importSkillPasteBox" style="display:none;margin-bottom:12px;">
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">粘贴 Skill JSON 或 Markdown 规则：</label>
+          <textarea id="importSkillContentInput" rows="5" style="width:100%;box-sizing:border-box;font-family:var(--font-mono);font-size:12px;padding:8px;border-radius:6px;border:1px solid var(--border-default);" placeholder="可粘贴 JSON 配置或 Markdown 文本，系统将自动解析元数据与提示词模板..."></textarea>
+        </div>
+
+        <!-- 表单详细信息 -->
+        <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="form-group" style="margin-bottom:8px;">
+            <label style="font-size:12px;font-weight:600;">技能名称 (Skill Name) *</label>
+            <input name="name" id="importSkillNameInput" placeholder="如：赛博朋克霓虹机能" required />
+          </div>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label style="font-size:12px;font-weight:600;">技能唯一标识 (Skill ID)</label>
+            <input name="id" id="importSkillIdInput" placeholder="留空自动生成，如：img-skill-cyberpunk" />
+          </div>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label style="font-size:12px;font-weight:600;">技能类别 (Category)</label>
+            <select id="importSkillCategorySelect">
+              <option value="image">🎨 图像生成视觉技能 (Image Skill)</option>
+              <option value="agent">🤖 智能体行为技能 (Agent Skill)</option>
+              <option value="workflow">🔄 工作流协作技能 (Workflow Skill)</option>
+              <option value="general">🧩 通用技能 (General)</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label style="font-size:12px;font-weight:600;">对应风格基调 (Style)</label>
+            <select id="importSkillStyleSelect">
+              <option value="vivid">鲜艳生动 (Vivid)</option>
+              <option value="cyberpunk">赛博朋克 (Cyberpunk)</option>
+              <option value="photorealistic">大师写实胶片 (Photorealistic)</option>
+              <option value="anime">日系动漫 (Anime)</option>
+              <option value="3d-render">3D 渲染 (3D Render)</option>
+              <option value="watercolor">柔和水彩 (Watercolor)</option>
+              <option value="digital-art">数字艺术 (Digital Art)</option>
+              <option value="vector">矢量图标 (Vector)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:8px;">
+          <label style="font-size:12px;font-weight:600;">技能简介与应用说明 (Description) *</label>
+          <input name="description" id="importSkillDescInput" placeholder="说明这个 Skill 能做什么、增强哪些细节与画面质感..." required />
+        </div>
+
+        <div class="form-group" style="margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+            <label style="font-size:12px;font-weight:600;">提示词修饰模板 (Prompt Template) *</label>
+            <span style="font-size:11px;color:var(--text-muted);">使用 <code>{{prompt}}</code> 占位用户输入</span>
+          </div>
+          <textarea id="importSkillPromptTemplateInput" rows="3" style="width:100%;box-sizing:border-box;border-radius:6px;padding:8px;font-size:12px;border:1px solid var(--border-default);" placeholder="例如：cyberpunk aesthetic, vibrant neon reflections, cinematic 8k, {{prompt}}"></textarea>
+        </div>
+
+        <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="form-group" style="margin-bottom:8px;">
+            <label style="font-size:12px;font-weight:600;">反向提示词 (Negative Prompt)</label>
+            <input name="negativePrompt" id="importSkillNegativePromptInput" placeholder="如：low quality, blurry, distorted" />
+          </div>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label style="font-size:12px;font-weight:600;">标签分类 (Tags，逗号分隔)</label>
+            <input name="tags" id="importSkillTagsInput" placeholder="如：生图, Cyberpunk, 8K" />
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:12px;border-top:1px solid var(--border-default);margin-top:6px;">
+          <button type="button" class="btn secondary" id="cancelImportSkillBtn">取消</button>
+          <button type="submit" class="btn primary" id="doImportSkillSubmitBtn">确认导入技能</button>
+        </div>
+      </form>
+    </dialog>
 
     <!-- 弹窗: 添加自定义 MCP 插件 -->
     <dialog id="addPluginModal" class="modal">
@@ -3299,6 +3408,27 @@
                 <button type="button" class="btn secondary img-preset-tag" style="font-size:11px;padding:3px 8px;border-radius:12px;" data-prompt="现代极简移动端 App UI 界面设计，毛玻璃卡片风格，精致图标排版，柔和优雅光影">现代 UI 设计</button>
                 <button type="button" class="btn secondary img-preset-tag" style="font-size:11px;padding:3px 8px;border-radius:12px;" data-prompt="可爱科技感 3D 机器人吉祥物，圆润柔和粘土质感，盲盒手办风格，柔和影棚布光">3D 机器人手办</button>
                 <button type="button" class="btn secondary img-preset-tag" style="font-size:11px;padding:3px 8px;border-radius:12px;" data-prompt="现代扁平商业插画，程序员在多屏工作台前协作开发，明快活力配色，极简线条">现代扁平插画</button>
+              </div>
+            </div>
+
+            <!-- 生图增强技能选择器与详情说明卡片 -->
+            <div class="form-group" style="margin-bottom:0;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                <label style="font-size:12px;font-weight:600;">生图增强技能 (Image Skill / 风格模板)</label>
+                <button type="button" class="btn secondary" id="openImportSkillModalBtn" style="font-size:11px;padding:2px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;">
+                  <span>📥</span> 导入技能
+                </button>
+              </div>
+              <select id="imageGenSkillSelect">
+                <option value="">(无预置技能 - 默认原生画面描述)</option>
+              </select>
+              <div id="imageSkillDetailCard" class="image-skill-detail-card" style="display:none;margin-top:6px;">
+                <div class="image-skill-detail-header">
+                  <span class="image-skill-detail-title" id="imageSkillDetailTitle"></span>
+                  <span class="image-skill-detail-tag" id="imageSkillDetailCategory">生图 Skill</span>
+                </div>
+                <div class="image-skill-detail-desc" id="imageSkillDetailDesc"></div>
+                <div class="image-skill-detail-template" id="imageSkillDetailTemplate"></div>
               </div>
             </div>
 

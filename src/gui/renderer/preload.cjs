@@ -38,6 +38,7 @@ contextBridge.exposeInMainWorld('hap', {
   generateImage: (payload) => call('gui:generateImage', payload),
   listSkills: () => call('gui:listSkills'),
   installSkill: (repoUrl) => call('gui:installSkill', repoUrl),
+  importSkill: (skillData) => call('gui:importSkill', skillData),
   toggleSkill: (id, enabled) => call('gui:toggleSkill', { id, enabled }),
   uninstallSkill: (id) => call('gui:uninstallSkill', id),
   listPlugins: () => call('gui:listPlugins'),
