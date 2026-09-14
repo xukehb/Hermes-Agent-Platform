@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { cosineSimilarity, dotProduct, normalizeVector } from '../src/memory/vector-math.js';
 import { LocalSemanticEmbedder } from '../src/memory/embedding.js';
 import { MemoryStore } from '../src/memory/store.js';
-import { existsSync, unlinkSync } from 'node:fs';
+import { existsSync, unlinkSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -58,8 +58,10 @@ describe('Vector Memory & RAG Engine', () => {
     });
 
     afterEach(() => {
-      if (existsSync(testDb)) {
-        try { unlinkSync(testDb); } catch {}
+      for (const file of [testDb, `${testDb}.db`, `${testDb}.migrated`]) {
+        if (existsSync(file)) {
+          try { unlinkSync(file); } catch {}
+        }
       }
     });
 
@@ -89,6 +91,59 @@ describe('Vector Memory & RAG Engine', () => {
       expect(searchRes.length).toBe(1);
       expect(searchRes[0]!.memory.title).toBe('前端框架规范');
       expect(searchRes[0]!.score).toBeGreaterThan(0.2);
+    });
+
+    it('preserves metadata and supports update and expiration filtering', async () => {
+      const card = await store.addMemory({
+        title: '项目规范',
+        content: '使用 TypeScript',
+        category: 'convention',
+        agentId: 'coder',
+        workspace: '/workspace/demo',
+        importance: 0.9,
+        confidence: 0.8,
+        expiresAt: Date.now() - 1,
+      });
+      expect(card.layer).toBe('semantic');
+      expect(store.listMemories()[0]?.agentId).toBe('coder');
+      expect(await store.searchMemories({ text: 'TypeScript', workspace: '/workspace/demo' })).toHaveLength(0);
+
+      const updated = store.updateMemory(card.id, { content: '必须使用 TypeScript 和 ESM', expiresAt: undefined });
+      expect(updated?.content).toContain('ESM');
+      expect((await store.searchMemories({ text: 'ESM', agentId: 'coder', workspace: '/workspace/demo' }))[0]?.memory.id).toBe(card.id);
+    });
+
+    it('migrates legacy JSON and rejects malformed legacy data', async () => {
+      const legacy = join(tmpdir(), `legacy-memory-${Date.now()}.json`);
+      writeFileSync(legacy, JSON.stringify({ memories: [{
+        id: 'legacy-1', category: 'preference', title: '旧偏好', content: '使用 ESM', tags: [], createdAt: 1, updatedAt: 1, accessCount: 0,
+      }] }));
+      const migrated = new MemoryStore(legacy);
+      expect(migrated.listMemories()[0]?.id).toBe('legacy-1');
+      expect(existsSync(`${legacy}.migrated`)).toBe(true);
+      migrated.close();
+      for (const file of [legacy, `${legacy}.db`, `${legacy}.migrated`]) if (existsSync(file)) unlinkSync(file);
+
+      const broken = join(tmpdir(), `broken-memory-${Date.now()}.json`);
+      writeFileSync(broken, '{broken');
+      expect(() => new MemoryStore(broken)).toThrow(/损坏|解析/);
+      unlinkSync(broken);
+    });
+
+    it('keeps concurrent additions instead of overwriting state', async () => {
+      await Promise.all(Array.from({ length: 20 }, (_, index) => store.addMemory({
+        title: `并发 ${index}`,
+        content: `内容 ${index}`,
+        category: 'fact',
+      })));
+      expect(store.listMemories()).toHaveLength(20);
+    });
+
+    it('merges highly similar memories without an explicit dedupe key', async () => {
+      const first = await store.addMemory({ title: '命名规范', content: '项目统一使用 kebab-case 命名文件', category: 'convention' });
+      const second = await store.addMemory({ title: '命名规范补充', content: '项目统一使用 kebab-case 命名文件', category: 'convention' });
+      expect(second.id).toBe(first.id);
+      expect(store.listMemories()).toHaveLength(1);
     });
   });
 });

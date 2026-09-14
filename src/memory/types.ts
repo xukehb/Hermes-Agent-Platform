@@ -2,7 +2,8 @@
  * 向量长期记忆库与 RAG 进化系统类型定义。
  */
 
-export type MemoryCategory = 'preference' | 'fact' | 'case' | 'architecture';
+export type MemoryCategory = 'preference' | 'fact' | 'case' | 'architecture' | 'convention' | 'domain' | 'custom';
+export type MemoryLayer = 'working' | 'semantic' | 'episodic';
 
 export interface MemoryCard {
   id: string;
@@ -11,8 +12,15 @@ export interface MemoryCard {
   content: string;
   tags: string[];
   embedding?: number[] | undefined;
+  embeddingVersion?: string | undefined;
+  layer: MemoryLayer;
+  agentId?: string | undefined;
   sourceTaskId?: string | undefined;
   workspace?: string | undefined;
+  importance: number;
+  confidence: number;
+  expiresAt?: number | undefined;
+  dedupeKey?: string | undefined;
   createdAt: number;
   updatedAt: number;
   accessCount: number;
@@ -30,6 +38,8 @@ export interface MemoryQuery {
   workspace?: string | undefined;
   limit?: number | undefined;
   threshold?: number | undefined;
+  agentId?: string | undefined;
+  layer?: MemoryLayer | undefined;
 }
 
 export interface MemoryState {
