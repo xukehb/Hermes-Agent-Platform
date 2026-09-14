@@ -2513,26 +2513,29 @@
           </div>
 
           <!-- 提交说明与操作栏 -->
-          <div style="margin-top:12px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px;">
-              <label style="font-size:12px;font-weight:600;">提交信息 (Commit Message)</label>
-              <div style="display:flex;align-items:center;gap:6px;">
-                <button type="button" class="btn primary" id="aiGenerateCommitBtn" style="font-size:11.5px;padding:3px 10px;font-weight:600;display:inline-flex;align-items:center;gap:4px;">
+          <div class="git-commit-section">
+            <div class="git-commit-header-row">
+              <label class="git-commit-label">
+                <span>💬</span> 提交信息 (Commit Message)
+              </label>
+              <div class="git-commit-actions">
+                <button type="button" class="btn git-ai-commit-btn" id="aiGenerateCommitBtn" title="依据左侧已暂存或选中的差异自动生成结构化提交说明">
                   <span>✨</span> AI 智能生成 Commit 说明
                 </button>
-                <button type="button" class="btn secondary" id="openCommitRulesModalBtn" title="配置 Commit 说明生成规则与团队规范" style="font-size:11.5px;padding:3px 8px;display:inline-flex;align-items:center;gap:4px;">
+                <button type="button" class="btn secondary git-rules-btn" id="openCommitRulesModalBtn" title="配置 Commit 说明生成规则与团队规范">
                   <span>⚙️</span> 规则设置
-                  <span id="currentCommitRuleBadge" style="font-size:10px;background:#e2e8f0;color:#334155;padding:1px 5px;border-radius:3px;margin-left:2px;font-weight:500;">Conventional · 中文</span>
+                  <span id="currentCommitRuleBadge" class="commit-rule-badge">Conventional</span>
                 </button>
               </div>
             </div>
-            <textarea id="gitCommitMessageInput" rows="5" placeholder="输入提交说明，例如:&#10;refactor(gui): 重构聊天界面和主机监控功能&#10;&#10;- 重构聊天输入框初始化逻辑，清空输入内容并重置附件状态&#10;- 将 scheduledTasksBtn 点击事件的目标页面从 logs 改为 schedules" style="width:100%;padding:8px 10px;border:1px solid var(--border-default);border-radius:var(--radius-sm);font-size:12px;font-family:var(--font-mono);resize:vertical;min-height:90px;line-height:1.55;"></textarea>
+            <textarea id="gitCommitMessageInput" class="git-commit-input" rows="5" placeholder="输入提交说明，例如:&#10;refactor(gui): 重构聊天界面和主机监控功能&#10;&#10;- 重构聊天输入框初始化逻辑，清空输入内容并重置附件状态&#10;- 将 scheduledTasksBtn 点击事件的目标页面从 logs 改为 schedules"></textarea>
           </div>
 
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-default);gap:8px;">
+          <div class="git-modal-footer">
             <div style="display:flex;gap:8px;">
               <button type="button" class="btn secondary" id="gitPullBtn" title="拉取远端最新代码">Git Pull 拉取</button>
               <button type="button" class="btn secondary" id="gitPushBtn" title="推送提交到远端仓库">Git Push 推送</button>
+              <button type="button" class="btn secondary" id="gitAuthConfigBtn" title="配置 Git 远程认证方式 (SSH 密钥 / GitHub Token)">🔑 凭据配置</button>
             </div>
             <div style="display:flex;gap:8px;">
               <button type="button" class="btn secondary" id="cancelGitModalBtn">关闭</button>
@@ -2561,6 +2564,86 @@
         </div>
         <div class="code-viewer-body" style="background:#1e1e1e;">
           <pre class="code-text-area git-diff-content" id="gitDiffContent" style="color:#d4d4d4;padding:14px 18px;font-size:12.5px;line-height:1.6;overflow:auto;max-height:65vh;"></pre>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- 弹窗 7: Git 远程授权与凭据配置 (Git Auth Modal) -->
+    <dialog id="gitAuthModal" class="modal modal-md">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <h3>Git 远程授权方式配置</h3>
+            <p style="color:var(--text-secondary);font-size:12px;margin-top:2px;">
+              解决 GitHub 推送认证失败或后台挂起问题。推荐使用 Linux 免密 SSH 密钥。
+            </p>
+          </div>
+          <button type="button" class="btn-icon" id="closeGitAuthModalBtn">✕</button>
+        </div>
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;">
+          <!-- 远程状态信息 -->
+          <div style="background:var(--bg-secondary);padding:10px 14px;border-radius:8px;font-size:12px;border:1px solid var(--border-color);">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px;gap:8px;">
+              <span style="color:var(--text-secondary);white-space:nowrap;">当前远程 URL:</span>
+              <span id="gitAuthCurrentRemote" style="font-family:var(--font-mono);font-weight:600;word-break:break-all;text-align:right;">-</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="color:var(--text-secondary);">协议类型:</span>
+              <span id="gitAuthRemoteType" class="badge info">-</span>
+            </div>
+          </div>
+
+          <!-- 授权方式切换 Tab -->
+          <div class="tab-group" style="display:flex;gap:8px;border-bottom:1px solid var(--border-color);padding-bottom:8px;">
+            <button type="button" class="btn small primary" id="gitAuthTabSshBtn">方式一：SSH 密钥（最推荐）</button>
+            <button type="button" class="btn small secondary" id="gitAuthTabTokenBtn">方式二：Personal Access Token</button>
+          </div>
+
+          <!-- Tab 1: SSH 方式 -->
+          <div id="gitAuthSshPanel" style="display:flex;flex-direction:column;gap:12px;">
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">
+              SSH 协议完全基于公私钥免密加密，推拉代码无需任何账号密码，在 Linux 下极速稳定且永久有效。
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <label style="font-size:12px;font-weight:600;">本地 SSH 公钥 (~/.ssh/id_ed25519.pub)：</label>
+                <button type="button" class="btn small secondary" id="gitAuthCopySshKeyBtn">📋 复制公钥</button>
+              </div>
+              <textarea id="gitAuthSshKeyDisplay" rows="3" readonly style="width:100%;font-family:var(--font-mono);font-size:11px;background:var(--bg-secondary);color:var(--text-primary);padding:8px;border-radius:6px;border:1px solid var(--border-color);resize:none;box-sizing:border-box;"></textarea>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:2px;">
+              <button type="button" class="btn primary" id="gitAuthApplySshBtn" style="flex:1;">一键配置 SSH 并切换远程地址</button>
+              <button type="button" class="btn secondary" id="gitAuthOpenGithubSshBtn" title="打开 GitHub SSH Keys 配置页面">打开 GitHub 密钥设置 ↗</button>
+            </div>
+            <div style="font-size:11px;color:var(--text-tertiary);line-height:1.4;">
+              💡 流程：1. 点击“一键配置 SSH 并切换远程地址”；2. 点击“复制公钥”并在打开的 GitHub 页面中添加该 Key，即可畅通推送。
+            </div>
+          </div>
+
+          <!-- Tab 2: Token 方式 -->
+          <div id="gitAuthTokenPanel" style="display:none;flex-direction:column;gap:12px;">
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">
+              GitHub 已停用账号登录密码，必须使用 Personal Access Token (PAT) 替代密码。
+            </div>
+            <div class="form-group" style="display:flex;flex-direction:column;gap:4px;">
+              <label style="font-size:12px;font-weight:600;">GitHub 用户名：</label>
+              <input type="text" id="gitAuthUsernameInput" class="input-text" placeholder="例如: xukehb" style="width:100%;box-sizing:border-box;padding:6px 10px;">
+            </div>
+            <div class="form-group" style="display:flex;flex-direction:column;gap:4px;">
+              <label style="font-size:12px;font-weight:600;">Personal Access Token (classic)：</label>
+              <input type="password" id="gitAuthTokenInput" class="input-text" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="width:100%;box-sizing:border-box;padding:6px 10px;">
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:2px;">
+              <button type="button" class="btn primary" id="gitAuthSaveTokenBtn" style="flex:1;">保存 Token 凭据到系统</button>
+              <button type="button" class="btn secondary" id="gitAuthOpenGithubTokensBtn" title="打开 GitHub Token 生成页面">生成 Token ↗</button>
+            </div>
+            <div style="font-size:11px;color:var(--text-tertiary);line-height:1.4;">
+              💡 提示：创建 Token 时请勾选 <code>repo</code> 权限。保存后系统将自动保存凭据，HTTPS 推送将自动生效。
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="margin-top:8px;">
+          <button type="button" class="btn secondary" id="closeGitAuthModalFooterBtn">关闭</button>
         </div>
       </div>
     </dialog>
@@ -3653,13 +3736,13 @@
 
     <!-- 弹窗: Git Commit Markdown 规范文档设置 (Git Commit Rule Markdown Modal) -->
     <dialog id="gitCommitRuleDialog" class="modal modal-lg">
-      <div class="modal-form-wrap" style="max-height:88vh;display:flex;flex-direction:column;padding:20px 24px;">
-        <div class="modal-header-row">
-          <div>
-            <h3 style="margin:0;font-size:16px;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:6px;">
-              <span>📝</span> Git Commit Markdown 规范文档设置
+      <div class="commit-rule-modal-wrap">
+        <div class="commit-rule-header-row">
+          <div class="commit-rule-title-group">
+            <h3 class="commit-rule-title">
+              <span class="commit-rule-title-icon">📝</span> Git Commit Markdown 规范文档设置
             </h3>
-            <p style="margin:4px 0 0 0;font-size:12px;color:var(--text-muted);">
+            <p class="commit-rule-desc">
               使用 Markdown (.md) 规范文档定义提交信息格式，AI 将严格按照该文档分析代码差异并生成 Commit
             </p>
           </div>
@@ -3667,28 +3750,28 @@
         </div>
 
         <!-- 顶部工具栏: 预置模板 + 项目文件同步 + 模式切换 -->
-        <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:var(--bg-surface-soft, #f8fafc);border:1px solid var(--border-default);border-radius:var(--radius-sm);margin-top:12px;">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <span style="font-size:12px;font-weight:600;color:var(--text-secondary);">预置规范模板:</span>
-            <select id="commitRulePresetSelect" style="font-size:12px;padding:4px 8px;border-radius:4px;border:1px solid var(--border-default);background:var(--bg-surface);">
+        <div class="commit-rule-toolbar">
+          <div class="commit-rule-toolbar-left">
+            <label for="commitRulePresetSelect" class="commit-rule-toolbar-label">预置规范模板:</label>
+            <select id="commitRulePresetSelect" class="commit-rule-select commit-rule-preset-select">
               <option value="conventional">🌟 Conventional Commits (标准推荐)</option>
               <option value="angular">📐 Angular 规范 (严格 Scope 格式)</option>
               <option value="gitmoji">🎨 Gitmoji 规范 (表情符号)</option>
               <option value="simple">⚡ 简明规范 (无类别前缀)</option>
               <option value="bilingual">🌐 中英双语规范 (Bilingual)</option>
             </select>
-            <button type="button" class="btn secondary" id="applyCommitPresetBtn" style="font-size:11.5px;padding:3px 8px;" title="载入所选预置模板到编辑器">
+            <button type="button" class="btn secondary" id="applyCommitPresetBtn" style="font-size:11.5px;padding:4px 10px;" title="载入所选预置模板到编辑器">
               载入模板
             </button>
           </div>
 
-          <div style="display:flex;align-items:center;gap:8px;">
+          <div class="commit-rule-toolbar-right">
             <!-- 编辑 / 预览 切换 -->
-            <div class="btn-segmented-group" style="display:flex;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:6px;padding:2px;">
-              <button type="button" class="btn-segmented active" id="commitRuleTabEditBtn" onclick="window.switchCommitRuleTab('edit')" style="font-size:11.5px;padding:3px 10px;">
+            <div class="commit-rule-tab-group">
+              <button type="button" class="commit-rule-tab-btn active" id="commitRuleTabEditBtn" onclick="window.switchCommitRuleTab('edit')">
                 📝 编辑 Markdown
               </button>
-              <button type="button" class="btn-segmented" id="commitRuleTabPreviewBtn" onclick="window.switchCommitRuleTab('preview')" style="font-size:11.5px;padding:3px 10px;">
+              <button type="button" class="commit-rule-tab-btn" id="commitRuleTabPreviewBtn" onclick="window.switchCommitRuleTab('preview')">
                 👁️ 实时渲染预览
               </button>
             </div>
@@ -3696,49 +3779,52 @@
         </div>
 
         <!-- 项目规范联动条 -->
-        <div id="commitRuleProjectSyncBar" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(2,132,199,0.06);border:1px solid rgba(2,132,199,0.2);border-radius:var(--radius-sm);margin-top:8px;font-size:12px;">
-          <div style="display:flex;align-items:center;gap:6px;color:var(--text-secondary);">
-            <span id="commitRuleProjectFileIcon">📁</span>
+        <div id="commitRuleProjectSyncBar" class="commit-rule-sync-bar">
+          <div class="commit-rule-sync-info">
+            <span id="commitRuleProjectFileIcon" class="commit-rule-sync-icon">📁</span>
             <span id="commitRuleProjectFileStatus">当前项目未发现 COMMIT_CONVENTION.md 规范文件</span>
           </div>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <button type="button" class="btn text-btn" id="loadFromProjectFileBtn" style="font-size:11.5px;padding:2px 6px;display:none;color:var(--primary);cursor:pointer;" title="从项目根目录载入规范文档">
+          <div class="commit-rule-sync-actions">
+            <button type="button" class="commit-rule-sync-btn" id="loadFromProjectFileBtn" style="display:none;" title="从项目根目录载入规范文档">
               📥 读取项目文件
             </button>
-            <button type="button" class="btn text-btn" id="saveToProjectFileBtn" style="font-size:11.5px;padding:2px 6px;color:var(--primary);cursor:pointer;" title="将当前 Markdown 内容写入项目根目录 COMMIT_CONVENTION.md">
+            <button type="button" class="commit-rule-sync-btn" id="saveToProjectFileBtn" title="将当前 Markdown 内容写入项目根目录 COMMIT_CONVENTION.md">
               💾 同步写入项目文件
             </button>
           </div>
         </div>
 
-        <form id="gitCommitRuleForm" style="display:flex;flex-direction:column;gap:12px;margin-top:10px;flex:1;min-height:0;">
+        <form id="gitCommitRuleForm" class="commit-rule-form">
           <!-- 编辑区 (Edit View) -->
-          <div id="commitRuleEditView" style="display:flex;flex-direction:column;gap:6px;flex:1;min-height:300px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <label style="font-size:12px;font-weight:600;color:var(--text-secondary);">Markdown 规范文档内容 (支持自由定义)：</label>
-              <span style="font-size:11px;color:var(--text-muted);">大模型将以该 Markdown 文档作为最高指令解析 Diff</span>
+          <div id="commitRuleEditView" class="commit-rule-pane">
+            <div class="commit-rule-pane-header">
+              <label class="commit-rule-pane-title">Markdown 规范文档内容 (支持自由定义)：</label>
+              <span class="commit-rule-pane-hint">大模型将以该 Markdown 文档作为最高指令解析 Diff</span>
             </div>
-            <textarea id="commitRuleMarkdownInput" spellcheck="false" style="flex:1;width:100%;min-height:280px;font-family:var(--font-mono, monospace);font-size:12.5px;line-height:1.6;padding:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--text-main);resize:vertical;"></textarea>
+            <textarea id="commitRuleMarkdownInput" class="commit-rule-editor" spellcheck="false" placeholder="在此编写或粘贴 Markdown 格式的 Git 提交规范..."></textarea>
           </div>
 
           <!-- 预览区 (Preview View) -->
-          <div id="commitRulePreviewView" style="display:none;flex-direction:column;gap:6px;flex:1;min-height:300px;">
-            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);">Markdown 规范渲染预览：</label>
-            <div id="commitRuleMarkdownRendered" style="flex:1;min-height:280px;max-height:420px;overflow-y:auto;padding:14px 16px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--text-main);line-height:1.6;"></div>
+          <div id="commitRulePreviewView" class="commit-rule-pane" style="display:none;">
+            <div class="commit-rule-pane-header">
+              <label class="commit-rule-pane-title">Markdown 规范渲染预览：</label>
+              <span class="commit-rule-pane-hint">所见即所得的规范格式与提示指南展示</span>
+            </div>
+            <div id="commitRuleMarkdownRendered" class="commit-rule-preview-content"></div>
           </div>
 
           <!-- 模型选择行与操作按钮 -->
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:10px;border-top:1px solid var(--border-default);">
-            <div style="display:flex;align-items:center;gap:8px;flex:1;">
-              <label style="font-size:12px;font-weight:600;color:var(--text-secondary);white-space:nowrap;">专属大模型:</label>
-              <select id="commitRuleModelSelect" style="font-size:12px;padding:4px 8px;border-radius:4px;border:1px solid var(--border-default);background:var(--bg-surface);max-width:300px;">
+          <div class="commit-rule-footer">
+            <div class="commit-rule-model-group">
+              <label for="commitRuleModelSelect" class="commit-rule-model-label">专属大模型:</label>
+              <select id="commitRuleModelSelect" class="commit-rule-select commit-rule-model-select">
                 <option value="">跟随当前会话默认模型</option>
               </select>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <button type="button" class="btn secondary" id="resetCommitRulesBtn" style="font-size:12px;">恢复默认</button>
-              <button type="button" class="btn secondary" id="cancelGitCommitRuleDialogBtn" style="font-size:12px;">取消</button>
-              <button type="submit" class="btn primary" style="font-size:12px;padding:6px 16px;">保存规范</button>
+            <div class="commit-rule-footer-actions">
+              <button type="button" class="btn secondary" id="resetCommitRulesBtn">恢复默认</button>
+              <button type="button" class="btn secondary" id="cancelGitCommitRuleDialogBtn">取消</button>
+              <button type="submit" class="btn primary">保存规范</button>
             </div>
           </div>
         </form>

@@ -5,6 +5,12 @@ import { GuiService } from './service.js';
 
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 
+// 修复 Linux (特别是 NVIDIA / Nouveau 显卡驱动环境) 下 Chromium GL VSync 报错与崩溃问题
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('disable-gpu-vsync');
+  app.commandLine.appendSwitch('disable-features', 'UseChromeOSDirectVideoDecoder');
+}
+
 const service = new GuiService();
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -64,6 +70,9 @@ function registerIpc(): void {
   ipcMain.handle('gui:gitCommit', (_event, payload) => invoke(() => service.gitCommit(payload.projectPath, payload.message)));
   ipcMain.handle('gui:gitPush', (_event, projectPath) => invoke(() => service.gitPush(projectPath)));
   ipcMain.handle('gui:gitPull', (_event, projectPath) => invoke(() => service.gitPull(projectPath)));
+  ipcMain.handle('gui:getGitAuthInfo', (_event, projectPath) => invoke(() => service.getGitAuthInfo(projectPath)));
+  ipcMain.handle('gui:configureGitSsh', (_event, projectPath) => invoke(() => service.configureGitSsh(projectPath)));
+  ipcMain.handle('gui:configureGitToken', (_event, payload) => invoke(() => service.configureGitToken(payload.projectPath, payload.username, payload.token)));
   ipcMain.handle('gui:gitDiff', (_event, payload) => invoke(() => service.gitDiff(payload.projectPath, payload.file)));
   ipcMain.handle('gui:getVisualDiff', (_event, payload) => invoke(() => service.getVisualDiff(payload.projectPath, payload.file)));
   ipcMain.handle('gui:revertFileDiff', (_event, payload) => invoke(() => service.revertFileDiff(payload.projectPath, payload.file)));

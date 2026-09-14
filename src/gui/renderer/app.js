@@ -2085,9 +2085,9 @@ window.openCommitRulesModal = async function () {
       const check = await window.hap.getProjectCommitRule(currentActiveProject);
       if (check && check.exists) {
         if (iconEl) iconEl.textContent = '📄';
-        if (statusEl) statusEl.innerHTML = `<span style="color:#10b981;font-weight:600;">已关联项目文件:</span> <code>${esc(check.fileName)}</code>`;
+        if (statusEl) statusEl.innerHTML = `<span class="commit-rule-sync-linked">已关联项目文件:</span> <code class="commit-rule-sync-filename">${esc(check.fileName)}</code>`;
         if (loadBtn) {
-          loadBtn.style.display = 'inline-block';
+          loadBtn.style.display = 'inline-flex';
           loadBtn.onclick = () => {
             if (check.content && $('commitRuleMarkdownInput')) {
               $('commitRuleMarkdownInput').value = check.content;
@@ -2159,7 +2159,7 @@ $('saveToProjectFileBtn')?.addEventListener('click', async () => {
     const iconEl = $('commitRuleProjectFileIcon');
     const statusEl = $('commitRuleProjectFileStatus');
     if (iconEl) iconEl.textContent = '📄';
-    if (statusEl) statusEl.innerHTML = `<span style="color:#10b981;font-weight:600;">已关联项目文件:</span> <code>COMMIT_CONVENTION.md</code>`;
+    if (statusEl) statusEl.innerHTML = `<span class="commit-rule-sync-linked">已关联项目文件:</span> <code class="commit-rule-sync-filename">COMMIT_CONVENTION.md</code>`;
   } catch (err) {
     showToast('保存到项目文件失败: ' + err.message, 'error');
   }
@@ -2377,7 +2377,15 @@ $('gitPushBtn')?.addEventListener('click', async () => {
     await updateGitStatus(currentActiveProject);
     renderGitModalContent();
   } catch (error) {
-    showToast('Git 推送失败：' + error.message, 'error');
+    const msg = error?.message || String(error);
+    if (msg.includes('AUTH_REQUIRED') || msg.includes('认证失败') || msg.includes('could not read Username') || msg.includes('Permission denied')) {
+      showToast('⚠️ 推送需要身份验证，已为你打开授权配置', 'warning');
+      openGitAuthModal();
+    } else if (msg.includes('BRANCH_UPSTREAM_REQUIRED')) {
+      showToast('⚠️ 当前分支尚未关联远端，请在终端执行一次 git push -u origin <当前分支名>', 'warning');
+    } else {
+      showToast('Git 推送失败：' + msg, 'error');
+    }
   }
 });
 
@@ -2391,13 +2399,141 @@ $('gitPullBtn')?.addEventListener('click', async () => {
     renderGitModalContent();
   } catch (error) {
     const msg = error?.message || String(error);
-    if (msg.includes('CONFLICT') || msg.includes('conflict')) {
+    if (msg.includes('AUTH_REQUIRED') || msg.includes('认证失败') || msg.includes('could not read Username') || msg.includes('Permission denied')) {
+      showToast('⚠️ 拉取需要身份验证，已为你打开授权配置', 'warning');
+      openGitAuthModal();
+    } else if (msg.includes('CONFLICT') || msg.includes('conflict')) {
       showToast('⚠️ 检测到代码合并冲突！请查看标红文件并解决冲突', 'warning');
     } else {
       showToast('Git 拉取失败：' + msg, 'error');
     }
     await updateGitStatus(currentActiveProject);
     renderGitModalContent();
+  }
+});
+
+// Git 授权配置弹窗交互
+async function openGitAuthModal() {
+  if (!currentActiveProject) return;
+  try {
+    const info = await window.hap.getGitAuthInfo(currentActiveProject);
+    const remoteEl = $('gitAuthCurrentRemote');
+    const typeEl = $('gitAuthRemoteType');
+    const sshDisplay = $('gitAuthSshKeyDisplay');
+
+    if (remoteEl) remoteEl.textContent = info.remoteUrl || '未检测到 origin 远端';
+    if (typeEl) {
+      typeEl.textContent = info.isSsh ? 'SSH 密钥' : 'HTTPS 协议';
+      typeEl.className = info.isSsh ? 'badge success' : 'badge info';
+    }
+    if (sshDisplay) {
+      sshDisplay.value = info.sshPublicKey || '（暂无本地公钥，点击下方按钮将自动生成）';
+    }
+
+    $('gitAuthModal')?.showModal();
+  } catch (e) {
+    showToast('获取 Git 远程信息失败: ' + (e.message || String(e)), 'error');
+  }
+}
+
+$('gitAuthConfigBtn')?.addEventListener('click', () => {
+  openGitAuthModal();
+});
+
+$('closeGitAuthModalBtn')?.addEventListener('click', () => {
+  $('gitAuthModal')?.close();
+});
+
+$('closeGitAuthModalFooterBtn')?.addEventListener('click', () => {
+  $('gitAuthModal')?.close();
+});
+
+$('gitAuthTabSshBtn')?.addEventListener('click', () => {
+  $('gitAuthTabSshBtn')?.classList.replace('secondary', 'primary');
+  $('gitAuthTabTokenBtn')?.classList.replace('primary', 'secondary');
+  if ($('gitAuthSshPanel')) $('gitAuthSshPanel').style.display = 'flex';
+  if ($('gitAuthTokenPanel')) $('gitAuthTokenPanel').style.display = 'none';
+});
+
+$('gitAuthTabTokenBtn')?.addEventListener('click', () => {
+  $('gitAuthTabTokenBtn')?.classList.replace('secondary', 'primary');
+  $('gitAuthTabSshBtn')?.classList.replace('primary', 'secondary');
+  if ($('gitAuthSshPanel')) $('gitAuthSshPanel').style.display = 'none';
+  if ($('gitAuthTokenPanel')) $('gitAuthTokenPanel').style.display = 'flex';
+});
+
+$('gitAuthCopySshKeyBtn')?.addEventListener('click', async () => {
+  const text = $('gitAuthSshKeyDisplay')?.value;
+  if (!text || text.includes('暂无')) {
+    showToast('请先点击下方按钮一键生成 SSH 密钥', 'warning');
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('SSH 公钥已复制到剪贴板！', 'success');
+  } catch {
+    showToast('复制失败，请手动在文本框中选中复制', 'error');
+  }
+});
+
+$('gitAuthApplySshBtn')?.addEventListener('click', async () => {
+  if (!currentActiveProject) return;
+  showToast('正在生成密钥并切换远程地址...', 'info');
+  try {
+    const res = await window.hap.configureGitSsh(currentActiveProject);
+    const remoteEl = $('gitAuthCurrentRemote');
+    const typeEl = $('gitAuthRemoteType');
+    const sshDisplay = $('gitAuthSshKeyDisplay');
+    if (remoteEl) remoteEl.textContent = res.remoteUrl;
+    if (typeEl) {
+      typeEl.textContent = 'SSH 密钥';
+      typeEl.className = 'badge success';
+    }
+    if (sshDisplay) sshDisplay.value = res.sshPublicKey;
+
+    try {
+      await navigator.clipboard.writeText(res.sshPublicKey);
+    } catch {
+      // 忽略
+    }
+
+    showToast('已成功切换为 SSH 远程并复制公钥！请在 GitHub 中添加该密钥', 'success');
+    window.hap.openExternal('https://github.com/settings/ssh/new');
+    await updateGitStatus(currentActiveProject);
+  } catch (error) {
+    showToast('配置 SSH 失败：' + (error.message || String(error)), 'error');
+  }
+});
+
+$('gitAuthOpenGithubSshBtn')?.addEventListener('click', () => {
+  window.hap.openExternal('https://github.com/settings/ssh/new');
+});
+
+$('gitAuthOpenGithubTokensBtn')?.addEventListener('click', () => {
+  window.hap.openExternal('https://github.com/settings/tokens/new?scopes=repo&description=HAP-Studio');
+});
+
+$('gitAuthSaveTokenBtn')?.addEventListener('click', async () => {
+  if (!currentActiveProject) return;
+  const username = $('gitAuthUsernameInput')?.value?.trim();
+  const token = $('gitAuthTokenInput')?.value?.trim();
+  if (!username) {
+    showToast('请输入 GitHub 用户名', 'warning');
+    return;
+  }
+  if (!token) {
+    showToast('请输入 GitHub Personal Access Token', 'warning');
+    return;
+  }
+
+  showToast('正在保存 Git 凭据...', 'info');
+  try {
+    await window.hap.configureGitToken(currentActiveProject, username, token);
+    showToast('GitHub 凭据已成功保存！再次尝试 Git 推送即可生效', 'success');
+    $('gitAuthModal')?.close();
+    await updateGitStatus(currentActiveProject);
+  } catch (error) {
+    showToast('保存凭据失败：' + (error.message || String(error)), 'error');
   }
 });
 

@@ -1722,16 +1722,175 @@ export class GuiService {
 
   async gitPush(projectPath: string): Promise<{ ok: boolean; summary: string }> {
     if (!projectPath) throw new Error('未指定项目路径');
-    const res = await execa('git', ['push'], { cwd: projectPath });
-    this.info(`Git 推送成功 [${projectPath}]`);
-    return { ok: true, summary: res.stdout || res.stderr || '推送成功' };
+    try {
+      const res = await execa('git', ['push'], {
+        cwd: projectPath,
+        env: {
+          ...process.env,
+          GIT_TERMINAL_PROMPT: '0',
+        },
+      });
+      this.info(`Git 推送成功 [${projectPath}]`);
+      return { ok: true, summary: res.stdout || res.stderr || '推送成功' };
+    } catch (error: any) {
+      const stderr = error?.stderr || error?.stdout || error?.message || String(error);
+      if (
+        stderr.includes('could not read Username') ||
+        stderr.includes('Authentication failed') ||
+        stderr.includes('Permission denied (publickey)') ||
+        stderr.includes('Invalid username or password')
+      ) {
+        throw new Error('AUTH_REQUIRED: 远端仓库需要身份验证。请配置 SSH 密钥或 GitHub Personal Access Token。');
+      }
+      if (stderr.includes('has no upstream branch') || stderr.includes('set-upstream')) {
+        throw new Error('BRANCH_UPSTREAM_REQUIRED: 当前分支尚未关联远端分支，请在终端执行一次 git push -u origin <当前分支名>');
+      }
+      throw new Error(`Git 推送失败: ${stderr}`);
+    }
   }
 
   async gitPull(projectPath: string): Promise<{ ok: boolean; summary: string }> {
     if (!projectPath) throw new Error('未指定项目路径');
-    const res = await execa('git', ['pull'], { cwd: projectPath });
-    this.info(`Git 拉取成功 [${projectPath}]`);
-    return { ok: true, summary: res.stdout || res.stderr || '拉取完成' };
+    try {
+      const res = await execa('git', ['pull'], {
+        cwd: projectPath,
+        env: {
+          ...process.env,
+          GIT_TERMINAL_PROMPT: '0',
+        },
+      });
+      this.info(`Git 拉取成功 [${projectPath}]`);
+      return { ok: true, summary: res.stdout || res.stderr || '拉取完成' };
+    } catch (error: any) {
+      const stderr = error?.stderr || error?.stdout || error?.message || String(error);
+      if (
+        stderr.includes('could not read Username') ||
+        stderr.includes('Authentication failed') ||
+        stderr.includes('Permission denied (publickey)') ||
+        stderr.includes('Invalid username or password')
+      ) {
+        throw new Error('AUTH_REQUIRED: 远端仓库需要身份验证。请配置 SSH 密钥或 GitHub Personal Access Token。');
+      }
+      throw error;
+    }
+  }
+
+  async getGitAuthInfo(projectPath: string): Promise<{
+    remoteUrl: string;
+    isSsh: boolean;
+    hasSshKey: boolean;
+    sshPublicKey: string;
+  }> {
+    if (!projectPath) throw new Error('未指定项目路径');
+    let remoteUrl = '';
+    try {
+      const res = await execa('git', ['remote', 'get-url', 'origin'], { cwd: projectPath });
+      remoteUrl = res.stdout.trim();
+    } catch {
+      // 忽略无 origin 错误
+    }
+
+    const isSsh = remoteUrl.startsWith('git@') || remoteUrl.startsWith('ssh://');
+
+    const userHomedir = homedir();
+    const edKeyPath = join(userHomedir, '.ssh', 'id_ed25519.pub');
+    const rsaKeyPath = join(userHomedir, '.ssh', 'id_rsa.pub');
+
+    let hasSshKey = false;
+    let sshPublicKey = '';
+
+    if (existsSync(edKeyPath)) {
+      hasSshKey = true;
+      sshPublicKey = readFileSync(edKeyPath, 'utf8').trim();
+    } else if (existsSync(rsaKeyPath)) {
+      hasSshKey = true;
+      sshPublicKey = readFileSync(rsaKeyPath, 'utf8').trim();
+    }
+
+    return {
+      remoteUrl,
+      isSsh,
+      hasSshKey,
+      sshPublicKey,
+    };
+  }
+
+  async configureGitSsh(projectPath: string): Promise<{
+    ok: boolean;
+    remoteUrl: string;
+    sshPublicKey: string;
+  }> {
+    if (!projectPath) throw new Error('未指定项目路径');
+    const userHomedir = homedir();
+    const sshDir = join(userHomedir, '.ssh');
+    const edKeyPath = join(sshDir, 'id_ed25519');
+    const edPubPath = join(sshDir, 'id_ed25519.pub');
+
+    if (!existsSync(sshDir)) {
+      mkdirSync(sshDir, { recursive: true, mode: 0o700 });
+    }
+
+    if (!existsSync(edPubPath)) {
+      await execa('ssh-keygen', ['-t', 'ed25519', '-N', '', '-f', edKeyPath]);
+    }
+
+    const sshPublicKey = readFileSync(edPubPath, 'utf8').trim();
+
+    let newRemoteUrl = '';
+    try {
+      const res = await execa('git', ['remote', 'get-url', 'origin'], { cwd: projectPath });
+      const currentUrl = res.stdout.trim();
+      if (currentUrl.startsWith('https://github.com/')) {
+        const pathPart = currentUrl.replace('https://github.com/', '');
+        newRemoteUrl = `git@github.com:${pathPart}`;
+        await execa('git', ['remote', 'set-url', 'origin', newRemoteUrl], { cwd: projectPath });
+        this.info(`已将远程仓库转换为 SSH 格式: ${newRemoteUrl}`);
+      } else {
+        newRemoteUrl = currentUrl;
+      }
+    } catch {
+      // 忽略
+    }
+
+    return {
+      ok: true,
+      remoteUrl: newRemoteUrl,
+      sshPublicKey,
+    };
+  }
+
+  async configureGitToken(
+    projectPath: string,
+    username: string,
+    token: string
+  ): Promise<{ ok: boolean; message: string }> {
+    if (!username || !username.trim()) throw new Error('请输入 GitHub 用户名');
+    if (!token || !token.trim()) throw new Error('请输入 GitHub Personal Access Token');
+
+    const cleanUsername = username.trim();
+    const cleanToken = token.trim();
+
+    await execa('git', ['config', '--global', 'credential.helper', 'store']);
+
+    const credentialPayload = `protocol=https\nhost=github.com\nusername=${cleanUsername}\npassword=${cleanToken}\n\n`;
+    await execa('git', ['credential', 'approve'], {
+      input: credentialPayload,
+    });
+
+    try {
+      const res = await execa('git', ['remote', 'get-url', 'origin'], { cwd: projectPath });
+      const currentUrl = res.stdout.trim();
+      if (currentUrl.startsWith('git@github.com:')) {
+        const repoPath = currentUrl.replace('git@github.com:', '');
+        const httpsUrl = `https://github.com/${repoPath}`;
+        await execa('git', ['remote', 'set-url', 'origin', httpsUrl], { cwd: projectPath });
+      }
+    } catch {
+      // 忽略
+    }
+
+    this.info(`Git 凭据已保存至系统 (用户: ${cleanUsername})`);
+    return { ok: true, message: 'GitHub 凭据已成功保存！' };
   }
 
   async gitInit(projectPath: string): Promise<{ ok: boolean; summary: string }> {
