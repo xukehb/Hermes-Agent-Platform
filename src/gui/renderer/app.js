@@ -1898,29 +1898,120 @@ $('gitInitRepoBtn')?.addEventListener('click', async () => {
 });
 
 // ==========================================================================
-// Git Commit 说明生成规则设置与智能生成
+// Git Commit Markdown 规范文档设置与智能生成
 // ==========================================================================
+const COMMIT_RULE_PRESETS = {
+  conventional: `# Git Commit 规范 (Conventional Commits)
+
+## 核心原则
+- 提交说明必须清晰、准确，一眼看清变更目的。
+- 语言：简体中文。
+
+## 格式规范
+结构严格分为【首行标题】、【空行】与【正文变动清单】：
+
+<type>(<scope>): <简明摘要，50字以内>
+
+- <改动细节 1：说明重构、新增或修复了什么>
+- <改动细节 2：说明影响模块与关键逻辑>
+- <改动细节 3：调整的具体配置或界面交互>
+
+## Type 常用分类
+- feat: 新功能、新特性
+- fix: 缺陷修复
+- refactor: 代码重构（无新功能也不修复 bug 的代码变动）
+- perf: 性能优化
+- docs: 文档变更
+- style: 格式调整（空格、分号、排版等，不影响代码逻辑）
+- test: 测试用例新增或调整
+- chore: 构建过程、辅助工具或依赖变更
+
+## 清单要求
+- 正文使用以 "- " 开头的项目符号列表，逐项列出具体改动点与重构细节（提供 3 ~ 8 条详实清单）。
+- 严禁空洞套话，客观记录变更。`,
+
+  angular: `# Git Commit 规范 (Angular 规范)
+
+## 格式规范
+<type>(<scope>): <header>
+
+<body>
+
+<footer>
+
+## 规则细则
+1. 必须包含小写的 (<scope>)，表明变动所属模块或目录（如 gui, api, core, config, tests）。
+2. 首行 <header> 使用动词开头，简明扼要概括本次提交，严格控制在 50 字符以内。
+3. 空一行后为 <body>，使用以 "- " 开头的项目符号列表，逐条详细阐述修改背景与具体实现细节。
+4. 如有关联工单或破坏性变更，在 <footer> 处标明 "Closes #123" 或 "BREAKING CHANGE:"。`,
+
+  gitmoji: `# Git Commit 规范 (Gitmoji 规范)
+
+## 格式规范
+<gitmoji> <简要描述>
+
+- <改动要点 1>
+- <改动要点 2>
+
+## 常用表情符号
+- :sparkles: 引入新功能
+- :bug: 修复缺陷
+- :recycle: 重构代码
+- :memo: 添加或更新文档
+- :zap: 提升性能
+- :lipstick: 更新界面与样式
+- :white_check_mark: 增加或更新测试
+- :wrench: 调整配置或工具`,
+
+  simple: `# Git Commit 规范 (简明规范)
+
+## 核心原则
+- 无类别前缀，使用清晰有力的祈使语气动词直接陈述改动。
+- 语言：简体中文。
+
+## 格式示例
+实现多智能体调度与状态同步控制
+
+- 优化智能体心跳保活检测机制
+- 增加会话超时自动清理策略
+- 完善前端任务执行状态指示灯`,
+
+  bilingual: `# Git Commit 规范 (中英双语规范 / Bilingual)
+
+## 格式规范
+<type>(<scope>): <中文简短标题>
+<type>(<scope>): <English short summary>
+
+- [ZH] <中文具体改动点说明>
+  [EN] <English description of change>
+- [ZH] <中文具体改动点说明>
+  [EN] <English description of change>`,
+};
+
 const DEFAULT_COMMIT_RULES = {
-  engine: 'llm',
   model: '',
-  lang: 'zh',
-  convention: 'conventional',
-  detailLevel: 'detailed',
-  scope: 'auto',
-  customPrompt: '',
+  markdownDoc: COMMIT_RULE_PRESETS.conventional,
+  presetKey: 'conventional',
 };
 
 function getCommitRules() {
   try {
-    const raw = localStorage.getItem('hap_git_commit_rules');
-    if (raw) return { ...DEFAULT_COMMIT_RULES, ...JSON.parse(raw) };
+    const raw = localStorage.getItem('hap_git_commit_rules_md');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        ...DEFAULT_COMMIT_RULES,
+        ...parsed,
+        markdownDoc: parsed.markdownDoc || COMMIT_RULE_PRESETS[parsed.presetKey] || COMMIT_RULE_PRESETS.conventional,
+      };
+    }
   } catch {}
   return { ...DEFAULT_COMMIT_RULES };
 }
 
 function saveCommitRules(rules) {
   try {
-    localStorage.setItem('hap_git_commit_rules', JSON.stringify(rules));
+    localStorage.setItem('hap_git_commit_rules_md', JSON.stringify(rules));
   } catch {}
 }
 
@@ -1928,70 +2019,45 @@ function updateCommitRuleBadge() {
   const badge = $('currentCommitRuleBadge');
   if (!badge) return;
   const rules = getCommitRules();
-  const convMap = {
+  const presetNames = {
     conventional: 'Conventional',
     angular: 'Angular',
     gitmoji: 'Gitmoji',
     simple: '简明',
-  };
-  const langMap = {
-    zh: '中文',
-    en: 'English',
     bilingual: '双语',
   };
-  const engineText = rules.engine === 'template' ? '模板' : (rules.model ? rules.model : 'AI 深度');
-  const convText = convMap[rules.convention] || 'Conventional';
-  const langText = langMap[rules.lang] || '中文';
-  const detailText = rules.detailLevel === 'compact' ? '单行' : '详细清单';
-  badge.textContent = `${engineText} · ${convText} · ${langText} · ${detailText}`;
+  const name = presetNames[rules.presetKey] || '自定义 MD';
+  const modelText = rules.model ? ` · ${rules.model}` : '';
+  badge.textContent = `📝 MD · ${name}${modelText}`;
 }
 
-window.updateCommitRulePreview = function () {
-  const box = $('commitRulePreviewBox');
-  if (!box) return;
-  const lang = $('commitRuleLangSelect')?.value || 'zh';
-  const convention = $('commitRuleConventionSelect')?.value || 'conventional';
-  const detailLevel = $('commitRuleDetailSelect')?.value || 'detailed';
-  const scopeMode = $('commitRuleScopeSelect')?.value || 'auto';
+window.switchCommitRuleTab = function (tab) {
+  const isEdit = tab === 'edit';
+  $('commitRuleTabEditBtn')?.classList.toggle('active', isEdit);
+  $('commitRuleTabPreviewBtn')?.classList.toggle('active', !isEdit);
+  const editView = $('commitRuleEditView');
+  const prevView = $('commitRulePreviewView');
+  if (editView) editView.style.display = isEdit ? 'flex' : 'none';
+  if (prevView) prevView.style.display = isEdit ? 'none' : 'flex';
 
-  const scopePrefix = scopeMode === 'none' ? 'refactor' : 'refactor(gui)';
-  const header = convention === 'gitmoji'
-    ? ':recycle: 重构聊天界面和主机监控功能'
-    : convention === 'simple'
-    ? '重构聊天界面和主机监控功能'
-    : `${scopePrefix}: 重构聊天界面和主机监控功能`;
-
-  const headerEn = convention === 'gitmoji'
-    ? ':recycle: refactor chat interface and host monitoring features'
-    : convention === 'simple'
-    ? 'refactor chat interface and host monitoring features'
-    : `${scopePrefix}: refactor chat interface and host monitoring features`;
-
-  if (detailLevel === 'compact') {
-    box.textContent = lang === 'zh' ? header : lang === 'en' ? headerEn : `${header}\n${headerEn}`;
-    return;
-  }
-
-  const bulletsZh = `- 重构聊天输入框初始化逻辑，清空输入内容并重置附件状态\n- 将 scheduledTasksBtn 点击事件的目标页面从 logs 改为 schedules\n- 重构本地主机视图渲染功能，分离数据获取和界面渲染逻辑\n- 实现主机IP地理位置信息的缓存机制，避免频繁请求\n- 优化设置面板标签页切换的样式控制方式`;
-  const bulletsEn = `- Refactor chat input initialization and reset composer attachment state\n- Redirect scheduledTasksBtn target view from logs to schedules\n- Decouple host view rendering between data retrieval and UI rendering\n- Add caching mechanism for host public IP lookups\n- Refine settings tab navigation styles`;
-
-  if (lang === 'zh') {
-    box.textContent = `${header}\n\n${bulletsZh}`;
-  } else if (lang === 'en') {
-    box.textContent = `${headerEn}\n\n${bulletsEn}`;
-  } else {
-    box.textContent = `${header}\n${headerEn}\n\n${bulletsZh}`;
+  if (!isEdit) {
+    const rawMd = $('commitRuleMarkdownInput')?.value || '';
+    const renderedEl = $('commitRuleMarkdownRendered');
+    if (renderedEl) {
+      renderedEl.innerHTML = renderMarkdownContent(rawMd) || '<p style="color:var(--text-muted);">（空规范文档）</p>';
+    }
   }
 };
 
-window.openCommitRulesModal = function () {
+window.openCommitRulesModal = async function () {
   const rules = getCommitRules();
-  if ($('commitRuleEngineSelect')) $('commitRuleEngineSelect').value = rules.engine || 'llm';
-  if ($('commitRuleLangSelect')) $('commitRuleLangSelect').value = rules.lang || 'zh';
-  if ($('commitRuleConventionSelect')) $('commitRuleConventionSelect').value = rules.convention || 'conventional';
-  if ($('commitRuleDetailSelect')) $('commitRuleDetailSelect').value = rules.detailLevel || 'detailed';
-  if ($('commitRuleScopeSelect')) $('commitRuleScopeSelect').value = rules.scope || 'auto';
-  if ($('commitRuleCustomPromptInput')) $('commitRuleCustomPromptInput').value = rules.customPrompt || '';
+
+  if ($('commitRuleMarkdownInput')) {
+    $('commitRuleMarkdownInput').value = rules.markdownDoc || COMMIT_RULE_PRESETS.conventional;
+  }
+  if ($('commitRulePresetSelect')) {
+    $('commitRulePresetSelect').value = rules.presetKey || 'conventional';
+  }
 
   const modelSelect = $('commitRuleModelSelect');
   if (modelSelect) {
@@ -2009,7 +2075,40 @@ window.openCommitRulesModal = function () {
     modelSelect.value = currentSelected;
   }
 
-  window.updateCommitRulePreview();
+  // 探测项目根目录是否有 COMMIT_CONVENTION.md 文件
+  const iconEl = $('commitRuleProjectFileIcon');
+  const statusEl = $('commitRuleProjectFileStatus');
+  const loadBtn = $('loadFromProjectFileBtn');
+
+  if (currentActiveProject && window.hap?.getProjectCommitRule) {
+    try {
+      const check = await window.hap.getProjectCommitRule(currentActiveProject);
+      if (check && check.exists) {
+        if (iconEl) iconEl.textContent = '📄';
+        if (statusEl) statusEl.innerHTML = `<span style="color:#10b981;font-weight:600;">已关联项目文件:</span> <code>${esc(check.fileName)}</code>`;
+        if (loadBtn) {
+          loadBtn.style.display = 'inline-block';
+          loadBtn.onclick = () => {
+            if (check.content && $('commitRuleMarkdownInput')) {
+              $('commitRuleMarkdownInput').value = check.content;
+              showToast(`已从项目文件 ${check.fileName} 载入规范文档`, 'success');
+              window.switchCommitRuleTab('edit');
+            }
+          };
+        }
+      } else {
+        if (iconEl) iconEl.textContent = '📁';
+        if (statusEl) statusEl.textContent = '当前项目根目录下未发现 COMMIT_CONVENTION.md，可点击右侧一键同步创建';
+        if (loadBtn) loadBtn.style.display = 'none';
+      }
+    } catch {
+      if (loadBtn) loadBtn.style.display = 'none';
+    }
+  } else {
+    if (loadBtn) loadBtn.style.display = 'none';
+  }
+
+  window.switchCommitRuleTab('edit');
   $('gitCommitRuleDialog')?.showModal();
 };
 
@@ -2020,39 +2119,62 @@ $('openCommitRulesModalBtn')?.addEventListener('click', () => {
 $('closeGitCommitRuleDialogBtn')?.addEventListener('click', () => $('gitCommitRuleDialog')?.close());
 $('cancelGitCommitRuleDialogBtn')?.addEventListener('click', () => $('gitCommitRuleDialog')?.close());
 
-document.querySelectorAll('.commit-preset-chip').forEach((chip) => {
-  chip.addEventListener('click', () => {
-    const type = chip.getAttribute('data-preset');
-    const input = $('commitRuleCustomPromptInput');
-    if (!input) return;
-    const map = {
-      scope: '必须包含模块范围，格式如 feat(scope): ...',
-      brief: '首行描述简短，严格控制在 50 个字符以内',
-      bullets: '正文使用项目符号清单（- 细节）逐项列出具体实现细节与关键修改点',
-      jira: '如有关联任务，请在末尾附加对应的 Issue 或工单编号（如 Closes #123）',
-    };
-    const text = map[type];
-    if (!text) return;
-    if (input.value.includes(text)) return;
-    input.value = input.value ? `${input.value.trim()}；${text}` : text;
-    input.focus();
-  });
+$('applyCommitPresetBtn')?.addEventListener('click', () => {
+  const key = $('commitRulePresetSelect')?.value || 'conventional';
+  const md = COMMIT_RULE_PRESETS[key];
+  if (md && $('commitRuleMarkdownInput')) {
+    $('commitRuleMarkdownInput').value = md;
+    showToast('已载入预置规范模板', 'info');
+    window.switchCommitRuleTab('edit');
+  }
+});
+
+$('resetCommitRulesBtn')?.addEventListener('click', () => {
+  if ($('commitRuleMarkdownInput')) {
+    $('commitRuleMarkdownInput').value = COMMIT_RULE_PRESETS.conventional;
+  }
+  if ($('commitRulePresetSelect')) {
+    $('commitRulePresetSelect').value = 'conventional';
+  }
+  if ($('commitRuleModelSelect')) {
+    $('commitRuleModelSelect').value = '';
+  }
+  window.switchCommitRuleTab('edit');
+  showToast('已重置为默认 Conventional 规范', 'info');
+});
+
+$('saveToProjectFileBtn')?.addEventListener('click', async () => {
+  if (!currentActiveProject) {
+    showToast('请先激活打开一个项目工作区', 'warning');
+    return;
+  }
+  const content = $('commitRuleMarkdownInput')?.value?.trim();
+  if (!content) {
+    showToast('规范文档内容不能为空', 'warning');
+    return;
+  }
+  try {
+    const res = await window.hap.saveProjectCommitRule(currentActiveProject, content);
+    showToast('已成功同步保存至项目根目录 COMMIT_CONVENTION.md', 'success');
+    const iconEl = $('commitRuleProjectFileIcon');
+    const statusEl = $('commitRuleProjectFileStatus');
+    if (iconEl) iconEl.textContent = '📄';
+    if (statusEl) statusEl.innerHTML = `<span style="color:#10b981;font-weight:600;">已关联项目文件:</span> <code>COMMIT_CONVENTION.md</code>`;
+  } catch (err) {
+    showToast('保存到项目文件失败: ' + err.message, 'error');
+  }
 });
 
 $('gitCommitRuleForm')?.addEventListener('submit', (e) => {
   e.preventDefault();
-  const engine = $('commitRuleEngineSelect')?.value || 'llm';
   const model = $('commitRuleModelSelect')?.value || '';
-  const lang = $('commitRuleLangSelect')?.value || 'zh';
-  const convention = $('commitRuleConventionSelect')?.value || 'conventional';
-  const detailLevel = $('commitRuleDetailSelect')?.value || 'detailed';
-  const scope = $('commitRuleScopeSelect')?.value || 'auto';
-  const customPrompt = $('commitRuleCustomPromptInput')?.value.trim() || '';
+  const markdownDoc = $('commitRuleMarkdownInput')?.value?.trim() || COMMIT_RULE_PRESETS.conventional;
+  const presetKey = $('commitRulePresetSelect')?.value || 'conventional';
 
-  saveCommitRules({ engine, model, lang, convention, detailLevel, scope, customPrompt });
+  saveCommitRules({ model, markdownDoc, presetKey });
   updateCommitRuleBadge();
   $('gitCommitRuleDialog')?.close();
-  showToast('Commit 说明生成规则已成功保存！', 'success');
+  showToast('Git Commit Markdown 规范文档已成功保存！', 'success');
 });
 
 // 初始化更新一次规则徽章
@@ -2109,35 +2231,31 @@ function generateStructuredCommitFallback(files, rules) {
     titleEn = 'refactor UI interaction and system features';
   }
 
-  const scopePrefix = (rules.scope === 'none' || rules.convention === 'simple')
-    ? type
-    : `${type}(${autoScope})`;
+  const doc = rules?.markdownDoc || '';
+  const isGitmoji = doc.includes('Gitmoji') || doc.includes('gitmoji') || rules?.convention === 'gitmoji';
+  const isAngular = doc.includes('Angular') || doc.includes('angular') || rules?.convention === 'angular';
+  const isSimple = doc.includes('简明') || doc.includes('无类别前缀') || rules?.convention === 'simple';
+  const isBilingual = doc.includes('双语') || doc.includes('Bilingual') || rules?.lang === 'bilingual';
+  const isEnglish = (doc.includes('English') && !isBilingual) || rules?.lang === 'en';
+  const isCompact = doc.includes('单行') || rules?.detailLevel === 'compact';
 
-  const headerZh = rules.convention === 'gitmoji'
-    ? `:sparkles: ${titleZh}`
-    : rules.convention === 'simple'
-    ? `${titleZh}`
-    : `${scopePrefix}: ${titleZh}`;
+  const scopePrefix = isSimple ? type : `${type}(${autoScope})`;
+  const headerZh = isGitmoji ? `:sparkles: ${titleZh}` : isSimple ? `${titleZh}` : `${scopePrefix}: ${titleZh}`;
+  const headerEn = isGitmoji ? `:sparkles: ${titleEn}` : isSimple ? `${titleEn}` : `${scopePrefix}: ${titleEn}`;
 
-  const headerEn = rules.convention === 'gitmoji'
-    ? `:sparkles: ${titleEn}`
-    : rules.convention === 'simple'
-    ? `${titleEn}`
-    : `${scopePrefix}: ${titleEn}`;
-
-  if (rules.detailLevel === 'compact') {
-    return rules.lang === 'zh' ? headerZh : rules.lang === 'en' ? headerEn : `${headerZh}\n${headerEn}`;
+  if (isCompact) {
+    return isEnglish ? headerEn : isBilingual ? `${headerZh}\n${headerEn}` : headerZh;
   }
 
   const bodyZh = bullets.map(b => `- ${b}`).join('\n');
   const bodyEn = bullets.map(b => `- ${b}`).join('\n');
 
-  if (rules.lang === 'zh') {
-    return `${headerZh}\n\n${bodyZh}`;
-  } else if (rules.lang === 'en') {
+  if (isEnglish) {
     return `${headerEn}\n\n${bodyEn}`;
-  } else {
+  } else if (isBilingual) {
     return `${headerZh}\n${headerEn}\n\n${bodyZh}`;
+  } else {
+    return `${headerZh}\n\n${bodyZh}`;
   }
 }
 
@@ -2150,104 +2268,79 @@ $('aiGenerateCommitBtn')?.addEventListener('click', async () => {
   const rules = getCommitRules();
 
   if (!currentGitStatus || currentGitStatus.changedFiles.length === 0) {
-    const emptyMsg = rules.lang === 'zh'
-      ? (rules.detailLevel === 'compact' ? 'chore: 常规更新与维护' : 'chore: 常规更新与维护\n\n- 检查并整理本地工程文件\n- 保持工作区整洁')
-      : (rules.detailLevel === 'compact' ? 'chore: minor maintenance' : 'chore: minor maintenance\n\n- Tidy workspace and configuration\n- Maintain clean repo state');
-    inputEl.value = emptyMsg;
+    inputEl.value = 'chore: 常规更新与维护\n\n- 检查并整理本地工程文件\n- 保持工作区整洁';
     return;
   }
 
   const files = currentGitStatus.changedFiles.map((f) => f.file);
 
-  // 大模型深度分析模式
-  if (rules.engine === 'llm') {
+  try {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="display:inline-block;width:11px;height:11px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-right:4px;"></span>AI 深度分析中...';
+
+    let diffSnippet = '';
     try {
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner" style="display:inline-block;width:11px;height:11px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-right:4px;"></span>AI 深度分析中...';
+      const diffRes = await window.hap.gitDiff(currentActiveProject);
+      diffSnippet = (diffRes?.diff || '').slice(0, 4500);
+    } catch {}
 
-      let diffSnippet = '';
+    let markdownDoc = rules.markdownDoc || COMMIT_RULE_PRESETS.conventional;
+    if (currentActiveProject && window.hap?.getProjectCommitRule) {
       try {
-        const diffRes = await window.hap.gitDiff(currentActiveProject);
-        diffSnippet = (diffRes?.diff || '').slice(0, 4500);
+        const projectFile = await window.hap.getProjectCommitRule(currentActiveProject);
+        if (projectFile?.exists && projectFile.content?.trim()) {
+          markdownDoc = projectFile.content.trim();
+        }
       } catch {}
+    }
 
-      const filesList = currentGitStatus.changedFiles.map(f => `${f.status || 'M'} ${f.file}`).join('\n');
-      const activeAgent = $('chatAgentSelect')?.value || 'coder';
-      const defaultModel = $('chatModelPickerSelect')?.value || (state.models?.[0]?.fullName || state.models?.[0]?.alias || 'gpt-5.5');
-      const activeModel = rules.model || defaultModel;
+    const filesList = currentGitStatus.changedFiles.map(f => `${f.status || 'M'} ${f.file}`).join('\n');
+    const activeAgent = $('chatAgentSelect')?.value || 'coder';
+    const defaultModel = $('chatModelPickerSelect')?.value || (state.models?.[0]?.fullName || state.models?.[0]?.alias || 'gpt-5.5');
+    const activeModel = rules.model || defaultModel;
 
-      let conventionDesc = '遵循 Conventional Commits 规范（以 feat:, fix:, docs:, style:, refactor:, perf:, test:, chore: 为前缀）';
-      if (rules.convention === 'gitmoji') {
-        conventionDesc = '使用 Gitmoji 规范（如 :sparkles: 新功能，:bug: 修复，:recycle: 重构，:memo: 文档更新，:lipstick: 样式等）';
-      } else if (rules.convention === 'angular') {
-        conventionDesc = '严格遵循 Angular Commit 规范，必须包含变更的范围/模块名（例如 feat(gui): ..., refactor(core): ...）';
-      } else if (rules.convention === 'simple') {
-        conventionDesc = '不使用类别前缀，直接输出清晰简练的动词开头概述';
-      }
+    const prompt = `你是一位顶尖的软件工程与 Git 版本控制专家。请根据以下 Git 变动文件列表与核心代码差异（Diff），严格遵照下方的【Git 提交规范（Markdown 规范文档）】为本次提交提炼并生成最终的 Git Commit 提交说明：
 
-      let langDesc = '请全部使用简体中文输出';
-      if (rules.lang === 'en') {
-        langDesc = 'Please output entirely in English';
-      } else if (rules.lang === 'bilingual') {
-        langDesc = '采用中英双语输出（第一行为中文标题，紧随第二行为英文标题，下方清单中英对照）';
-      }
+=== 【Git 提交规范 (Markdown 规范文档)】 ===
+${markdownDoc}
 
-      const isDetailed = rules.detailLevel !== 'compact';
-
-      const prompt = `你是一位顶尖的软件工程与 Git 版本控制专家。请根据以下 Git 变动文件列表与核心代码差异（diff），为本次提交提炼并生成一份高水准、层级清晰、带具体改动详情的 Git Commit 提交说明：
-
-变动文件列表：
+=== 【变动文件列表】 ===
 ${filesList}
 
-核心代码差异（Diff 摘要）：
-${diffSnippet || '（未获取到详细 diff，请根据变动文件路径推测修改细节）'}
+=== 【核心代码差异 (Diff 摘要)】 ===
+${diffSnippet || '（未获取到详细 diff，请根据变动文件路径与命名推测修改细节）'}
 
-生成要求：
-1. 语言要求：${langDesc}
-2. 规范风格：${conventionDesc}
-${isDetailed ? `3. 结构格式必须严格分为两部分（标准开源项目推荐格式）：
-   - 第一行（首行标题）：<type>(<scope>): <简明扼要概括本次提交的核心主旨，50 字以内>
-   - 第二行：必须为空行
-   - 正文部分（详细改动清单）：从第三行开始，使用以 "- " 开头的项目符号列表，逐条详细列出本次提交具体做了哪些修改、重构了哪些函数/逻辑、修复了什么问题或调整了什么配置（提供 3 ~ 10 条具体详实的改动点，不要写空洞套话）。
-   示例格式参考：
-   refactor(gui): 重构聊天界面和主机监控功能
+【特别执行要求】：
+1. 必须 100% 严格遵守上方【Git 提交规范】Markdown 文档中约定的格式结构、Type 前缀分类、语言风格与清单要求。
+2. 绝不要输出任何解释、引言、客套话或 markdown 代码块反引号（\`\`\`），直接且仅输出符合规范的 Commit Message 纯文本！`;
 
-   - 重构聊天输入框初始化逻辑，清空输入内容并重置附件状态
-   - 将 scheduledTasksBtn 点击事件的目标页面从 logs 改为 schedules
-   - 重构本地主机视图渲染功能，分离数据获取和界面渲染逻辑
-   - 实现主机IP地理位置信息的缓存机制，避免频繁请求
-   - 优化设置面板标签页切换的样式控制方式` : '3. 单行格式：仅输出一行简明扼要的 Commit 标题，不超过 50 个字符。'}
-${rules.customPrompt ? `4. 额外团队规范约束：${rules.customPrompt}` : ''}
-5. 绝不要输出任何解释、引言、客套话或 markdown 代码块反引号，直接且仅输出生成的 Commit Message 纯文本！`;
+    const res = await window.hap.chat({
+      input: prompt,
+      agentId: activeAgent,
+      model: activeModel,
+      projectPath: currentActiveProject,
+    });
 
-      const res = await window.hap.chat({
-        input: prompt,
-        agentId: activeAgent,
-        model: activeModel,
-        projectPath: currentActiveProject,
-      });
+    const rawText = res?.outcome?.text || res?.output || (typeof res === 'string' ? res : '');
 
-      const rawText = res?.outcome?.text || res?.output || (typeof res === 'string' ? res : '');
-
-      if (rawText && !rawText.startsWith('⚠️') && !rawText.includes('智能体回复提示')) {
-        let commitMsg = rawText.trim();
-        commitMsg = commitMsg.replace(/^```[a-zA-Z]*\n?/, '').replace(/\n?```$/, '').trim();
-        commitMsg = commitMsg.replace(/^[`"']+|[`"']+$/g, '').trim();
-        if (commitMsg) {
-          inputEl.value = commitMsg;
-          showToast(`已根据规则由 AI 深度生成 Commit 详细说明 (${activeModel})`, 'success');
-          return;
-        }
-      } else if (rawText) {
-        showToast('AI 模型未返回有效回复，已自动切换结构化详情模板生成', 'info');
+    if (rawText && !rawText.startsWith('⚠️') && !rawText.includes('智能体回复提示')) {
+      let commitMsg = rawText.trim();
+      commitMsg = commitMsg.replace(/^```[a-zA-Z]*\n?/, '').replace(/\n?```$/, '').trim();
+      commitMsg = commitMsg.replace(/^[`"']+|[`"']+$/g, '').trim();
+      if (commitMsg) {
+        inputEl.value = commitMsg;
+        showToast(`已根据 Markdown 规范由 AI 深度生成 Commit 说明 (${activeModel})`, 'success');
+        return;
       }
-    } catch (err) {
-      console.warn('AI 大模型生成 Commit 失败，降级为模板规则:', err);
-      showToast('AI 生成请求异常，已切换为启发式结构化模板', 'info');
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = origText;
+    } else if (rawText) {
+      showToast('AI 模型未返回有效回复，已自动切换结构化详情模板生成', 'info');
     }
+  } catch (err) {
+    console.warn('AI 大模型生成 Commit 失败，降级为模板规则:', err);
+    showToast('AI 生成请求异常，已切换为启发式结构化模板', 'info');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origText;
   }
 
   // 极速启发式模板模式（或大模型调用失败时的降级兜底）

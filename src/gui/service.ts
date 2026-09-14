@@ -1861,6 +1861,40 @@ export class GuiService {
     }
   }
 
+  getProjectCommitRule(projectPath: string): { exists: boolean; filePath?: string; fileName?: string; content?: string } {
+    if (!projectPath) return { exists: false };
+    const candidates = [
+      'COMMIT_CONVENTION.md',
+      'COMMIT_RULES.md',
+      '.github/COMMIT_CONVENTION.md',
+      '.github/commit-convention.md',
+      'docs/COMMIT_CONVENTION.md',
+      '.gitmessage.md',
+      '.gitmessage',
+    ];
+    for (const rel of candidates) {
+      const full = join(projectPath, rel);
+      if (existsSync(full)) {
+        try {
+          const content = readFileSync(full, 'utf8');
+          return { exists: true, filePath: full, fileName: rel, content };
+        } catch {
+          // 继续探测下一个候选文件
+        }
+      }
+    }
+    return { exists: false };
+  }
+
+  saveProjectCommitRule(projectPath: string, content: string, fileName = 'COMMIT_CONVENTION.md'): { ok: boolean; filePath: string } {
+    if (!projectPath) throw new Error('项目路径不能为空');
+    const targetFile = join(projectPath, fileName);
+    mkdirSync(dirname(targetFile), { recursive: true });
+    writeFileSync(targetFile, content, 'utf8');
+    this.info(`已同步保存项目 Git Commit 规范文件: ${targetFile}`);
+    return { ok: true, filePath: targetFile };
+  }
+
   listSchedules(): ScheduleJobConfig[] {
     return ScheduleStore.getInstance().listJobs();
   }

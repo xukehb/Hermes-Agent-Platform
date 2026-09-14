@@ -70,6 +70,8 @@ function registerIpc(): void {
   ipcMain.handle('gui:stageFileDiff', (_event, payload) => invoke(() => service.stageFileDiff(payload.projectPath, payload.file)));
   ipcMain.handle('gui:stageHunk', (_event, payload) => invoke(() => service.stageHunk(payload.projectPath, payload.file, payload.patch)));
   ipcMain.handle('gui:revertHunk', (_event, payload) => invoke(() => service.revertHunk(payload.projectPath, payload.file, payload.patch)));
+  ipcMain.handle('gui:getProjectCommitRule', (_event, projectPath) => invoke(() => service.getProjectCommitRule(projectPath)));
+  ipcMain.handle('gui:saveProjectCommitRule', (_event, payload) => invoke(() => service.saveProjectCommitRule(payload.projectPath, payload.content, payload.fileName)));
   ipcMain.handle('gui:listSchedules', () => invoke(() => service.listSchedules()));
   ipcMain.handle('gui:upsertSchedule', (_event, input) => invoke(() => service.upsertSchedule(input)));
   ipcMain.handle('gui:removeSchedule', (_event, id) => invoke(() => service.removeSchedule(id)));

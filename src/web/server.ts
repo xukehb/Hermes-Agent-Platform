@@ -2,8 +2,8 @@ import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { cors } from 'hono/cors';
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { networkInterfaces } from 'node:os';
 import { isIP } from 'node:net';
 import { AgentOrchestrator } from '../agent/index.js';
@@ -513,6 +513,42 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
     } catch (err) {
       return c.json({ ok: false, error: String(err) }, 500);
     }
+  });
+
+  app.get('/api/git/commit-rule', (c) => {
+    const projectPath = c.req.query('projectPath');
+    if (!projectPath) return c.json({ ok: false, error: '缺少 projectPath' }, 400);
+    const candidates = [
+      'COMMIT_CONVENTION.md',
+      'COMMIT_RULES.md',
+      '.github/COMMIT_CONVENTION.md',
+      '.github/commit-convention.md',
+      'docs/COMMIT_CONVENTION.md',
+      '.gitmessage.md',
+      '.gitmessage',
+    ];
+    for (const rel of candidates) {
+      const full = join(projectPath, rel);
+      if (existsSync(full)) {
+        try {
+          const content = readFileSync(full, 'utf8');
+          return c.json({ ok: true, data: { exists: true, filePath: full, fileName: rel, content } });
+        } catch {}
+      }
+    }
+    return c.json({ ok: true, data: { exists: false } });
+  });
+
+  app.post('/api/git/commit-rule', async (c) => {
+    const body = await c.req.json();
+    const projectPath = body.projectPath;
+    const content = body.content ?? '';
+    const fileName = body.fileName || 'COMMIT_CONVENTION.md';
+    if (!projectPath) return c.json({ ok: false, error: '缺少 projectPath' }, 400);
+    const targetFile = join(projectPath, fileName);
+    mkdirSync(dirname(targetFile), { recursive: true });
+    writeFileSync(targetFile, content, 'utf8');
+    return c.json({ ok: true, data: { filePath: targetFile } });
   });
 
   // 4. 定时任务接口

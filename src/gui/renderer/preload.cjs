@@ -55,6 +55,8 @@ contextBridge.exposeInMainWorld('hap', {
   stageFileDiff: (projectPath, file) => call('gui:stageFileDiff', { projectPath, file }),
   stageHunk: (projectPath, file, patch) => call('gui:stageHunk', { projectPath, file, patch }),
   revertHunk: (projectPath, file, patch) => call('gui:revertHunk', { projectPath, file, patch }),
+  getProjectCommitRule: (projectPath) => call('gui:getProjectCommitRule', projectPath),
+  saveProjectCommitRule: (projectPath, content, fileName) => call('gui:saveProjectCommitRule', { projectPath, content, fileName }),
   listSchedules: () => call('gui:listSchedules'),
   upsertSchedule: (input) => call('gui:upsertSchedule', input),
   removeSchedule: (id) => call('gui:removeSchedule', id),

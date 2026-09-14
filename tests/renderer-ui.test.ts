@@ -179,28 +179,30 @@ describe('Electron renderer UI contracts', () => {
     expect(app).toContain('batchRemoveModels(toDeleteAliases)');
   });
 
-  it('supports configurable Git commit rules with model selection, presets, and live preview', () => {
+  it('supports configurable Git commit rules with Markdown document, presets, and live preview', () => {
     expect(html).toContain('id="gitCommitRuleDialog"');
-    expect(html).toContain('id="commitRuleEngineSelect"');
+    expect(html).toContain('id="commitRuleMarkdownInput"');
+    expect(html).toContain('id="commitRulePresetSelect"');
     expect(html).toContain('id="commitRuleModelSelect"');
-    expect(html).toContain('id="commitRuleLangSelect"');
-    expect(html).toContain('id="commitRuleConventionSelect"');
-    expect(html).toContain('id="commitRuleDetailSelect"');
-    expect(html).toContain('id="commitRuleScopeSelect"');
-    expect(html).toContain('id="commitRuleCustomPromptInput"');
-    expect(html).toContain('id="commitRulePreviewBox"');
-    expect(html).toContain('commit-preset-chip');
+    expect(html).toContain('id="commitRuleMarkdownRendered"');
     expect(html).toContain('id="currentCommitRuleBadge"');
     expect(html).toContain('window.openCommitRulesModal()');
+    expect(html).toContain('id="saveToProjectFileBtn"');
+    expect(html).toContain('id="loadFromProjectFileBtn"');
 
     expect(app).toContain('DEFAULT_COMMIT_RULES');
+    expect(app).toContain('COMMIT_RULE_PRESETS');
     expect(app).toContain('window.openCommitRulesModal =');
-    expect(app).toContain('window.updateCommitRulePreview =');
+    expect(app).toContain('window.switchCommitRuleTab =');
     expect(app).toContain('function updateCommitRuleBadge()');
-    expect(app).toContain('saveCommitRules({ engine, model, lang, convention, detailLevel, scope, customPrompt });');
+    expect(app).toContain('saveCommitRules({ model, markdownDoc, presetKey });');
     expect(app).toContain('generateStructuredCommitFallback');
-    expect(app).toContain("rules.convention === 'angular'");
-    expect(app).toContain("rules.lang === 'bilingual'");
+    expect(preload).toContain("getProjectCommitRule: (projectPath) => call('gui:getProjectCommitRule', projectPath)");
+    expect(preload).toContain("saveProjectCommitRule: (projectPath, content, fileName) => call('gui:saveProjectCommitRule'");
+    expect(main).toContain("ipcMain.handle('gui:getProjectCommitRule'");
+    expect(main).toContain("ipcMain.handle('gui:saveProjectCommitRule'");
+    expect(serviceSource).toContain('getProjectCommitRule(projectPath: string)');
+    expect(serviceSource).toContain('saveProjectCommitRule(projectPath: string, content: string');
   });
 
   it('detects Git merge conflicts, renders conflict badges and alert banner with AI resolution', () => {

@@ -3651,113 +3651,95 @@
       </div>
     </dialog>
 
-    <!-- 弹窗: Git Commit 说明生成规则设置 (Git Commit Rule Settings Modal) -->
-    <dialog id="gitCommitRuleDialog" class="modal modal-md">
-      <div class="modal-form-wrap">
+    <!-- 弹窗: Git Commit Markdown 规范文档设置 (Git Commit Rule Markdown Modal) -->
+    <dialog id="gitCommitRuleDialog" class="modal modal-lg">
+      <div class="modal-form-wrap" style="max-height:88vh;display:flex;flex-direction:column;padding:20px 24px;">
         <div class="modal-header-row">
           <div>
             <h3 style="margin:0;font-size:16px;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:6px;">
-              <span>⚙️</span> AI Commit 规则与规范设置
+              <span>📝</span> Git Commit Markdown 规范文档设置
             </h3>
             <p style="margin:4px 0 0 0;font-size:12px;color:var(--text-muted);">
-              配置一键生成 Git 提交说明时的模型分析引擎、语言习惯与团队代码规范
+              使用 Markdown (.md) 规范文档定义提交信息格式，AI 将严格按照该文档分析代码差异并生成 Commit
             </p>
           </div>
           <button type="button" class="btn-close" id="closeGitCommitRuleDialogBtn" aria-label="关闭" title="关闭"></button>
         </div>
 
-        <form id="gitCommitRuleForm" style="display:flex;flex-direction:column;gap:14px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div class="form-group">
-              <label style="font-size:12.5px;font-weight:600;">生成引擎 (Generation Engine)</label>
-              <select id="commitRuleEngineSelect">
-                <option value="llm">AI 大模型深度 Diff 分析 (推荐)</option>
-                <option value="template">极速启发式模板规则 (毫秒生成)</option>
-              </select>
-            </div>
+        <!-- 顶部工具栏: 预置模板 + 项目文件同步 + 模式切换 -->
+        <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:var(--bg-surface-soft, #f8fafc);border:1px solid var(--border-default);border-radius:var(--radius-sm);margin-top:12px;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:12px;font-weight:600;color:var(--text-secondary);">预置规范模板:</span>
+            <select id="commitRulePresetSelect" style="font-size:12px;padding:4px 8px;border-radius:4px;border:1px solid var(--border-default);background:var(--bg-surface);">
+              <option value="conventional">🌟 Conventional Commits (标准推荐)</option>
+              <option value="angular">📐 Angular 规范 (严格 Scope 格式)</option>
+              <option value="gitmoji">🎨 Gitmoji 规范 (表情符号)</option>
+              <option value="simple">⚡ 简明规范 (无类别前缀)</option>
+              <option value="bilingual">🌐 中英双语规范 (Bilingual)</option>
+            </select>
+            <button type="button" class="btn secondary" id="applyCommitPresetBtn" style="font-size:11.5px;padding:3px 8px;" title="载入所选预置模板到编辑器">
+              载入模板
+            </button>
+          </div>
 
-            <div class="form-group">
-              <label style="font-size:12.5px;font-weight:600;">专属 AI 模型 (Model - 可选)</label>
-              <select id="commitRuleModelSelect">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <!-- 编辑 / 预览 切换 -->
+            <div class="btn-segmented-group" style="display:flex;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:6px;padding:2px;">
+              <button type="button" class="btn-segmented active" id="commitRuleTabEditBtn" onclick="window.switchCommitRuleTab('edit')" style="font-size:11.5px;padding:3px 10px;">
+                📝 编辑 Markdown
+              </button>
+              <button type="button" class="btn-segmented" id="commitRuleTabPreviewBtn" onclick="window.switchCommitRuleTab('preview')" style="font-size:11.5px;padding:3px 10px;">
+                👁️ 实时渲染预览
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 项目规范联动条 -->
+        <div id="commitRuleProjectSyncBar" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(2,132,199,0.06);border:1px solid rgba(2,132,199,0.2);border-radius:var(--radius-sm);margin-top:8px;font-size:12px;">
+          <div style="display:flex;align-items:center;gap:6px;color:var(--text-secondary);">
+            <span id="commitRuleProjectFileIcon">📁</span>
+            <span id="commitRuleProjectFileStatus">当前项目未发现 COMMIT_CONVENTION.md 规范文件</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <button type="button" class="btn text-btn" id="loadFromProjectFileBtn" style="font-size:11.5px;padding:2px 6px;display:none;color:var(--primary);cursor:pointer;" title="从项目根目录载入规范文档">
+              📥 读取项目文件
+            </button>
+            <button type="button" class="btn text-btn" id="saveToProjectFileBtn" style="font-size:11.5px;padding:2px 6px;color:var(--primary);cursor:pointer;" title="将当前 Markdown 内容写入项目根目录 COMMIT_CONVENTION.md">
+              💾 同步写入项目文件
+            </button>
+          </div>
+        </div>
+
+        <form id="gitCommitRuleForm" style="display:flex;flex-direction:column;gap:12px;margin-top:10px;flex:1;min-height:0;">
+          <!-- 编辑区 (Edit View) -->
+          <div id="commitRuleEditView" style="display:flex;flex-direction:column;gap:6px;flex:1;min-height:300px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <label style="font-size:12px;font-weight:600;color:var(--text-secondary);">Markdown 规范文档内容 (支持自由定义)：</label>
+              <span style="font-size:11px;color:var(--text-muted);">大模型将以该 Markdown 文档作为最高指令解析 Diff</span>
+            </div>
+            <textarea id="commitRuleMarkdownInput" spellcheck="false" style="flex:1;width:100%;min-height:280px;font-family:var(--font-mono, monospace);font-size:12.5px;line-height:1.6;padding:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--text-main);resize:vertical;"></textarea>
+          </div>
+
+          <!-- 预览区 (Preview View) -->
+          <div id="commitRulePreviewView" style="display:none;flex-direction:column;gap:6px;flex:1;min-height:300px;">
+            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);">Markdown 规范渲染预览：</label>
+            <div id="commitRuleMarkdownRendered" style="flex:1;min-height:280px;max-height:420px;overflow-y:auto;padding:14px 16px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--text-main);line-height:1.6;"></div>
+          </div>
+
+          <!-- 模型选择行与操作按钮 -->
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:10px;border-top:1px solid var(--border-default);">
+            <div style="display:flex;align-items:center;gap:8px;flex:1;">
+              <label style="font-size:12px;font-weight:600;color:var(--text-secondary);white-space:nowrap;">专属大模型:</label>
+              <select id="commitRuleModelSelect" style="font-size:12px;padding:4px 8px;border-radius:4px;border:1px solid var(--border-default);background:var(--bg-surface);max-width:300px;">
                 <option value="">跟随当前会话默认模型</option>
               </select>
             </div>
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div class="form-group">
-              <label style="font-size:12.5px;font-weight:600;">输出语言 (Language)</label>
-              <select id="commitRuleLangSelect" onchange="window.updateCommitRulePreview?.()">
-                <option value="zh">简体中文 (如 feat: 新增用户登录验证)</option>
-                <option value="en">English (如 feat: add user auth)</option>
-                <option value="bilingual">中英双语 (首行中文 + 次行英文)</option>
-              </select>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button type="button" class="btn secondary" id="resetCommitRulesBtn" style="font-size:12px;">恢复默认</button>
+              <button type="button" class="btn secondary" id="cancelGitCommitRuleDialogBtn" style="font-size:12px;">取消</button>
+              <button type="submit" class="btn primary" style="font-size:12px;padding:6px 16px;">保存规范</button>
             </div>
-
-            <div class="form-group">
-              <label style="font-size:12.5px;font-weight:600;">规范风格 (Convention Style)</label>
-              <select id="commitRuleConventionSelect" onchange="window.updateCommitRulePreview?.()">
-                <option value="conventional">Conventional Commits (feat, fix, docs...)</option>
-                <option value="angular">Angular 模块范围 (feat(core): ...)</option>
-                <option value="gitmoji">Gitmoji 符号规范 (✨, 🐛, ♻️, 📝...)</option>
-                <option value="simple">简明叙述 (无类别前缀，动词直叙)</option>
-              </select>
-            </div>
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div class="form-group">
-              <label style="font-size:12.5px;font-weight:600;">详情格式结构 (Detail Structure)</label>
-              <select id="commitRuleDetailSelect" onchange="window.updateCommitRulePreview?.()">
-                <option value="detailed">详细改动清单 (首行概括 + 详细要点列表，推荐)</option>
-                <option value="compact">单行简明概括 (仅保留首行摘要)</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label style="font-size:12.5px;font-weight:600;">模块作用域 (Scope Extraction)</label>
-              <select id="commitRuleScopeSelect" onchange="window.updateCommitRulePreview?.()">
-                <option value="auto">智能提取改动模块 (如 gui, core, api, agent, build)</option>
-                <option value="none">不添加模块范围括号</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- 实时格式预览 -->
-          <div style="background:#0f172a;border-radius:6px;padding:9px 12px;border:1px solid #1e293b;">
-            <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">
-              <span style="font-weight:600;">生成效果格式预览 (Live Preview)：</span>
-              <span style="color:#38bdf8;font-size:10.5px;">示例</span>
-            </div>
-            <div id="commitRulePreviewBox" style="font-size:12px;font-family:var(--font-mono);color:#38bdf8;word-break:break-all;line-height:1.5;white-space:pre-wrap;">refactor(gui): 重构聊天界面和主机监控功能
-
-- 重构聊天输入框初始化逻辑，清空输入内容并重置附件状态
-- 将 scheduledTasksBtn 点击事件的目标页面从 logs 改为 schedules
-- 重构本地主机视图渲染功能，分离数据获取和界面渲染逻辑
-- 实现主机IP地理位置信息的缓存机制，避免频繁请求
-- 优化设置面板标签页切换的样式控制方式</div>
-          </div>
-
-          <div class="form-group">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-              <label style="font-size:12.5px;font-weight:600;">自定义团队规范提示词 (Custom Rules Prompt)</label>
-            </div>
-            <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;flex-wrap:wrap;">
-              <span style="font-size:11px;color:var(--text-muted);">快捷追加要求：</span>
-              <button type="button" class="btn text-btn commit-preset-chip" data-preset="scope">+ 强制模块 Scope</button>
-              <button type="button" class="btn text-btn commit-preset-chip" data-preset="brief">+ 首行不超过 50 字</button>
-              <button type="button" class="btn text-btn commit-preset-chip" data-preset="bullets">+ 附带改动要点清单</button>
-              <button type="button" class="btn text-btn commit-preset-chip" data-preset="jira">+ 关联 Issue 编号</button>
-            </div>
-            <textarea id="commitRuleCustomPromptInput" rows="3" placeholder="输入团队个性化 Git 提交约束，例如：使用动词开头，说明为什么做此更改；首行不超过50个字；重大改动在首行标注 BREAKING CHANGE: ..." style="width:100%;padding:8px 10px;font-size:12px;font-family:var(--font-sans);border:1px solid var(--border-default);border-radius:var(--radius-sm);resize:none;"></textarea>
-            <span style="font-size:11px;color:var(--text-muted);margin-top:2px;">
-              调用大模型时，该规则将作为额外约束注入 Prompt，确保团队多人协作的提交信息格式高度统一。
-            </span>
-          </div>
-
-          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;border-top:1px solid var(--border-default);padding-top:14px;">
-            <button type="button" class="btn secondary" id="cancelGitCommitRuleDialogBtn">取消</button>
-            <button type="submit" class="btn primary">保存规则</button>
           </div>
         </form>
       </div>
