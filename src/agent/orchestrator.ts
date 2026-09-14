@@ -36,7 +36,7 @@ import { AgentRegistry } from './registry.js';
 import { AgentRouter, planModelChain } from './router.js';
 import { composeSystemPrompt } from './system-prompt.js';
 import { createSubagentSpawner } from './subagent.js';
-import { recallRelevantMemories } from '../memory/index.js';
+import { MemoryStore, recallRelevantMemories } from '../memory/index.js';
 import type {
   LoopRequest,
   RunTaskRequest,
@@ -388,7 +388,7 @@ export class AgentOrchestrator {
 
       let basePrompt = this.systemPromptFor(effectiveAgent);
       try {
-        const memoryPrompt = await recallRelevantMemories(request.input, request.workspace);
+        const memoryPrompt = await recallRelevantMemories(request.input, request.workspace, agent.id);
         if (memoryPrompt) {
           basePrompt = `${memoryPrompt}\n${basePrompt}`;
         }
@@ -427,6 +427,13 @@ export class AgentOrchestrator {
       };
 
       const result = await this.loop.run(loopRequest);
+      void MemoryStore.getInstance().extractTaskMemory({
+        taskId,
+        agentId: agent.id,
+        workspace: request.workspace,
+        userInput: request.input,
+        assistantOutput: result.messages.filter((message) => message.role === 'assistant').map((message) => message.content).join('\n'),
+      }).catch(() => undefined);
       const finishedAt = new Date().toISOString();
 
       store.appendMessages(sessionKey, agent.id, result.messages);
