@@ -10286,12 +10286,13 @@ $('memoryForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const category = $('memoryInputCategory').value;
   const agentId = $('memoryAgentSelect').value || undefined;
+  const title = $('memoryInputTitle').value.trim();
   const content = $('memoryInputContent').value.trim();
 
-  if (!content) return;
+  if (!title || !content) return;
 
   try {
-    await window.hap.addMemory({ category, agentId, content });
+    await window.hap.addMemory({ category, agentId, title, content });
     $('memoryDialog')?.close();
     showToast('记忆条目已成功添加', 'success');
     await renderMemories();
@@ -10299,6 +10300,16 @@ $('memoryForm')?.addEventListener('submit', async (e) => {
     showToast('添加记忆失败：' + err.message, 'error');
   }
 });
+
+window.rebuildMemoryIndex = async () => {
+  try {
+    const result = await window.hap.rebuildMemoryEmbeddings();
+    showToast(`已重建 ${result?.count || 0} 条记忆索引`, 'success');
+    await renderMemories();
+  } catch (err) {
+    showToast('重建记忆索引失败：' + err.message, 'error');
+  }
+};
 
 $('closeMemoryDialogBtn')?.addEventListener('click', () => $('memoryDialog')?.close());
 $('cancelMemoryDialogBtn')?.addEventListener('click', () => $('memoryDialog')?.close());

@@ -1197,6 +1197,7 @@
               <p class="page-subtitle">跨会话沉淀用户开发习惯、架构约束、工程规范与重要偏好</p>
             </div>
             <div class="page-header-actions">
+              <button type="button" class="btn secondary" onclick="window.rebuildMemoryIndex()">重建索引</button>
               <button type="button" class="btn primary" onclick="window.openAddMemoryDialog()">+ 添加记忆条目</button>
             </div>
           </div>
@@ -1872,6 +1873,11 @@
             <select id="memoryAgentSelect">
               <option value="">全部智能体通用</option>
             </select>
+          </div>
+
+          <div class="form-group full-width">
+            <label>记忆标题 *</label>
+            <input id="memoryInputTitle" required placeholder="例如：前端代码规范" />
           </div>
 
           <div class="form-group full-width">
