@@ -124,3 +124,11 @@
 - **类型检查**：`npm run typecheck` -> 退出码 0。
 - **全量测试**：`npm test -- --runInBand` -> 退出码 1；56 个测试文件、696 项用例中 656 通过、40 失败，另有 1 个未处理错误。
 - **环境限制**：`better-sqlite3` 原生模块的 Node 模块版本为 136，而当前运行时要求 127；Windows 环境缺少 `sleep`。这些失败属于当前本地验证环境/既有功能测试，未影响 Git/LFS 推送验证。
+
+## 2026-09-14 App 图标生成验证（Codex）
+
+使用现有 `xkk` 服务商 URL 和已保存密钥，调用 `gpt-image-2` 生成 `output/imagegen/codexconnect-app-icon.png` 成功。PNG 为 1254×1254 RGBA，透明通道有效；Pillow 方形、尺寸、alpha 与 32px 缩略图断言通过，目视图标主体清晰。服务商未严格遵循请求的 1024×1024 尺寸。仅新增图片和记录，未改代码，故不运行项目测试或构建。
+
+## 2026-09-14 桌面图标接入验证（Codex）
+
+图标现由 `build/icon.png` 构建复制到 `dist/src/gui/renderer/app-icon.png`，窗口运行时加载该路径；Windows/macOS/Linux 打包配置分别指向 `.ico`、`.icns`、`.png`。专项测试先有 2 项预期失败，接入后 2/2 通过；GUI 相关测试 24/24 通过，构建与 lint 通过。Linux 目录打包成功，`app.asar` 包含运行时 PNG。Windows/macOS 安装包未在本机实测，仅验证资源格式与配置。

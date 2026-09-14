@@ -7,3 +7,4 @@ mkdirSync(target, { recursive: true });
 for (const file of readdirSync(source)) {
   copyFileSync(join(source, file), join(target, file));
 }
+copyFileSync(join(process.cwd(), 'build', 'icon.png'), join(target, 'app-icon.png'));

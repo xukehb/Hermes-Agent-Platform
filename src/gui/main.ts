@@ -181,6 +181,7 @@ async function createWindow(): Promise<void> {
     minWidth: 1080,
     minHeight: 720,
     title: 'ChatGPT · HAP Studio',
+    icon: rendererPath('app-icon.png'),
     backgroundColor: '#ffffff',
     autoHideMenuBar: true,
     webPreferences: {

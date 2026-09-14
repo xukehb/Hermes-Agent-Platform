@@ -205,3 +205,18 @@
 - `apply_patch`：编排器接入任务前召回与成功后自动提炼；补齐 CLI、Web REST、Electron IPC、GUI 的更新/删除/重建/提炼能力。
 - `exec_command`：类型检查、lint、记忆/Web/编排器专项测试通过；重建 better-sqlite3 ABI 后构建通过。
 - `exec_command`：全量测试 55 文件 / 713 项，711 通过；两项既有失败记录于验证报告。
+
+## 2026-09-14：生成 CodexConnect App 图标
+
+- `exec_command` / `rg`：读取项目品牌、GUI 色彩、图像生成接口和当前服务商配置；只检查凭据键名，不输出密钥。`code-index`、`sequential-thinking`、`shrimp-task-manager` 未在当前工具列表中提供。
+- `exec_command`：在 `/tmp/hap-imagegen-sB9nAO/venv` 安装隔离的 OpenAI Python SDK；通过本机配置的 URL 与密钥调用 imagegen 技能自带 CLI，模型 `gpt-image-2`、质量 `high`、请求尺寸 `1024x1024`。
+- `view_image` / `exec_command`：目视检查输出，并用 Pillow 验证 PNG、RGBA、方形、透明通道及 32px 缩略图；实际返回 `1254x1254`。
+- 生成结果：`output/imagegen/codexconnect-app-icon.png`；未修改应用代码、已有图片或服务商配置。
+
+## 2026-09-14：接入桌面图标
+
+- `rg` / `exec_command`：确认 `src/gui/copy-assets.ts` 复制 renderer 资源、`BrowserWindow` 缺少 icon、打包仅包含 `dist/**/*`；原始 PNG 为 RGBA 方形。
+- `apply_patch`：先添加 `tests/gui-app-icon.test.ts`，执行 Vitest 得到两项预期失败（资源不存在、平台配置缺失）；再将图标接入窗口、资源复制与 Windows/macOS/Linux 打包配置。
+- `exec_command`：用 Pillow 将已生成图标转换为 `build/icon.png`、`build/icon.ico`、`build/icon.icns`；确认三者可读取。
+- `exec_command`：专项测试 24 项、`npm run build`、`npm run lint` 通过；Linux `electron-builder --linux dir` 打包完成，`app.asar` 中可列出运行时图标。
+- `git restore`：仅恢复本轮打包命令改写的 `release/builder-debug.yml`，未处理其他用户改动。

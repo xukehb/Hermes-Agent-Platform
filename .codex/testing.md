@@ -74,3 +74,17 @@ npx tsx src/cli/bin.ts -c .tmp-probe/hap.toml init
 - `npm test`：55 个文件 / 713 项中 711 项通过；2 项失败均为既有环境/测试隔离问题：`remote-diagnostics.test.ts` 守护进程启动超时，`gui-service-agent.test.ts` 默认智能体回退断言与当前配置条目冲突。
 
 本轮记忆专项覆盖：SQLite 迁移、并发写入、损坏 JSON 报错、CRUD、过期过滤、工作区/智能体隔离、混合召回、访问统计、向量重建、任务文本提炼以及 Web API CRUD/搜索/重建/提炼。
+
+## 八、2026-09-14 App 图标验证
+
+- 功能：`gpt-image-2` 实际调用成功，生成 `output/imagegen/codexconnect-app-icon.png`。
+- 冒烟与结构断言：Pillow 读取 PNG；实际 `1254x1254`、RGBA、alpha 极值 `(0,255)`，主体非空；32px 缩略图中心像素 `(34,159,237,255)`，断言通过。
+- 目视：抽象 H 形连接路径、两个端点节点清晰，无文字或水印。
+- 本任务未改代码，项目单元测试与构建不适用；输出尺寸与请求 `1024x1024` 不同，由当前图像服务端返回。
+
+## 九、2026-09-14 图标接入验证
+
+- 红阶段：`npx vitest run tests/gui-app-icon.test.ts`，2 项按预期失败：缺少 `build/icon.png` 与 `build.win.icon`。
+- 绿阶段：同命令 2/2 通过；`npx vitest run tests/gui-app-icon.test.ts tests/renderer-ui.test.ts`，24/24 通过。
+- `npm run build` 与 `npm run lint` 均退出码 0；`cmp build/icon.png dist/src/gui/renderer/app-icon.png` 退出码 0。
+- `npx --yes electron-builder --linux dir --publish never` 退出码 0；`app.asar` 列出 `/dist/src/gui/renderer/app-icon.png`。Windows/macOS 交叉平台安装包未在本机实际构建，已检查对应 ICO/ICNS 格式及配置。

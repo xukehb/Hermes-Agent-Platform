@@ -2570,79 +2570,121 @@
 
     <!-- 弹窗 7: Git 远程授权与凭据配置 (Git Auth Modal) -->
     <dialog id="gitAuthModal" class="modal modal-md">
-      <div class="modal-card">
-        <div class="modal-header">
+      <div class="modal-form-wrap">
+        <div class="modal-header-row">
           <div>
-            <h3>Git 远程授权方式配置</h3>
-            <p style="color:var(--text-secondary);font-size:12px;margin-top:2px;">
-              解决 GitHub 推送认证失败或后台挂起问题。推荐使用 Linux 免密 SSH 密钥。
-            </p>
-          </div>
-          <button type="button" class="btn-icon" id="closeGitAuthModalBtn">✕</button>
-        </div>
-        <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;">
-          <!-- 远程状态信息 -->
-          <div style="background:var(--bg-secondary);padding:10px 14px;border-radius:8px;font-size:12px;border:1px solid var(--border-color);">
-            <div style="display:flex;justify-content:space-between;margin-bottom:6px;gap:8px;">
-              <span style="color:var(--text-secondary);white-space:nowrap;">当前远程 URL:</span>
-              <span id="gitAuthCurrentRemote" style="font-family:var(--font-mono);font-weight:600;word-break:break-all;text-align:right;">-</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <h2>Git 远程授权方式配置</h2>
             </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <span style="color:var(--text-secondary);">协议类型:</span>
-              <span id="gitAuthRemoteType" class="badge info">-</span>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:3px;">
+              解决 GitHub 推送认证失败与挂起问题 · 推荐配置 Linux 免密 SSH 密钥
+            </div>
+          </div>
+          <button type="button" class="btn-close" id="closeGitAuthModalBtn" aria-label="关闭" title="关闭"></button>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <!-- 远程状态信息卡片 -->
+          <div class="git-auth-remote-card">
+            <div class="git-auth-remote-info">
+              <span class="git-auth-remote-label">当前远程仓库 (origin):</span>
+              <span id="gitAuthCurrentRemote" class="git-auth-remote-url">-</span>
+            </div>
+            <div style="flex-shrink:0;">
+              <span id="gitAuthRemoteType" class="prop-chip" style="font-size:12px;font-weight:600;">HTTPS 协议</span>
             </div>
           </div>
 
           <!-- 授权方式切换 Tab -->
-          <div class="tab-group" style="display:flex;gap:8px;border-bottom:1px solid var(--border-color);padding-bottom:8px;">
-            <button type="button" class="btn small primary" id="gitAuthTabSshBtn">方式一：SSH 密钥（最推荐）</button>
-            <button type="button" class="btn small secondary" id="gitAuthTabTokenBtn">方式二：Personal Access Token</button>
+          <div class="git-auth-tab-bar">
+            <button type="button" class="git-auth-tab-btn active" id="gitAuthTabSshBtn">
+              <span>🔑</span> 方式一：SSH 密钥（最推荐 · 永久免密）
+            </button>
+            <button type="button" class="git-auth-tab-btn" id="gitAuthTabTokenBtn">
+              <span>🎫</span> 方式二：Personal Access Token
+            </button>
           </div>
 
           <!-- Tab 1: SSH 方式 -->
           <div id="gitAuthSshPanel" style="display:flex;flex-direction:column;gap:12px;">
-            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">
-              SSH 协议完全基于公私钥免密加密，推拉代码无需任何账号密码，在 Linux 下极速稳定且永久有效。
+            <div class="git-auth-info-tip">
+              <span style="font-size:14px;flex-shrink:0;">💡</span>
+              <div>
+                <strong>免密极速体验：</strong>SSH 协议基于非对称加密，无需账号密码即可完成安全身份认证，彻底告别浏览器弹窗与凭据过期问题。
+              </div>
             </div>
+
             <div>
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                <label style="font-size:12px;font-weight:600;">本地 SSH 公钥 (~/.ssh/id_ed25519.pub)：</label>
-                <button type="button" class="btn small secondary" id="gitAuthCopySshKeyBtn">📋 复制公钥</button>
+                <label style="font-size:12px;font-weight:600;color:var(--text-main);">本地 SSH 公钥 (~/.ssh/id_ed25519.pub)：</label>
+                <button type="button" class="btn small secondary" id="gitAuthCopySshKeyBtn" style="padding:3px 10px;font-size:11.5px;">📋 复制公钥</button>
               </div>
-              <textarea id="gitAuthSshKeyDisplay" rows="3" readonly style="width:100%;font-family:var(--font-mono);font-size:11px;background:var(--bg-secondary);color:var(--text-primary);padding:8px;border-radius:6px;border:1px solid var(--border-color);resize:none;box-sizing:border-box;"></textarea>
+              <textarea id="gitAuthSshKeyDisplay" rows="3" readonly class="git-auth-key-area" placeholder="点击下方按钮即可一键生成密钥并加载公钥..."></textarea>
             </div>
-            <div style="display:flex;gap:8px;align-items:center;margin-top:2px;">
-              <button type="button" class="btn primary" id="gitAuthApplySshBtn" style="flex:1;">一键配置 SSH 并切换远程地址</button>
-              <button type="button" class="btn secondary" id="gitAuthOpenGithubSshBtn" title="打开 GitHub SSH Keys 配置页面">打开 GitHub 密钥设置 ↗</button>
+
+            <div style="display:flex;gap:10px;align-items:center;">
+              <button type="button" class="btn primary" id="gitAuthApplySshBtn" style="flex:1;padding:8px 14px;font-weight:600;">
+                ⚡ 一键配置 SSH 并切换远程地址
+              </button>
+              <button type="button" class="btn secondary" id="gitAuthOpenGithubSshBtn" title="打开 GitHub SSH 密钥配置管理页" style="padding:8px 14px;">
+                GitHub 密钥设置 ↗
+              </button>
             </div>
-            <div style="font-size:11px;color:var(--text-tertiary);line-height:1.4;">
-              💡 流程：1. 点击“一键配置 SSH 并切换远程地址”；2. 点击“复制公钥”并在打开的 GitHub 页面中添加该 Key，即可畅通推送。
+
+            <div class="git-auth-steps-box">
+              <div class="git-auth-steps-title">
+                <span>📌</span> 简单 2 步开箱即用：
+              </div>
+              <div>1. 点击上方 <strong>“一键配置 SSH 并切换远程地址”</strong>，系统将自动生成密钥、配置远程并复制公钥至剪贴板；</div>
+              <div>2. 在自动打开的 GitHub 页面中点击 <strong>New SSH Key</strong> 粘贴公钥并保存，即可顺利免密推送。</div>
             </div>
           </div>
 
           <!-- Tab 2: Token 方式 -->
           <div id="gitAuthTokenPanel" style="display:none;flex-direction:column;gap:12px;">
-            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">
-              GitHub 已停用账号登录密码，必须使用 Personal Access Token (PAT) 替代密码。
+            <div class="git-auth-info-tip">
+              <span style="font-size:14px;flex-shrink:0;">ℹ️</span>
+              <div>
+                <strong>HTTPS 认证规范：</strong>GitHub 已全面禁用普通账号密码推送，必须使用 Personal Access Token (PAT) 替代密码。
+              </div>
             </div>
-            <div class="form-group" style="display:flex;flex-direction:column;gap:4px;">
-              <label style="font-size:12px;font-weight:600;">GitHub 用户名：</label>
-              <input type="text" id="gitAuthUsernameInput" class="input-text" placeholder="例如: xukehb" style="width:100%;box-sizing:border-box;padding:6px 10px;">
+
+            <div class="form-group" style="margin-bottom:0;">
+              <label style="font-size:12px;font-weight:600;margin-bottom:4px;display:block;">GitHub 用户名：</label>
+              <input type="text" id="gitAuthUsernameInput" placeholder="例如: xukehb" style="width:100%;" />
             </div>
-            <div class="form-group" style="display:flex;flex-direction:column;gap:4px;">
-              <label style="font-size:12px;font-weight:600;">Personal Access Token (classic)：</label>
-              <input type="password" id="gitAuthTokenInput" class="input-text" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="width:100%;box-sizing:border-box;padding:6px 10px;">
+
+            <div class="form-group" style="margin-bottom:0;">
+              <label style="font-size:12px;font-weight:600;margin-bottom:4px;display:block;">Personal Access Token (classic)：</label>
+              <input type="password" id="gitAuthTokenInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="width:100%;" />
             </div>
-            <div style="display:flex;gap:8px;align-items:center;margin-top:2px;">
-              <button type="button" class="btn primary" id="gitAuthSaveTokenBtn" style="flex:1;">保存 Token 凭据到系统</button>
-              <button type="button" class="btn secondary" id="gitAuthOpenGithubTokensBtn" title="打开 GitHub Token 生成页面">生成 Token ↗</button>
+
+            <div style="display:flex;gap:10px;align-items:center;margin-top:2px;">
+              <button type="button" class="btn primary" id="gitAuthSaveTokenBtn" style="flex:1;padding:8px 14px;font-weight:600;">
+                💾 保存 Token 凭据到系统
+              </button>
+              <button type="button" class="btn secondary" id="gitAuthOpenGithubTokensBtn" title="在 GitHub 生成带有 repo 权限的访问令牌" style="padding:8px 14px;">
+                生成 Token ↗
+              </button>
             </div>
-            <div style="font-size:11px;color:var(--text-tertiary);line-height:1.4;">
-              💡 提示：创建 Token 时请勾选 <code>repo</code> 权限。保存后系统将自动保存凭据，HTTPS 推送将自动生效。
+
+            <div class="git-auth-steps-box">
+              <div class="git-auth-steps-title">
+                <span>📌</span> Token 生成说明：
+              </div>
+              <div>创建 Token 时请勾选 <code>repo</code>（完整仓库控制权限）。保存后将永久缓存至 Git 凭据管理器，后续推送自动免密。</div>
             </div>
           </div>
         </div>
-        <div class="modal-footer" style="margin-top:8px;">
+
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding-top:16px;margin-top:16px;border-top:1px solid var(--border-default);">
+          <button type="button" class="btn secondary" id="gitAuthTestPushBtn" title="配置完成后立即验证推送">
+            🚀 立即测试推送
+          </button>
           <button type="button" class="btn secondary" id="closeGitAuthModalFooterBtn">关闭</button>
         </div>
       </div>

@@ -6245,4 +6245,123 @@ body.sidebar-collapsed .sidebar-bottom-panel.sidebar-settings-only .nav-settings
   gap: 8px;
 }
 
+/* ==========================================================================
+   Git 远程授权配置弹窗现代化样式 (Git Auth Modal)
+   ========================================================================== */
+.git-auth-remote-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  gap: 12px;
+}
+
+.git-auth-remote-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.git-auth-remote-label {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.git-auth-remote-url {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-main);
+  word-break: break-all;
+}
+
+.git-auth-tab-bar {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-default);
+  padding-bottom: 10px;
+}
+
+.git-auth-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 15px;
+  font-size: 12.5px;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.git-auth-tab-btn:hover:not(.active) {
+  background: var(--bg-hover);
+  color: var(--text-main);
+}
+
+.git-auth-tab-btn.active {
+  background: var(--primary) !important;
+  color: #ffffff !important;
+  border-color: var(--primary) !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+}
+
+.git-auth-info-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--primary-subtle);
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.git-auth-key-area {
+  font-family: var(--font-mono) !important;
+  font-size: 11.5px !important;
+  line-height: 1.55 !important;
+  background: var(--bg-subtle) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-default) !important;
+  border-radius: var(--radius-sm) !important;
+  resize: none !important;
+  padding: 10px 12px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.git-auth-steps-box {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 12px 15px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.git-auth-steps-title {
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+
 

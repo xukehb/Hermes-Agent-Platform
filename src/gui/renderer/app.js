@@ -2420,15 +2420,31 @@ async function openGitAuthModal() {
     const remoteEl = $('gitAuthCurrentRemote');
     const typeEl = $('gitAuthRemoteType');
     const sshDisplay = $('gitAuthSshKeyDisplay');
+    const usernameInput = $('gitAuthUsernameInput');
 
     if (remoteEl) remoteEl.textContent = info.remoteUrl || '未检测到 origin 远端';
     if (typeEl) {
       typeEl.textContent = info.isSsh ? 'SSH 密钥' : 'HTTPS 协议';
-      typeEl.className = info.isSsh ? 'badge success' : 'badge info';
+      typeEl.className = info.isSsh ? 'prop-chip' : 'prop-chip';
+      typeEl.style.color = info.isSsh ? 'var(--success)' : 'var(--accent)';
     }
     if (sshDisplay) {
-      sshDisplay.value = info.sshPublicKey || '（暂无本地公钥，点击下方按钮将自动生成）';
+      sshDisplay.value = info.sshPublicKey || '';
     }
+
+    // 从远程仓库 URL 中自动猜测 GitHub 用户名并预填
+    if (usernameInput && !usernameInput.value && info.remoteUrl) {
+      const match = info.remoteUrl.match(/github\.com[:/]([^/]+)\//i);
+      if (match && match[1]) {
+        usernameInput.value = match[1];
+      }
+    }
+
+    // 默认高亮 SSH Tab（最推荐）
+    $('gitAuthTabSshBtn')?.classList.add('active');
+    $('gitAuthTabTokenBtn')?.classList.remove('active');
+    if ($('gitAuthSshPanel')) $('gitAuthSshPanel').style.display = 'flex';
+    if ($('gitAuthTokenPanel')) $('gitAuthTokenPanel').style.display = 'none';
 
     $('gitAuthModal')?.showModal();
   } catch (e) {
@@ -2449,28 +2465,28 @@ $('closeGitAuthModalFooterBtn')?.addEventListener('click', () => {
 });
 
 $('gitAuthTabSshBtn')?.addEventListener('click', () => {
-  $('gitAuthTabSshBtn')?.classList.replace('secondary', 'primary');
-  $('gitAuthTabTokenBtn')?.classList.replace('primary', 'secondary');
+  $('gitAuthTabSshBtn')?.classList.add('active');
+  $('gitAuthTabTokenBtn')?.classList.remove('active');
   if ($('gitAuthSshPanel')) $('gitAuthSshPanel').style.display = 'flex';
   if ($('gitAuthTokenPanel')) $('gitAuthTokenPanel').style.display = 'none';
 });
 
 $('gitAuthTabTokenBtn')?.addEventListener('click', () => {
-  $('gitAuthTabTokenBtn')?.classList.replace('secondary', 'primary');
-  $('gitAuthTabSshBtn')?.classList.replace('primary', 'secondary');
+  $('gitAuthTabTokenBtn')?.classList.add('active');
+  $('gitAuthTabSshBtn')?.classList.remove('active');
   if ($('gitAuthSshPanel')) $('gitAuthSshPanel').style.display = 'none';
   if ($('gitAuthTokenPanel')) $('gitAuthTokenPanel').style.display = 'flex';
 });
 
 $('gitAuthCopySshKeyBtn')?.addEventListener('click', async () => {
   const text = $('gitAuthSshKeyDisplay')?.value;
-  if (!text || text.includes('暂无')) {
+  if (!text || text.trim().length === 0) {
     showToast('请先点击下方按钮一键生成 SSH 密钥', 'warning');
     return;
   }
   try {
-    await navigator.clipboard.writeText(text);
-    showToast('SSH 公钥已复制到剪贴板！', 'success');
+    await navigator.clipboard.writeText(text.trim());
+    showToast('SSH 公钥已成功复制到剪贴板！', 'success');
   } catch {
     showToast('复制失败，请手动在文本框中选中复制', 'error');
   }
@@ -2478,7 +2494,7 @@ $('gitAuthCopySshKeyBtn')?.addEventListener('click', async () => {
 
 $('gitAuthApplySshBtn')?.addEventListener('click', async () => {
   if (!currentActiveProject) return;
-  showToast('正在生成密钥并切换远程地址...', 'info');
+  showToast('正在生成 SSH 密钥并切换远程地址...', 'info');
   try {
     const res = await window.hap.configureGitSsh(currentActiveProject);
     const remoteEl = $('gitAuthCurrentRemote');
@@ -2487,7 +2503,7 @@ $('gitAuthApplySshBtn')?.addEventListener('click', async () => {
     if (remoteEl) remoteEl.textContent = res.remoteUrl;
     if (typeEl) {
       typeEl.textContent = 'SSH 密钥';
-      typeEl.className = 'badge success';
+      typeEl.style.color = 'var(--success)';
     }
     if (sshDisplay) sshDisplay.value = res.sshPublicKey;
 
@@ -2497,7 +2513,7 @@ $('gitAuthApplySshBtn')?.addEventListener('click', async () => {
       // 忽略
     }
 
-    showToast('已成功切换为 SSH 远程并复制公钥！请在 GitHub 中添加该密钥', 'success');
+    showToast('✅ 已配置 SSH 远程并自动复制公钥！已为你打开 GitHub 密钥设置页', 'success');
     window.hap.openExternal('https://github.com/settings/ssh/new');
     await updateGitStatus(currentActiveProject);
   } catch (error) {
@@ -2529,11 +2545,32 @@ $('gitAuthSaveTokenBtn')?.addEventListener('click', async () => {
   showToast('正在保存 Git 凭据...', 'info');
   try {
     await window.hap.configureGitToken(currentActiveProject, username, token);
-    showToast('GitHub 凭据已成功保存！再次尝试 Git 推送即可生效', 'success');
-    $('gitAuthModal')?.close();
+    showToast('✅ GitHub Token 凭据已保存到系统！', 'success');
+    const info = await window.hap.getGitAuthInfo(currentActiveProject);
+    const remoteEl = $('gitAuthCurrentRemote');
+    const typeEl = $('gitAuthRemoteType');
+    if (remoteEl) remoteEl.textContent = info.remoteUrl;
+    if (typeEl) {
+      typeEl.textContent = 'HTTPS 协议';
+      typeEl.style.color = 'var(--accent)';
+    }
     await updateGitStatus(currentActiveProject);
   } catch (error) {
     showToast('保存凭据失败：' + (error.message || String(error)), 'error');
+  }
+});
+
+$('gitAuthTestPushBtn')?.addEventListener('click', async () => {
+  if (!currentActiveProject) return;
+  showToast('正在测试推送到远端仓库...', 'info');
+  try {
+    const res = await window.hap.gitPush(currentActiveProject);
+    showToast('🎉 测试推送成功！代码已成功同步至远程仓库！', 'success');
+    $('gitAuthModal')?.close();
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
+  } catch (error) {
+    showToast('测试推送失败：' + (error.message || String(error)), 'error');
   }
 });
 
