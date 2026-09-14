@@ -237,6 +237,15 @@ describe('Electron renderer UI contracts', () => {
     expect(app).toContain("modal.querySelectorAll('.btn-close')");
     expect(app).toContain('if (modal.open) modal.close()');
   });
+
+  it('safely renders diff hunks with structured DiffLine objects without throwing line.startsWith error', () => {
+    expect(app).toContain('buildHunkPatchString');
+    expect(app).toContain('formatGitDiffToHtml');
+    // Ensure hunk.lines supports object structure ({ type, content })
+    expect(app).toContain("line.type === 'add' ? '+' : line.type === 'delete' ? '-' : ' '");
+    // Ensure hunk badge shows chunk range and header
+    expect(app).toContain('const hunkBadge = `@@ -${hunk.oldStart},${hunk.oldLines} +${hunk.newStart},${hunk.newLines} @@');
+  });
 });
 
 

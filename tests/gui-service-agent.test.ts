@@ -61,8 +61,10 @@ describe('GuiService agent role management', () => {
   });
 
   it('falls back to the configured default agent when the UI sends a deleted agent id', async () => {
+    const service = new GuiService(configPath);
+    service.removeAgent('coder');
     const run = vi.spyOn(AgentOrchestrator.prototype, 'runTask').mockResolvedValue({ text: 'ok' } as never);
-    await new GuiService(configPath).chat({ input: 'hello', agentId: 'coder' });
+    await service.chat({ input: 'hello', agentId: 'coder' });
     expect(run.mock.calls[0]?.[0].agentId).toBe('helper');
   });
 

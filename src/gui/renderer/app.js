@@ -1563,13 +1563,22 @@ let currentInlineDiffHunksMap = {};
 
 function buildHunkPatchString(filePath, hunk) {
   const cleanPath = filePath.replace(/^[ab]\//, '');
+  const header = `@@ -${hunk.oldStart},${hunk.oldLines} +${hunk.newStart},${hunk.newLines} @@${hunk.header ? ' ' + hunk.header : ''}`;
   const lines = [
+    `diff --git a/${cleanPath} b/${cleanPath}`,
     `--- a/${cleanPath}`,
     `+++ b/${cleanPath}`,
-    hunk.header,
-    ...hunk.lines,
-    '',
+    header,
   ];
+  for (const line of (hunk.lines || [])) {
+    if (typeof line === 'string') {
+      lines.push(line);
+    } else if (line && typeof line === 'object') {
+      const prefix = line.type === 'add' ? '+' : line.type === 'delete' ? '-' : ' ';
+      lines.push(prefix + (line.content ?? ''));
+    }
+  }
+  lines.push('');
   return lines.join('\n');
 }
 
@@ -1597,21 +1606,29 @@ function formatGitDiffToHtml(rawDiff, filePath, hunks) {
   }
 
   return hunks.map((hunk, hunkIdx) => {
-    const linesHtml = hunk.lines.map((line) => {
-      const escaped = esc(line);
-      if (line.startsWith('+')) {
-        return `<div class="git-diff-line add">${escaped}</div>`;
+    const linesHtml = (hunk.lines || []).map((line) => {
+      let type = 'normal';
+      let text = '';
+      if (typeof line === 'string') {
+        text = line;
+        if (line.startsWith('+')) type = 'add';
+        else if (line.startsWith('-')) type = 'del';
+      } else if (line && typeof line === 'object') {
+        const prefix = line.type === 'add' ? '+' : line.type === 'delete' ? '-' : ' ';
+        text = prefix + (line.content ?? '');
+        if (line.type === 'add') type = 'add';
+        else if (line.type === 'delete') type = 'del';
       }
-      if (line.startsWith('-')) {
-        return `<div class="git-diff-line del">${escaped}</div>`;
-      }
-      return `<div class="git-diff-line normal">${escaped}</div>`;
+      const escaped = esc(text);
+      return `<div class="git-diff-line ${type}">${escaped}</div>`;
     }).join('');
+
+    const hunkBadge = `@@ -${hunk.oldStart},${hunk.oldLines} +${hunk.newStart},${hunk.newLines} @@${hunk.header ? ' ' + hunk.header : ''}`;
 
     return `
       <div class="git-hunk-card">
         <div class="git-hunk-toolbar">
-          <span class="git-hunk-badge">${esc(hunk.header)}</span>
+          <span class="git-hunk-badge">${esc(hunkBadge)}</span>
           <div class="git-hunk-actions">
             <button type="button" class="btn-hunk-action stage" onclick="handleStageHunk('${esc(filePath || currentInlineDiffFile)}', ${hunkIdx})" title="仅将该代码块加入 Git 暂存区 (git apply --cached)">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
