@@ -64,3 +64,13 @@ npx tsx src/cli/bin.ts -c .tmp-probe/hap.toml init
 - `npm run typecheck`：退出码 0。
 - `npm test -- --runInBand`：退出码 1；56 个测试文件中 43 个通过、13 个失败，696 项用例中 656 通过、40 失败，另有 1 个未处理错误。
 - 主要环境原因：`better-sqlite3` 原生模块使用 Node 模块版本 136 编译，而当前 Node 要求版本 127；Windows 测试环境也缺少 `sleep` 命令。失败集中在控制平面、GUI 服务、远程诊断与工具测试，与本次发布产物上传无直接关系。
+
+## 七、2026-09-14 记忆功能完整实现验证
+
+- `npm run typecheck`：通过。
+- `npm run lint`：通过。
+- `npm run build`：通过（先执行 `npm rebuild better-sqlite3` 修复本地 ABI 版本后）。
+- `npx vitest run tests/memory.test.ts tests/web-server.test.ts tests/orchestrator.test.ts`：3 个文件 / 41 项通过。
+- `npm test`：55 个文件 / 713 项中 711 项通过；2 项失败均为既有环境/测试隔离问题：`remote-diagnostics.test.ts` 守护进程启动超时，`gui-service-agent.test.ts` 默认智能体回退断言与当前配置条目冲突。
+
+本轮记忆专项覆盖：SQLite 迁移、并发写入、损坏 JSON 报错、CRUD、过期过滤、工作区/智能体隔离、混合召回、访问统计、向量重建、任务文本提炼以及 Web API CRUD/搜索/重建/提炼。

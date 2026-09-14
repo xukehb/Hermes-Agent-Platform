@@ -196,3 +196,12 @@
 - `read_thread`：读取任务 `01a03e57-965a-7e83-a581-94b297af803a`，确认上一轮因 Codex 服务端 503 中断，目标远端为 `xukehb/Hermes-Agent-Platform`。
 - `exec_command`：检查仓库状态、远端、发布目录与 Git LFS；确认 `main` 已同步，两个 0.1.2 `.exe` 分别为约 111 MB，普通 Git push 会超过 GitHub 单文件限制。
 - `exec_command`：复制 `E:\\Hermes-Agent-Platform\\release` 顶层 0.1.2 发布产物到仓库 `release/`，启用 `release/*.exe` 的 Git LFS 跟踪并完成暂存。
+
+## 2026-09-14：完整实现离线记忆功能
+
+- `exec_command`：读取项目记忆模块、相似测试与工作流技能。
+- `apply_patch`：新增记忆设计/实施计划，扩展记忆类型。
+- `apply_patch`：将 `MemoryStore` 迁移到 better-sqlite3，加入事务、迁移备份、并发队列、CRUD、混合召回、过期过滤、向量重建和任务提炼。
+- `apply_patch`：编排器接入任务前召回与成功后自动提炼；补齐 CLI、Web REST、Electron IPC、GUI 的更新/删除/重建/提炼能力。
+- `exec_command`：类型检查、lint、记忆/Web/编排器专项测试通过；重建 better-sqlite3 ABI 后构建通过。
+- `exec_command`：全量测试 55 文件 / 713 项，711 通过；两项既有失败记录于验证报告。

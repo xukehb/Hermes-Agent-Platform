@@ -106,6 +106,20 @@
 - **TypeScript 类型检查**：`npx tsc --noEmit` -> 退出码 0，无任何类型错误。
 - **Vitest 全量单元测试**：`npx vitest run` -> **25 个测试文件，479 项测试用例全部通过**。
 
+## 九、记忆功能完整实现验证（2026-09-14）
+
+本轮将 `src/memory` 迁移为 SQLite 事务存储，并贯通自动提炼、混合召回、CLI、Web、GUI 和任务编排器。
+
+| 检查 | 命令 | 结果 |
+|---|---|---|
+| 类型检查 | `npm run typecheck` | 通过 |
+| lint | `npm run lint` | 通过 |
+| 构建 | `npm run build` | 通过；先执行 `npm rebuild better-sqlite3` 修复本地 ABI |
+| 记忆专项 | `npx vitest run tests/memory.test.ts tests/web-server.test.ts tests/orchestrator.test.ts` | 3 文件 / 41 项通过 |
+| 全量测试 | `npm test` | 55 文件 / 713 项，711 通过；2 项既有失败（远程 daemon 超时、GUI 默认智能体回退断言） |
+
+专项验证确认：旧 JSON 可迁移并保留 `.migrated` 备份；损坏 JSON 明确报错；并发新增不丢失；记忆支持更新、删除、过期和元数据过滤；关键词与向量混合排序；任务成功后自动提炼 semantic/episodic 记忆；Web API 和 GUI IPC 支持编辑、删除、搜索、重建。
+
 ### 2026-09-07 发布推送复核
 - **类型检查**：`npm run typecheck` -> 退出码 0。
 - **全量测试**：`npm test -- --runInBand` -> 退出码 1；56 个测试文件、696 项用例中 656 通过、40 失败，另有 1 个未处理错误。

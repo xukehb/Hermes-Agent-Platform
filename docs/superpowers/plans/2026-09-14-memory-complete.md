@@ -16,9 +16,9 @@
 - Modify: `src/memory/types.ts`
 - Test: `tests/memory.test.ts`
 
-- [ ] 添加 layer、agentId、importance、confidence、expiresAt、embeddingVersion 字段及输入类型。
-- [ ] 添加校验/默认值测试，确保旧卡片字段可读取。
-- [ ] 运行 `npx vitest run tests/memory.test.ts`，确认新增测试先失败。
+- [x] 添加 layer、agentId、importance、confidence、expiresAt、embeddingVersion 字段及输入类型。
+- [x] 添加校验/默认值测试，确保旧卡片字段可读取。
+- [x] 运行 `npx vitest run tests/memory.test.ts`，确认新增测试先失败。
 
 ### Task 2: SQLite 存储与 JSON 迁移
 
@@ -26,10 +26,10 @@
 - Modify: `src/memory/store.ts`
 - Test: `tests/memory.test.ts`
 
-- [ ] 使用 `better-sqlite3` 创建 schema、索引和事务 CRUD。
-- [ ] 迁移旧 JSON，成功后保留 `.migrated` 备份；损坏数据抛出错误。
-- [ ] 以串行写入队列包住异步 embedding 后的提交。
-- [ ] 补并发新增、迁移、损坏文件和访问统计测试。
+- [x] 使用 `better-sqlite3` 创建 schema、索引和事务 CRUD。
+- [x] 迁移旧 JSON，成功后保留 `.migrated` 备份；损坏数据抛出错误。
+- [x] 以串行写入队列包住异步 embedding 后的提交。
+- [x] 补并发新增、迁移、损坏文件和访问统计测试。
 
 ### Task 3: 混合召回、更新、重建与自动提炼
 
@@ -39,9 +39,9 @@
 - Modify: `src/memory/recall.ts`
 - Test: `tests/memory.test.ts`
 
-- [ ] 实现关键词 + 向量混合评分、过期过滤、agent/workspace 过滤。
-- [ ] 实现 updateMemory、rebuildEmbeddings、extractTaskMemory 及相似去重合并。
-- [ ] 限制 prompt 注入长度，补充边界测试。
+- [x] 实现关键词 + 向量混合评分、过期过滤、agent/workspace 过滤。
+- [x] 实现 updateMemory、rebuildEmbeddings、extractTaskMemory 及相似去重合并。
+- [x] 限制 prompt 注入长度，补充边界测试。
 
 ### Task 4: 编排器自动记忆闭环
 
@@ -49,9 +49,9 @@
 - Modify: `src/agent/orchestrator.ts`
 - Test: `tests/orchestrator.test.ts`
 
-- [ ] 传递 agentId/workspace 召回上下文。
-- [ ] 任务成功后异步提炼，失败只记录日志。
-- [ ] 补充成功、失败和关闭流程测试。
+- [x] 传递 agentId/workspace 召回上下文。
+- [x] 任务成功后异步提炼，失败只记录日志。
+- [x] 补充成功、失败和关闭流程测试。
 
 ### Task 5: CLI、Web、GUI 契约
 
@@ -64,9 +64,9 @@
 - Modify: `src/gui/renderer/index.html`
 - Test: `tests/web-server.test.ts`, `tests/gui-missing-features.test.ts`
 
-- [ ] 增加 update/rebuild/extract 和删除接口。
-- [ ] 统一 agentId、title、tags、workspace 等字段并做运行时校验。
-- [ ] GUI 支持编辑、元数据和重建索引。
+- [x] 增加 update/rebuild/extract 和删除接口。
+- [x] 统一 agentId、title、tags、workspace 等字段并做运行时校验。
+- [x] GUI 支持编辑、元数据和重建索引。
 
 ### Task 6: 全量验证与文档记录
 
@@ -75,5 +75,5 @@
 - Modify: `verification.md`
 - Create: `.codex/review-report.md`
 
-- [ ] 运行 `npm run typecheck`、`npm test`、`npm run lint`、CLI 冒烟。
-- [ ] 记录输出、失败原因和残余风险。
+- [x] 运行 `npm run typecheck`、`npm test`、`npm run lint`、CLI 冒烟。
+- [x] 记录输出、失败原因和残余风险。
