@@ -161,3 +161,11 @@
 | 综合 | 96 | 建议通过并触发 GitHub Release |
 
 风险：v0.1.3 未配置 Windows/macOS 代码签名，首次启动可能出现系统安全提示；该限制已写入 README 与 Release 说明。发布任务使用最小权限，只有最终 Release job 具有 `contents: write`。
+
+## 11. 2026-09-15 v0.1.3 发布终审（Codex）
+
+GitHub Actions 运行 `34940545569` 的验证、四平台构建和 Release 发布共六个 job 全部成功。公开 Release 为正式版，资产清单严格限定为两个 Windows EXE、一个 Ubuntu DEB 和两个 macOS DMG，共五项，名称全部以 `Hermes-Agent-Platform-0.1.3-` 开头。两个误上传的 `CodexConnect 0.1.2` 旧资产已删除，API 均返回 HTTP `204`。
+
+终审评分：技术质量 97/100，需求匹配 100/100，验证完整性 98/100，综合 98/100；建议通过。唯一已知风险仍是安装包未签名，Windows SmartScreen 和 macOS Gatekeeper 可能提示。Release：https://github.com/xukehb/Hermes-Agent-Platform/releases/tag/v0.1.3
+
+收尾复核补充：当前本地 `better-sqlite3` 在源码重建时连续遇到 `node-gyp` 临时目录异常，改用预编译包又得到 Electron ABI 136，与 Node 22 ABI 127 不匹配；本轮全量测试因此为 745/751，6 项失败均在加载原生模块处。已依照连续三次相关失败规则停止重试。发布结论仍以标签提交上的 GitHub 六 job 全绿和公开资产白名单为准；本地依赖目录需重新安装后方可恢复全量测试能力。

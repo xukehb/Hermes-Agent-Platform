@@ -146,3 +146,27 @@
 - 包内冒烟：`.desktop` 的 Name、Exec、Icon、StartupWMClass 与 Categories 正确；主可执行文件存在且具有执行权限。
 - workflow：YAML 可解析，包含标签版本校验、Windows x64、Ubuntu x64、macOS arm64、macOS x64 原生构建和集中 Release 发布。
 - 剩余边界：Windows/macOS 包等待 GitHub runner 实际生成；未签名包可能触发 SmartScreen/Gatekeeper。
+
+## 2026-09-15 Hermes Agent Platform v0.1.3 GitHub 发布终验（Codex）
+
+- 工作流：https://github.com/xukehb/Hermes-Agent-Platform/actions/runs/34940545569
+- 工作流状态：`completed/success`；标签源码提交为 `3c988bebae603f251b47f3a7b74fce83e4af4ac3`。
+- 六个 job 全部成功：源码校验、Windows x64、Ubuntu x64、macOS arm64、macOS x64、GitHub Release 发布。
+- Release：https://github.com/xukehb/Hermes-Agent-Platform/releases/tag/v0.1.3
+- Release 标题为 `Hermes Agent Platform v0.1.3`，`draft=false`，`prerelease=false`。
+- 两个误上传的 `CodexConnect 0.1.2` EXE 已删除，GitHub API 两次均返回 HTTP `204`。
+- 公共 Release API 最终白名单为 5/5：
+
+| 资产 | 大小（bytes） | 状态 |
+|---|---:|---|
+| `Hermes-Agent-Platform-0.1.3-Windows-x64-Setup.exe` | 111870690 | uploaded |
+| `Hermes-Agent-Platform-0.1.3-Windows-x64-Portable.exe` | 111611918 | uploaded |
+| `Hermes-Agent-Platform-0.1.3-Ubuntu-amd64.deb` | 110869128 | uploaded |
+| `Hermes-Agent-Platform-0.1.3-macOS-arm64.dmg` | 137423816 | uploaded |
+| `Hermes-Agent-Platform-0.1.3-macOS-x64.dmg` | 142246717 | uploaded |
+
+结论：Windows、Ubuntu 和双架构 macOS 安装包均已发布，公开资产中不存在 `ChatGPTConnect` 或 `CodexConnect` 命名。安装包未签名，首次运行仍可能触发系统安全提示。
+
+本地收尾复核说明：两次 `npm run rebuild:node` 在 `node-gyp` 临时目录收尾阶段失败，随后官方预编译包安装为 Electron ABI 136，与 Node 22 所需 ABI 127 不匹配。本轮 `npm test` 因此得到 61 个文件中 59 个通过、751 项中 745 项通过；6 项失败均发生在加载 `better-sqlite3` 时。连续三次相关失败后按规则停止重试。此前同版本 Node 22 环境已有 751/751 成功记录，且正式发布由 GitHub 的四个平台原生 runner 构建并全部成功；当前限制仅影响本地 `node_modules` 的再次验证能力。
+
+不依赖该原生模块加载的 `npm run typecheck` 与 `npm run build` 已在 Node 22.23.2 下重新执行，均以退出码 0 完成。

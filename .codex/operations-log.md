@@ -239,3 +239,13 @@
 - `vitest`：发布契约完成 RED/GREEN；最终全量 61 文件 / 751 项通过。
 - `electron-builder` / `dpkg-deb`：两次构建 Ubuntu x64 DEB；补齐 author 与 Linux desktopName 后无对应警告，包元数据与可执行文件检查通过。
 - `git`：在 `codex/release-v0.1.3` 分支分步提交规格、计划、测试、构建配置、workflow、文档和待发布应用改动。
+
+## 2026-09-15：v0.1.3 GitHub 发布闭环
+
+- `GitHub Actions`：运行 `34940545569` 在标签提交 `3c988be` 上完成，验证、Windows x64、Ubuntu x64、macOS arm64、macOS x64、Release 发布六个 job 全部成功。
+- `GitHub API`：删除误上传的两个 `CodexConnect 0.1.2` EXE，返回 HTTP `204`；随后公共 Release API 仅返回五个 `Hermes-Agent-Platform-0.1.3-*` 白名单资产。
+- `apply_patch`：将工作流成功状态、最终资产名与大小、删除结果和 Release URL 写入测试、验证、操作日志及审查报告。
+- 工具降级：当前环境未提供 `code-index`、`sequential-thinking`、`shrimp-task-manager`、`exa`，内部检索使用 `rg`/Git，GitHub 终验使用公共 REST API；本机亦无 `gh` CLI。
+- Release：https://github.com/xukehb/Hermes-Agent-Platform/releases/tag/v0.1.3
+- `exec_command`：Node 22 收尾复核中两次源码重建分别因 `.deps` 与 `node_gyp_bins` 临时目录缺失失败；第三次改用预编译包后因 Electron ABI 136 与 Node ABI 127 不匹配，测试结果为 59/61 文件、745/751 用例通过。连续三次相关失败后停止重试并重新评估，未继续修改原生依赖。
+- `exec_command`：停止原生模块重试后独立执行 `npm run typecheck` 与 `npm run build`，两者退出码均为 0。

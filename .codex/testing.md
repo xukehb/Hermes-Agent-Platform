@@ -114,3 +114,19 @@ npx tsx src/cli/bin.ts -c .tmp-probe/hap.toml init
 | 包内冒烟 | `dpkg-deb --info`、解包后检查 `.desktop` 与可执行位 | 版本 0.1.3、amd64、产品名、StartupWMClass 和可执行文件均正确 |
 
 第一次正式全量验证因本机 `better-sqlite3` 被其他 Electron 构建切换到错误 ABI 而失败；在 Node 22 下执行 `npm run rebuild:node` 后复跑通过。Node 24 还会触发该依赖的清理钩子断言，因此发布与 CI 统一使用 Node 22。
+
+## 十一、2026-09-15 v0.1.3 GitHub 发布终验（Codex）
+
+- GitHub Actions 运行 `34940545569` 状态为 `completed/success`，源码为标签 `v0.1.3` 对应提交 `3c988bebae603f251b47f3a7b74fce83e4af4ac3`。
+- `Validate v0.1.3 source`、Windows x64、Ubuntu x64、macOS arm64、macOS x64 和 `Publish GitHub Release` 六个 job 全部成功。
+- Release `Hermes Agent Platform v0.1.3` 为公开正式版（`draft=false`、`prerelease=false`）。
+- 误上传的两个旧 `CodexConnect 0.1.2` EXE 已通过 GitHub API 删除，两次删除均返回 HTTP `204`。
+- 公共 Release API 终验仅返回以下五个白名单资产，全部为 `uploaded`：
+  - `Hermes-Agent-Platform-0.1.3-Windows-x64-Setup.exe`（111870690 bytes）
+  - `Hermes-Agent-Platform-0.1.3-Windows-x64-Portable.exe`（111611918 bytes）
+  - `Hermes-Agent-Platform-0.1.3-Ubuntu-amd64.deb`（110869128 bytes）
+  - `Hermes-Agent-Platform-0.1.3-macOS-arm64.dmg`（137423816 bytes）
+  - `Hermes-Agent-Platform-0.1.3-macOS-x64.dmg`（142246717 bytes）
+- Release：https://github.com/xukehb/Hermes-Agent-Platform/releases/tag/v0.1.3
+- 收尾阶段本地复核：两次 `npm run rebuild:node` 均在 `node-gyp` 临时目录收尾阶段失败；改用预编译包后得到 Electron ABI 136，而 Node 22 要求 ABI 127，故 `npm test` 为 59/61 文件、745/751 用例通过，6 项均因 `better-sqlite3` ABI 不匹配失败。连续三次相关失败后已按规则停止重试。此结果不否定此前 Node 22 下 751/751 的成功记录，也不影响上述 GitHub 原生 runner 的发布结果，但表明当前本地 `node_modules` 需要重新安装后才能再次运行完整测试。
+- 同一收尾复核中，`npm run typecheck` 与 `npm run build` 均以退出码 0 完成。
