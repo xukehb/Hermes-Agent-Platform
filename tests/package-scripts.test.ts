@@ -7,12 +7,19 @@ describe('package scripts', () => {
     readFileSync(join(process.cwd(), 'package.json'), 'utf8'),
   ) as {
     version?: string;
+    author?: string;
+    desktopName?: string;
     scripts?: Record<string, string>;
     build?: {
       productName?: string;
       copyright?: string;
       win?: { target?: string[] };
-      linux?: { target?: string[]; category?: string; maintainer?: string };
+      linux?: {
+        target?: string[];
+        category?: string;
+        maintainer?: string;
+        syncDesktopName?: boolean;
+      };
       mac?: { target?: string[] };
     };
   };
@@ -29,6 +36,8 @@ describe('package scripts', () => {
 
   it('uses the v0.1.3 Hermes product identity', () => {
     expect(packageJson.version).toBe('0.1.3');
+    expect(packageJson.author).toBe('Hermes Agent Platform Team');
+    expect(packageJson.desktopName).toBe('hermes-agent-platform.desktop');
     expect(packageJson.build?.productName).toBe('Hermes Agent Platform');
     expect(packageJson.build?.copyright).toContain('Hermes Agent Platform');
   });
@@ -45,6 +54,7 @@ describe('package scripts', () => {
       target: ['deb'],
       category: 'Development',
       maintainer: 'Hermes Agent Platform Team',
+      syncDesktopName: true,
     });
     expect(packageJson.build?.mac?.target).toEqual(['dmg']);
   });

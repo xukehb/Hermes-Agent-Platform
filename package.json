@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "description": "Hermes 多智能体平台",
+  "author": "Hermes Agent Platform Team",
+  "desktopName": "hermes-agent-platform.desktop",
   "engines": {
     "node": ">=20"
   },
@@ -72,6 +74,7 @@
       ],
       "category": "Development",
       "maintainer": "Hermes Agent Platform Team",
+      "syncDesktopName": true,
       "artifactName": "Hermes-Agent-Platform-${version}-Ubuntu-${arch}.${ext}"
     }
   },
