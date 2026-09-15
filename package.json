@@ -1,6 +1,6 @@
 {
   "name": "hermes-agent-platform",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "type": "module",
   "description": "Hermes 多智能体平台",
@@ -19,13 +19,16 @@
     "rebuild:node": "npm rebuild better-sqlite3 --build-from-source",
     "gui": "npm run build && npm run rebuild:electron && electron dist/src/gui/main.js",
     "gui:dev": "npm run build && npm run rebuild:electron && electron dist/src/gui/main.js",
-    "dist": "npm run build && npm run rebuild:electron && npx electron-builder --win",
-    "dist:dir": "npm run build && npm run rebuild:electron && npx electron-builder --win --dir"
+    "dist": "npm run dist:win",
+    "dist:win": "npm run build && npm run rebuild:electron && electron-builder --win",
+    "dist:linux": "npm run build && npm run rebuild:electron && electron-builder --linux deb",
+    "dist:mac": "npm run build && npm run rebuild:electron && electron-builder --mac dmg",
+    "dist:dir": "npm run build && npm run rebuild:electron && electron-builder --dir"
   },
   "build": {
     "appId": "com.hermes.agent.platform",
-    "productName": "CodexConnect",
-    "copyright": "Copyright © 2026 CodexConnect Team",
+    "productName": "Hermes Agent Platform",
+    "copyright": "Copyright © 2026 Hermes Agent Platform Team",
     "directories": {
       "output": "release"
     },
@@ -44,16 +47,32 @@
       ]
     },
     "nsis": {
+      "artifactName": "Hermes-Agent-Platform-${version}-Windows-${arch}-Setup.${ext}",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
     },
+    "portable": {
+      "artifactName": "Hermes-Agent-Platform-${version}-Windows-${arch}-Portable.${ext}"
+    },
     "mac": {
-      "icon": "build/icon.icns"
+      "icon": "build/icon.icns",
+      "target": [
+        "dmg"
+      ]
+    },
+    "dmg": {
+      "artifactName": "Hermes-Agent-Platform-${version}-macOS-${arch}.${ext}"
     },
     "linux": {
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "target": [
+        "deb"
+      ],
+      "category": "Development",
+      "maintainer": "Hermes Agent Platform Team",
+      "artifactName": "Hermes-Agent-Platform-${version}-Ubuntu-${arch}.${ext}"
     }
   },
   "dependencies": {
@@ -83,6 +102,7 @@
     "@types/ssh2": "^1.15.5",
     "@types/ws": "^8.18.1",
     "electron": "^37.3.1",
+    "electron-builder": "26.15.3",
     "eslint": "^9.0.0",
     "tsx": "^4.23.12",
     "typescript": "^7.0.2",
