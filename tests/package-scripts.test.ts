@@ -69,7 +69,7 @@ describe('package scripts', () => {
     expect(workflow).toContain('windows-latest');
     expect(workflow).toContain('ubuntu-latest');
     expect(workflow).toContain('macos-15');
-    expect(workflow).toContain('macos-13');
+    expect(workflow).toContain('macos-15-intel');
     expect(workflow).toContain('actions/upload-artifact@v4');
     expect(workflow).toContain('actions/download-artifact@v4');
     expect(workflow).toContain('softprops/action-gh-release@v2');

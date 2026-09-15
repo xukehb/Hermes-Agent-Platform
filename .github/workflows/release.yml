@@ -63,7 +63,7 @@ jobs:
             artifact: macos-arm64
             command: npm run dist:mac -- --arm64
             files: release/*.dmg
-          - os: macos-13
+          - os: macos-15-intel
             artifact: macos-x64
             command: npm run dist:mac -- --x64
             files: release/*.dmg
