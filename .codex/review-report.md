@@ -142,3 +142,11 @@
 ## 9. 2026-09-14 桌面图标接入审查（Codex）
 
 范围：图标资源、窗口加载、资源复制、三平台打包图标与专项测试。技术 94、战略 95、综合 95，建议通过。专项测试经历预期失败再通过，构建与 lint 通过，Linux 实际包内含 PNG。Windows `.ico` 与 macOS `.icns` 可解析，但当前 Linux 环境没有实测两平台安装器；这是剩余验证边界。未触碰现有 GUI 未提交改动。
+## 2026-09-14 生图成功后异常修复审查（Codex）
+
+- 技术质量：96/100。删除不存在的函数调用，并将服务请求错误与成功后的界面收尾错误分离。
+- 需求匹配：98/100。直接消除截图中的成功后 `ReferenceError`，同时防止同类 UI 异常被误报为生成失败。
+- 综合评分：97/100，建议通过。
+- 覆盖：正常生成、服务失败契约、模型选择、技能提示词、错误边界、全量回归。
+- 风险：Node 24 下 Vitest fork 池与 `better-sqlite3` 存在销毁阶段兼容问题；threads 池全量 746/746 通过，与本次 renderer 代码无关。
+- 留痕：`.codex/context-image-generation-runtime-error.json`、`.codex/operations-log.md`、`.codex/testing.md`、`.codex/review-report.md`、`verification.md`。

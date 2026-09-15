@@ -227,3 +227,6 @@
 - `git status/diff/log/blame`：确认问题位于当前未提交的生图插件改动，不覆盖用户已有修改。
 - 根因：图片生成成功后调用不存在的 `loadProjectFiles`，随后被生图异常处理器误报为生成失败。
 - 决策：项目树不包含文件列表，成功分支已完成消息保存和渲染，删除无效调用是符合现有架构的单点修复。
+- `apply_patch`：新增两阶段回归测试，移除未定义调用，并拆分服务失败与成功收尾的错误边界。
+- `vitest/typecheck/eslint`：专项 16/16、线程池全量 746/746、类型检查和 lint 均通过。
+- `npm rebuild better-sqlite3 --build-from-source`：修复本地 Node ABI 136/137 不匹配；默认 fork 池仍有 Node 24 销毁断言，改用 threads 池完成可信全量验证。

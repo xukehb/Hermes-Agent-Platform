@@ -6755,20 +6755,48 @@ async function executeImageGenPlugin(promptText, targetSessionId, explicitSkill,
   }
 
   try {
-    const res = await window.hap.generateImage({
-      prompt: enhancedPrompt,
-      providerId: providerId || undefined,
-      model: model || undefined,
-      workspace: currentActiveProject || undefined,
-      size: '1024x1024',
-      aspectRatio: '1:1',
-      style: skill?.style || 'vivid',
-    });
+    let res;
+    try {
+      res = await window.hap.generateImage({
+        prompt: enhancedPrompt,
+        providerId: providerId || undefined,
+        model: model || undefined,
+        workspace: currentActiveProject || undefined,
+        size: '1024x1024',
+        aspectRatio: '1:1',
+        style: skill?.style || 'vivid',
+      });
+      if (!res.ok || !(res.imageUrl || res.localUri)) {
+        throw new Error(res.error || '生成失败，请检查生图服务商配置');
+      }
+    } catch (err) {
+      const errSession = getTargetSession();
+      const errorMsg = err.message || '生图服务异常';
+      const replyContent = `⚠️ **AI 生图插件执行异常**：${errorMsg}\n\n> 💡 提示：可点击输入框底部的 **「🎨 AI 生图」** 按钮，检查或选择可用的生图服务商与模型名称。`;
+
+      if (errSession) {
+        errSession.messages.push({
+          role: 'assistant',
+          content: replyContent,
+          timestamp: new Date().toISOString(),
+        });
+        errSession.updatedAt = new Date().toISOString();
+        errSession.isGenerating = false;
+        errSession.generatingPlugin = null;
+        saveSessionsToStorage();
+        if (currentSessionId === errSession.id) {
+          renderCurrentSessionMessages();
+          setChatGenerating(false, errSession);
+        }
+      }
+      showToast('生图失败: ' + errorMsg, 'error');
+      return;
+    }
 
     const finishSession = getTargetSession();
     if (!finishSession) return;
 
-    if (res.ok && (res.imageUrl || res.localUri)) {
+    try {
       lastGeneratedImage = res;
       res.skillUsed = skill;
       const imgUrl = res.imageUrl || res.localUri;
@@ -6798,30 +6826,10 @@ async function executeImageGenPlugin(promptText, targetSessionId, explicitSkill,
         setChatGenerating(false, finishSession);
       }
       showToast('🎨 AI 图像生成成功！', 'success');
-    } else {
-      throw new Error(res.error || '生成失败，请检查生图服务商配置');
+    } catch (err) {
+      console.error('生图成功后的界面更新失败:', err);
+      showToast('图像已生成，但界面更新不完整，请切换会话后重试', 'warning');
     }
-  } catch (err) {
-    const errSession = getTargetSession();
-    const errorMsg = err.message || '生图服务异常';
-    const replyContent = `⚠️ **AI 生图插件执行异常**：${errorMsg}\n\n> 💡 提示：可点击输入框底部的 **「🎨 AI 生图」** 按钮，检查或选择可用的生图服务商与模型名称。`;
-
-    if (errSession) {
-      errSession.messages.push({
-        role: 'assistant',
-        content: replyContent,
-        timestamp: new Date().toISOString(),
-      });
-      errSession.updatedAt = new Date().toISOString();
-      errSession.isGenerating = false;
-      errSession.generatingPlugin = null;
-      saveSessionsToStorage();
-      if (currentSessionId === errSession.id) {
-        renderCurrentSessionMessages();
-        setChatGenerating(false, errSession);
-      }
-    }
-    showToast('生图失败: ' + errorMsg, 'error');
   } finally {
     const finalSession = getTargetSession();
     if (finalSession) {

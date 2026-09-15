@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/Hermes-Agent-Platform.iml" filepath="$PROJECT_DIR$/.idea/Hermes-Agent-Platform.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/gyp-next.iml" filepath="$PROJECT_DIR$/.idea/gyp-next.iml" />
     </modules>
   </component>
 </project>

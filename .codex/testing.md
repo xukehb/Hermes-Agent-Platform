@@ -88,3 +88,15 @@ npx tsx src/cli/bin.ts -c .tmp-probe/hap.toml init
 - 绿阶段：同命令 2/2 通过；`npx vitest run tests/gui-app-icon.test.ts tests/renderer-ui.test.ts`，24/24 通过。
 - `npm run build` 与 `npm run lint` 均退出码 0；`cmp build/icon.png dist/src/gui/renderer/app-icon.png` 退出码 0。
 - `npx --yes electron-builder --linux dir --publish never` 退出码 0；`app.asar` 列出 `/dist/src/gui/renderer/app-icon.png`。Windows/macOS 交叉平台安装包未在本机实际构建，已检查对应 ICO/ICNS 格式及配置。
+## 2026-09-14 生图成功后异常修复（Codex）
+
+| 阶段 | 命令 | 结果 |
+|---|---|---|
+| RED 1 | `npx vitest run tests/gui-image-plugin-skills.test.ts` | 预期失败：检测到 `loadProjectFiles(` |
+| RED 2 | `npx vitest run tests/gui-image-plugin-skills.test.ts -t "does not report a generated image as failed"` | 预期失败：成功收尾尚未与服务错误隔离 |
+| 专项验证 | `npx vitest run tests/gui-image-plugin-skills.test.ts tests/gui-image-generation.test.ts` | 2 文件 / 16 项通过 |
+| 类型检查 | `npm run typecheck` | 通过 |
+| 静态检查 | `npm run lint` | 通过 |
+| 全量验证 | `npx vitest run tests/ --pool=threads` | 61 文件 / 746 项全部通过 |
+
+首次 `npm test` 因 `better-sqlite3` ABI 不匹配失败；执行 `npm rebuild better-sqlite3 --build-from-source` 后，fork 池在 Node 24 清理原生 Statement 时仍触发运行时断言。改用 Vitest `threads` 池后全部断言通过，规避的是测试 worker 销毁兼容问题，不改变应用代码。

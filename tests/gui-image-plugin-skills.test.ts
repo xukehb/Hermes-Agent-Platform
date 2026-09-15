@@ -132,8 +132,14 @@ describe('AI Image Generation Plugin & Skill Ecosystem', () => {
 
   it('does not report a generated image as failed while finalizing the success path', () => {
     const app = readFileSync('src/gui/renderer/app.js', 'utf8');
+    const executeImageGenPlugin = app.slice(
+      app.indexOf('async function executeImageGenPlugin'),
+      app.indexOf("chatInput?.addEventListener('input', updateComposerState)"),
+    );
 
     expect(app).not.toContain('loadProjectFiles(');
+    expect(executeImageGenPlugin).toContain('图像已生成，但界面更新不完整');
+    expect(executeImageGenPlugin).toMatch(/catch \(err\) \{[\s\S]+?生图失败:[\s\S]+?return;[\s\S]+?const finishSession/);
   });
 
   it('exposes gui:importSkill in IPC main and preload contracts', () => {

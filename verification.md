@@ -132,3 +132,6 @@
 ## 2026-09-14 桌面图标接入验证（Codex）
 
 图标现由 `build/icon.png` 构建复制到 `dist/src/gui/renderer/app-icon.png`，窗口运行时加载该路径；Windows/macOS/Linux 打包配置分别指向 `.ico`、`.icns`、`.png`。专项测试先有 2 项预期失败，接入后 2/2 通过；GUI 相关测试 24/24 通过，构建与 lint 通过。Linux 目录打包成功，`app.asar` 包含运行时 PNG。Windows/macOS 安装包未在本机实测，仅验证资源格式与配置。
+## 2026-09-14 生图成功后异常修复验证（Codex）
+
+修复 `executeImageGenPlugin` 成功路径调用未定义 `loadProjectFiles` 后产生的矛盾提示，并隔离图像服务失败与成功后的界面更新异常。TDD 两轮 RED 均精确命中缺陷；生图专项 2 文件 / 16 项通过，类型检查与 lint 通过，全量测试在线程池模式下 61 文件 / 746 项全部通过。默认 fork 池在 Node 24 销毁 `better-sqlite3` 原生对象时发生进程断言，属于测试运行时兼容问题。
