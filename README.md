@@ -2,7 +2,7 @@
 
 一个基于 Electron 和 TypeScript 的多智能体工作台，将模型配置、项目对话、智能体角色、消息通道和主机管理集中在同一个桌面应用中。也可以通过 CLI 或 HTTP 接口运行任务，通过 TOML 文件管理服务商、模型与智能体。
 
-桌面安装包的产品名称为 **CodexConnect**，源码与命令行沿用 **HAP** 命名。
+桌面安装包的产品名称为 **Hermes Agent Platform**，源码与命令行沿用 **HAP** 命名。
 
 [界面预览](#界面预览) · [快速开始](#快速开始) · [安装包打包](#安装包打包) · [CLI 全景](#cli-全景) · [开发](#开发)
 
@@ -94,43 +94,31 @@ npx tsx src/cli/bin.ts serve
 
 ## 安装包打包
 
-当前 `package.json` 已配置 Windows 的 NSIS 安装程序和 Portable 便携包，输出目录为 `release/`。`npm run dist` 固定打包 Windows；macOS 使用下面的显式命令。
-
-### 准备打包工具
-
-项目目前未在开发依赖中声明 `electron-builder`，首次打包先安装，并将依赖与锁文件变更一并纳入版本管理：
+Hermes Agent Platform 使用锁定版本的 `electron-builder` 生成安装包，产物统一写入 `release/`。请在目标操作系统执行对应命令，确保 `better-sqlite3` 针对正确平台和架构编译：
 
 ```bash
-npm install
-npm install -D electron-builder
+# Windows x64：NSIS 安装版和 Portable 便携版
+npm run dist:win -- --x64
+
+# Ubuntu x64：Debian 安装包
+npm run dist:linux -- --x64
+
+# macOS：按运行机器选择 Apple Silicon 或 Intel
+npm run dist:mac -- --arm64
+npm run dist:mac -- --x64
 ```
 
-### macOS
+v0.1.3 的发布文件名如下：
 
-在 Mac 上执行：
+- `Hermes-Agent-Platform-0.1.3-Windows-x64-Setup.exe`
+- `Hermes-Agent-Platform-0.1.3-Windows-x64-Portable.exe`
+- `Hermes-Agent-Platform-0.1.3-Ubuntu-amd64.deb`
+- `Hermes-Agent-Platform-0.1.3-macOS-arm64.dmg`
+- `Hermes-Agent-Platform-0.1.3-macOS-x64.dmg`
 
-```bash
-npm run build
-npx electron-builder --mac dmg --arm64
-```
+推送与 `package.json` 版本一致的 `v*` 标签后，GitHub Actions 会在 Windows、Ubuntu、macOS arm64 和 macOS Intel 原生 runner 上完成测试与打包。只有全部平台成功，工作流才会创建 GitHub Release 并上传所有安装包。
 
-Apple Silicon 使用 `--arm64`，Intel Mac 改为 `--x64`；同时生成两种架构的独立安装镜像可使用 `--arm64 --x64`。输出 `.dmg` 位于 `release/`，打开后将应用拖入 Applications 文件夹。
-
-### Windows
-
-在 Windows PowerShell 中执行：
-
-```powershell
-npm run dist
-```
-
-`release/` 中会生成 NSIS 安装程序 `.exe` 和 Portable 便携版 `.exe`。安装程序支持选择安装目录、创建桌面与开始菜单快捷方式。仅生成解包目录用于检查时，执行 `npm run dist:dir`。
-
-### 分发与验证
-
-- 建议分别在 macOS 与 Windows 上构建。项目包含 `better-sqlite3` 原生模块，跨系统打包需要额外处理目标平台的原生依赖。
-- 对外发布 macOS 版本应配置 Developer ID 签名与 Apple 公证；Windows 建议配置代码签名，减少未知发布者提示。
-- 上述命令是构建步骤，不代表安装包已经通过验证。发布前需在目标系统上检查安装、启动、模型调用、SQLite 会话读写和卸载流程。
+v0.1.3 未配置 Apple Developer ID 或 Windows 代码签名证书。Windows SmartScreen 或 macOS Gatekeeper 可能在首次启动时显示未知发布者警告。正式签名发布前仍应在目标系统检查安装、启动、模型调用、SQLite 会话读写和卸载流程。
 
 ### 常见问题
 
@@ -139,7 +127,7 @@ npm run dist
 | `NODE_MODULE_VERSION` 不匹配或 SQLite 模块无法加载 | CLI / 测试前执行 `npm run rebuild:node`；桌面端执行 `npm run gui`，它会自动重建 Electron 模块 |
 | 原生模块编译失败 | macOS 执行 `xcode-select --install`；Windows 安装 Python 与 Visual Studio C++ 构建工具 |
 | 找不到 API Key 或模型调用失败 | 核对所选智能体绑定的服务商、模型别名和环境变量，运行 `npm run hap -- doctor` |
-| Mac 上执行 `npm run dist` 却开始打 Windows 包 | 该脚本包含 `--win`，请使用上面的 `--mac dmg` 命令 |
+| 在错误的平台执行打包命令 | 使用与当前系统对应的 `dist:win`、`dist:linux` 或 `dist:mac` 命令 |
 | Electron 或打包工具下载失败 | 检查网络、代理及 npm 配置后重试 |
 
 ## 运行时加服务商与模型
