@@ -100,3 +100,17 @@ npx tsx src/cli/bin.ts -c .tmp-probe/hap.toml init
 | 全量验证 | `npx vitest run tests/ --pool=threads` | 61 文件 / 746 项全部通过 |
 
 首次 `npm test` 因 `better-sqlite3` ABI 不匹配失败；执行 `npm rebuild better-sqlite3 --build-from-source` 后，fork 池在 Node 24 清理原生 Statement 时仍触发运行时断言。改用 Vitest `threads` 池后全部断言通过，规避的是测试 worker 销毁兼容问题，不改变应用代码。
+
+## 十、2026-09-15 v0.1.3 多平台发布验证（Codex）
+
+| 阶段 | 命令 | 结果 |
+|---|---|---|
+| RED | `npx vitest run tests/package-scripts.test.ts` | 4 项按预期失败：旧版本、缺少平台命令、缺少目标配置、缺少 workflow |
+| 发布契约 | `npx vitest run tests/package-scripts.test.ts` | 8/8 通过，覆盖产品名、版本、平台目标、workflow 和运行时品牌 |
+| 全量测试 | `npm test`（Node 22.23.2） | 61 文件 / 751 项全部通过 |
+| 类型检查 | `npm run typecheck` | 退出码 0 |
+| 编译 | `npm run build` | 退出码 0 |
+| Ubuntu 打包 | `npm run dist:linux -- --x64` | 退出码 0，生成 108 MB DEB |
+| 包内冒烟 | `dpkg-deb --info`、解包后检查 `.desktop` 与可执行位 | 版本 0.1.3、amd64、产品名、StartupWMClass 和可执行文件均正确 |
+
+第一次正式全量验证因本机 `better-sqlite3` 被其他 Electron 构建切换到错误 ABI 而失败；在 Node 22 下执行 `npm run rebuild:node` 后复跑通过。Node 24 还会触发该依赖的清理钩子断言，因此发布与 CI 统一使用 Node 22。

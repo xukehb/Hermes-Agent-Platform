@@ -135,3 +135,14 @@
 ## 2026-09-14 生图成功后异常修复验证（Codex）
 
 修复 `executeImageGenPlugin` 成功路径调用未定义 `loadProjectFiles` 后产生的矛盾提示，并隔离图像服务失败与成功后的界面更新异常。TDD 两轮 RED 均精确命中缺陷；生图专项 2 文件 / 16 项通过，类型检查与 lint 通过，全量测试在线程池模式下 61 文件 / 746 项全部通过。默认 fork 池在 Node 24 销毁 `better-sqlite3` 原生对象时发生进程断言，属于测试运行时兼容问题。
+
+## 2026-09-15 Hermes Agent Platform v0.1.3 发布验证（Codex）
+
+- 产品身份：`package.json` 版本为 `0.1.3`，安装包、Electron 标题、CLI、Web 与诊断文案统一为 `Hermes Agent Platform`。
+- 自动测试：Node 22.23.2 下 `npm test` 通过，61 个测试文件、751 项测试无失败。
+- 静态验证：`npm run typecheck` 与 `npm run build` 均为退出码 0。
+- Ubuntu 产物：`release/Hermes-Agent-Platform-0.1.3-Ubuntu-amd64.deb`，大小 112711548 bytes，SHA-256 `27f3315e72bdd45f8b78276b9c0a4728dee214a8ff2d711b3998fe0650e5c0f1`。
+- DEB 元数据：Package `hermes-agent-platform`、Version `0.1.3`、Architecture `amd64`、Maintainer `Hermes Agent Platform Team`。
+- 包内冒烟：`.desktop` 的 Name、Exec、Icon、StartupWMClass 与 Categories 正确；主可执行文件存在且具有执行权限。
+- workflow：YAML 可解析，包含标签版本校验、Windows x64、Ubuntu x64、macOS arm64、macOS x64 原生构建和集中 Release 发布。
+- 剩余边界：Windows/macOS 包等待 GitHub runner 实际生成；未签名包可能触发 SmartScreen/Gatekeeper。

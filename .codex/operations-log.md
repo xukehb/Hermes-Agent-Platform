@@ -230,3 +230,12 @@
 - `apply_patch`：新增两阶段回归测试，移除未定义调用，并拆分服务失败与成功收尾的错误边界。
 - `vitest/typecheck/eslint`：专项 16/16、线程池全量 746/746、类型检查和 lint 均通过。
 - `npm rebuild better-sqlite3 --build-from-source`：修复本地 Node ABI 136/137 不匹配；默认 fork 池仍有 Node 24 销毁断言，改用 threads 池完成可信全量验证。
+
+## 2026-09-15：v0.1.3 多平台发布
+
+- `rg` / `git` / `npm view`：确认 Electron 技术栈、0.1.2 旧版本、旧产品名、原生依赖、远端仓库及 v0.1.3 标签空缺；code-index、sequential-thinking、shrimp-task-manager、exa 不可用，降级为本地工具。
+- `apply_patch`：新增发布设计、实施计划、配置契约测试、三平台 electron-builder 配置、GitHub Actions Release workflow、README 和统一运行时品牌。
+- `npm install`：锁定 `electron-builder@26.15.3`；`nvm` 安装 Node 22.23.2，使本地与 CI 原生模块 ABI 一致。
+- `vitest`：发布契约完成 RED/GREEN；最终全量 61 文件 / 751 项通过。
+- `electron-builder` / `dpkg-deb`：两次构建 Ubuntu x64 DEB；补齐 author 与 Linux desktopName 后无对应警告，包元数据与可执行文件检查通过。
+- `git`：在 `codex/release-v0.1.3` 分支分步提交规格、计划、测试、构建配置、workflow、文档和待发布应用改动。

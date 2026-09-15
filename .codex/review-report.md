@@ -150,3 +150,14 @@
 - 覆盖：正常生成、服务失败契约、模型选择、技能提示词、错误边界、全量回归。
 - 风险：Node 24 下 Vitest fork 池与 `better-sqlite3` 存在销毁阶段兼容问题；threads 池全量 746/746 通过，与本次 renderer 代码无关。
 - 留痕：`.codex/context-image-generation-runtime-error.json`、`.codex/operations-log.md`、`.codex/testing.md`、`.codex/review-report.md`、`verification.md`。
+
+## 10. 2026-09-15 v0.1.3 多平台发布审查（Codex）
+
+| 维度 | 分数 | 依据 |
+|---|---:|---|
+| 技术质量 | 96 | electron-builder 版本锁定；四个原生 runner；标签与清单版本校验；构建失败阻断发布 |
+| 需求匹配 | 98 | 版本 0.1.3；产品名及运行时文案统一；EXE、DEB、双架构 DMG 均纳入发布 |
+| 验证完整性 | 94 | 本地 751 项测试、类型检查、编译和真实 DEB 构建通过；Windows/macOS 由 GitHub 原生 runner 验证 |
+| 综合 | 96 | 建议通过并触发 GitHub Release |
+
+风险：v0.1.3 未配置 Windows/macOS 代码签名，首次启动可能出现系统安全提示；该限制已写入 README 与 Release 说明。发布任务使用最小权限，只有最终 Release job 具有 `contents: write`。
