@@ -733,7 +733,7 @@ describe('shell 与 http_fetch', () => {
       response.writeHead(302, { location: 'http://127.0.0.1:1/private' });
       response.end();
     });
-    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    await new Promise<void>((resolve) => server.listen(0, 'localhost', resolve));
     const port = (server.address() as AddressInfo).port;
     try {
       const executor = new ToolExecutor(ToolRegistry.builtin());
