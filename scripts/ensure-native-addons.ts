@@ -16,8 +16,9 @@ mkdirSync(electronAbiDir, { recursive: true });
 mkdirSync(nodeAbiDir, { recursive: true });
 
 if (existsSync(releaseNode)) {
-  const isElectron = Boolean(process.versions.electron);
-  if (isElectron) {
+  const isElectron = process.argv.includes('--electron') || Boolean(process.versions.electron);
+  const isNode = process.argv.includes('--node');
+  if (isElectron && !isNode) {
     copyFileSync(releaseNode, electronTarget);
     console.log('[Native Addon] Saved Electron ABI 136 better_sqlite3.node');
   } else {

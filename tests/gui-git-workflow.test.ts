@@ -239,4 +239,162 @@ describe('GuiService Git Branch, Merge, Rebase & Auth Workflow', () => {
       expect(tokenRes.message).toContain('凭据已成功保存');
     });
   });
+
+  describe('Git Stash Commit, Commit History & Rollback Workflow', () => {
+    it('creates a stash commit with [暂存] prefix and updates git status', async () => {
+      // Create some uncommitted changes
+      writeFileSync(join(repoDir, 'feature.txt'), 'console.log("stash me");\n', 'utf8');
+      writeFileSync(join(repoDir, 'README.md'), '# Updated Readme\n', 'utf8');
+
+      const preStatus = await service.getGitStatus(repoDir);
+      expect(preStatus.uncommittedCount).toBe(2);
+
+      // Execute gitStashCommit with custom note
+      const stashRes = await service.gitStashCommit(repoDir, '临时保存功能开发进度');
+      expect(stashRes.ok).toBe(true);
+      expect(stashRes.isStash).toBe(true);
+      expect(stashRes.hash).toBeDefined();
+
+      // Working tree should now be clean
+      const postStatus = await service.getGitStatus(repoDir);
+      expect(postStatus.uncommittedCount).toBe(0);
+      expect(postStatus.isLatestStash).toBe(true);
+      expect(postStatus.latestCommit?.message).toContain('[暂存]');
+      expect(postStatus.latestCommit?.message).toContain('临时保存功能开发进度');
+    });
+
+    it('rejects gitStashCommit if working tree is clean', async () => {
+      await expect(service.gitStashCommit(repoDir)).rejects.toThrow('当前工作区无任何未提交的修改，无需暂存');
+    });
+
+    it('retrieves commit history and properly flags stash commits', async () => {
+      // Make a normal commit
+      writeFileSync(join(repoDir, 'file1.txt'), 'normal', 'utf8');
+      await service.gitCommit(repoDir, 'feat: normal feature');
+
+      // Make a stash commit
+      writeFileSync(join(repoDir, 'file2.txt'), 'stash content', 'utf8');
+      await service.gitStashCommit(repoDir);
+
+      const historyRes = await service.gitGetCommitHistory(repoDir, 10);
+      expect(historyRes.ok).toBe(true);
+      expect(historyRes.commits.length).toBeGreaterThanOrEqual(3);
+
+      const topCommit = historyRes.commits[0];
+      expect(topCommit).toBeDefined();
+      if (!topCommit) throw new Error('topCommit undefined');
+      expect(topCommit.isStash).toBe(true);
+      expect(topCommit.message).toContain('[暂存]');
+      expect(topCommit.shortHash.length).toBe(7);
+
+      const secondCommit = historyRes.commits[1];
+      expect(secondCommit).toBeDefined();
+      if (!secondCommit) throw new Error('secondCommit undefined');
+      expect(secondCommit.isStash).toBe(false);
+      expect(secondCommit.message).toContain('feat: normal feature');
+    });
+
+    it('rolls back a stash commit back into workspace uncommitted changes (mixed reset)', async () => {
+      // Modify file and stash it
+      writeFileSync(join(repoDir, 'revert-target.txt'), 'important work in progress\n', 'utf8');
+      await service.gitStashCommit(repoDir, '快照：半成品代码');
+
+      let status = await service.getGitStatus(repoDir);
+      expect(status.uncommittedCount).toBe(0);
+
+      // Rollback the latest commit to workspace
+      const rollbackRes = await service.gitRollbackCommit(repoDir, undefined, 'mixed');
+      expect(rollbackRes.ok).toBe(true);
+      expect(rollbackRes.message).toContain('回滚并保留所有修改到工作区');
+
+      // Working tree should now have the uncommitted changes back!
+      status = await service.getGitStatus(repoDir);
+      expect(status.uncommittedCount).toBeGreaterThanOrEqual(1);
+      expect(status.changedFiles.some((f) => f.file === 'revert-target.txt')).toBe(true);
+    });
+
+    it('shows commit diff and allows git revert', async () => {
+      writeFileSync(join(repoDir, 'diff-test.txt'), 'hello world diff\n', 'utf8');
+      const commitRes = await service.gitCommit(repoDir, 'feat: add diff test');
+      expect(commitRes.ok).toBe(true);
+
+      const history = await service.gitGetCommitHistory(repoDir, 1);
+      const topHistory = history.commits[0];
+      if (!topHistory) throw new Error('topHistory undefined');
+      const hash = topHistory.hash;
+
+      // Show commit diff
+      const showRes = await service.gitShowCommit(repoDir, hash);
+      expect(showRes.ok).toBe(true);
+      expect(showRes.diff).toContain('hello world diff');
+
+      // Revert commit
+      const revertRes = await service.gitRevertCommit(repoDir, hash);
+      expect(revertRes.ok).toBe(true);
+
+      const postRevertHistory = await service.gitGetCommitHistory(repoDir, 1);
+      const latestRevert = postRevertHistory.commits[0];
+      if (!latestRevert) throw new Error('latestRevert undefined');
+      expect(latestRevert.message).toContain('Revert "feat: add diff test"');
+    });
+  });
+
+  describe('Git Staging Area (Stage +, Unstage - & Revert)', () => {
+    it('stages a file with stageFileDiff (+) and unstages with unstageFileDiff (-)', async () => {
+      writeFileSync(join(repoDir, 'verification.md'), '# Verification doc\n', 'utf8');
+      writeFileSync(join(repoDir, 'docker-compose.yml'), 'version: "3"\n', 'utf8');
+
+      let status = await service.getGitStatus(repoDir);
+      expect(status.unstagedCount).toBe(2);
+      expect(status.stagedCount).toBe(0);
+
+      // Click + to stage verification.md
+      const stageRes = await service.stageFileDiff(repoDir, 'verification.md');
+      expect(stageRes.ok).toBe(true);
+
+      status = await service.getGitStatus(repoDir);
+      expect(status.stagedCount).toBe(1);
+      expect(status.stagedFiles?.some((f) => f.file === 'verification.md')).toBe(true);
+      expect(status.unstagedCount).toBe(1);
+      expect(status.unstagedFiles?.some((f) => f.file === 'docker-compose.yml')).toBe(true);
+
+      // Click - to unstage verification.md
+      const unstageRes = await service.unstageFileDiff(repoDir, 'verification.md');
+      expect(unstageRes.ok).toBe(true);
+
+      status = await service.getGitStatus(repoDir);
+      expect(status.stagedCount).toBe(0);
+      expect(status.unstagedCount).toBe(2);
+    });
+
+    it('commits only staged files when staged files exist', async () => {
+      writeFileSync(join(repoDir, 'staged-file.txt'), 'staged content\n', 'utf8');
+      writeFileSync(join(repoDir, 'unstaged-file.txt'), 'unstaged content\n', 'utf8');
+
+      // Stage only staged-file.txt
+      await service.stageFileDiff(repoDir, 'staged-file.txt');
+
+      // Commit
+      const commitRes = await service.gitCommit(repoDir, 'feat: only commit staged file');
+      expect(commitRes.ok).toBe(true);
+
+      // Verify staged-file is committed, while unstaged-file remains unstaged in working tree!
+      const status = await service.getGitStatus(repoDir);
+      expect(status.stagedCount).toBe(0);
+      expect(status.unstagedCount).toBe(1);
+      expect(status.unstagedFiles?.some((f) => f.file === 'unstaged-file.txt')).toBe(true);
+    });
+
+    it('reverts file modifications using revertFileDiff', async () => {
+      writeFileSync(join(repoDir, 'README.md'), '# Completely Modified\n', 'utf8');
+      let status = await service.getGitStatus(repoDir);
+      expect(status.unstagedFiles?.some((f) => f.file === 'README.md')).toBe(true);
+
+      const revertRes = await service.revertFileDiff(repoDir, 'README.md');
+      expect(revertRes.ok).toBe(true);
+
+      status = await service.getGitStatus(repoDir);
+      expect(status.unstagedFiles?.some((f) => f.file === 'README.md')).toBe(false);
+    });
+  });
 });

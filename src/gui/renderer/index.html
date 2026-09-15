@@ -206,25 +206,204 @@
               <h1 class="hero-title">今天有什么我可以帮你的？</h1>
               <p class="hero-subtitle" id="heroSubtitleText">选择或导入工作区项目，开启高效智能编排与自动化修复</p>
               <div class="hero-grid">
-                <div class="hero-card" data-hero-prompt="分析当前绑定的项目工程结构并列出关键模块与潜在风险" onclick="triggerHeroPrompt('分析当前绑定的项目工程结构并列出关键模块与潜在风险')">
-                  <div class="hero-card-icon"></div>
-                  <div class="hero-card-title">分析工程架构</div>
-                  <div class="hero-card-sub">梳理模块依赖、调用拓扑与架构建议</div>
+                <div class="cyber-folder-card hero-card" data-hero-prompt="分析当前绑定的项目工程结构并列出关键模块与潜在风险" onclick="triggerHeroPrompt('分析当前绑定的项目工程结构并列出关键模块与潜在风险')">
+                  <div class="cyber-tab-header">
+                    <span class="cyber-tab-pill"><span class="cyber-tab-dot"></span>ARCH-01</span>
+                    <div class="cyber-tab-meta">
+                      <span class="cyber-meta-item">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/></svg>
+                        <span>09/15</span>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="cyber-card-body">
+                    <div class="cyber-card-title">分析工程拓扑结构，自动梳理核心依赖与潜在架构风险</div>
+                    <div class="cyber-telemetry-row">
+                      <div class="cyber-telemetry-left">
+                        <div class="cyber-timer-text">00:01:28</div>
+                        <div class="cyber-status-chip">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          <span>11:09 就绪</span>
+                        </div>
+                      </div>
+                      <div class="cyber-matrix-wrap">
+                        <div class="cyber-dot-matrix">
+                          <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span>
+                          <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span><span class="matrix-dot teal"></span>
+                          <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                          <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                        </div>
+                        <div class="matrix-legend"><span class="highlight">100%</span> | P1 | 全模块</div>
+                      </div>
+                    </div>
+                    <div class="cyber-pipeline-chain">
+                      <span class="pipeline-node node-blue"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>解析拓扑</span>
+                      <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                      <span class="pipeline-node node-teal"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>依赖扫描</span>
+                      <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                      <span class="pipeline-node node-purple"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>风险评估</span>
+                      <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                      <span class="pipeline-node node-success"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>架构建议</span>
+                    </div>
+                    <div class="cyber-card-footer">
+                      <div class="cyber-signal-group">
+                        <span class="cyber-lightning-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+                        <div class="signal-bars"><span class="signal-bar b1 active-amber"></span><span class="signal-bar b2 active-amber"></span><span class="signal-bar b3 active-amber"></span><span class="signal-bar b4"></span></div>
+                        <span class="cyber-pill-tag"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>自动编排</span></span>
+                      </div>
+                      <span class="cyber-action-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg><span>一键分析</span></span>
+                    </div>
+                  </div>
                 </div>
-                <div class="hero-card" data-hero-prompt="对当前项目进行全面的代码质量、安全漏洞与潜在 Bug 审查" onclick="triggerHeroPrompt('对当前项目进行全面的代码质量、安全漏洞与潜在 Bug 审查')">
-                  <div class="hero-card-icon"></div>
-                  <div class="hero-card-title">代码安全审查</div>
-                  <div class="hero-card-sub">自动化排查潜在代码缺陷与性能瓶颈</div>
+
+                <div class="cyber-folder-card hero-card" data-hero-prompt="对当前项目进行全面的代码质量、安全漏洞与潜在 Bug 审查" onclick="triggerHeroPrompt('对当前项目进行全面的代码质量、安全漏洞与潜在 Bug 审查')">
+                  <div class="cyber-tab-header">
+                    <span class="cyber-tab-pill"><span class="cyber-tab-dot"></span>SEC-AUDIT</span>
+                    <div class="cyber-tab-meta">
+                      <span class="cyber-meta-item">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/></svg>
+                        <span>09/15</span>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="cyber-card-body">
+                    <div class="cyber-card-title">深度安全审计与缺陷漏洞排查，识别性能与注入隐患</div>
+                    <div class="cyber-telemetry-row">
+                      <div class="cyber-telemetry-left">
+                        <div class="cyber-timer-text">00:03:45</div>
+                        <div class="cyber-status-chip">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          <span>11:15 待命</span>
+                        </div>
+                      </div>
+                      <div class="cyber-matrix-wrap">
+                        <div class="cyber-dot-matrix">
+                          <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                          <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span><span class="matrix-dot amber"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                          <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                          <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                        </div>
+                        <div class="matrix-legend"><span class="highlight">98%</span> | High | 静态扫描</div>
+                      </div>
+                    </div>
+                    <div class="cyber-pipeline-chain">
+                      <span class="pipeline-node node-blue"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>规则匹配</span>
+                      <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                      <span class="pipeline-node node-teal"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>污点分析</span>
+                      <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                      <span class="pipeline-node node-purple"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>漏洞评级</span>
+                      <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                      <span class="pipeline-node node-success"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>修复方案</span>
+                    </div>
+                    <div class="cyber-card-footer">
+                      <div class="cyber-signal-group">
+                        <span class="cyber-lightning-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+                        <div class="signal-bars"><span class="signal-bar b1 active-teal"></span><span class="signal-bar b2 active-teal"></span><span class="signal-bar b3 active-teal"></span><span class="signal-bar b4 active-teal"></span></div>
+                        <span class="cyber-pill-tag"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span>深度扫描</span></span>
+                      </div>
+                      <span class="cyber-action-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg><span>全面审计</span></span>
+                    </div>
+                  </div>
                 </div>
-                <div class="hero-card" data-hero-prompt="为当前核心功能模块设计并编写高覆盖率的单元测试用例" onclick="triggerHeroPrompt('为当前核心功能模块设计并编写高覆盖率的单元测试用例')">
-                  <div class="hero-card-icon"></div>
-                  <div class="hero-card-title">编写测试套件</div>
-                  <div class="hero-card-sub">生成高覆盖率的自动化测试用例并执行</div>
+
+                <div class="cyber-folder-card hero-card" data-hero-prompt="为当前核心功能模块设计并编写高覆盖率的单元测试用例" onclick="triggerHeroPrompt('为当前核心功能模块设计并编写高覆盖率的单元测试用例')">
+                  <div class="cyber-tab-header">
+                    <span class="cyber-tab-pill"><span class="cyber-tab-dot"></span>TEST-GEN</span>
+                    <div class="cyber-tab-meta">
+                      <span class="cyber-meta-item">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/></svg>
+                        <span>09/15</span>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="cyber-card-body">
+                    <div class="cyber-card-title">自动化合成高覆盖率单元与集成测试，覆盖边界异常分支</div>
+                    <div class="cyber-telemetry-row">
+                      <div class="cyber-telemetry-left">
+                        <div class="cyber-timer-text">00:02:10</div>
+                        <div class="cyber-status-chip">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          <span>11:20 就绪</span>
+                        </div>
+                      </div>
+                      <div class="cyber-matrix-wrap">
+                        <div class="cyber-dot-matrix">
+                          <span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                          <span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                          <span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot teal"></span>
+                          <span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                        </div>
+                        <div class="matrix-legend"><span class="highlight">95%</span> | P2 | 全覆盖</div>
+                      </div>
+                    </div>
+                    <div class="cyber-pipeline-chain">
+                      <span class="pipeline-node node-blue"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="14 2 18 6 7 17 3 17 3 13 14 2"/></svg>用例设计</span>
+                      <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                      <span class="pipeline-node node-teal"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>测试编写</span>
+                      <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                      <span class="pipeline-node node-purple"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>沙箱执行</span>
+                      <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                      <span class="pipeline-node node-success"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>报告产出</span>
+                    </div>
+                    <div class="cyber-card-footer">
+                      <div class="cyber-signal-group">
+                        <span class="cyber-lightning-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+                        <div class="signal-bars"><span class="signal-bar b1 active-amber"></span><span class="signal-bar b2 active-amber"></span><span class="signal-bar b3 active-amber"></span><span class="signal-bar b4 active-amber"></span></div>
+                        <span class="cyber-pill-tag"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg><span>自动执行</span></span>
+                      </div>
+                      <span class="cyber-action-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg><span>生成套件</span></span>
+                    </div>
+                  </div>
                 </div>
-                <div class="hero-card" data-hero-prompt="审查 Git 变更并协助生成规范的 Commit 提交和推送代码" onclick="triggerHeroPrompt('审查 Git 变更并协助生成规范的 Commit 提交和推送代码')">
-                  <div class="hero-card-icon"></div>
-                  <div class="hero-card-title">Git 协同与推送</div>
-                  <div class="hero-card-sub">一键审查 Diff 差异并自动提交代码</div>
+
+                <div class="cyber-folder-card hero-card" data-hero-prompt="审查 Git 变更并协助生成规范的 Commit 提交和推送代码" onclick="triggerHeroPrompt('审查 Git 变更并协助生成规范的 Commit 提交和推送代码')">
+                  <div class="cyber-tab-header">
+                    <span class="cyber-tab-pill"><span class="cyber-tab-dot"></span>GIT-OPS</span>
+                    <div class="cyber-tab-meta">
+                      <span class="cyber-meta-item">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/></svg>
+                        <span>09/15</span>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="cyber-card-body">
+                    <div class="cyber-card-title">审查 Git 工作区差异变动，自动生成规范提交并推送远程</div>
+                    <div class="cyber-telemetry-row">
+                      <div class="cyber-telemetry-left">
+                        <div class="cyber-timer-text">00:00:45</div>
+                        <div class="cyber-status-chip">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          <span>11:25 就绪</span>
+                        </div>
+                      </div>
+                      <div class="cyber-matrix-wrap">
+                        <div class="cyber-dot-matrix">
+                          <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span>
+                          <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                          <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                          <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                        </div>
+                        <div class="matrix-legend"><span class="highlight">100%</span> | P1 | Clean</div>
+                      </div>
+                    </div>
+                    <div class="cyber-pipeline-chain">
+                      <span class="pipeline-node node-blue"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 9v12"/></svg>Diff 差异</span>
+                      <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                      <span class="pipeline-node node-teal"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><line x1="1.05" y1="12" x2="7" y2="12"/><line x1="17.01" y1="12" x2="22.96" y2="12"/></svg>生成规范</span>
+                      <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                      <span class="pipeline-node node-purple"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>自动提交</span>
+                      <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                      <span class="pipeline-node node-success"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/></svg>同步远程</span>
+                    </div>
+                    <div class="cyber-card-footer">
+                      <div class="cyber-signal-group">
+                        <span class="cyber-lightning-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+                        <div class="signal-bars"><span class="signal-bar b1 active-teal"></span><span class="signal-bar b2 active-teal"></span><span class="signal-bar b3 active-teal"></span><span class="signal-bar b4"></span></div>
+                        <span class="cyber-pill-tag"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg><span>一键同步</span></span>
+                      </div>
+                      <span class="cyber-action-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg><span>审查提交</span></span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2636,74 +2815,132 @@
           </div>
         </div>
 
+        <div class="git-auth-tab-bar" style="margin-top:8px;">
+          <button type="button" class="git-auth-tab-btn active" id="gitTabChangesBtn">
+            工作区改动 (<span id="gitTabChangesCount">0</span>)
+          </button>
+          <button type="button" class="git-auth-tab-btn" id="gitTabHistoryBtn">
+            提交与暂存历史
+          </button>
+        </div>
+
         <div id="gitNotRepoState" style="display:none;padding:32px 0;text-align:center;">
           <div style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;">当前工程尚未初始化为 Git 仓库</div>
           <button type="button" class="btn primary" id="gitInitRepoBtn">初始化为 Git 仓库 (git init)</button>
         </div>
 
         <div id="gitRepoState" style="display:flex;flex-direction:column;flex:1;min-height:0;margin-top:10px;">
-          <!-- 冲突预警/合并变基状态提示横幅 -->
-          <div id="gitConflictAlertBanner" class="git-conflict-banner" style="display:none;">
-            <div style="display:flex;align-items:center;gap:6px;">
-              <span style="font-size:14px;"></span>
-              <span id="gitConflictAlertText"><strong>检测到代码冲突！</strong>存在未合并的冲突文件，请查看下方标有「冲突」的文件。</span>
+          <!-- 快捷提示：最新提交为暂存快照 -->
+          <div id="gitLatestStashBanner" class="git-stash-banner" style="display:none;">
+            <div style="display:flex;align-items:center;gap:8px;overflow:hidden;flex:1;">
+              <span class="git-stash-badge">最新暂存快照</span>
+              <span id="gitLatestStashText" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">-</span>
             </div>
-            <div style="display:flex;gap:6px;align-items:center;" id="gitConflictActionGroup">
-              <button type="button" class="btn secondary" id="gitAbortMergeBtn" style="display:none;font-size:11px;padding:2px 8px;color:var(--danger);border-color:var(--danger);" title="终止本次合并并恢复现场">终止合并 (--abort)</button>
-              <button type="button" class="btn secondary" id="gitAbortRebaseBtn" style="display:none;font-size:11px;padding:2px 8px;color:var(--danger);border-color:var(--danger);" title="终止本次变基并恢复现场">终止变基 (--abort)</button>
-              <button type="button" class="btn primary" id="gitContinueRebaseBtn" style="display:none;font-size:11px;padding:2px 8px;background:#0284c7;border-color:#0284c7;" title="冲突已解决并暂存后继续变基">继续变基 (--continue)</button>
-              <button type="button" class="btn secondary" onclick="window.openVsCodeForProject?.()" style="font-size:11px;padding:2px 8px;">VS Code 解决冲突</button>
-              <button type="button" class="btn primary" onclick="window.askAiResolveConflicts?.()" style="font-size:11px;padding:2px 8px;background:#e11d48;border-color:#be123c;"> 唤醒 AI 智能解决</button>
+            <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+              <button type="button" class="btn small" id="gitRollbackLatestStashBtn" style="font-size:11.5px;padding:3px 10px;background:#f59e0b;color:#fff;border-color:#d97706;font-weight:600;" title="撤销该暂存 Commit 并将修改原封不动恢复到未提交工作区">
+                回滚恢复到工作区
+              </button>
             </div>
           </div>
 
-          <!-- 左右分栏：左侧文件列表，右侧 Diff 代码对比 -->
-          <div class="git-split-container">
-            <!-- 左侧：改动文件清单 -->
-            <div style="background:var(--bg-main);border-right:1px solid var(--border-default);display:flex;flex-direction:column;min-height:0;">
-              <div style="padding:8px 10px;border-bottom:1px solid var(--border-default);display:flex;justify-content:space-between;align-items:center;">
-                <span style="font-size:12px;font-weight:700;">改动文件 (<span id="gitFileListCount">0</span>)</span>
-                <button type="button" class="btn text-btn" id="viewAllDiffsBtn" style="font-size:11px;padding:2px 4px;color:var(--accent);">查看全局补丁</button>
+          <!-- 面板 1: 工作区改动与提交 -->
+          <div id="gitChangesPanel" style="display:flex;flex-direction:column;flex:1;min-height:0;">
+            <!-- 冲突预警/合并变基状态提示横幅 -->
+            <div id="gitConflictAlertBanner" class="git-conflict-banner" style="display:none;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:14px;"></span>
+                <span id="gitConflictAlertText"><strong>检测到代码冲突！</strong>存在未合并的冲突文件，请查看下方标有「冲突」的文件。</span>
               </div>
-              <div id="gitChangedFilesList" style="flex:1;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:3px;">
-                <div style="color:var(--text-muted);font-style:italic;padding:8px;font-size:12px;">暂无文件改动</div>
+              <div style="display:flex;gap:6px;align-items:center;" id="gitConflictActionGroup">
+                <button type="button" class="btn secondary" id="gitAbortMergeBtn" style="display:none;font-size:11px;padding:2px 8px;color:var(--danger);border-color:var(--danger);" title="终止本次合并并恢复现场">终止合并 (--abort)</button>
+                <button type="button" class="btn secondary" id="gitAbortRebaseBtn" style="display:none;font-size:11px;padding:2px 8px;color:var(--danger);border-color:var(--danger);" title="终止本次变基并恢复现场">终止变基 (--abort)</button>
+                <button type="button" class="btn primary" id="gitContinueRebaseBtn" style="display:none;font-size:11px;padding:2px 8px;background:#0284c7;border-color:#0284c7;" title="冲突已解决并暂存后继续变基">继续变基 (--continue)</button>
+                <button type="button" class="btn secondary" onclick="window.openVsCodeForProject?.()" style="font-size:11px;padding:2px 8px;">VS Code 解决冲突</button>
+                <button type="button" class="btn primary" onclick="window.askAiResolveConflicts?.()" style="font-size:11px;padding:2px 8px;background:#e11d48;border-color:#be123c;"> 唤醒 AI 智能解决</button>
               </div>
             </div>
 
-            <!-- 右侧：实时 Diff 对比区 -->
-            <div style="display:flex;flex-direction:column;min-height:0;background:#1e1e1e;">
-              <div style="padding:6px 12px;background:#252526;border-bottom:1px solid #333333;display:flex;justify-content:space-between;align-items:center;">
-                <div style="display:flex;align-items:center;gap:8px;overflow:hidden;">
-                  <span id="gitInlineDiffFileTitle" style="font-family:var(--font-mono);font-size:12px;color:#e1e4e8;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">选择左侧文件查看代码差异</span>
+            <!-- 左右分栏：左侧文件列表，右侧 Diff 代码对比 -->
+            <div class="git-split-container">
+              <!-- 左侧：改动文件清单 -->
+              <div style="background:var(--bg-main);border-right:1px solid var(--border-default);display:flex;flex-direction:column;min-height:0;">
+                <div style="padding:8px 10px;border-bottom:1px solid var(--border-default);display:flex;justify-content:space-between;align-items:center;">
+                  <span style="font-size:12px;font-weight:700;">改动文件 (<span id="gitFileListCount">0</span>)</span>
+                  <button type="button" class="btn text-btn" id="viewAllDiffsBtn" style="font-size:11px;padding:2px 4px;color:var(--accent);">查看全局补丁</button>
                 </div>
-                <div style="display:flex;gap:6px;">
-                  <button type="button" class="codeblock-btn" id="gitInlineDiffCopyBtn" style="font-size:11px;">复制代码</button>
-                  <button type="button" class="codeblock-btn" id="gitInlineDiffOpenVsCodeBtn" style="font-size:11px;">VS Code 对比</button>
+                <div id="gitChangedFilesList" style="flex:1;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:3px;">
+                  <div style="color:var(--text-muted);font-style:italic;padding:8px;font-size:12px;">暂无文件改动</div>
                 </div>
               </div>
-              <div id="gitInlineDiffContent" class="git-diff-content" style="flex:1;overflow:auto;padding:12px 14px;color:#d4d4d4;font-size:12px;line-height:1.55;">
-                <div class="git-diff-line normal" style="color:#858585;"> 点击左侧文件，实时审查具体修改的代码差异</div>
+
+              <!-- 右侧：实时 Diff 对比区 -->
+              <div style="display:flex;flex-direction:column;min-height:0;background:#1e1e1e;">
+                <div style="padding:6px 12px;background:#252526;border-bottom:1px solid #333333;display:flex;justify-content:space-between;align-items:center;">
+                  <div style="display:flex;align-items:center;gap:8px;overflow:hidden;">
+                    <span id="gitInlineDiffFileTitle" style="font-family:var(--font-mono);font-size:12px;color:#e1e4e8;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">选择左侧文件查看代码差异</span>
+                  </div>
+                  <div style="display:flex;gap:6px;">
+                    <button type="button" class="codeblock-btn" id="gitInlineDiffCopyBtn" style="font-size:11px;">复制代码</button>
+                    <button type="button" class="codeblock-btn" id="gitInlineDiffOpenVsCodeBtn" style="font-size:11px;">VS Code 对比</button>
+                  </div>
+                </div>
+                <div id="gitInlineDiffContent" class="git-diff-content" style="flex:1;overflow:auto;padding:12px 14px;color:#d4d4d4;font-size:12px;line-height:1.55;">
+                  <div class="git-diff-line normal" style="color:#858585;"> 点击左侧文件，实时审查具体修改的代码差异</div>
+                </div>
               </div>
+            </div>
+
+            <!-- 提交说明与操作栏 -->
+            <div class="git-commit-section">
+              <div class="git-commit-header-row">
+                <label class="git-commit-label">
+                  <span>提交</span> 提交信息 (Commit Message)
+                </label>
+                <div class="git-commit-actions">
+                  <button type="button" class="btn git-ai-commit-btn" id="aiGenerateCommitBtn" title="依据左侧已暂存或选中的差异自动生成结构化提交说明">
+                    <span>AI</span> 智能生成 Commit 说明
+                  </button>
+                  <button type="button" class="btn secondary git-rules-btn" id="openCommitRulesModalBtn" title="配置 Commit 说明生成规则与团队规范">
+                    <span>设置</span> 规则设置
+                    <span id="currentCommitRuleBadge" class="commit-rule-badge">Conventional</span>
+                  </button>
+                </div>
+              </div>
+              <textarea id="gitCommitMessageInput" class="git-commit-input" rows="4" placeholder="输入提交说明，例如:&#10;refactor(gui): 重构聊天界面和主机监控功能&#10;&#10;- 重构聊天输入框初始化逻辑，清空输入内容并重置附件状态&#10;- 将 scheduledTasksBtn 点击事件的目标页面从 logs 改为 schedules"></textarea>
             </div>
           </div>
 
-          <!-- 提交说明与操作栏 -->
-          <div class="git-commit-section">
-            <div class="git-commit-header-row">
-              <label class="git-commit-label">
-                <span>提交</span> 提交信息 (Commit Message)
-              </label>
-              <div class="git-commit-actions">
-                <button type="button" class="btn git-ai-commit-btn" id="aiGenerateCommitBtn" title="依据左侧已暂存或选中的差异自动生成结构化提交说明">
-                  <span>AI</span> 智能生成 Commit 说明
-                </button>
-                <button type="button" class="btn secondary git-rules-btn" id="openCommitRulesModalBtn" title="配置 Commit 说明生成规则与团队规范">
-                  <span>设置</span> 规则设置
-                  <span id="currentCommitRuleBadge" class="commit-rule-badge">Conventional</span>
-                </button>
+          <!-- 面板 2: 提交历史与暂存快照 -->
+          <div id="gitHistoryPanel" style="display:none;flex-direction:column;flex:1;min-height:0;">
+            <div class="git-split-container">
+              <!-- 左侧：提交历史列表 -->
+              <div style="background:var(--bg-main);border-right:1px solid var(--border-default);display:flex;flex-direction:column;min-height:0;">
+                <div style="padding:8px 10px;border-bottom:1px solid var(--border-default);display:flex;justify-content:space-between;align-items:center;">
+                  <span style="font-size:12px;font-weight:700;">历史版本与暂存 (<span id="gitHistoryCount">0</span>)</span>
+                  <button type="button" class="btn text-btn" id="refreshGitHistoryBtn" style="font-size:11px;padding:2px 4px;color:var(--accent);">刷新历史</button>
+                </div>
+                <div id="gitCommitHistoryList" style="flex:1;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:5px;">
+                  <div style="color:var(--text-muted);font-style:italic;padding:8px;font-size:12px;">正在读取提交历史...</div>
+                </div>
+              </div>
+
+              <!-- 右侧：选中的 Commit 详情与代码 Diff -->
+              <div style="display:flex;flex-direction:column;min-height:0;background:#1e1e1e;">
+                <div style="padding:6px 12px;background:#252526;border-bottom:1px solid #333333;display:flex;justify-content:space-between;align-items:center;">
+                  <div style="display:flex;align-items:center;gap:8px;overflow:hidden;">
+                    <span id="gitHistoryDiffTitle" style="font-family:var(--font-mono);font-size:12px;color:#e1e4e8;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">选择左侧提交查看差异与改动</span>
+                  </div>
+                  <div style="display:flex;gap:6px;align-items:center;" id="gitHistoryCommitActions">
+                    <button type="button" class="codeblock-btn" id="gitHistoryRollbackBtn" style="display:none;color:#f59e0b;font-weight:600;" title="回滚该提交，修改重新恢复至工作区未提交状态">回滚到工作区</button>
+                    <button type="button" class="codeblock-btn" id="gitHistoryRevertBtn" style="display:none;" title="通过 git revert 安全撤销该提交">撤销此提交 (Revert)</button>
+                    <button type="button" class="codeblock-btn" id="gitHistoryCopyHashBtn" style="font-size:11px;">复制 Hash</button>
+                  </div>
+                </div>
+                <div id="gitHistoryDiffContent" class="git-diff-content" style="flex:1;overflow:auto;padding:12px 14px;color:#d4d4d4;font-size:12px;line-height:1.55;">
+                  <div class="git-diff-line normal" style="color:#858585;">点击左侧提交记录，查看该提交的变更差异代码。</div>
+                </div>
               </div>
             </div>
-            <textarea id="gitCommitMessageInput" class="git-commit-input" rows="5" placeholder="输入提交说明，例如:&#10;refactor(gui): 重构聊天界面和主机监控功能&#10;&#10;- 重构聊天输入框初始化逻辑，清空输入内容并重置附件状态&#10;- 将 scheduledTasksBtn 点击事件的目标页面从 logs 改为 schedules"></textarea>
           </div>
 
           <div class="git-modal-footer">
@@ -2714,9 +2951,43 @@
             </div>
             <div style="display:flex;gap:8px;">
               <button type="button" class="btn secondary" id="cancelGitModalBtn">关闭</button>
+              <button type="button" class="btn secondary" id="gitStashBtn" style="color:#d97706;border-color:rgba(217,119,6,0.45);background:rgba(245,158,11,0.06);font-weight:600;" title="将当前所有未提交修改一键保存为 [暂存] Commit 快照，工作区重置干净，支持随时回滚恢复">一键暂存快照 (Stash)</button>
               <button type="button" class="btn primary" id="gitCommitBtn">提交变更 (Commit)</button>
             </div>
           </div>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- 弹窗: 一键暂存快照 (Stash Commit Modal) -->
+    <dialog id="gitStashModal" class="modal modal-md">
+      <div class="modal-form-wrap">
+        <div class="modal-header-row">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <line x1="9" y1="3" x2="9" y2="21"/>
+            </svg>
+            <h2>创建工作区暂存快照 (Stash Commit)</h2>
+          </div>
+          <button type="button" class="btn-close" id="closeGitStashModalBtn" aria-label="关闭" title="关闭"></button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="git-auth-info-tip" style="background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.25);">
+            <span class="hint-pill" style="background:#f59e0b;color:#fff;">说明</span>
+            <div style="font-size:12px;color:var(--text-secondary);">
+              系统将自动执行 <code>git add -A</code> 并生成带有 <strong>[暂存]</strong> 专属标识的快照提交。<br>
+              暂存后工作区变干净，可在历史记录中随时<strong>一键回滚恢复到工作区</strong>继续开发。
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label style="font-size:12px;font-weight:600;margin-bottom:4px;display:block;">暂存说明 / 备注 (可选)：</label>
+            <input type="text" id="gitStashMessageInput" placeholder="输入暂存说明，如: 临时保存当前功能联调中途代码" style="width:100%;font-size:12.5px;" />
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:16px;margin-top:16px;border-top:1px solid var(--border-default);">
+          <button type="button" class="btn secondary" id="cancelGitStashModalBtn">取消</button>
+          <button type="button" class="btn primary" id="confirmGitStashModalBtn" style="background:#f59e0b;border-color:#d97706;font-weight:600;">确认暂存快照</button>
         </div>
       </div>
     </dialog>

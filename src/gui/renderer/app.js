@@ -519,8 +519,8 @@ function renderMarkdownContent(rawText) {
   safe = safe.replace(/^\> (.*$)/gim, '<blockquote class="md-quote">$1</blockquote>');
 
   // 任务复选框
-  safe = safe.replace(/^[\*\-] \[ \] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:center;gap:6px;margin:3px 0;"><span style="color:var(--text-muted);font-size:14px;">☐</span><span>$1</span></div>');
-  safe = safe.replace(/^[\*\-] \[x\] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:center;gap:6px;margin:3px 0;"><span style="color:var(--success);font-weight:700;font-size:14px;"></span><span style="text-decoration:line-through;color:var(--text-muted);">$1</span></div>');
+  safe = safe.replace(/^[\*\-] \[ \] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:center;gap:6px;margin:3px 0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);"><rect x="3" y="3" width="18" height="18" rx="2"/></svg><span>$1</span></div>');
+  safe = safe.replace(/^[\*\-] \[x\] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:center;gap:6px;margin:3px 0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--success);"><polyline points="20 6 9 17 4 12"/></svg><span style="text-decoration:line-through;color:var(--text-muted);">$1</span></div>');
 
   // 无序列表与有序列表
   safe = safe.replace(/^[*-] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:baseline;gap:6px;margin:3px 0;"><span class="md-bullet" style="color:var(--primary);font-weight:bold;">•</span><span>$1</span></div>');
@@ -1093,25 +1093,204 @@ function renderCurrentSessionMessages() {
         <h1 class="hero-title">今天有什么我可以帮你的？</h1>
         <p class="hero-subtitle">${heroSubtitle}</p>
         <div class="hero-grid">
-          <div class="hero-card" onclick="triggerHeroPrompt('分析当前绑定的项目工程结构并列出关键模块与潜在风险')">
-            <div class="hero-card-icon"></div>
-            <div class="hero-card-title">分析工程架构</div>
-            <div class="hero-card-sub">梳理模块依赖、调用拓扑与架构建议</div>
+          <div class="cyber-folder-card hero-card" data-hero-prompt="分析当前绑定的项目工程结构并列出关键模块与潜在风险" onclick="triggerHeroPrompt('分析当前绑定的项目工程结构并列出关键模块与潜在风险')">
+            <div class="cyber-tab-header">
+              <span class="cyber-tab-pill"><span class="cyber-tab-dot"></span>ARCH-01</span>
+              <div class="cyber-tab-meta">
+                <span class="cyber-meta-item">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/></svg>
+                  <span>09/15</span>
+                </span>
+              </div>
+            </div>
+            <div class="cyber-card-body">
+              <div class="cyber-card-title">分析工程拓扑结构，自动梳理核心依赖与潜在架构风险</div>
+              <div class="cyber-telemetry-row">
+                <div class="cyber-telemetry-left">
+                  <div class="cyber-timer-text">00:01:28</div>
+                  <div class="cyber-status-chip">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>11:09 就绪</span>
+                  </div>
+                </div>
+                <div class="cyber-matrix-wrap">
+                  <div class="cyber-dot-matrix">
+                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span>
+                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span><span class="matrix-dot teal"></span>
+                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                  </div>
+                  <div class="matrix-legend"><span class="highlight">100%</span> | P1 | 全模块</div>
+                </div>
+              </div>
+              <div class="cyber-pipeline-chain">
+                <span class="pipeline-node node-blue"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>解析拓扑</span>
+                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                <span class="pipeline-node node-teal"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>依赖扫描</span>
+                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                <span class="pipeline-node node-purple"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>风险评估</span>
+                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                <span class="pipeline-node node-success"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>架构建议</span>
+              </div>
+              <div class="cyber-card-footer">
+                <div class="cyber-signal-group">
+                  <span class="cyber-lightning-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+                  <div class="signal-bars"><span class="signal-bar b1 active-amber"></span><span class="signal-bar b2 active-amber"></span><span class="signal-bar b3 active-amber"></span><span class="signal-bar b4"></span></div>
+                  <span class="cyber-pill-tag"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>自动编排</span></span>
+                </div>
+                <span class="cyber-action-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg><span>一键分析</span></span>
+              </div>
+            </div>
           </div>
-          <div class="hero-card" onclick="triggerHeroPrompt('对当前项目进行全面的代码质量、安全漏洞与潜在 Bug 审查')">
-            <div class="hero-card-icon"></div>
-            <div class="hero-card-title">代码安全审查</div>
-            <div class="hero-card-sub">自动化排查潜在代码缺陷与性能瓶颈</div>
+
+          <div class="cyber-folder-card hero-card" data-hero-prompt="对当前项目进行全面的代码质量、安全漏洞与潜在 Bug 审查" onclick="triggerHeroPrompt('对当前项目进行全面的代码质量、安全漏洞与潜在 Bug 审查')">
+            <div class="cyber-tab-header">
+              <span class="cyber-tab-pill"><span class="cyber-tab-dot"></span>SEC-AUDIT</span>
+              <div class="cyber-tab-meta">
+                <span class="cyber-meta-item">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/></svg>
+                  <span>09/15</span>
+                </span>
+              </div>
+            </div>
+            <div class="cyber-card-body">
+              <div class="cyber-card-title">深度安全审计与缺陷漏洞排查，识别性能与注入隐患</div>
+              <div class="cyber-telemetry-row">
+                <div class="cyber-telemetry-left">
+                  <div class="cyber-timer-text">00:03:45</div>
+                  <div class="cyber-status-chip">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>11:15 待命</span>
+                  </div>
+                </div>
+                <div class="cyber-matrix-wrap">
+                  <div class="cyber-dot-matrix">
+                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span><span class="matrix-dot amber"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                  </div>
+                  <div class="matrix-legend"><span class="highlight">98%</span> | High | 静态扫描</div>
+                </div>
+              </div>
+              <div class="cyber-pipeline-chain">
+                <span class="pipeline-node node-blue"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>规则匹配</span>
+                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                <span class="pipeline-node node-teal"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>污点分析</span>
+                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                <span class="pipeline-node node-purple"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>漏洞评级</span>
+                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                <span class="pipeline-node node-success"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>修复方案</span>
+              </div>
+              <div class="cyber-card-footer">
+                <div class="cyber-signal-group">
+                  <span class="cyber-lightning-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+                  <div class="signal-bars"><span class="signal-bar b1 active-teal"></span><span class="signal-bar b2 active-teal"></span><span class="signal-bar b3 active-teal"></span><span class="signal-bar b4 active-teal"></span></div>
+                  <span class="cyber-pill-tag"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span>深度扫描</span></span>
+                </div>
+                <span class="cyber-action-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg><span>全面审计</span></span>
+              </div>
+            </div>
           </div>
-          <div class="hero-card" onclick="triggerHeroPrompt('为当前核心功能模块设计并编写高覆盖率的单元测试用例')">
-            <div class="hero-card-icon"></div>
-            <div class="hero-card-title">编写测试套件</div>
-            <div class="hero-card-sub">生成高覆盖率的自动化测试用例并执行</div>
+
+          <div class="cyber-folder-card hero-card" data-hero-prompt="为当前核心功能模块设计并编写高覆盖率的单元测试用例" onclick="triggerHeroPrompt('为当前核心功能模块设计并编写高覆盖率的单元测试用例')">
+            <div class="cyber-tab-header">
+              <span class="cyber-tab-pill"><span class="cyber-tab-dot"></span>TEST-GEN</span>
+              <div class="cyber-tab-meta">
+                <span class="cyber-meta-item">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/></svg>
+                  <span>09/15</span>
+                </span>
+              </div>
+            </div>
+            <div class="cyber-card-body">
+              <div class="cyber-card-title">自动化合成高覆盖率单元与集成测试，覆盖边界异常分支</div>
+              <div class="cyber-telemetry-row">
+                <div class="cyber-telemetry-left">
+                  <div class="cyber-timer-text">00:02:10</div>
+                  <div class="cyber-status-chip">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>11:20 就绪</span>
+                  </div>
+                </div>
+                <div class="cyber-matrix-wrap">
+                  <div class="cyber-dot-matrix">
+                    <span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                    <span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                    <span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot teal"></span>
+                    <span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                  </div>
+                  <div class="matrix-legend"><span class="highlight">95%</span> | P2 | 全覆盖</div>
+                </div>
+              </div>
+              <div class="cyber-pipeline-chain">
+                <span class="pipeline-node node-blue"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="14 2 18 6 7 17 3 17 3 13 14 2"/></svg>用例设计</span>
+                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                <span class="pipeline-node node-teal"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>测试编写</span>
+                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                <span class="pipeline-node node-purple"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>沙箱执行</span>
+                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                <span class="pipeline-node node-success"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>报告产出</span>
+              </div>
+              <div class="cyber-card-footer">
+                <div class="cyber-signal-group">
+                  <span class="cyber-lightning-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+                  <div class="signal-bars"><span class="signal-bar b1 active-amber"></span><span class="signal-bar b2 active-amber"></span><span class="signal-bar b3 active-amber"></span><span class="signal-bar b4 active-amber"></span></div>
+                  <span class="cyber-pill-tag"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg><span>自动执行</span></span>
+                </div>
+                <span class="cyber-action-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg><span>生成套件</span></span>
+              </div>
+            </div>
           </div>
-          <div class="hero-card" onclick="triggerHeroPrompt('审查 Git 变更并协助生成规范的 Commit 提交和推送代码')">
-            <div class="hero-card-icon"></div>
-            <div class="hero-card-title">Git 协同与推送</div>
-            <div class="hero-card-sub">一键审查 Diff 差异并自动提交代码</div>
+
+          <div class="cyber-folder-card hero-card" data-hero-prompt="审查 Git 变更并协助生成规范的 Commit 提交和推送代码" onclick="triggerHeroPrompt('审查 Git 变更并协助生成规范的 Commit 提交和推送代码')">
+            <div class="cyber-tab-header">
+              <span class="cyber-tab-pill"><span class="cyber-tab-dot"></span>GIT-OPS</span>
+              <div class="cyber-tab-meta">
+                <span class="cyber-meta-item">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/></svg>
+                  <span>09/15</span>
+                </span>
+              </div>
+            </div>
+            <div class="cyber-card-body">
+              <div class="cyber-card-title">审查 Git 工作区差异变动，自动生成规范提交并推送远程</div>
+              <div class="cyber-telemetry-row">
+                <div class="cyber-telemetry-left">
+                  <div class="cyber-timer-text">00:00:45</div>
+                  <div class="cyber-status-chip">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>11:25 就绪</span>
+                  </div>
+                </div>
+                <div class="cyber-matrix-wrap">
+                  <div class="cyber-dot-matrix">
+                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span>
+                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
+                  </div>
+                  <div class="matrix-legend"><span class="highlight">100%</span> | P1 | Clean</div>
+                </div>
+              </div>
+              <div class="cyber-pipeline-chain">
+                <span class="pipeline-node node-blue"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 9v12"/></svg>Diff 差异</span>
+                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                <span class="pipeline-node node-teal"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><line x1="1.05" y1="12" x2="7" y2="12"/><line x1="17.01" y1="12" x2="22.96" y2="12"/></svg>生成规范</span>
+                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                <span class="pipeline-node node-purple"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>自动提交</span>
+                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
+                <span class="pipeline-node node-success"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/></svg>同步远程</span>
+              </div>
+              <div class="cyber-card-footer">
+                <div class="cyber-signal-group">
+                  <span class="cyber-lightning-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+                  <div class="signal-bars"><span class="signal-bar b1 active-teal"></span><span class="signal-bar b2 active-teal"></span><span class="signal-bar b3 active-teal"></span><span class="signal-bar b4"></span></div>
+                  <span class="cyber-pill-tag"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg><span>一键同步</span></span>
+                </div>
+                <span class="cyber-action-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg><span>审查提交</span></span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1311,10 +1490,10 @@ function renderCurrentSessionMessages() {
               </div>
               <div id="streamingContentText">
                 ${hasLiveText ? renderMarkdownContent(session.liveContent) + '<span class="streaming-cursor"></span>' : `
-                  <div class="thinking-loading-pill" title="正在深度思考与执行中，若已输出可点击 ✕ 强制清除">
+                  <div class="thinking-loading-pill" title="正在深度思考与执行中，若已输出可点击强制清除">
                     <span class="thinking-pulse-dot"></span>
                     <span>正在深度思考与执行中...</span>
-                    <button type="button" class="pill-cancel-btn" onclick="window.forceStopGenerating(event)" title="强制清除悬挂状态">✕</button>
+                    <button type="button" class="pill-cancel-btn" onclick="window.forceStopGenerating(event)" title="强制清除悬挂状态"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                   </div>
                 `}
               </div>
@@ -1742,11 +1921,6 @@ function setWindowOpacity(val, syncInput = true) {
 
   const isTranslucent = clamped < 100;
   document.body.classList.toggle('is-translucent', isTranslucent);
-  if (isTranslucent) {
-    document.body.style.opacity = String(ratio);
-  } else {
-    document.body.style.opacity = '';
-  }
 
   const textBadge = $('opacityValueText');
   if (textBadge) textBadge.textContent = clamped + '%';
@@ -2359,15 +2533,22 @@ window.handleRevertHunk = async (filePath, hunkIdx) => {
 let currentInlineDiffRaw = '';
 let currentInlineDiffFile = '';
 
-async function loadInlineDiff(file) {
+let currentInlineDiffIsStaged = false;
+
+async function loadInlineDiff(file, isStaged = false) {
   if (!currentActiveProject) return;
 
   currentInlineDiffFile = file || '';
+  currentInlineDiffIsStaged = !!isStaged;
   const titleEl = $('gitInlineDiffFileTitle');
   const contentEl = $('gitInlineDiffContent');
 
   if (titleEl) {
-    titleEl.textContent = file ? `Diff: ${file}` : '工作区全局差异补丁 (All in one)';
+    if (file) {
+      titleEl.textContent = isStaged ? `Diff (已暂存): ${file}` : `Diff (工作区): ${file}`;
+    } else {
+      titleEl.textContent = isStaged ? '已暂存全局差异补丁 (Staged Diff)' : '工作区全局差异补丁 (All in one)';
+    }
   }
   if (contentEl) {
     contentEl.innerHTML = '<div class="git-diff-line normal" style="color:#858585;">正在提取差异代码...</div>';
@@ -2375,11 +2556,12 @@ async function loadInlineDiff(file) {
 
   // 高亮左侧激活文件行
   document.querySelectorAll('.git-file-row').forEach((row) => {
-    row.classList.toggle('active', row.dataset.file === (file || '__ALL__'));
+    const isRowStaged = row.dataset.staged === 'true';
+    row.classList.toggle('active', row.dataset.file === (file || '__ALL__') && isRowStaged === currentInlineDiffIsStaged);
   });
 
   try {
-    const visualRes = await window.hap.getVisualDiff(currentActiveProject, file || undefined);
+    const visualRes = await window.hap.getVisualDiff(currentActiveProject, file || undefined, currentInlineDiffIsStaged);
     currentInlineDiffRaw = visualRes.rawDiff || '（暂无代码差异）';
     currentInlineDiffHunksMap = {};
 
@@ -2464,6 +2646,7 @@ function renderGitModalContent() {
   if ($('gitRemoteUrlText')) $('gitRemoteUrlText').textContent = currentGitStatus.remoteUrl || '无远程仓库 (本地)';
   if ($('gitChangedCount')) $('gitChangedCount').textContent = String(currentGitStatus.uncommittedCount || 0);
   if ($('gitFileListCount')) $('gitFileListCount').textContent = String(currentGitStatus.uncommittedCount || 0);
+  if ($('gitTabChangesCount')) $('gitTabChangesCount').textContent = String(currentGitStatus.uncommittedCount || 0);
 
   // 统计信息展示
   const statBadge = $('gitSummaryStatsBadge');
@@ -2471,6 +2654,21 @@ function renderGitModalContent() {
     const adds = currentGitStatus.totalAdditions || 0;
     const dels = currentGitStatus.totalDeletions || 0;
     statBadge.innerHTML = `共 <strong>${currentGitStatus.uncommittedCount || 0}</strong> 个文件改动 <span style="color:#2ea043;margin-left:6px;">+${adds}</span> <span style="color:#f85149;margin-left:2px;">-${dels}</span>`;
+  }
+
+  // 快捷横幅：最新提交是否为暂存快照
+  const latestStashBanner = $('gitLatestStashBanner');
+  const latestStashText = $('gitLatestStashText');
+  if (latestStashBanner) {
+    if (currentGitStatus.isLatestStash && currentGitStatus.latestCommit) {
+      latestStashBanner.style.display = 'flex';
+      if (latestStashText) {
+        const short = currentGitStatus.latestCommit.shortHash || currentGitStatus.latestCommit.hash.slice(0, 7);
+        latestStashText.textContent = `${short}: ${currentGitStatus.latestCommit.message}`;
+      }
+    } else {
+      latestStashBanner.style.display = 'none';
+    }
   }
 
   const hasConflict = Array.isArray(currentGitStatus.changedFiles) && currentGitStatus.changedFiles.some((f) => f.status.includes('U') || f.status === 'AA' || f.status === 'DD');
@@ -2506,52 +2704,230 @@ function renderGitModalContent() {
 
   const list = $('gitChangedFilesList');
   if (!list) return;
-  if (!currentGitStatus.changedFiles || currentGitStatus.changedFiles.length === 0) {
+
+  const staged = currentGitStatus.stagedFiles || [];
+  const unstaged = currentGitStatus.unstagedFiles || [];
+
+  // 更新提交按钮文案
+  const commitBtn = $('gitCommitBtn');
+  if (commitBtn) {
+    commitBtn.textContent = staged.length > 0 ? `提交已暂存 (${staged.length}) (Commit)` : '提交变更 (Commit)';
+  }
+
+  if (staged.length === 0 && unstaged.length === 0) {
     list.innerHTML = '<div style="color:var(--text-muted);font-style:italic;padding:8px;font-size:12px;">工作区干净，暂无未提交变更</div>';
     const contentEl = $('gitInlineDiffContent');
     if (contentEl) contentEl.innerHTML = '<div class="git-diff-line normal" style="color:#858585;">工作区干净，暂无代码变更。</div>';
     if ($('gitInlineDiffFileTitle')) $('gitInlineDiffFileTitle').textContent = '无变更';
   } else {
-    list.innerHTML = currentGitStatus.changedFiles.map((f) => {
-      let badgeClass = 'M';
-      let badgeLabel = '修改';
-      if (f.status.includes('U') || f.status === 'AA' || f.status === 'DD') {
-        badgeClass = 'C';
-        badgeLabel = '冲突';
-      } else if (f.status.includes('?') || f.status.includes('A')) {
-        badgeClass = 'A';
-        badgeLabel = '新增';
-      } else if (f.status.includes('D')) {
-        badgeClass = 'D';
-        badgeLabel = '删除';
-      }
+    let html = '';
 
-      const adds = f.additions ? `<span style="color:#2ea043;font-size:11px;font-weight:600;">+${f.additions}</span>` : '';
-      const dels = f.deletions ? `<span style="color:#f85149;font-size:11px;font-weight:600;">-${f.deletions}</span>` : '';
-      const statSpan = (adds || dels) ? `<span style="display:flex;gap:3px;margin-left:auto;margin-right:6px;">${adds}${dels}</span>` : '';
-
-      return `
-        <div class="git-file-row" data-file="${esc(f.file)}" onclick="loadInlineDiff('${esc(f.file)}')">
-          <div style="display:flex;align-items:center;gap:6px;overflow:hidden;flex:1;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;" title="${esc(f.file)}">${esc(f.file)}</span>
+    // 1. 已暂存的更改 (Staged Changes)
+    if (staged.length > 0) {
+      html += `
+        <div class="git-group-header">
+          <div class="git-group-header-title">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            <span>已暂存的更改 (Staged Changes)</span>
+            <span class="prop-chip" style="font-size:10px;padding:0 5px;background:rgba(46,160,67,0.15);color:#2ea043;font-weight:700;">${staged.length}</span>
           </div>
-          ${statSpan}
-          <div class="git-file-row-actions">
-            <span class="git-status-badge ${badgeClass}">${badgeLabel}</span>
+          <div class="git-group-header-actions" onclick="event.stopPropagation()">
+            <button type="button" class="git-icon-btn" onclick="handleUnstageAll()" title="全部取消暂存 (Unstage All)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
           </div>
         </div>
+        <div class="git-group-files" style="display:flex;flex-direction:column;gap:2px;margin-bottom:6px;">
+          ${staged.map((f) => renderGitFileRow(f, true)).join('')}
+        </div>
       `;
-    }).join('');
+    }
 
-    // 默认加载第一个文件的 Diff
-    if (!currentInlineDiffFile || !currentGitStatus.changedFiles.some((f) => f.file === currentInlineDiffFile)) {
-      loadInlineDiff(currentGitStatus.changedFiles[0].file);
+    // 2. 更改 (Changes)
+    if (unstaged.length > 0) {
+      html += `
+        <div class="git-group-header">
+          <div class="git-group-header-title">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            <span>更改 (Changes)</span>
+            <span class="prop-chip" style="font-size:10px;padding:0 5px;background:rgba(2,132,199,0.15);color:var(--accent);font-weight:700;">${unstaged.length}</span>
+          </div>
+          <div class="git-group-header-actions" onclick="event.stopPropagation()">
+            <button type="button" class="git-icon-btn danger" onclick="handleRevertAll()" title="放弃所有更改 (Discard All Changes)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            </button>
+            <button type="button" class="git-icon-btn primary" onclick="handleStageAll()" title="全部暂存 (Stage All Changes)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="git-group-files" style="display:flex;flex-direction:column;gap:2px;">
+          ${unstaged.map((f) => renderGitFileRow(f, false)).join('')}
+        </div>
+      `;
+    }
+
+    list.innerHTML = html;
+
+    // 默认加载选中的文件差异
+    const firstFile = staged[0]?.file || unstaged[0]?.file;
+    const firstIsStaged = staged.length > 0;
+    if (!currentInlineDiffFile || (!staged.some((f) => f.file === currentInlineDiffFile) && !unstaged.some((f) => f.file === currentInlineDiffFile))) {
+      if (firstFile) {
+        loadInlineDiff(firstFile, firstIsStaged);
+      }
     } else {
-      loadInlineDiff(currentInlineDiffFile);
+      loadInlineDiff(currentInlineDiffFile, currentInlineDiffIsStaged);
     }
   }
 }
+
+function renderGitFileRow(f, isStaged) {
+  let badgeClass = 'M';
+  let badgeLabel = 'M';
+  const s = f.status || '';
+  if (s.includes('U') || s === 'AA' || s === 'DD') {
+    badgeClass = 'C';
+    badgeLabel = 'U';
+  } else if (s.includes('?') || s.includes('A')) {
+    badgeClass = 'A';
+    badgeLabel = isStaged ? 'A' : 'U';
+  } else if (s.includes('D')) {
+    badgeClass = 'D';
+    badgeLabel = 'D';
+  }
+
+  const adds = f.additions ? `<span style="color:#2ea043;font-size:11px;font-weight:600;">+${f.additions}</span>` : '';
+  const dels = f.deletions ? `<span style="color:#f85149;font-size:11px;font-weight:600;">-${f.deletions}</span>` : '';
+  const statSpan = (adds || dels) ? `<span style="display:flex;gap:3px;margin-left:auto;margin-right:6px;">${adds}${dels}</span>` : '';
+
+  let actionButtonsHtml = '';
+  if (isStaged) {
+    actionButtonsHtml = `
+      <button type="button" class="git-icon-btn" onclick="event.stopPropagation(); handleUnstageFile('${esc(f.file)}')" title="从暂存区移出 (Unstage)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+    `;
+  } else {
+    actionButtonsHtml = `
+      <button type="button" class="git-icon-btn danger" onclick="event.stopPropagation(); handleRevertFile('${esc(f.file)}')" title="放弃更改 (Discard Changes)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+      </button>
+      <button type="button" class="git-icon-btn primary" onclick="event.stopPropagation(); handleStageFile('${esc(f.file)}')" title="暂存更改 (Stage Changes)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+    `;
+  }
+
+  const activeAttr = currentInlineDiffFile === f.file && currentInlineDiffIsStaged === isStaged ? 'active' : '';
+
+  return `
+    <div class="git-file-row ${activeAttr}" data-file="${esc(f.file)}" data-staged="${isStaged}" onclick="loadInlineDiff('${esc(f.file)}', ${isStaged})">
+      <div style="display:flex;align-items:center;gap:6px;overflow:hidden;flex:1;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;" title="${esc(f.file)}">${esc(f.file)}</span>
+      </div>
+      ${statSpan}
+      <div class="git-file-row-actions">
+        <div class="git-file-hover-actions">
+          ${actionButtonsHtml}
+        </div>
+        <span class="git-status-badge ${badgeClass}">${badgeLabel}</span>
+      </div>
+    </div>
+  `;
+}
+
+window.handleStageFile = async (file) => {
+  if (!currentActiveProject || !file) return;
+  try {
+    await window.hap.stageFileDiff(currentActiveProject, file);
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
+    loadInlineDiff(file, true);
+  } catch (err) {
+    showToast('暂存文件失败: ' + (err.message || String(err)), 'error');
+  }
+};
+
+window.handleUnstageFile = async (file) => {
+  if (!currentActiveProject || !file) return;
+  try {
+    await window.hap.unstageFileDiff(currentActiveProject, file);
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
+    loadInlineDiff(file, false);
+  } catch (err) {
+    showToast('取消暂存失败: ' + (err.message || String(err)), 'error');
+  }
+};
+
+window.handleStageAll = async () => {
+  if (!currentActiveProject) return;
+  try {
+    await window.hap.stageAllFiles(currentActiveProject);
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
+    showToast('已暂存全部改动', 'success');
+  } catch (err) {
+    showToast('全部暂存失败: ' + (err.message || String(err)), 'error');
+  }
+};
+
+window.handleUnstageAll = async () => {
+  if (!currentActiveProject) return;
+  try {
+    await window.hap.unstageAllFiles(currentActiveProject);
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
+    showToast('已取消全部暂存', 'success');
+  } catch (err) {
+    showToast('取消全部暂存失败: ' + (err.message || String(err)), 'error');
+  }
+};
+
+window.handleRevertFile = async (file) => {
+  if (!currentActiveProject || !file) return;
+  const confirmed = await showConfirm({
+    title: '放弃文件更改',
+    message: `确定要放弃对 <strong>${esc(file)}</strong> 的修改吗？<br>此操作将丢弃未暂存的修改，无法撤销。`,
+    okText: '确认放弃',
+    cancelText: '取消',
+    isDanger: true,
+  });
+  if (!confirmed) return;
+
+  try {
+    await window.hap.revertFileDiff(currentActiveProject, file);
+    showToast(`已成功还原 ${file}`, 'success');
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
+  } catch (err) {
+    showToast('放弃更改失败: ' + (err.message || String(err)), 'error');
+  }
+};
+
+window.handleRevertAll = async () => {
+  if (!currentActiveProject) return;
+  const count = currentGitStatus?.unstagedCount || currentGitStatus?.uncommittedCount || 0;
+  const confirmed = await showConfirm({
+    title: '放弃工作区全部更改',
+    message: `确定要放弃工作区全部 <strong>${count}</strong> 个文件的未暂存修改吗？<br>此操作将丢弃修改并清理未跟踪新增文件，操作无法撤销。`,
+    okText: '确认全部放弃',
+    cancelText: '取消',
+    isDanger: true,
+  });
+  if (!confirmed) return;
+
+  try {
+    await window.hap.revertAllFiles(currentActiveProject);
+    showToast('已放弃全部未暂存的修改', 'success');
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
+  } catch (err) {
+    showToast('放弃更改失败: ' + (err.message || String(err)), 'error');
+  }
+};
 
 $('gitStatusTopBtn')?.addEventListener('click', async () => {
   if (!currentActiveProject) {
@@ -2582,6 +2958,252 @@ $('gitInitRepoBtn')?.addEventListener('click', async () => {
     renderGitModalContent();
   } catch (error) {
     showToast('Git 初始化失败：' + error.message, 'error');
+  }
+});
+
+// ==========================================================================
+// Git 暂存快照 (Stash Commit)、历史版本与回滚管理
+// ==========================================================================
+let currentGitActiveTab = 'changes';
+let currentSelectedHistoryCommit = null;
+
+function switchGitTab(tab) {
+  currentGitActiveTab = tab;
+  const changesTabBtn = $('gitTabChangesBtn');
+  const historyTabBtn = $('gitTabHistoryBtn');
+  const changesPanel = $('gitChangesPanel');
+  const historyPanel = $('gitHistoryPanel');
+
+  if (tab === 'changes') {
+    if (changesTabBtn) changesTabBtn.classList.add('active');
+    if (historyTabBtn) historyTabBtn.classList.remove('active');
+    if (changesPanel) changesPanel.style.display = 'flex';
+    if (historyPanel) historyPanel.style.display = 'none';
+  } else {
+    if (changesTabBtn) changesTabBtn.classList.remove('active');
+    if (historyTabBtn) historyTabBtn.classList.add('active');
+    if (changesPanel) changesPanel.style.display = 'none';
+    if (historyPanel) historyPanel.style.display = 'flex';
+    loadGitCommitHistory();
+  }
+}
+
+async function loadGitCommitHistory() {
+  if (!currentActiveProject) return;
+  const listEl = $('gitCommitHistoryList');
+  const countEl = $('gitHistoryCount');
+  if (!listEl) return;
+
+  listEl.innerHTML = '<div style="color:var(--text-muted);font-style:italic;padding:8px;font-size:12px;">正在加载提交历史...</div>';
+
+  try {
+    const res = await window.hap.gitGetCommitHistory(currentActiveProject, 25);
+    const commits = res?.commits || [];
+    if (countEl) countEl.textContent = String(commits.length);
+
+    if (commits.length === 0) {
+      listEl.innerHTML = '<div style="color:var(--text-muted);font-style:italic;padding:8px;font-size:12px;">暂无提交历史记录</div>';
+      const contentEl = $('gitHistoryDiffContent');
+      if (contentEl) contentEl.innerHTML = '<div class="git-diff-line normal" style="color:#858585;">暂无提交记录。</div>';
+      return;
+    }
+
+    listEl.innerHTML = commits.map((c) => {
+      const isStash = !!c.isStash;
+      const stashBadge = isStash ? '<span class="git-stash-badge">暂存快照</span>' : '';
+      const dateStr = c.relativeDate || c.date || '';
+
+      return `
+        <div class="git-commit-history-item ${isStash ? 'is-stash' : ''} ${currentSelectedHistoryCommit === c.hash ? 'active' : ''}" data-hash="${esc(c.hash)}" onclick="selectHistoryCommit('${esc(c.hash)}')">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              ${stashBadge}
+              <span style="font-family:var(--font-mono);font-size:11.5px;font-weight:700;color:var(--accent);">${esc(c.shortHash)}</span>
+              <span style="font-size:11px;color:var(--text-secondary);">${esc(c.author)}</span>
+            </div>
+            <span style="font-size:11px;color:var(--text-muted);">${esc(dateStr)}</span>
+          </div>
+          <div style="font-size:12px;color:var(--text-main);word-break:break-all;line-height:1.45;margin-top:2px;">
+            ${esc(c.message)}
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:4px;" onclick="event.stopPropagation()">
+            <button type="button" class="btn small secondary" style="font-size:11px;padding:1px 7px;color:#f59e0b;border-color:rgba(245,158,11,0.35);" onclick="rollbackCommitToWorkspace('${esc(c.hash)}')">
+              回滚到工作区
+            </button>
+            <button type="button" class="btn small secondary" style="font-size:11px;padding:1px 7px;" onclick="revertSpecificCommit('${esc(c.hash)}')">
+              撤销提交
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (!currentSelectedHistoryCommit || !commits.some(c => c.hash === currentSelectedHistoryCommit)) {
+      selectHistoryCommit(commits[0].hash);
+    } else {
+      selectHistoryCommit(currentSelectedHistoryCommit);
+    }
+  } catch (error) {
+    listEl.innerHTML = `<div style="color:var(--danger);padding:8px;font-size:12px;">加载历史失败: ${esc(error.message || String(error))}</div>`;
+  }
+}
+
+window.selectHistoryCommit = async (hash) => {
+  if (!currentActiveProject || !hash) return;
+  currentSelectedHistoryCommit = hash;
+
+  document.querySelectorAll('.git-commit-history-item').forEach((el) => {
+    if (el.getAttribute('data-hash') === hash) {
+      el.classList.add('active');
+    } else {
+      el.classList.remove('active');
+    }
+  });
+
+  const titleEl = $('gitHistoryDiffTitle');
+  const contentEl = $('gitHistoryDiffContent');
+  const rollbackBtn = $('gitHistoryRollbackBtn');
+  const revertBtn = $('gitHistoryRevertBtn');
+  const copyBtn = $('gitHistoryCopyHashBtn');
+
+  if (titleEl) titleEl.textContent = `提交详情与差异：${hash.slice(0, 7)}`;
+  if (rollbackBtn) {
+    rollbackBtn.style.display = 'inline-block';
+    rollbackBtn.onclick = () => rollbackCommitToWorkspace(hash);
+  }
+  if (revertBtn) {
+    revertBtn.style.display = 'inline-block';
+    revertBtn.onclick = () => revertSpecificCommit(hash);
+  }
+  if (copyBtn) {
+    copyBtn.onclick = () => {
+      navigator.clipboard.writeText(hash);
+      showToast('已复制 Commit Hash 到剪贴板', 'info');
+    };
+  }
+
+  if (contentEl) contentEl.innerHTML = '<div class="git-diff-line normal" style="color:#858585;">正在获取该提交代码差异...</div>';
+
+  try {
+    const res = await window.hap.gitShowCommit(currentActiveProject, hash);
+    if (!contentEl) return;
+    const diff = res?.diff || '（无变更代码）';
+    const lines = diff.split('\n');
+    contentEl.innerHTML = lines.map((line) => {
+      let type = 'normal';
+      if (line.startsWith('+') && !line.startsWith('+++')) type = 'add';
+      else if (line.startsWith('-') && !line.startsWith('---')) type = 'del';
+      else if (line.startsWith('commit') || line.startsWith('Author:') || line.startsWith('Date:')) type = 'header';
+      return `<div class="git-diff-line ${type}">${esc(line)}</div>`;
+    }).join('');
+  } catch (error) {
+    if (contentEl) contentEl.innerHTML = `<div style="color:var(--danger);padding:8px;">${esc(error.message || String(error))}</div>`;
+  }
+};
+
+window.rollbackCommitToWorkspace = async (commitHash) => {
+  if (!currentActiveProject) return;
+
+  if (currentGitStatus && currentGitStatus.uncommittedCount > 0) {
+    const confirmed = await showConfirm({
+      title: '回滚确认',
+      message: `检测到工作区目前有 <strong>${currentGitStatus.uncommittedCount}</strong> 个未提交的文件改动。<br><br>回滚暂存提交将把该提交的修改恢复至工作区，是否继续？`,
+      okText: '确认回滚',
+      cancelText: '取消',
+      isDanger: false,
+    });
+    if (!confirmed) return;
+  }
+
+  showToast('正在回滚暂存快照到工作区...', 'info');
+  try {
+    const res = await window.hap.gitRollbackCommit(currentActiveProject, commitHash, 'mixed');
+    showToast(res.message || '已成功回滚暂存快照！修改已恢复至未提交工作区。', 'success');
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
+    switchGitTab('changes');
+    if (currentGitActiveTab === 'history') {
+      await loadGitCommitHistory();
+    }
+  } catch (error) {
+    showToast('回滚失败：' + (error.message || String(error)), 'error');
+  }
+};
+
+window.revertSpecificCommit = async (commitHash) => {
+  if (!currentActiveProject || !commitHash) return;
+  const confirmed = await showConfirm({
+    title: '撤销提交 (Git Revert)',
+    message: `确定要撤销该提交 (<strong>${commitHash.slice(0, 7)}</strong>) 吗？<br>系统将通过创建一条逆向提交来安全恢复代码，不破坏历史。`,
+    okText: '确认撤销',
+    cancelText: '取消',
+    isDanger: false,
+  });
+  if (!confirmed) return;
+
+  showToast('正在撤销提交...', 'info');
+  try {
+    const res = await window.hap.gitRevertCommit(currentActiveProject, commitHash);
+    showToast(res.message || '提交已撤销！', 'success');
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
+    await loadGitCommitHistory();
+  } catch (error) {
+    showToast('撤销提交失败：' + (error.message || String(error)), 'error');
+  }
+};
+
+$('gitTabChangesBtn')?.addEventListener('click', () => switchGitTab('changes'));
+$('gitTabHistoryBtn')?.addEventListener('click', () => switchGitTab('history'));
+$('refreshGitHistoryBtn')?.addEventListener('click', () => loadGitCommitHistory());
+$('gitRollbackLatestStashBtn')?.addEventListener('click', () => rollbackCommitToWorkspace());
+
+$('gitStashBtn')?.addEventListener('click', () => {
+  if (!currentActiveProject) {
+    showToast('请先选择或导入一个工作区工程', 'info');
+    return;
+  }
+  if (!currentGitStatus || currentGitStatus.uncommittedCount === 0) {
+    showToast('当前工作区干净，无任何未提交的代码改动可供暂存', 'info');
+    return;
+  }
+
+  const existingMsg = $('gitCommitMessageInput')?.value.trim();
+  const stashInput = $('gitStashMessageInput');
+  if (stashInput) {
+    if (existingMsg) {
+      stashInput.value = existingMsg;
+    } else {
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const timeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      stashInput.value = `${timeStr} 工作区暂存快照 (${currentGitStatus.uncommittedCount} 个文件)`;
+    }
+  }
+  $('gitStashModal')?.showModal();
+});
+
+$('closeGitStashModalBtn')?.addEventListener('click', () => $('gitStashModal')?.close());
+$('cancelGitStashModalBtn')?.addEventListener('click', () => $('gitStashModal')?.close());
+
+$('confirmGitStashModalBtn')?.addEventListener('click', async () => {
+  if (!currentActiveProject) return;
+  const msg = $('gitStashMessageInput')?.value.trim() || '';
+  const stashModal = $('gitStashModal');
+
+  try {
+    showToast('正在创建暂存快照 Commit...', 'info');
+    const res = await window.hap.gitStashCommit(currentActiveProject, msg);
+    stashModal?.close();
+    if ($('gitCommitMessageInput')) $('gitCommitMessageInput').value = '';
+    showToast('代码已成功暂存为快照 Commit！工作区已重置，可在历史记录中随时回滚。', 'success');
+    await updateGitStatus(currentActiveProject);
+    renderGitModalContent();
+    if (currentGitActiveTab === 'history') {
+      await loadGitCommitHistory();
+    }
+  } catch (error) {
+    showToast('暂存快照失败：' + (error.message || String(error)), 'error');
   }
 });
 
@@ -3377,7 +3999,7 @@ function renderBranchListItems(filterText) {
               <span>${isCurrent ? '●' : '○'}</span>
               <span>${esc(b.name)}</span>
               ${isCurrent ? '<span class="prop-chip" style="font-size:10px;padding:1px 5px;color:var(--primary);">当前</span>' : ''}
-              ${b.upstream ? `<span style="font-size:10.5px;color:var(--text-muted);font-weight:normal;">➔ ${esc(b.upstream)}</span>` : ''}
+              ${b.upstream ? `<span style="font-size:10.5px;color:var(--text-muted);font-weight:normal;">&rarr; ${esc(b.upstream)}</span>` : ''}
             </div>
             ${b.lastCommit ? `<div class="git-branch-item-meta" title="${esc(b.lastCommit)}">${esc(b.lastCommit)}</div>` : ''}
           </div>
@@ -7024,7 +7646,7 @@ function renderActivePluginTray() {
       <span class="plugin-badge-tag">${esc(activeComposerPlugin.badge || '插件')}</span>
       ${skillNameTag}
       ${activeComposerPlugin.id === 'image-gen' ? `<button type="button" class="plugin-badge-btn" id="activePluginConfigBtn" title="配置生图服务商、模型与技能"> 设置</button>` : ''}
-      <button type="button" class="plugin-badge-btn plugin-badge-close" id="activePluginRemoveBtn" title="移除当前插件引用">✕</button>
+      <button type="button" class="plugin-badge-btn plugin-badge-close" id="activePluginRemoveBtn" title="移除当前插件引用"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
   `;
 

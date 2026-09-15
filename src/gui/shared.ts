@@ -166,15 +166,29 @@ export interface GuiGitFileChange {
 }
 
 // Git 状态与协同操作数据结构
+export interface GuiGitCommitInfo {
+  hash: string;
+  shortHash?: string;
+  message: string;
+  isStash?: boolean;
+  relativeDate?: string;
+}
+
 export interface GuiGitStatus {
   isRepo: boolean;
   branch: string;
   remoteUrl?: string | undefined;
   changedFiles: GuiGitFileChange[];
+  stagedFiles?: GuiGitFileChange[] | undefined;
+  unstagedFiles?: GuiGitFileChange[] | undefined;
+  stagedCount?: number | undefined;
+  unstagedCount?: number | undefined;
   uncommittedCount: number;
   totalAdditions: number;
   totalDeletions: number;
-  recentCommits: Array<{ hash: string; message: string }>;
+  recentCommits: GuiGitCommitInfo[];
+  latestCommit?: GuiGitCommitInfo | undefined;
+  isLatestStash?: boolean | undefined;
   isMerging?: boolean | undefined;
   isRebasing?: boolean | undefined;
 }

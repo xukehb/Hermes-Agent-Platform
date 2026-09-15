@@ -1,5 +1,5 @@
 import { IlinkAccountStore } from '../channels/wechat/ilink/credential-store.js';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, resolve as resolvePath } from 'node:path';
 import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
@@ -1790,7 +1790,9 @@ export class GuiService {
       } catch {}
     }
 
-    const changedFiles: Array<{ status: string; file: string; additions: number; deletions: number }> = [];
+    const changedFiles: Array<{ status: string; file: string; additions: number; deletions: number; isStaged?: boolean }> = [];
+    const stagedFiles: Array<{ status: string; file: string; additions: number; deletions: number; isStaged: true }> = [];
+    const unstagedFiles: Array<{ status: string; file: string; additions: number; deletions: number; isStaged: false }> = [];
     let totalAdditions = 0;
     let totalDeletions = 0;
 
@@ -1798,8 +1800,14 @@ export class GuiService {
       const sRes = await execa('git', ['status', '--porcelain'], { cwd: projectPath });
       const lines = sRes.stdout.split('\n').map((l) => l.trimEnd()).filter(Boolean);
       for (const line of lines) {
-        const status = line.slice(0, 2).trim();
-        const file = line.slice(3).trim();
+        if (line.length < 3) continue;
+        const indexStatus = line[0] || ' ';
+        const workingStatus = line[1] || ' ';
+        let file = line.slice(3).trim();
+        if (file.includes(' -> ')) {
+          const parts = file.split(' -> ');
+          file = (parts[1] || parts[0] || '').trim();
+        }
 
         let adds = 0;
         let dels = 0;
@@ -1808,7 +1816,7 @@ export class GuiService {
           const stat = numstatMap.get(file)!;
           adds = stat.additions;
           dels = stat.deletions;
-        } else if (status.includes('?') || status.includes('A')) {
+        } else if (indexStatus === '?' || workingStatus === '?' || indexStatus === 'A') {
           // untracked 或新添加文件计算实际行数
           const fullPath = join(projectPath, file);
           if (existsSync(fullPath)) {
@@ -1822,39 +1830,92 @@ export class GuiService {
         totalAdditions += adds;
         totalDeletions += dels;
 
+        const isStaged = indexStatus !== ' ' && indexStatus !== '?';
+        const isUnstaged = workingStatus !== ' ' || indexStatus === '?';
+
         changedFiles.push({
-          status,
+          status: line.slice(0, 2).trim(),
           file,
           additions: adds,
           deletions: dels,
+          isStaged,
         });
-      }
-    } catch {}
 
-    const recentCommits: Array<{ hash: string; message: string }> = [];
-    try {
-      const logRes = await execa('git', ['log', '-n', '5', '--oneline'], { cwd: projectPath });
-      const lines = logRes.stdout.split('\n').filter(Boolean);
-      for (const line of lines) {
-        const spaceIdx = line.indexOf(' ');
-        if (spaceIdx > 0) {
-          recentCommits.push({
-            hash: line.slice(0, spaceIdx),
-            message: line.slice(spaceIdx + 1),
+        if (isStaged) {
+          stagedFiles.push({
+            status: indexStatus,
+            file,
+            additions: adds,
+            deletions: dels,
+            isStaged: true,
+          });
+        }
+        if (isUnstaged) {
+          unstagedFiles.push({
+            status: workingStatus === ' ' ? indexStatus : workingStatus === '?' ? 'U' : workingStatus,
+            file,
+            additions: adds,
+            deletions: dels,
+            isStaged: false,
           });
         }
       }
     } catch {}
+
+    const recentCommits: Array<{ hash: string; shortHash?: string; message: string; isStash?: boolean; relativeDate?: string }> = [];
+    try {
+      const logRes = await execa('git', ['log', '-n', '5', '--format=%H%x09%h%x09%an%x09%ad%x09%ar%x09%s'], { cwd: projectPath });
+      const lines = logRes.stdout.split('\n').filter(Boolean);
+      for (const line of lines) {
+        const parts = line.split('\t');
+        const [p0, p1, , , p4] = parts;
+        if (parts.length >= 6 && p0 && p1 && p4) {
+          const hash = p0.trim();
+          const shortHash = p1.trim();
+          const message = parts.slice(5).join('\t').trim();
+          const isStash = /^\s*(\[暂存\]|stash:?|\[stash\])/i.test(message) || message.includes('[暂存]');
+          recentCommits.push({
+            hash,
+            shortHash,
+            message,
+            isStash,
+            relativeDate: p4.trim(),
+          });
+        } else {
+          const spaceIdx = line.indexOf(' ');
+          if (spaceIdx > 0) {
+            const hash = line.slice(0, spaceIdx);
+            const message = line.slice(spaceIdx + 1);
+            recentCommits.push({
+              hash,
+              shortHash: hash.slice(0, 7),
+              message,
+              isStash: message.includes('[暂存]'),
+            });
+          }
+        }
+      }
+    } catch {}
+
+    const firstCommit = recentCommits[0];
+    const isLatestStash = !!firstCommit?.isStash;
+    const latestCommit = firstCommit;
 
     return {
       isRepo: true,
       branch,
       remoteUrl,
       changedFiles,
+      stagedFiles,
+      unstagedFiles,
+      stagedCount: stagedFiles.length,
+      unstagedCount: unstagedFiles.length,
       uncommittedCount: changedFiles.length,
       totalAdditions,
       totalDeletions,
       recentCommits,
+      latestCommit,
+      isLatestStash,
       isMerging,
       isRebasing,
     };
@@ -1864,10 +1925,165 @@ export class GuiService {
     if (!projectPath) throw new Error('未指定项目路径');
     if (!message || !message.trim()) throw new Error('Commit message 不能为空');
 
-    await execa('git', ['add', '-A'], { cwd: projectPath });
+    // 检查是否已有暂存区文件 (Staged Changes)
+    let hasStaged = false;
+    try {
+      const diffRes = await execa('git', ['diff', '--cached', '--name-only'], { cwd: projectPath });
+      hasStaged = diffRes.stdout.split('\n').filter((l) => l.trim().length > 0).length > 0;
+    } catch {}
+
+    if (!hasStaged) {
+      // 若没有单独暂存任何文件，则默认暂存全部改动后提交
+      await execa('git', ['add', '-A'], { cwd: projectPath });
+    }
+
     const res = await execa('git', ['commit', '-m', message.trim()], { cwd: projectPath });
     this.info(`Git 提交成功 [${projectPath}]: ${message.trim()}`);
     return { ok: true, summary: res.stdout || '提交成功' };
+  }
+
+  async gitStashCommit(
+    projectPath: string,
+    message?: string
+  ): Promise<{ ok: boolean; summary: string; hash?: string; isStash: boolean }> {
+    if (!projectPath) throw new Error('未指定项目路径');
+
+    const sRes = await execa('git', ['status', '--porcelain'], { cwd: projectPath });
+    const changedLines = sRes.stdout.split('\n').filter((l) => l.trim().length > 0);
+    if (changedLines.length === 0) {
+      throw new Error('当前工作区无任何未提交的修改，无需暂存');
+    }
+
+    const changedCount = changedLines.length;
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const timeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+    let commitMsg = (message || '').trim();
+    if (!commitMsg) {
+      commitMsg = `[暂存] ${timeStr} 工作区代码快照 (${changedCount} 个文件)`;
+    } else if (!commitMsg.startsWith('[暂存]') && !commitMsg.toLowerCase().startsWith('stash:')) {
+      commitMsg = `[暂存] ${commitMsg}`;
+    }
+
+    await execa('git', ['add', '-A'], { cwd: projectPath });
+    const res = await execa('git', ['commit', '-m', commitMsg], { cwd: projectPath });
+
+    let hash = '';
+    try {
+      const revRes = await execa('git', ['rev-parse', 'HEAD'], { cwd: projectPath });
+      hash = revRes.stdout.trim();
+    } catch {}
+
+    this.info(`Git 暂存提交成功 [${projectPath}]: ${commitMsg} (${hash.slice(0, 7)})`);
+    return { ok: true, summary: res.stdout || '暂存快照创建成功', hash, isStash: true };
+  }
+
+  async gitGetCommitHistory(
+    projectPath: string,
+    limit: number = 20
+  ): Promise<{
+    ok: boolean;
+    commits: Array<{
+      hash: string;
+      shortHash: string;
+      author: string;
+      date: string;
+      relativeDate: string;
+      message: string;
+      isStash: boolean;
+    }>;
+  }> {
+    if (!projectPath) throw new Error('未指定项目路径');
+    const commits: Array<{
+      hash: string;
+      shortHash: string;
+      author: string;
+      date: string;
+      relativeDate: string;
+      message: string;
+      isStash: boolean;
+    }> = [];
+
+    try {
+      const logRes = await execa(
+        'git',
+        ['log', `-n`, String(Math.max(1, limit)), '--format=%H%x09%h%x09%an%x09%ad%x09%ar%x09%s'],
+        { cwd: projectPath }
+      );
+      const lines = logRes.stdout.split('\n').filter(Boolean);
+      for (const line of lines) {
+        const parts = line.split('\t');
+        const [p0, p1, p2, p3, p4] = parts;
+        if (parts.length >= 6 && p0 !== undefined && p1 !== undefined && p2 !== undefined && p3 !== undefined && p4 !== undefined) {
+          const hash = p0.trim();
+          const shortHash = p1.trim();
+          const author = p2.trim();
+          const date = p3.trim();
+          const relativeDate = p4.trim();
+          const message = parts.slice(5).join('\t').trim();
+          const isStash = /^\s*(\[暂存\]|stash:?|\[stash\])/i.test(message) || message.includes('[暂存]');
+          commits.push({
+            hash,
+            shortHash,
+            author,
+            date,
+            relativeDate,
+            message,
+            isStash,
+          });
+        }
+      }
+    } catch {}
+
+    return { ok: true, commits };
+  }
+
+  async gitRollbackCommit(
+    projectPath: string,
+    commitHash?: string,
+    mode: 'soft' | 'mixed' | 'hard' = 'mixed'
+  ): Promise<{ ok: boolean; message: string }> {
+    if (!projectPath) throw new Error('未指定项目路径');
+
+    const target = commitHash && commitHash.trim() ? commitHash.trim() : 'HEAD~1';
+    const flag = mode === 'soft' ? '--soft' : mode === 'hard' ? '--hard' : '--mixed';
+
+    try {
+      await execa('git', ['reset', flag, target], { cwd: projectPath });
+      let actionDesc = '回滚并保留所有修改到工作区（未提交状态）';
+      if (mode === 'soft') actionDesc = '回滚到暂存区（已暂存状态）';
+      if (mode === 'hard') actionDesc = '强制回滚并丢弃后续修改';
+
+      this.info(`Git 回滚成功 [${projectPath}] 目标: ${target}, 模式: ${mode}`);
+      return { ok: true, message: `已成功${actionDesc}！` };
+    } catch (error: any) {
+      const stderr = error?.stderr || error?.stdout || error?.message || String(error);
+      throw new Error(`回滚失败: ${stderr}`);
+    }
+  }
+
+  async gitRevertCommit(projectPath: string, commitHash: string): Promise<{ ok: boolean; message: string }> {
+    if (!projectPath || !commitHash) throw new Error('参数缺失：项目路径或 commitHash 为空');
+    try {
+      const res = await execa('git', ['revert', '--no-edit', commitHash.trim()], { cwd: projectPath });
+      this.info(`Git 撤销提交成功 [${projectPath}]: ${commitHash}`);
+      return { ok: true, message: res.stdout || `已成功撤销提交 ${commitHash.slice(0, 7)}` };
+    } catch (error: any) {
+      const stderr = error?.stderr || error?.stdout || error?.message || String(error);
+      throw new Error(`撤销提交失败: ${stderr}`);
+    }
+  }
+
+  async gitShowCommit(projectPath: string, commitHash: string): Promise<{ ok: boolean; diff: string }> {
+    if (!projectPath || !commitHash) throw new Error('参数缺失：项目路径或 commitHash 为空');
+    try {
+      const res = await execa('git', ['show', '--stat', '-p', commitHash.trim()], { cwd: projectPath });
+      return { ok: true, diff: res.stdout || '（该提交无代码改动内容）' };
+    } catch (error: any) {
+      const stderr = error?.stderr || error?.stdout || error?.message || String(error);
+      throw new Error(`获取提交内容失败: ${stderr}`);
+    }
   }
 
   async gitPush(projectPath: string): Promise<{ ok: boolean; summary: string }> {
@@ -2311,17 +2527,20 @@ export class GuiService {
     return { ok: true, summary: res.stdout || '初始化成功' };
   }
 
-  async gitDiff(projectPath: string, file?: string): Promise<{ ok: boolean; diff: string }> {
+  async gitDiff(projectPath: string, file?: string, isStaged?: boolean): Promise<{ ok: boolean; diff: string }> {
     if (!projectPath || !existsSync(projectPath)) {
       throw new Error('未指定有效项目路径');
     }
 
     try {
       const args = ['diff'];
-      if (file && file.trim()) {
-        args.push('HEAD', '--', file.trim());
+      if (isStaged) {
+        args.push('--cached');
       } else {
         args.push('HEAD');
+      }
+      if (file && file.trim()) {
+        args.push('--', file.trim());
       }
 
       try {
@@ -2330,7 +2549,9 @@ export class GuiService {
           return { ok: true, diff: res.stdout };
         }
       } catch {
-        const fallbackRes = await execa('git', file ? ['diff', '--', file.trim()] : ['diff'], { cwd: projectPath });
+        const fallbackArgs = isStaged ? ['diff', '--cached'] : ['diff'];
+        if (file && file.trim()) fallbackArgs.push('--', file.trim());
+        const fallbackRes = await execa('git', fallbackArgs, { cwd: projectPath });
         if (fallbackRes.stdout.trim()) {
           return { ok: true, diff: fallbackRes.stdout };
         }
@@ -2354,8 +2575,8 @@ export class GuiService {
     }
   }
 
-  async getVisualDiff(projectPath: string, file?: string): Promise<{ ok: boolean; files: FileDiffItem[]; rawDiff: string }> {
-    const rawRes = await this.gitDiff(projectPath, file);
+  async getVisualDiff(projectPath: string, file?: string, isStaged?: boolean): Promise<{ ok: boolean; files: FileDiffItem[]; rawDiff: string }> {
+    const rawRes = await this.gitDiff(projectPath, file, isStaged);
     const rawDiff = rawRes.diff || '';
     const files = parseUnifiedDiff(rawDiff);
     return { ok: true, files, rawDiff };
@@ -2364,25 +2585,75 @@ export class GuiService {
   async revertFileDiff(projectPath: string, file: string): Promise<{ ok: boolean; message: string }> {
     if (!projectPath || !file) throw new Error('参数缺失');
     try {
-      await execa('git', ['checkout', 'HEAD', '--', file], { cwd: projectPath });
+      await execa('git', ['restore', '--', file], { cwd: projectPath });
       this.info(`已回滚文件变更: ${file}`);
       return { ok: true, message: `已成功还原 ${file}` };
     } catch {
       try {
-        await execa('git', ['checkout', '--', file], { cwd: projectPath });
+        await execa('git', ['checkout', 'HEAD', '--', file], { cwd: projectPath });
         this.info(`已回滚文件变更: ${file}`);
         return { ok: true, message: `已成功还原 ${file}` };
-      } catch (err) {
-        throw new Error(`回滚失败: ${describeError(err)}`);
+      } catch {
+        // 如果是未跟踪新增文件，删除本地文件
+        const fullPath = join(projectPath, file);
+        if (existsSync(fullPath)) {
+          rmSync(fullPath, { force: true, recursive: true });
+          this.info(`已清理未跟踪新增文件: ${file}`);
+          return { ok: true, message: `已删除未跟踪文件 ${file}` };
+        }
+        throw new Error(`回滚失败`);
       }
     }
   }
 
+  async revertAllFiles(projectPath: string): Promise<{ ok: boolean; message: string }> {
+    if (!projectPath) throw new Error('参数缺失');
+    try {
+      await execa('git', ['restore', '.'], { cwd: projectPath });
+    } catch {
+      await execa('git', ['checkout', 'HEAD', '--', '.'], { cwd: projectPath });
+    }
+    try {
+      await execa('git', ['clean', '-fd'], { cwd: projectPath });
+    } catch {}
+    this.info(`已成功放弃工作区全部修改 [${projectPath}]`);
+    return { ok: true, message: '已成功放弃工作区全部修改' };
+  }
+
   async stageFileDiff(projectPath: string, file: string): Promise<{ ok: boolean; message: string }> {
     if (!projectPath || !file) throw new Error('参数缺失');
-    await execa('git', ['add', file], { cwd: projectPath });
+    await execa('git', ['add', '--', file], { cwd: projectPath });
     this.info(`已暂存文件: ${file}`);
     return { ok: true, message: `已成功暂存 ${file}` };
+  }
+
+  async unstageFileDiff(projectPath: string, file: string): Promise<{ ok: boolean; message: string }> {
+    if (!projectPath || !file) throw new Error('参数缺失');
+    try {
+      await execa('git', ['restore', '--staged', '--', file], { cwd: projectPath });
+    } catch {
+      await execa('git', ['reset', 'HEAD', '--', file], { cwd: projectPath });
+    }
+    this.info(`已取消暂存文件: ${file}`);
+    return { ok: true, message: `已从暂存区移出 ${file}` };
+  }
+
+  async stageAllFiles(projectPath: string): Promise<{ ok: boolean; message: string }> {
+    if (!projectPath) throw new Error('参数缺失');
+    await execa('git', ['add', '-A'], { cwd: projectPath });
+    this.info(`已暂存全部改动 [${projectPath}]`);
+    return { ok: true, message: '已暂存全部改动' };
+  }
+
+  async unstageAllFiles(projectPath: string): Promise<{ ok: boolean; message: string }> {
+    if (!projectPath) throw new Error('参数缺失');
+    try {
+      await execa('git', ['restore', '--staged', '.'], { cwd: projectPath });
+    } catch {
+      await execa('git', ['reset', 'HEAD'], { cwd: projectPath });
+    }
+    this.info(`已取消全部暂存 [${projectPath}]`);
+    return { ok: true, message: '已取消全部暂存' };
   }
 
   async stageHunk(projectPath: string, file: string, patch: string): Promise<{ ok: boolean; message: string }> {

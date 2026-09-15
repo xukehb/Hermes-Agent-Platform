@@ -73,6 +73,11 @@ function registerIpc(): void {
   ipcMain.handle('gui:updatePermissions', (_event, config) => invoke(() => service.updatePermissions(config)));
   ipcMain.handle('gui:getGitStatus', (_event, projectPath) => invoke(() => service.getGitStatus(projectPath)));
   ipcMain.handle('gui:gitCommit', (_event, payload) => invoke(() => service.gitCommit(payload.projectPath, payload.message)));
+  ipcMain.handle('gui:gitStashCommit', (_event, payload) => invoke(() => service.gitStashCommit(payload.projectPath, payload.message)));
+  ipcMain.handle('gui:gitGetCommitHistory', (_event, payload) => invoke(() => service.gitGetCommitHistory(payload.projectPath, payload.limit)));
+  ipcMain.handle('gui:gitRollbackCommit', (_event, payload) => invoke(() => service.gitRollbackCommit(payload.projectPath, payload.commitHash, payload.mode)));
+  ipcMain.handle('gui:gitRevertCommit', (_event, payload) => invoke(() => service.gitRevertCommit(payload.projectPath, payload.commitHash)));
+  ipcMain.handle('gui:gitShowCommit', (_event, payload) => invoke(() => service.gitShowCommit(payload.projectPath, payload.commitHash)));
   ipcMain.handle('gui:gitPush', (_event, projectPath) => invoke(() => service.gitPush(projectPath)));
   ipcMain.handle('gui:gitPull', (_event, projectPath) => invoke(() => service.gitPull(projectPath)));
   ipcMain.handle('gui:getGitAuthInfo', (_event, projectPath) => invoke(() => service.getGitAuthInfo(projectPath)));
@@ -85,10 +90,14 @@ function registerIpc(): void {
   ipcMain.handle('gui:gitRebaseBranch', (_event, payload) => invoke(() => service.gitRebaseBranch(payload.projectPath, payload.targetBranch)));
   ipcMain.handle('gui:gitRebaseAbort', (_event, projectPath) => invoke(() => service.gitRebaseAbort(projectPath)));
   ipcMain.handle('gui:gitRebaseContinue', (_event, projectPath) => invoke(() => service.gitRebaseContinue(projectPath)));
-  ipcMain.handle('gui:gitDiff', (_event, payload) => invoke(() => service.gitDiff(payload.projectPath, payload.file)));
-  ipcMain.handle('gui:getVisualDiff', (_event, payload) => invoke(() => service.getVisualDiff(payload.projectPath, payload.file)));
+  ipcMain.handle('gui:gitDiff', (_event, payload) => invoke(() => service.gitDiff(payload.projectPath, payload.file, payload.isStaged)));
+  ipcMain.handle('gui:getVisualDiff', (_event, payload) => invoke(() => service.getVisualDiff(payload.projectPath, payload.file, payload.isStaged)));
   ipcMain.handle('gui:revertFileDiff', (_event, payload) => invoke(() => service.revertFileDiff(payload.projectPath, payload.file)));
+  ipcMain.handle('gui:revertAllFiles', (_event, projectPath) => invoke(() => service.revertAllFiles(projectPath)));
   ipcMain.handle('gui:stageFileDiff', (_event, payload) => invoke(() => service.stageFileDiff(payload.projectPath, payload.file)));
+  ipcMain.handle('gui:unstageFileDiff', (_event, payload) => invoke(() => service.unstageFileDiff(payload.projectPath, payload.file)));
+  ipcMain.handle('gui:stageAllFiles', (_event, projectPath) => invoke(() => service.stageAllFiles(projectPath)));
+  ipcMain.handle('gui:unstageAllFiles', (_event, projectPath) => invoke(() => service.unstageAllFiles(projectPath)));
   ipcMain.handle('gui:stageHunk', (_event, payload) => invoke(() => service.stageHunk(payload.projectPath, payload.file, payload.patch)));
   ipcMain.handle('gui:revertHunk', (_event, payload) => invoke(() => service.revertHunk(payload.projectPath, payload.file, payload.patch)));
   ipcMain.handle('gui:getProjectCommitRule', (_event, projectPath) => invoke(() => service.getProjectCommitRule(projectPath)));
@@ -264,7 +273,7 @@ async function createWindow(): Promise<void> {
     minHeight: 720,
     title: 'Hermes Agent Platform',
     icon: rendererPath('app-icon.png'),
-    backgroundColor: '#00000000',
+    backgroundColor: '#0b0f19',
     autoHideMenuBar: true,
     webPreferences: {
       preload: rendererPath('preload.cjs'),
