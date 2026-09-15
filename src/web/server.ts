@@ -771,7 +771,7 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
   app.get('/', (c) => {
     const htmlPath = join(rendererDir, 'index.html');
     if (!existsSync(htmlPath)) {
-      return c.html(`<h1>CodexConnect Web 工作台已启动</h1><p>API 运行正常 (Port: ${options.port || 3000})</p>`);
+      return c.html(`<h1>Hermes Agent Platform Web 工作台已启动</h1><p>API 运行正常 (Port: ${options.port || 3000})</p>`);
     }
 
     let html = readFileSync(htmlPath, 'utf8');
@@ -1057,7 +1057,7 @@ export function startWebServer(options: WebServerOptions = {}) {
   const log = options.log || console.log;
 
   log('\n🌐 ════════════════════════════════════════════════════════════');
-  log(`   CodexConnect 局域网 Web 工作台已就绪！`);
+  log(`   Hermes Agent Platform 局域网 Web 工作台已就绪！`);
   log(`   - 本地访问： http://localhost:${port}`);
   if (!isLoopbackHost(bind)) {
     for (const ip of ips) {

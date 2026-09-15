@@ -44,7 +44,8 @@ export type TaskEvent =
   | { type: 'tool_end'; result: ToolResult }
   | { type: 'model_switch'; from: string; to: string; reason: string }
   | { type: 'notice'; message: string }
-  | { type: 'usage'; usage: TokenUsage };
+  | { type: 'usage'; usage: TokenUsage }
+  | { type: 'stream_end' };
 
 export type TaskEventSink = (event: TaskEvent) => void;
 export type UsageEventSink = (event: {

@@ -117,7 +117,7 @@ export async function lookupIpGeo(targetIp?: string): Promise<IpGeoInfo> {
     const res = await fetch(queryUrl, {
       signal: AbortSignal.timeout(3000),
       headers: {
-        'User-Agent': 'CodexConnect-Diagnostics/1.0',
+        'User-Agent': 'Hermes-Agent-Platform-Diagnostics/1.0',
         'Accept': 'application/json',
       },
     });

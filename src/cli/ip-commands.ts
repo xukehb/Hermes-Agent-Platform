@@ -45,7 +45,7 @@ export function registerIpCommands(root: Command, globals: () => GlobalOptions):
       const geo = await lookupIpGeo(target);
       const lines = [
         `\n🌐 ════════════════════════════════════════════════════════════════════`,
-        `   CodexConnect IP 归属地与网络定位诊断报告`,
+        `   Hermes Agent Platform IP 归属地与网络定位诊断报告`,
         `════════════════════════════════════════════════════════════════════`,
         `   目标 IP:     ${geo.ip} ${geo.isPrivate ? '(局域网私网)' : '(公网出口)'}`,
         `   地理归属地:  ${geo.formattedLocation}`,

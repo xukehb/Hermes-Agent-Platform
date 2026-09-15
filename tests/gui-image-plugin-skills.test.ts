@@ -123,10 +123,10 @@ describe('AI Image Generation Plugin & Skill Ecosystem', () => {
   it('explains what Skill was used in the assistant response with prompt breakdown', () => {
     const app = readFileSync('src/gui/renderer/app.js', 'utf8');
     // Verifies assistant message includes skill details and prompt transformation
-    expect(app).toContain('> ⚡ **应用技能 (Skill)**：');
-    expect(app).toContain('> 📖 **技能说明**：');
-    expect(app).toContain('> 📝 **原始描述**：');
-    expect(app).toContain('> 🪄 **技能增强提示词**：');
+    expect(app).toContain('> **应用技能 (Skill)**：');
+    expect(app).toContain('> **技能说明**：');
+    expect(app).toContain('> **原始描述**：');
+    expect(app).toContain('> **技能增强提示词**：');
     expect(app).toContain('plugin-executing-skill-banner');
   });
 

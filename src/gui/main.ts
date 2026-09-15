@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, screen, shell } from 'electron';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GuiService } from './service.js';
@@ -13,6 +13,10 @@ if (process.platform === 'linux') {
 
 const service = new GuiService();
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
+
+let mainWindow: BrowserWindow | null = null;
+let isMiniMode = false;
+let normalBounds: Electron.Rectangle | null = null;
 
 function rendererPath(file: string): string {
   return join(__dirname, 'renderer', file);
@@ -177,6 +181,76 @@ function registerIpc(): void {
     }
     return { ok: false, error: '非法 URL 地址' };
   });
+
+  // 窗口系统控制、透明度调节与 Mini 模式 IPC 接口
+  ipcMain.handle('gui:window:minimize', () => {
+    mainWindow?.minimize();
+    return { ok: true, data: true };
+  });
+  ipcMain.handle('gui:window:maximize', () => {
+    if (!mainWindow) return { ok: false, error: 'Window not ready' };
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+    return { ok: true, data: mainWindow.isMaximized() };
+  });
+  ipcMain.handle('gui:window:close', () => {
+    mainWindow?.close();
+    return { ok: true, data: true };
+  });
+  ipcMain.handle('gui:window:setOpacity', (_event, opacity: number) => {
+    if (!mainWindow) return { ok: false, error: 'Window not ready' };
+    const clamped = Math.max(0.3, Math.min(1.0, Number(opacity) || 1.0));
+    mainWindow.setOpacity(clamped);
+    return { ok: true, data: clamped };
+  });
+  ipcMain.handle('gui:window:getOpacity', () => {
+    if (!mainWindow) return { ok: true, data: 1.0 };
+    return { ok: true, data: mainWindow.getOpacity() };
+  });
+  ipcMain.handle('gui:window:setAlwaysOnTop', (_event, flag: boolean) => {
+    if (!mainWindow) return { ok: false, error: 'Window not ready' };
+    mainWindow.setAlwaysOnTop(Boolean(flag), flag ? 'floating' : 'normal');
+    return { ok: true, data: Boolean(flag) };
+  });
+  ipcMain.handle('gui:window:setMiniMode', (_event, enable: boolean) => {
+    if (!mainWindow) return { ok: true, data: isMiniMode };
+    if (enable && !isMiniMode) {
+      normalBounds = mainWindow.getBounds();
+      isMiniMode = true;
+      mainWindow.setMinimumSize(320, 240);
+      try {
+        const display = screen.getDisplayMatching(normalBounds);
+        const workArea = display.workArea;
+        const miniWidth = 360;
+        const miniHeight = 520;
+        const x = Math.round(workArea.x + workArea.width - miniWidth - 30);
+        const y = Math.round(workArea.y + workArea.height - miniHeight - 30);
+        mainWindow.setBounds({ x, y, width: miniWidth, height: miniHeight });
+      } catch {
+        mainWindow.setSize(360, 520);
+      }
+      mainWindow.setAlwaysOnTop(true, 'floating');
+      mainWindow.webContents.send('gui:window:miniModeChanged', true);
+    } else if (!enable && isMiniMode) {
+      isMiniMode = false;
+      mainWindow.setAlwaysOnTop(false);
+      mainWindow.setMinimumSize(1080, 720);
+      if (normalBounds) {
+        mainWindow.setBounds(normalBounds);
+      } else {
+        mainWindow.setSize(1320, 860);
+        mainWindow.center();
+      }
+      mainWindow.webContents.send('gui:window:miniModeChanged', false);
+    }
+    return { ok: true, data: isMiniMode };
+  });
+  ipcMain.handle('gui:window:getMiniMode', () => {
+    return { ok: true, data: isMiniMode };
+  });
 }
 
 async function createWindow(): Promise<void> {
@@ -188,15 +262,20 @@ async function createWindow(): Promise<void> {
     height: 860,
     minWidth: 1080,
     minHeight: 720,
-    title: 'ChatGPT · HAP Studio',
+    title: 'Hermes Agent Platform',
     icon: rendererPath('app-icon.png'),
-    backgroundColor: '#ffffff',
+    backgroundColor: '#00000000',
     autoHideMenuBar: true,
     webPreferences: {
       preload: rendererPath('preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  mainWindow = window;
+  mainWindow.on('closed', () => {
+    mainWindow = null;
   });
 
   // 监听键盘输入事件，支持 Ctrl+Shift+I / F12 开关控制台，Ctrl+R / F5 快速刷新

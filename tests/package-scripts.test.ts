@@ -74,4 +74,25 @@ describe('package scripts', () => {
     expect(workflow).toContain('actions/download-artifact@v4');
     expect(workflow).toContain('softprops/action-gh-release@v2');
   });
+
+  it('does not expose legacy desktop product names at runtime', () => {
+    const runtimeFiles = [
+      'src/cli/ip-commands.ts',
+      'src/cli/clean-commands.ts',
+      'src/cli/host-commands.ts',
+      'src/system/ip-lookup.ts',
+      'src/web/server.ts',
+      'src/gui/main.ts',
+      'src/gui/renderer/index.html',
+      'src/gui/service.ts',
+      'src/tools/builtin/host-tools.ts',
+    ];
+    const runtimeText = runtimeFiles
+      .map((file) => readFileSync(join(process.cwd(), file), 'utf8'))
+      .join('\n');
+
+    expect(runtimeText).not.toContain('CodexConnect');
+    expect(runtimeText).not.toContain('ChatGPT · HAP Studio');
+    expect(runtimeText).toContain('Hermes Agent Platform');
+  });
 });

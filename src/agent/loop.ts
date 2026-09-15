@@ -469,6 +469,7 @@ export class AgentLoop {
             }
           }
         }
+        request.onEvent?.({ type: 'stream_end' });
         events.push(...parser.end());
         const outcome = foldTurn(events);
         const durationMs = Date.now() - startedAt;

@@ -508,7 +508,7 @@ function readState(): GuiState {
     const cwd = process.cwd();
     const defaultProject: GuiProject = {
       id: randomUUID(),
-      name: basename(cwd) || 'CodexConnect',
+      name: basename(cwd) || 'Hermes Agent Platform',
       path: cwd,
       addedAt: new Date().toISOString(),
     };
@@ -2203,7 +2203,7 @@ export class GuiService {
         return {
           ok: false,
           hasConflict: true,
-          message: '⚠️ 合并时检测到代码冲突！冲突文件已在列表中标红，请解决冲突后提交，或点击「终止合并」。',
+          message: '[注意] 合并时检测到代码冲突！冲突文件已在列表中标红，请解决冲突后提交，或点击「终止合并」。',
         };
       }
       throw new Error(`合并分支失败: ${msg}`);
@@ -2252,7 +2252,7 @@ export class GuiService {
         return {
           ok: false,
           hasConflict: true,
-          message: '⚠️ 变基过程中产生代码冲突，变基已暂停！请解决冲突并暂存后点击「继续变基」，或点击「终止变基」。',
+          message: '[注意] 变基过程中产生代码冲突，变基已暂停！请解决冲突并暂存后点击「继续变基」，或点击「终止变基」。',
         };
       }
       throw new Error(`变基失败: ${msg}`);
@@ -2296,7 +2296,7 @@ export class GuiService {
         return {
           ok: false,
           hasConflict: true,
-          message: '⚠️ 仍存在未解决的变基冲突，请将冲突全部标记解决并暂存后再次继续。',
+          message: '[注意] 仍存在未解决的变基冲突，请将冲突全部标记解决并暂存后再次继续。',
         };
       }
       throw new Error(`继续变基失败: ${msg}`);
@@ -2862,20 +2862,20 @@ export class GuiService {
         if (chatController.signal.aborted || outcome.finishReason === 'abort') {
           outcome = {
             taskId,
-            text: (outcome?.text ? outcome.text + '\n\n' : '') + '*(⏹️ 用户已手动中断本次生成)*',
+            text: (outcome?.text ? outcome.text + '\n\n' : '') + '*(用户已手动中断本次生成)*',
             finishReason: 'abort',
             iterations: outcome?.iterations ?? 0,
             model: targetModel || 'default',
           };
         } else if (outcome.status === 'failed' || outcome.finishReason === 'error' || (!outcome.text && outcome.error)) {
           const reason = outcome.error || '大模型接口未返回有效回复';
-          outcome.text = `⚠️ **智能体回复提示：**\n\n\`${reason}\`\n\n> 💡 **解决建议：**\n> 1. 请前往左侧导航 **【⚙️ 设置中心 -> AI 服务商与模型】**，检查对应服务商的 **API 基础地址 (Base URL)** 与 **API Key** 是否填写正确；\n> 2. 点击服务商卡片上的 **【连通测试】** 验证网络与 Key 有效性；\n> 3. 您也可以点击顶部模型下拉框，切换到其它已就绪的模型（如 DeepSeek、OpenAI 或本地免费的 Ollama）。\n> 4. 支持本地斜杠系统指令，例如发送 \`/models\` 查看所有已配置模型。\n`;
+          outcome.text = `**智能体回复提示：**\n\n\`${reason}\`\n\n> **解决建议：**\n> 1. 请前往左侧导航 **【设置中心 -> AI 服务商与模型】**，检查对应服务商的 **API 基础地址 (Base URL)** 与 **API Key** 是否填写正确；\n> 2. 点击服务商卡片上的 **【连通测试】** 验证网络与 Key 有效性；\n> 3. 您也可以点击顶部模型下拉框，切换到其它已就绪的模型（如 DeepSeek、OpenAI 或本地免费的 Ollama）。\n> 4. 支持本地斜杠系统指令，例如发送 \`/models\` 查看所有已配置模型。\n`;
         }
       } catch (taskErr) {
         if (chatController.signal.aborted) {
           outcome = {
             taskId,
-            text: '*(⏹️ 用户已手动中断本次生成)*',
+            text: '*(用户已手动中断本次生成)*',
             finishReason: 'abort',
             iterations: 0,
             model: targetModel || 'default',
@@ -2885,7 +2885,7 @@ export class GuiService {
           this.error('智能体对话执行异常：' + errMsg);
           outcome = {
             taskId: 'err_' + Date.now(),
-            text: `⚠️ **智能体回复提示：**\n\n\`${errMsg}\`\n\n> 💡 **解决建议：**\n> 1. 请前往左侧导航 **【⚙️ 设置中心 -> AI 服务商与模型】**，检查对应服务商的 **API 基础地址 (Base URL)** 与 **API Key** 是否填写正确；\n> 2. 点击服务商卡片上的 **【连通测试】** 验证连通性；\n> 3. 您也可以点击顶部模型下拉框，切换到其它已就绪的模型直接对话。\n> 4. 支持本地斜杠系统指令（如 \`/models\`、\`/help\`）。\n`,
+            text: `**智能体回复提示：**\n\n\`${errMsg}\`\n\n> **解决建议：**\n> 1. 请前往左侧导航 **【设置中心 -> AI 服务商与模型】**，检查对应服务商的 **API 基础地址 (Base URL)** 与 **API Key** 是否填写正确；\n> 2. 点击服务商卡片上的 **【连通测试】** 验证连通性；\n> 3. 您也可以点击顶部模型下拉框，切换到其它已就绪的模型直接对话。\n> 4. 支持本地斜杠系统指令（如 \`/models\`、\`/help\`）。\n`,
             iterations: 0,
             model: targetModel || 'default',
           };
@@ -3883,7 +3883,7 @@ export class GuiService {
         const res = await fetch(`https://api.telegram.org/bot${token}/getMe`, { signal: controller.signal }).finally(() => clearTimeout(timeoutId));
         const data = await res.json() as { ok: boolean; result?: { id: number; is_bot: boolean; first_name: string; username: string } };
         if (data.ok && data.result) {
-          return { ok: true, message: `🎉 握手成功！机器人：@${data.result.username} (${data.result.first_name})`, details: data.result };
+          return { ok: true, message: `握手成功！机器人：@${data.result.username} (${data.result.first_name})`, details: data.result };
         }
         return { ok: false, message: 'Telegram Token 校验失败：凭据无效或被封禁' };
       } catch (err) {
@@ -3957,7 +3957,7 @@ export class GuiService {
     const server = RemoteServerStore.getInstance().get(payload.serverId) || { name: payload.serverId, host: payload.serverId };
     const { channel, webhookUrl, targetId } = payload.botConfig;
     const nowStr = new Date().toLocaleString();
-    const title = '🚨 [HAP 计算节点监控测试告警]';
+    const title = '[HAP 计算节点监控测试告警]';
     const content = `【节点名称】${server.name} (${server.host})\n【绑定智能体】${payload.botConfig.agentId || 'ops'}\n【通道状态】测试推送正常\n【时间】${nowStr}\n\n已成功连通告警机器人，当 CPU/内存/磁盘 超过阈值或节点离线时将自动推送并唤醒 Agent 自愈。`;
 
     if (channel === 'feishu') {
@@ -3973,7 +3973,7 @@ export class GuiService {
         });
         const data = await res.json() as any;
         if (data.code === 0 || data.StatusCode === 0 || res.ok) {
-          return { ok: true, message: '🎉 飞书告警卡片已成功推送到指定群聊！' };
+          return { ok: true, message: '飞书告警卡片已成功推送到指定群聊！' };
         }
         return { ok: false, message: `飞书推送响应异常：${JSON.stringify(data)}` };
       } catch (err: any) {
@@ -3994,7 +3994,7 @@ export class GuiService {
         });
         const data = await res.json() as any;
         if (data.errcode === 0 || res.ok) {
-          return { ok: true, message: '🎉 企微告警卡片已成功推送到群聊！' };
+          return { ok: true, message: '企微告警卡片已成功推送到群聊！' };
         }
         return { ok: false, message: `企微推送异常：${JSON.stringify(data)}` };
       } catch (err: any) {
@@ -4028,7 +4028,7 @@ export class GuiService {
         });
         const data = await res.json() as any;
         if (data.ok) {
-          return { ok: true, message: '🎉 Telegram 告警消息已成功发送至指定 Chat！' };
+          return { ok: true, message: 'Telegram 告警消息已成功发送至指定 Chat！' };
         }
         const description = String(data.description || '');
         if (description.toLowerCase().includes('chat not found')) {
@@ -4060,7 +4060,7 @@ export class GuiService {
               timestamp: Date.now(),
             }),
           });
-          return { ok: true, message: '🎉 通用 Webhook 告警测试请求已成功送达！' };
+          return { ok: true, message: '通用 Webhook 告警测试请求已成功送达！' };
         } catch (err: any) {
           return { ok: false, message: `Webhook 请求失败：${err.message}` };
         }

@@ -155,4 +155,19 @@ contextBridge.exposeInMainWorld('hap', {
   clearLogs: () => call('gui:clearLogs'),
   toggleDevTools: () => call('gui:toggleDevTools'),
   openExternal: (url) => call('gui:openExternal', url),
+  minimizeWindow: () => call('gui:window:minimize'),
+  maximizeWindow: () => call('gui:window:maximize'),
+  closeWindow: () => call('gui:window:close'),
+  setWindowOpacity: (opacity) => call('gui:window:setOpacity', opacity),
+  getWindowOpacity: () => call('gui:window:getOpacity'),
+  setAlwaysOnTop: (flag) => call('gui:window:setAlwaysOnTop', flag),
+  setMiniMode: (enable) => call('gui:window:setMiniMode', enable),
+  getMiniMode: () => call('gui:window:getMiniMode'),
+  onMiniModeChanged: (callback) => {
+    ipcRenderer.on('gui:window:miniModeChanged', (_event, data) => callback(data));
+  },
+  removeMiniModeListeners: () => {
+    ipcRenderer.removeAllListeners('gui:window:miniModeChanged');
+  },
 });
+

@@ -7,7 +7,7 @@
       content="default-src 'self' file: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https: file: data:; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https: file: data:; font-src 'self' data: https://fonts.gstatic.com file: https:; img-src 'self' data: blob: file: https:; connect-src 'self' ws: wss: http: https: file:;"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ChatGPT · HAP Studio</title>
+    <title>Hermes Agent Platform</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -93,52 +93,105 @@
             </div>
           </div>
 
+          <!-- 右侧工具栏：精简为 4 个清晰高雅的视觉胶囊，杜绝元素过多拥挤 -->
           <div class="header-right-tools">
-            <div class="token-telemetry-pill" id="tokenTelemetryPill" title="今日实时 Token 消耗">
-              <span class="token-telemetry-label">Tokens</span>
-              <span class="token-telemetry-value" id="tokenTelemetryTotal">0</span>
-              <span class="token-telemetry-server" id="tokenTelemetryServer">local 0</span>
-            </div>
+            <!-- 1. Git 状态指示 (紧凑胶囊) -->
             <button id="gitStatusTopBtn" class="btn text-btn git-capsule-btn" title="Git 关联、提交与推送代码">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 9v12"/><path d="M18 9a9 9 0 0 0-9 9"/>
               </svg>
               <span id="gitBranchTopText">Git</span>
               <span class="git-badge-pill" id="gitChangesTopBadge" style="display:none;">0</span>
             </button>
-            <div class="tool-capsule" title="切换处理智能体">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-              <select id="chatAgentSelect" class="agent-switch-select"></select>
-              <svg class="pill-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+
+            <!-- 2. 小 i 助手与 Mini 模式整合胶囊 -->
+            <div class="header-capsule-group">
+              <button id="miniIAssistantBtn" class="btn text-btn mini-i-trigger-btn" title="展开小 i 交互弹窗 (快捷问答与状态)">
+                <span class="mini-i-capsule">
+                  <span class="mini-i-dot"></span>
+                  <span class="mini-i-letter">i</span>
+                </span>
+                <span>小 i</span>
+              </button>
+              <button id="miniModeToggleBtn" class="btn text-btn mini-mode-btn" title="缩小为桌面悬浮小窗模式 (Alt+M)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="4" y="4" width="16" height="16" rx="2"/>
+                  <rect x="10" y="10" width="6" height="6" rx="1"/>
+                </svg>
+                <span>缩小化</span>
+              </button>
             </div>
-            <button id="openProjectVsCodeTopBtn" class="btn text-btn" title="在 VS Code 中打开当前绑定的项目">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-              <span>VS Code</span>
-            </button>
-            <button id="exportChatMarkdownBtn" class="btn text-btn" title="导出当前会话为 Markdown 文档">
+
+            <!-- 3. 外观设计中心 (集成 6 款主题色彩与半透明连续调节) -->
+            <button id="appearanceToggleBtn" class="btn text-btn appearance-trigger-btn" title="调整界面主题色彩与窗口半透明度">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 2a10 10 0 0 1 0 20c-1.5 0-2.5-1-2.5-2.5 0-.8.3-1.4.8-1.9.4-.5.7-1.1.7-1.6 0-1.4-1.1-2.5-2.5-2.5H7A5 5 0 0 1 2 8.5C2 4.9 6.5 2 12 2z"/>
               </svg>
-              <span>导出</span>
+              <span id="appearanceDisplayLabel">外观</span>
             </button>
-            <button id="themeToggleBtn" class="btn text-btn" title="切换深色/浅色主题 (Dark/Light)">
-              <svg class="theme-icon-dark" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-              </svg>
-              <svg class="theme-icon-light" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
-                <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-              </svg>
-            </button>
-            <button id="clearChatHistoryTopBtn" class="btn text-btn" title="清空上下文开启新对话 (/new)">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                <path d="M3 3v5h5"/>
-              </svg>
-              <span>清空</span>
-            </button>
-            <button id="deleteCurrentChatBtn" class="btn text-btn" title="删除当前会话">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            </button>
+
+            <!-- 4. 会话操作与更多工具下拉菜单 (将 VS Code, 导出, 清空, 删除, 智能体折叠于此) -->
+            <div class="header-more-wrap">
+              <button id="headerMoreBtn" class="btn text-btn header-more-btn" title="更多工具与会话管理">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="1"/>
+                  <circle cx="19" cy="12" r="1"/>
+                  <circle cx="5" cy="12" r="1"/>
+                </svg>
+                <span>操作</span>
+              </button>
+
+              <div id="headerMoreMenu" class="header-more-menu" style="display: none;">
+                <!-- 智能体选择 -->
+                <div class="more-menu-row">
+                  <span class="more-menu-label">当前智能体:</span>
+                  <div class="tool-capsule" title="切换处理智能体">
+                    <select id="chatAgentSelect" class="agent-switch-select"></select>
+                  </div>
+                </div>
+
+                <!-- Token 消耗指示 -->
+                <div class="more-menu-row">
+                  <span class="more-menu-label">Token 消耗:</span>
+                  <div class="token-telemetry-pill" id="tokenTelemetryPill" title="今日实时 Token 消耗">
+                    <span class="token-telemetry-value" id="tokenTelemetryTotal">0</span>
+                    <span class="token-telemetry-server" id="tokenTelemetryServer">local 0</span>
+                  </div>
+                </div>
+
+                <div class="more-menu-divider"></div>
+
+                <!-- 快捷动作列表 -->
+                <button id="openProjectVsCodeTopBtn" class="more-menu-item-btn" title="在 VS Code 中打开当前绑定的项目">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                  <span>在 VS Code 中打开</span>
+                </button>
+
+                <button id="exportChatMarkdownBtn" class="more-menu-item-btn" title="导出当前会话为 Markdown 文档">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  <span>导出 Markdown</span>
+                </button>
+
+                <button id="clearChatHistoryTopBtn" class="more-menu-item-btn" title="清空上下文开启新对话 (/new)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                    <path d="M3 3v5h5"/>
+                  </svg>
+                  <span>清空当前上下文</span>
+                </button>
+
+                <button id="deleteCurrentChatBtn" class="more-menu-item-btn more-danger-btn" title="删除当前会话">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  <span>删除当前会话</span>
+                </button>
+
+                <!-- 隐藏的传统主题切换按钮，保留兼容性 -->
+                <button id="themeToggleBtn" style="display: none;"></button>
+              </div>
+            </div>
           </div>
         </header>
 
@@ -296,7 +349,7 @@
                 重新部署 Daemon
               </button>
               <button type="button" class="btn primary" id="sdJumpChatBtn" onclick="window.sdJumpToChat()" style="font-size:12px;padding:6px 14px;">
-                在对话中呼叫 Agent ↗
+                在对话中呼叫 Agent
               </button>
             </div>
           </div>
@@ -543,28 +596,30 @@
               <!-- 顶部现代卡片式统计看板 -->
               <div class="provider-metrics-grid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
                 <div class="card metric-stat-card" style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);">
-                  <div style="width:38px;height:38px;border-radius:8px;background:#f0f9ff;color:#0284c7;display:grid;place-items:center;font-size:18px;flex-shrink:0;">🏢</div>
+                  <div style="width:38px;height:38px;border-radius:8px;background:#f0f9ff;color:#0284c7;display:grid;place-items:center;font-size:18px;flex-shrink:0;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2" ry="2"/><path d="M7 2v20"/><path d="M17 2v20"/><path d="M2 12h20"/><path d="M2 7h5"/><path d="M2 17h5"/><path d="M17 17h5"/><path d="M17 7h5"/></svg></div>
                   <div>
                     <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">已配置服务商</div>
                     <div style="font-size:19px;font-weight:700;color:var(--text-main);margin-top:2px;" id="statTotalProviders">0</div>
                   </div>
                 </div>
                 <div class="card metric-stat-card" style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);">
-                  <div style="width:38px;height:38px;border-radius:8px;background:#ecfdf5;color:#10b981;display:grid;place-items:center;font-size:18px;flex-shrink:0;">🟢</div>
+                  <div style="width:38px;height:38px;border-radius:8px;background:#ecfdf5;color:#10b981;display:grid;place-items:center;font-size:18px;flex-shrink:0;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
                   <div>
                     <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">连通正常服务商</div>
                     <div style="font-size:19px;font-weight:700;color:#10b981;margin-top:2px;" id="statHealthyProviders">0</div>
                   </div>
                 </div>
                 <div class="card metric-stat-card" style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);">
-                  <div style="width:38px;height:38px;border-radius:8px;background:#faf5ff;color:#a855f7;display:grid;place-items:center;font-size:18px;flex-shrink:0;">🤖</div>
+                  <div style="width:38px;height:38px;border-radius:8px;background:#faf5ff;color:#a855f7;display:grid;place-items:center;font-size:18px;flex-shrink:0;"></div>
                   <div>
                     <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">已收录模型总数</div>
                     <div style="font-size:19px;font-weight:700;color:var(--text-main);margin-top:2px;" id="statTotalModels">0</div>
                   </div>
                 </div>
                 <div class="card metric-stat-card" style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);">
-                  <div style="width:38px;height:38px;border-radius:8px;background:#fffbeb;color:#f59e0b;display:grid;place-items:center;font-size:18px;flex-shrink:0;">★</div>
+                  <div style="width:38px;height:38px;border-radius:8px;background:#fffbeb;color:#f59e0b;display:grid;place-items:center;flex-shrink:0;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  </div>
                   <div style="min-width:0;flex:1;">
                     <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">全局默认主模型</div>
                     <div style="font-size:14px;font-weight:700;color:var(--text-main);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="statDefaultModel">未设置</div>
@@ -579,23 +634,23 @@
                   <!-- 左侧双重视角切换 -->
                   <div class="view-switch-segmented" style="display:inline-flex;background:var(--bg-subtle);padding:3px;border-radius:8px;border:1px solid var(--border-default);">
                     <button type="button" class="btn-segmented active" id="viewModeProvidersBtn" onclick="window.switchProviderModelView('providers')" style="padding:5px 14px;font-size:12.5px;font-weight:600;border:none;border-radius:6px;cursor:pointer;transition:all 0.15s;">
-                      🏢 按服务商分组
+                      按服务商分组
                     </button>
                     <button type="button" class="btn-segmented" id="viewModeModelsBtn" onclick="window.switchProviderModelView('models')" style="padding:5px 14px;font-size:12.5px;font-weight:600;border:none;border-radius:6px;cursor:pointer;transition:all 0.15s;">
-                      📋 全量模型综合目录
+                      全量模型综合目录
                     </button>
                   </div>
 
                   <!-- 右侧全局操作按钮组 -->
                   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                     <button type="button" class="btn secondary" id="testAllProvidersBtn" onclick="window.testAllProviders(this)" style="font-size:12px;padding:6px 12px;display:inline-flex;align-items:center;gap:4px;">
-                      ⚡ 一键测全部服务商
+                      测试全部服务商
                     </button>
                     <button type="button" class="btn secondary" id="clearDefaultProvidersBtn" onclick="window.clearDefaultProviders()" style="font-size:12px;padding:6px 12px;">
                       清空内置预置
                     </button>
                     <button type="button" class="btn secondary" id="openEnvManagerBtn" onclick="window.openEnvManagerModal()" style="font-size:12px;padding:6px 12px;">
-                      🔑 全局环境变量
+                      全局环境变量
                     </button>
                     <button type="button" class="btn secondary" id="addModelQuickBtn" onclick="window.openModelDialog()" style="font-size:12px;padding:6px 12px;">
                       + 录入单个模型
@@ -616,19 +671,19 @@
                     <!-- 状态筛选 -->
                     <select id="pmStatusFilter" onchange="window.onProviderModelFilterChange()" style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--border-default);background:var(--bg-surface);color:var(--text-secondary);">
                       <option value="all">全部连通状态</option>
-                      <option value="ok">🟢 连通正常 (就绪)</option>
-                      <option value="missing_credentials">⚠️ 缺少凭据 (API Key)</option>
-                      <option value="unknown">⏳ 待测试探测</option>
+                      <option value="ok">[就绪] 连通正常</option>
+                      <option value="missing_credentials">[缺失] 缺少凭据 (API Key)</option>
+                      <option value="unknown">[待测] 待测试探测</option>
                     </select>
 
                     <!-- 能力筛选 (主要用于模型视图) -->
                     <select id="pmCapabilityFilter" onchange="window.onProviderModelFilterChange()" style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--border-default);background:var(--bg-surface);color:var(--text-secondary);">
                       <option value="all">全部能力特性</option>
-                      <option value="tools">🛠️ 工具调用 (Tools)</option>
-                      <option value="vision">👁️ 视觉能力 (Vision)</option>
-                      <option value="reasoning">🧠 深度思考 (Reasoning)</option>
-                      <option value="streaming">⚡ 流式传输 (Streaming)</option>
-                      <option value="longctx">📜 长上下文 (LongCtx)</option>
+                      <option value="tools">工具调用 (Tools)</option>
+                      <option value="vision">视觉能力 (Vision)</option>
+                      <option value="reasoning">深度思考 (Reasoning)</option>
+                      <option value="streaming">流式传输 (Streaming)</option>
+                      <option value="longctx">长上下文 (LongCtx)</option>
                     </select>
 
                     <!-- 批量操作栏 (当有勾选时显示) -->
@@ -689,7 +744,7 @@
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <button id="openMcpPlaygroundBtn" class="btn primary" style="font-size:12.5px;padding:6px 14px;background:linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);color:#fff;border:none;">
-                  ⚡ MCP 调试台
+                  MCP 调试台
                 </button>
                 <button id="openPresetMcpModalBtn" class="btn secondary" style="font-size:12.5px;padding:6px 14px;">
                   热门 MCP 插件库
@@ -701,7 +756,7 @@
                   + 从 GitHub 安装 Skill
                 </button>
                 <button id="openImportSkillModalFromMarketBtn" class="btn secondary" style="font-size:12.5px;padding:6px 14px;">
-                  📥 导入自定义/生图 Skill
+                  导入自定义/生图技能
                 </button>
               </div>
             </div>
@@ -730,7 +785,7 @@
                   <span class="market-tab-badge" id="tabCountActive">0</span>
                 </button>
                 <button type="button" class="market-tab-btn" data-market-tab="playground">
-                  <span>⚡ MCP 调试台</span>
+                  <span>MCP 调试台</span>
                   <span class="market-tab-badge" id="tabCountMcpTools" style="background:#e0e7ff;color:#4338ca;">0</span>
                 </button>
               </div>
@@ -755,7 +810,7 @@
                     <span class="mcp-tool-badge" id="mcpToolTotalCount">0 个</span>
                   </div>
                   <button type="button" class="btn text-btn" id="refreshMcpPlaygroundBtn" style="font-size:11.5px;padding:3px 6px;" title="重新连接与扫描 MCP 服务器暴露的工具">
-                    🔄 刷新
+                    刷新
                   </button>
                 </div>
                 <div class="mcp-search-wrap">
@@ -917,8 +972,9 @@
                   </div>
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;">
-                  <button type="button" class="btn secondary" id="openWechatModalBtn" style="font-size:12px;">
-                    ⛶ 弹出独立扫码窗口
+                  <button type="button" class="btn secondary" id="openWechatModalBtn" style="font-size:12px;display:inline-flex;align-items:center;gap:4px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                    <span>弹出独立扫码窗口</span>
                   </button>
                   <button type="button" class="btn secondary" id="refreshWxQrBtn" style="font-size:12px;">
                     同步联系人与群
@@ -1523,7 +1579,10 @@
               <!-- 系统运行时间指标卡 -->
               <div class="card metric-card">
                 <div class="metric-card-header">
-                  <span>⏱️ 系统连续运行</span>
+                  <span style="display:inline-flex;align-items:center;gap:5px;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>系统连续运行</span>
+                  </span>
                   <span id="hostLoadAvgBadge" class="badge neutral">负载: --</span>
                 </div>
                 <div style="font-size: 20px; font-weight: 700; color: var(--text-main); margin-top:2px;" id="hostSystemUptime">--</div>
@@ -1659,7 +1718,7 @@
               <div id="diskScanProgressBox" class="disk-scan-progress" style="display:none;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                   <div style="font-size:12.5px; font-weight:600; color:var(--text-main); display:flex; align-items:center; gap:8px;">
-                    <span style="display:inline-block; animation:spin 1s linear infinite;">⏳</span>
+                    <span class="spinner-sm"></span>
                     <span id="diskScanProgressText">正在从系统根目录全盘扫描...</span>
                   </div>
                   <span style="font-size:11.5px; color:var(--text-muted);">全盘深度体检中</span>
@@ -1776,12 +1835,12 @@
                       <strong style="font-size:14.5px;color:var(--text-main);" id="localHostCardName">本机宿主系统 (Local Host System)</strong>
                       <span class="badge success" style="font-size:10.5px;">● 在线 (本地直接控制)</span>
                     </div>
-                    <div style="font-size:11.5px;color:var(--text-muted);" id="localHostCardSub">当前 CodexConnect 运行的物理环境</div>
+                    <div style="font-size:11.5px;color:var(--text-muted);" id="localHostCardSub">当前 Hermes Agent Platform 运行的物理环境</div>
                   </div>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                   <button type="button" class="btn primary" onclick="window.switchSettingsTab('host')" style="font-size:12px;padding:6px 14px;">
-                    进入全景监控大盘 ↗
+                    进入全景监控大盘
                   </button>
                 </div>
               </div>
@@ -1823,7 +1882,7 @@
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                   <button type="button" class="btn secondary" onclick="window.openCommitRulesModal()" style="font-size:12px;display:inline-flex;align-items:center;gap:4px;">
-                    <span>⚙️</span> Git Commit 规则设置
+                    <span>设置</span> Git Commit 规则设置
                   </button>
                   <button type="button" class="btn secondary" id="importProjectBtn">+ 导入已有项目</button>
                   <button type="button" class="btn primary" onclick="window.openProjectDialog()">+ 手动添加项目</button>
@@ -2052,7 +2111,7 @@
       <form id="importSkillForm" class="modal-form-wrap" style="max-width:680px;">
         <div class="modal-header-row">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff;display:grid;place-items:center;font-size:16px;">⚡</div>
+            <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff;display:grid;place-items:center;font-size:16px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
             <div>
               <h2 style="margin:0;font-size:16px;font-weight:700;">导入技能 (Import Skill)</h2>
               <p style="margin:2px 0 0 0;font-size:12px;color:var(--text-muted);">导入或自定义 AI 生图视觉技能、智能体提示词模版或业务扩展能力</p>
@@ -2063,15 +2122,15 @@
 
         <!-- 导入方式切换: 上传文件 / 粘贴内容 / 手动表单 -->
         <div class="import-skill-tabs" style="display:flex;gap:8px;margin-bottom:12px;border-bottom:1px solid var(--border-default);padding-bottom:8px;">
-          <button type="button" class="btn secondary active" id="importSkillTabFile" style="font-size:12px;padding:4px 10px;">📁 文件导入 (.json / .md)</button>
-          <button type="button" class="btn secondary" id="importSkillTabPaste" style="font-size:12px;padding:4px 10px;">📋 粘贴 JSON / Markdown</button>
-          <button type="button" class="btn secondary" id="importSkillTabForm" style="font-size:12px;padding:4px 10px;">✏️ 手动填写表单</button>
+          <button type="button" class="btn secondary active" id="importSkillTabFile" style="font-size:12px;padding:4px 10px;">文件导入 (.json / .md)</button>
+          <button type="button" class="btn secondary" id="importSkillTabPaste" style="font-size:12px;padding:4px 10px;">粘贴 JSON / Markdown</button>
+          <button type="button" class="btn secondary" id="importSkillTabForm" style="font-size:12px;padding:4px 10px;">手动填写表单</button>
         </div>
 
         <!-- 文件导入区域 -->
         <div id="importSkillFileBox" class="import-drop-box" style="margin-bottom:12px;padding:16px;border:2px dashed var(--border-default);border-radius:8px;text-align:center;background:var(--bg-secondary);cursor:pointer;">
           <input type="file" id="importSkillFileInput" accept=".json,.md,.yaml,.yml,.txt" style="display:none;" />
-          <div style="font-size:24px;margin-bottom:4px;">📥</div>
+          <div class="import-drop-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
           <div style="font-size:13px;font-weight:600;color:var(--text-main);">点击选择或拖拽 Skill 文件至此</div>
           <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">支持 .json 配置文件或带 Frontmatter/Prompt 的 .md 技能规则文件</div>
         </div>
@@ -2095,10 +2154,10 @@
           <div class="form-group" style="margin-bottom:8px;">
             <label style="font-size:12px;font-weight:600;">技能类别 (Category)</label>
             <select id="importSkillCategorySelect">
-              <option value="image">🎨 图像生成视觉技能 (Image Skill)</option>
-              <option value="agent">🤖 智能体行为技能 (Agent Skill)</option>
-              <option value="workflow">🔄 工作流协作技能 (Workflow Skill)</option>
-              <option value="general">🧩 通用技能 (General)</option>
+              <option value="image">图像生成视觉技能 (Image Skill)</option>
+              <option value="agent">智能体行为技能 (Agent Skill)</option>
+              <option value="workflow">工作流协作技能 (Workflow Skill)</option>
+              <option value="general">通用技能 (General)</option>
             </select>
           </div>
           <div class="form-group" style="margin-bottom:8px;">
@@ -2368,11 +2427,11 @@
           <div class="form-group full-width">
             <label>模型能力标签 (Capabilities)</label>
             <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:4px;padding:8px 12px;background:var(--bg-subtle);border:1px solid var(--border-default);border-radius:6px;font-size:12px;">
-              <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapTools" checked /> 🛠️ 工具调用 (Tools)</label>
-              <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapVision" /> 👁️ 视觉理解 (Vision)</label>
-              <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapReasoning" /> 🧠 深度思考推理 (Reasoning)</label>
-              <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapStreaming" checked /> ⚡ 流式输出 (Streaming)</label>
-              <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapLongctx" /> 📜 超长上下文 (LongCtx)</label>
+              <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapTools" checked /> 工具调用 (Tools)</label>
+              <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapVision" /> 视觉理解 (Vision)</label>
+              <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapReasoning" /> 深度思考推理 (Reasoning)</label>
+              <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapStreaming" checked /> 流式输出 (Streaming)</label>
+              <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapLongctx" /> 超长上下文 (LongCtx)</label>
             </div>
           </div>
 
@@ -2568,7 +2627,7 @@
             <div style="display:flex;align-items:center;gap:6px;">
               <span style="color:var(--text-muted);">分支：</span>
               <strong id="gitBranchBadge" class="prop-chip" style="color:var(--accent);cursor:pointer;" title="点击管理分支、合并或变基">main</strong>
-              <button type="button" class="btn small secondary" id="openBranchManagerBtn" title="切换分支、创建新分支、合并 (Merge) 或变基 (Rebase)" style="padding:2px 8px;font-size:11px;height:22px;display:inline-flex;align-items:center;gap:4px;">🌿 分支与协同 ▾</button>
+              <button type="button" class="btn small secondary" id="openBranchManagerBtn" title="切换分支、创建新分支、合并 (Merge) 或变基 (Rebase)" style="padding:2px 8px;font-size:11px;height:22px;display:inline-flex;align-items:center;gap:4px;">分支与协同 ▾</button>
             </div>
             <div><span style="color:var(--text-muted);">远端：</span><span id="gitRemoteUrlText" style="font-family:var(--font-mono);color:var(--text-secondary);">-</span></div>
           </div>
@@ -2586,7 +2645,7 @@
           <!-- 冲突预警/合并变基状态提示横幅 -->
           <div id="gitConflictAlertBanner" class="git-conflict-banner" style="display:none;">
             <div style="display:flex;align-items:center;gap:6px;">
-              <span style="font-size:14px;">⚠️</span>
+              <span style="font-size:14px;"></span>
               <span id="gitConflictAlertText"><strong>检测到代码冲突！</strong>存在未合并的冲突文件，请查看下方标有「冲突」的文件。</span>
             </div>
             <div style="display:flex;gap:6px;align-items:center;" id="gitConflictActionGroup">
@@ -2594,7 +2653,7 @@
               <button type="button" class="btn secondary" id="gitAbortRebaseBtn" style="display:none;font-size:11px;padding:2px 8px;color:var(--danger);border-color:var(--danger);" title="终止本次变基并恢复现场">终止变基 (--abort)</button>
               <button type="button" class="btn primary" id="gitContinueRebaseBtn" style="display:none;font-size:11px;padding:2px 8px;background:#0284c7;border-color:#0284c7;" title="冲突已解决并暂存后继续变基">继续变基 (--continue)</button>
               <button type="button" class="btn secondary" onclick="window.openVsCodeForProject?.()" style="font-size:11px;padding:2px 8px;">VS Code 解决冲突</button>
-              <button type="button" class="btn primary" onclick="window.askAiResolveConflicts?.()" style="font-size:11px;padding:2px 8px;background:#e11d48;border-color:#be123c;">🤖 唤醒 AI 智能解决</button>
+              <button type="button" class="btn primary" onclick="window.askAiResolveConflicts?.()" style="font-size:11px;padding:2px 8px;background:#e11d48;border-color:#be123c;"> 唤醒 AI 智能解决</button>
             </div>
           </div>
 
@@ -2632,14 +2691,14 @@
           <div class="git-commit-section">
             <div class="git-commit-header-row">
               <label class="git-commit-label">
-                <span>💬</span> 提交信息 (Commit Message)
+                <span>提交</span> 提交信息 (Commit Message)
               </label>
               <div class="git-commit-actions">
                 <button type="button" class="btn git-ai-commit-btn" id="aiGenerateCommitBtn" title="依据左侧已暂存或选中的差异自动生成结构化提交说明">
-                  <span>✨</span> AI 智能生成 Commit 说明
+                  <span>AI</span> 智能生成 Commit 说明
                 </button>
                 <button type="button" class="btn secondary git-rules-btn" id="openCommitRulesModalBtn" title="配置 Commit 说明生成规则与团队规范">
-                  <span>⚙️</span> 规则设置
+                  <span>设置</span> 规则设置
                   <span id="currentCommitRuleBadge" class="commit-rule-badge">Conventional</span>
                 </button>
               </div>
@@ -2651,7 +2710,7 @@
             <div style="display:flex;gap:8px;">
               <button type="button" class="btn secondary" id="gitPullBtn" title="拉取远端最新代码">Git Pull 拉取</button>
               <button type="button" class="btn secondary" id="gitPushBtn" title="推送提交到远端仓库">Git Push 推送</button>
-              <button type="button" class="btn secondary" id="gitAuthConfigBtn" title="配置 Git 远程认证方式 (SSH 密钥 / GitHub Token)">🔑 凭据配置</button>
+              <button type="button" class="btn secondary" id="gitAuthConfigBtn" title="配置 Git 远程认证方式 (SSH 密钥 / GitHub Token)">凭据配置</button>
             </div>
             <div style="display:flex;gap:8px;">
               <button type="button" class="btn secondary" id="cancelGitModalBtn">关闭</button>
@@ -2718,17 +2777,17 @@
           <!-- 授权方式切换 Tab -->
           <div class="git-auth-tab-bar">
             <button type="button" class="git-auth-tab-btn active" id="gitAuthTabSshBtn">
-              <span>🔑</span> 方式一：SSH 密钥（最推荐 · 永久免密）
+              方式一：SSH 密钥（推荐 · 永久免密）
             </button>
             <button type="button" class="git-auth-tab-btn" id="gitAuthTabTokenBtn">
-              <span>🎫</span> 方式二：Personal Access Token
+              方式二：Personal Access Token
             </button>
           </div>
 
           <!-- Tab 1: SSH 方式 -->
           <div id="gitAuthSshPanel" style="display:flex;flex-direction:column;gap:12px;">
             <div class="git-auth-info-tip">
-              <span style="font-size:14px;flex-shrink:0;">💡</span>
+              <span class="hint-pill">提示</span>
               <div>
                 <strong>免密极速体验：</strong>SSH 协议基于非对称加密，无需账号密码即可完成安全身份认证，彻底告别浏览器弹窗与凭据过期问题。
               </div>
@@ -2737,23 +2796,23 @@
             <div>
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                 <label style="font-size:12px;font-weight:600;color:var(--text-main);">本地 SSH 公钥 (~/.ssh/id_ed25519.pub)：</label>
-                <button type="button" class="btn small secondary" id="gitAuthCopySshKeyBtn" style="padding:3px 10px;font-size:11.5px;">📋 复制公钥</button>
+                <button type="button" class="btn small secondary" id="gitAuthCopySshKeyBtn" style="padding:3px 10px;font-size:11.5px;">复制公钥</button>
               </div>
               <textarea id="gitAuthSshKeyDisplay" rows="3" readonly class="git-auth-key-area" placeholder="点击下方按钮即可一键生成密钥并加载公钥..."></textarea>
             </div>
 
             <div style="display:flex;gap:10px;align-items:center;">
               <button type="button" class="btn primary" id="gitAuthApplySshBtn" style="flex:1;padding:8px 14px;font-weight:600;">
-                ⚡ 一键配置 SSH 并切换远程地址
+                一键配置 SSH 并切换远程地址
               </button>
               <button type="button" class="btn secondary" id="gitAuthOpenGithubSshBtn" title="打开 GitHub SSH 密钥配置管理页" style="padding:8px 14px;">
-                GitHub 密钥设置 ↗
+                GitHub 密钥设置
               </button>
             </div>
 
             <div class="git-auth-steps-box">
               <div class="git-auth-steps-title">
-                <span>📌</span> 简单 2 步开箱即用：
+                <span>指南</span> 简单 2 步开箱即用：
               </div>
               <div>1. 点击上方 <strong>“一键配置 SSH 并切换远程地址”</strong>，系统将自动生成密钥、配置远程并复制公钥至剪贴板；</div>
               <div>2. 在自动打开的 GitHub 页面中点击 <strong>New SSH Key</strong> 粘贴公钥并保存，即可顺利免密推送。</div>
@@ -2763,7 +2822,7 @@
           <!-- Tab 2: Token 方式 -->
           <div id="gitAuthTokenPanel" style="display:none;flex-direction:column;gap:12px;">
             <div class="git-auth-info-tip">
-              <span style="font-size:14px;flex-shrink:0;">ℹ️</span>
+              <span class="hint-pill">说明</span>
               <div>
                 <strong>HTTPS 认证规范：</strong>GitHub 已全面禁用普通账号密码推送，必须使用 Personal Access Token (PAT) 替代密码。
               </div>
@@ -2781,16 +2840,16 @@
 
             <div style="display:flex;gap:10px;align-items:center;margin-top:2px;">
               <button type="button" class="btn primary" id="gitAuthSaveTokenBtn" style="flex:1;padding:8px 14px;font-weight:600;">
-                💾 保存 Token 凭据到系统
+                保存 Token 凭据到系统
               </button>
               <button type="button" class="btn secondary" id="gitAuthOpenGithubTokensBtn" title="在 GitHub 生成带有 repo 权限的访问令牌" style="padding:8px 14px;">
-                生成 Token ↗
+                生成 Token
               </button>
             </div>
 
             <div class="git-auth-steps-box">
               <div class="git-auth-steps-title">
-                <span>📌</span> Token 生成说明：
+                <span>说明</span> Token 生成说明：
               </div>
               <div>创建 Token 时请勾选 <code>repo</code>（完整仓库控制权限）。保存后将永久缓存至 Git 凭据管理器，后续推送自动免密。</div>
             </div>
@@ -2799,7 +2858,7 @@
 
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding-top:16px;margin-top:16px;border-top:1px solid var(--border-default);">
           <button type="button" class="btn secondary" id="gitAuthTestPushBtn" title="配置完成后立即验证推送">
-            🚀 立即测试推送
+            立即测试推送
           </button>
           <button type="button" class="btn secondary" id="closeGitAuthModalFooterBtn">关闭</button>
         </div>
@@ -2831,7 +2890,7 @@
           <!-- 当前分支卡片 -->
           <div class="git-branch-hero-card">
             <div style="display:flex;align-items:center;gap:10px;">
-              <div class="git-branch-icon-badge">🌿</div>
+              <div class="git-branch-icon-badge"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 9v12"/><path d="M18 9a9 9 0 0 0-9 9"/></svg></div>
               <div>
                 <div style="font-size:11.5px;color:var(--text-muted);">当前所在分支</div>
                 <div style="display:flex;align-items:center;gap:8px;margin-top:2px;">
@@ -2846,13 +2905,13 @@
           <!-- 分支功能 Tab 切换 -->
           <div class="git-auth-tab-bar">
             <button type="button" class="git-auth-tab-btn active" id="branchTabSwitchBtn">
-              <span>🔀</span> 分支列表与切换
+              分支列表与切换
             </button>
             <button type="button" class="git-auth-tab-btn" id="branchTabMergeBtn">
-              <span>🌿</span> 分支合并 (Merge)
+              分支合并 (Merge)
             </button>
             <button type="button" class="git-auth-tab-btn" id="branchTabRebaseBtn">
-              <span>🔄</span> 分支变基 (Rebase)
+              分支变基 (Rebase)
             </button>
           </div>
 
@@ -2860,9 +2919,9 @@
           <div id="branchPanelSwitch" style="display:flex;flex-direction:column;gap:12px;">
             <!-- 搜索与筛选 -->
             <div style="display:flex;gap:8px;align-items:center;">
-              <input type="search" id="branchSearchInput" placeholder="🔍 搜索本地或远程分支..." style="flex:1;" />
+              <input type="search" id="branchSearchInput" placeholder="搜索本地或远程分支..." style="flex:1;" />
               <button type="button" class="btn secondary" id="refreshBranchListBtn" title="刷新分支列表" style="padding:6px 10px;font-size:12px;">
-                🔄 刷新
+                刷新
               </button>
             </div>
 
@@ -2876,7 +2935,7 @@
             <!-- 底部新建分支表单 -->
             <div class="git-branch-create-box">
               <div style="font-size:12px;font-weight:600;color:var(--text-main);margin-bottom:6px;display:flex;align-items:center;gap:5px;">
-                <span>✨</span> 基于当前分支创建并切换新分支：
+                基于当前分支创建并切换新分支：
               </div>
               <div style="display:flex;gap:8px;">
                 <input type="text" id="newBranchNameInput" placeholder="输入新分支名称，如 feat/login 或 fix/ui-bug" style="flex:1;" />
@@ -2890,7 +2949,7 @@
           <!-- Tab 2: 分支合并 (Merge) -->
           <div id="branchPanelMerge" style="display:none;flex-direction:column;gap:14px;">
             <div class="git-auth-info-tip">
-              <span style="font-size:14px;flex-shrink:0;">💡</span>
+              <span class="hint-pill">提示</span>
               <div>
                 <strong>分支合并工作流：</strong>将选定分支的代码改动合并到当前分支 (<code id="mergeCurrentBranchLabel" style="font-weight:700;">main</code>)。若产生冲突，界面将高亮标红并提供协同解决方案。
               </div>
@@ -2916,7 +2975,7 @@
 
             <div style="display:flex;gap:10px;align-items:center;">
               <button type="button" class="btn primary" id="executeMergeBtn" style="flex:1;padding:8px 14px;font-weight:600;">
-                🌿 执行分支合并 (git merge)
+                执行分支合并 (git merge)
               </button>
               <button type="button" class="btn secondary" id="abortMergeModalBtn" style="display:none;padding:8px 14px;color:var(--danger);border-color:var(--danger);">
                 终止合并 (--abort)
@@ -2927,7 +2986,7 @@
           <!-- Tab 3: 分支变基 (Rebase) -->
           <div id="branchPanelRebase" style="display:none;flex-direction:column;gap:14px;">
             <div class="git-auth-info-tip">
-              <span style="font-size:14px;flex-shrink:0;">🔄</span>
+              <span class="hint-pill">同步</span>
               <div>
                 <strong>分支变基工作流：</strong>将当前分支 (<code id="rebaseCurrentBranchLabel" style="font-weight:700;">main</code>) 的提交序列整体“移动变基”到目标基底分支之后，形成线性干净的提交历史。
               </div>
@@ -2942,7 +3001,7 @@
 
             <div class="git-auth-steps-box">
               <div class="git-auth-steps-title">
-                <span>⚠️</span> 变基操作规范与提醒：
+                <span></span> 变基操作规范与提醒：
               </div>
               <div>· 推荐在个人特性分支上将基底变基到 <code>origin/main</code> 或 <code>main</code> 以同步主干；</div>
               <div>· 切勿对多人共享的公共主干分支进行变基操作，避免改写公共历史；</div>
@@ -2951,14 +3010,14 @@
 
             <div style="display:flex;gap:10px;align-items:center;">
               <button type="button" class="btn primary" id="executeRebaseBtn" style="flex:1;padding:8px 14px;font-weight:600;">
-                🔄 开始执行变基 (git rebase)
+                开始执行变基 (git rebase)
               </button>
             </div>
 
             <!-- 变基冲突时的操作控制栏 -->
             <div id="rebaseInProgressControls" style="display:none;flex-direction:column;gap:8px;background:rgba(239, 68, 68, 0.08);border:1px solid rgba(239, 68, 68, 0.3);padding:12px;border-radius:var(--radius-sm);">
               <div style="font-size:12px;font-weight:600;color:var(--danger);display:flex;align-items:center;gap:6px;">
-                <span>⚠️ 当前变基处于暂停状态（检测到代码冲突）：</span>
+                <span> 当前变基处于暂停状态（检测到代码冲突）：</span>
               </div>
               <div style="display:flex;gap:8px;">
                 <button type="button" class="btn primary" id="continueRebaseModalBtn" style="flex:1;background:var(--primary);font-size:12px;">
@@ -3181,7 +3240,7 @@
           <!-- 快捷操作栏 -->
           <div style="display:flex;flex-wrap:wrap;gap:8px;padding-top:6px;">
             <button type="button" class="btn primary" id="serverDetailsPanoramaBtn" style="font-size:12.5px;padding:6px 14px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);">
-              进入节点全景监控大盘 ↗
+              进入节点全景监控大盘
             </button>
             <button type="button" class="btn secondary" id="serverDetailsTerminalBtn" style="font-size:12.5px;padding:6px 14px;">
               切换至终端操作此节点
@@ -3416,7 +3475,7 @@
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
                 <label style="font-size:12px;font-weight:600;">生图增强技能 (Image Skill / 风格模板)</label>
                 <button type="button" class="btn secondary" id="openImportSkillModalBtn" style="font-size:11px;padding:2px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;">
-                  <span>📥</span> 导入技能
+                  导入技能
                 </button>
               </div>
               <select id="imageGenSkillSelect">
@@ -4091,7 +4150,7 @@
         <div class="commit-rule-header-row">
           <div class="commit-rule-title-group">
             <h3 class="commit-rule-title">
-              <span class="commit-rule-title-icon">📝</span> Git Commit Markdown 规范文档设置
+              Git Commit Markdown 规范文档设置
             </h3>
             <p class="commit-rule-desc">
               使用 Markdown (.md) 规范文档定义提交信息格式，AI 将严格按照该文档分析代码差异并生成 Commit
@@ -4105,11 +4164,11 @@
           <div class="commit-rule-toolbar-left">
             <label for="commitRulePresetSelect" class="commit-rule-toolbar-label">预置规范模板:</label>
             <select id="commitRulePresetSelect" class="commit-rule-select commit-rule-preset-select">
-              <option value="conventional">🌟 Conventional Commits (标准推荐)</option>
-              <option value="angular">📐 Angular 规范 (严格 Scope 格式)</option>
-              <option value="gitmoji">🎨 Gitmoji 规范 (表情符号)</option>
-              <option value="simple">⚡ 简明规范 (无类别前缀)</option>
-              <option value="bilingual">🌐 中英双语规范 (Bilingual)</option>
+              <option value="conventional">Conventional Commits (标准推荐)</option>
+              <option value="angular">Angular 规范 (严格 Scope 格式)</option>
+              <option value="gitmoji">Gitmoji 规范</option>
+              <option value="simple">简明规范 (无类别前缀)</option>
+              <option value="bilingual">中英双语规范 (Bilingual)</option>
             </select>
             <button type="button" class="btn secondary" id="applyCommitPresetBtn" style="font-size:11.5px;padding:4px 10px;" title="载入所选预置模板到编辑器">
               载入模板
@@ -4120,10 +4179,10 @@
             <!-- 编辑 / 预览 切换 -->
             <div class="commit-rule-tab-group">
               <button type="button" class="commit-rule-tab-btn active" id="commitRuleTabEditBtn" onclick="window.switchCommitRuleTab('edit')">
-                📝 编辑 Markdown
+                编辑 Markdown
               </button>
               <button type="button" class="commit-rule-tab-btn" id="commitRuleTabPreviewBtn" onclick="window.switchCommitRuleTab('preview')">
-                👁️ 实时渲染预览
+                实时渲染预览
               </button>
             </div>
           </div>
@@ -4132,15 +4191,15 @@
         <!-- 项目规范联动条 -->
         <div id="commitRuleProjectSyncBar" class="commit-rule-sync-bar">
           <div class="commit-rule-sync-info">
-            <span id="commitRuleProjectFileIcon" class="commit-rule-sync-icon">📁</span>
+            <span id="commitRuleProjectFileIcon" class="commit-rule-sync-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
             <span id="commitRuleProjectFileStatus">当前项目未发现 COMMIT_CONVENTION.md 规范文件</span>
           </div>
           <div class="commit-rule-sync-actions">
             <button type="button" class="commit-rule-sync-btn" id="loadFromProjectFileBtn" style="display:none;" title="从项目根目录载入规范文档">
-              📥 读取项目文件
+              读取项目文件
             </button>
             <button type="button" class="commit-rule-sync-btn" id="saveToProjectFileBtn" title="将当前 Markdown 内容写入项目根目录 COMMIT_CONVENTION.md">
-              💾 同步写入项目文件
+              同步写入项目文件
             </button>
           </div>
         </div>
@@ -4200,6 +4259,375 @@
         </div>
       </div>
     </dialog>
+
+    <!-- 弹窗: 可视化多主题选择器 (Theme Picker Modal) -->
+    <dialog id="themePickerModal" class="modal modal-md theme-picker-dialog">
+      <div class="modal-form-wrap" style="max-width: 640px; padding: 22px 24px;">
+        <div class="modal-header-row" style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-default);">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="theme-modal-icon-badge">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 2a10 10 0 0 1 0 20c-1.5 0-2.5-1-2.5-2.5 0-.8.3-1.4.8-1.9.4-.5.7-1.1.7-1.6 0-1.4-1.1-2.5-2.5-2.5H7A5 5 0 0 1 2 8.5C2 4.9 6.5 2 12 2z"/>
+              </svg>
+            </div>
+            <div>
+              <h2 style="margin: 0; font-size: 16px; font-weight: 600;">界面色彩风格与多主题系统</h2>
+              <p style="margin: 2px 0 0; font-size: 12px; color: var(--text-muted);">精选 6 款经过光学对比度调校的高质感专业主题</p>
+            </div>
+          </div>
+          <button type="button" class="btn-close" id="closeThemePickerModalBtn" aria-label="关闭" title="关闭"></button>
+        </div>
+
+        <div class="theme-cards-grid">
+          <!-- 1. 曜石深空 -->
+          <div class="theme-select-card" data-theme-id="dark">
+            <div class="theme-card-preview theme-preview-dark">
+              <div class="theme-swatch-surface"></div>
+              <div class="theme-swatch-accent"></div>
+            </div>
+            <div class="theme-card-info">
+              <div class="theme-card-header">
+                <span class="theme-name">曜石深空 (Deep Obsidian)</span>
+                <span class="theme-active-tag">当前使用</span>
+              </div>
+              <p class="theme-desc">经典极客暗黑，纯正深空黑曜底色与冷冽电光青蓝，沉浸护眼。</p>
+            </div>
+          </div>
+
+          <!-- 2. 极简冷玉 -->
+          <div class="theme-select-card" data-theme-id="light">
+            <div class="theme-card-preview theme-preview-light">
+              <div class="theme-swatch-surface"></div>
+              <div class="theme-swatch-accent"></div>
+            </div>
+            <div class="theme-card-info">
+              <div class="theme-card-header">
+                <span class="theme-name">极简冷玉 (Minimal Frost)</span>
+                <span class="theme-active-tag">当前使用</span>
+              </div>
+              <p class="theme-desc">高雅明亮纯净，无瑕瓷白与纯净黑曜字阶，清晰通透。</p>
+            </div>
+          </div>
+
+          <!-- 3. 赛博霓虹 -->
+          <div class="theme-select-card" data-theme-id="cyber">
+            <div class="theme-card-preview theme-preview-cyber">
+              <div class="theme-swatch-surface"></div>
+              <div class="theme-swatch-accent"></div>
+            </div>
+            <div class="theme-card-info">
+              <div class="theme-card-header">
+                <span class="theme-name">赛博霓虹 (Cyber Neon)</span>
+                <span class="theme-active-tag">当前使用</span>
+              </div>
+              <p class="theme-desc">高科技未来感，深邃午夜蓝底搭配极光品红与电波紫辉。</p>
+            </div>
+          </div>
+
+          <!-- 4. 极光松岭 -->
+          <div class="theme-select-card" data-theme-id="aurora">
+            <div class="theme-card-preview theme-preview-aurora">
+              <div class="theme-swatch-surface"></div>
+              <div class="theme-swatch-accent"></div>
+            </div>
+            <div class="theme-card-info">
+              <div class="theme-card-header">
+                <span class="theme-name">极光松岭 (Nordic Aurora)</span>
+                <span class="theme-active-tag">当前使用</span>
+              </div>
+              <p class="theme-desc">幽静心流空间，北欧森林暗绿玄武岩与翡翠薄荷流光。</p>
+            </div>
+          </div>
+
+          <!-- 5. 落日熔金 -->
+          <div class="theme-select-card" data-theme-id="sunset">
+            <div class="theme-card-preview theme-preview-sunset">
+              <div class="theme-swatch-surface"></div>
+              <div class="theme-swatch-accent"></div>
+            </div>
+            <div class="theme-card-info">
+              <div class="theme-card-header">
+                <span class="theme-name">落日熔金 (Sunset Amber)</span>
+                <span class="theme-active-tag">当前使用</span>
+              </div>
+              <p class="theme-desc">奢雅意式浓缩，深邃暖褐黑底色与落日琥珀金光，舒适温润。</p>
+            </div>
+          </div>
+
+          <!-- 6. 流光玻璃 -->
+          <div class="theme-select-card" data-theme-id="glass">
+            <div class="theme-card-preview theme-preview-glass">
+              <div class="theme-swatch-surface"></div>
+              <div class="theme-swatch-accent"></div>
+            </div>
+            <div class="theme-card-info">
+              <div class="theme-card-header">
+                <span class="theme-name">流光玻璃 (Acrylic Glass)</span>
+                <span class="theme-active-tag">当前使用</span>
+              </div>
+              <p class="theme-desc">通透亚克力磨砂，深度配合半透明模式，桌面背景若隐若现。</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 半透明与毛玻璃透亮调节 -->
+        <div class="theme-opacity-section" style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-default);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="9" cy="12" r="6"/>
+                <circle cx="15" cy="12" r="6"/>
+              </svg>
+              <span style="font-size: 13px; font-weight: 600;">窗口半透明与亚克力毛玻璃</span>
+            </div>
+            <span class="opacity-value-badge" id="modalOpacityValueText">100%</span>
+          </div>
+
+          <div class="opacity-slider-wrap" style="margin-bottom: 10px;">
+            <input type="range" id="modalOpacityRange" min="40" max="100" step="2" value="100" class="opacity-range-slider" />
+            <div class="opacity-slider-labels">
+              <span>40% 通透</span>
+              <span>70% 磨砂</span>
+              <span>100% 实色</span>
+            </div>
+          </div>
+
+          <div class="opacity-presets-grid" style="margin-bottom: 10px;">
+            <button type="button" class="opacity-preset-chip" data-opacity="100">100% 实色</button>
+            <button type="button" class="opacity-preset-chip" data-opacity="90">90% 微透</button>
+            <button type="button" class="opacity-preset-chip" data-opacity="80">80% 磨砂</button>
+            <button type="button" class="opacity-preset-chip" data-opacity="70">70% 通透</button>
+            <button type="button" class="opacity-preset-chip" data-opacity="60">60% 极光</button>
+          </div>
+        </div>
+
+        <div class="modal-footer-row" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-default); display: flex; justify-content: flex-end;">
+          <button type="button" class="btn primary" id="confirmThemePickerBtn">完成设置</button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- 悬浮弹层: 窗口半透明与色彩主题快速调节面板 (Opacity & Theme Popover) -->
+    <div id="opacityPickerPopover" class="floating-popover opacity-popover" style="display: none;">
+      <div class="popover-section-title">色彩主题快速切换</div>
+      <div class="popover-theme-chips">
+        <button type="button" class="theme-quick-chip" data-theme-id="dark">曜石深空</button>
+        <button type="button" class="theme-quick-chip" data-theme-id="light">极简冷玉</button>
+        <button type="button" class="theme-quick-chip" data-theme-id="cyber">赛博霓虹</button>
+        <button type="button" class="theme-quick-chip" data-theme-id="aurora">极光松岭</button>
+        <button type="button" class="theme-quick-chip" data-theme-id="sunset">落日熔金</button>
+        <button type="button" class="theme-quick-chip" data-theme-id="glass">流光玻璃</button>
+      </div>
+
+      <button type="button" class="btn text-btn" id="popoverOpenThemeModalBtn" style="width: 100%; justify-content: center; font-size: 11px; padding: 4px; color: var(--primary);">查看 6 款主题设计详情 ▾</button>
+
+      <div class="popover-divider"></div>
+
+      <div class="popover-header">
+        <div class="popover-title">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="9" cy="12" r="6"/>
+            <circle cx="15" cy="12" r="6"/>
+          </svg>
+          <span>半透明与毛玻璃</span>
+        </div>
+        <span class="opacity-value-badge" id="opacityValueText">100%</span>
+      </div>
+
+      <div class="opacity-slider-wrap">
+        <input type="range" id="opacityRangeInput" min="40" max="100" step="2" value="100" class="opacity-range-slider" />
+        <div class="opacity-slider-labels">
+          <span>40% 通透</span>
+          <span>70% 磨砂</span>
+          <span>100% 实色</span>
+        </div>
+      </div>
+
+      <div class="opacity-presets-grid">
+        <button type="button" class="opacity-preset-chip" data-opacity="100">100% 实色</button>
+        <button type="button" class="opacity-preset-chip" data-opacity="90">90% 微透</button>
+        <button type="button" class="opacity-preset-chip" data-opacity="80">80% 磨砂</button>
+        <button type="button" class="opacity-preset-chip" data-opacity="70">70% 通透</button>
+        <button type="button" class="opacity-preset-chip" data-opacity="60">60% 极光</button>
+      </div>
+
+      <div class="opacity-options-row">
+        <label class="opacity-checkbox-label">
+          <input type="checkbox" id="glassBlurToggle" checked />
+          <span>启用背景高斯模糊滤镜 (Backdrop Blur)</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- 核心弹窗: 小 i 智能体快捷交互弹窗 (Mini 'i' Popover) -->
+    <div id="miniIPopover" class="floating-popover mini-i-popover-card" style="display: none;">
+      <div class="mini-i-card-header">
+        <div class="mini-i-profile">
+          <div class="mini-i-avatar-pulsing">
+            <span class="mini-i-letter-bold">i</span>
+            <span class="mini-i-ring"></span>
+          </div>
+          <div class="mini-i-title-col">
+            <div class="mini-i-title-row">
+              <span class="mini-i-brand-name">Hermes 小 i</span>
+              <span class="mini-i-status-dot" title="系统正常就绪"></span>
+            </div>
+            <span class="mini-i-subtext" id="miniStatusSubtext">智能副驾 · 随行待命</span>
+          </div>
+        </div>
+        <div class="mini-i-header-actions">
+          <button type="button" class="mini-action-icon-btn" id="miniPinWindowBtn" title="窗口置顶切换">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-2l-3-3V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v7l-3 3v2z"/></svg>
+          </button>
+          <button type="button" class="mini-action-icon-btn" id="miniExpandWindowBtn" title="还原完整窗口 (1320x860)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          </button>
+          <button type="button" class="mini-action-icon-btn" id="miniClosePopoverBtn" title="收起弹窗">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="mini-i-meta-bar">
+        <div class="mini-i-meta-chip" title="当前对话模型">
+          <span class="meta-label">模型:</span>
+          <span class="meta-val" id="miniModelBadge">HAP</span>
+        </div>
+        <div class="mini-i-meta-chip" title="当前智能体">
+          <span class="meta-label">Agent:</span>
+          <span class="meta-val" id="miniAgentBadge">Default</span>
+        </div>
+        <div class="mini-i-meta-chip" title="今日消耗 Token">
+          <span class="meta-label">Tokens:</span>
+          <span class="meta-val" id="miniTokensBadge">0</span>
+        </div>
+      </div>
+
+      <!-- 流式回复与快捷预览区 -->
+      <div class="mini-i-preview-area" id="miniIPreviewArea">
+        <div class="mini-i-empty-tip" id="miniIEmptyTip">
+          <div class="mini-sparkle-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+          </div>
+          <p>随时输入指令，小 i 将为你即时解答或执行任务</p>
+        </div>
+        <div class="mini-i-conversation" id="miniIConversation" style="display: none;">
+          <!-- 动态展示小 i 问答 -->
+        </div>
+      </div>
+
+      <!-- 快捷输入交互区 -->
+      <div class="mini-i-input-box">
+        <textarea id="miniPromptTextarea" rows="2" placeholder="快速向小 i 发送指令... (Enter 发送, Shift+Enter 换行)"></textarea>
+        <div class="mini-i-input-footer">
+          <div class="mini-i-quick-tools">
+            <button type="button" class="mini-quick-btn" id="miniClearChatBtn" title="清空对话上下文">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+              <span>清空</span>
+            </button>
+            <button type="button" class="mini-quick-btn" id="miniThemeBtn" title="快速切换主题">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20c-1.5 0-2.5-1-2.5-2.5 0-.8.3-1.4.8-1.9.4-.5.7-1.1.7-1.6 0-1.4-1.1-2.5-2.5-2.5H7A5 5 0 0 1 2 8.5C2 4.9 6.5 2 12 2z"/></svg>
+              <span>主题</span>
+            </button>
+          </div>
+          <button type="button" class="mini-send-btn" id="miniSendPromptBtn" title="发送指令">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="mini-i-footer-restore">
+        <button type="button" class="mini-restore-full-btn" id="miniRestoreFullWindowBtn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          <span>还原完整工作台界面 (Full Studio)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 桌面 Mini 悬浮小窗模式主舞台 (当进入 Mini 模式时展示) -->
+    <div id="miniModeStage" class="mini-mode-stage" style="display: none;">
+      <!-- 顶部轻量级拖拽栏 -->
+      <div class="mini-drag-titlebar">
+        <div class="mini-drag-left">
+          <span class="mini-brand-icon">
+            <span class="mini-letter">i</span>
+          </span>
+          <span class="mini-app-title">Hermes Mini</span>
+        </div>
+        <div class="mini-drag-right">
+          <button type="button" class="mini-title-btn" id="miniStagePinBtn" title="切换始终置顶">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-2l-3-3V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v7l-3 3v2z"/></svg>
+          </button>
+          <button type="button" class="mini-title-btn" id="miniStageRestoreBtn" title="还原完整窗口 (Alt+M)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          </button>
+          <button type="button" class="mini-title-btn" id="miniStageMinimizeBtn" title="最小化到任务栏">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mini 核心交互卡片 -->
+      <div class="mini-stage-body">
+        <div class="mini-stage-hero">
+          <div class="mini-stage-avatar" id="miniStageAvatarBtn" title="点击展开/收起小 i 交互面板">
+            <span class="mini-stage-avatar-i">i</span>
+            <div class="mini-stage-pulse-ring"></div>
+          </div>
+          <div class="mini-stage-hero-text">
+            <div class="mini-hero-status-row">
+              <span class="mini-hero-title">Hermes Intelligence</span>
+              <span class="mini-badge-online">在线</span>
+            </div>
+            <p class="mini-hero-desc">桌面悬浮助手 · 随行待命</p>
+          </div>
+        </div>
+
+        <!-- 紧凑对话预览窗口 -->
+        <div class="mini-stage-chat-wrap" id="miniStageChatWrap">
+          <div class="mini-stage-messages" id="miniStageMessages">
+            <div class="mini-welcome-msg">
+              <span>我是小 i，输入你的问题或指令，我将立即开始协助你。</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 紧凑输入底栏 -->
+        <div class="mini-stage-input-bar">
+          <textarea id="miniStageInput" placeholder="输入指令... (Enter 发送)"></textarea>
+          <div class="mini-stage-controls">
+            <button type="button" class="mini-stage-btn" id="miniStageThemeToggle" title="切换主题">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20c-1.5 0-2.5-1-2.5-2.5 0-.8.3-1.4.8-1.9.4-.5.7-1.1.7-1.6 0-1.4-1.1-2.5-2.5-2.5H7A5 5 0 0 1 2 8.5C2 4.9 6.5 2 12 2z"/>
+              </svg>
+            </button>
+            <button type="button" class="mini-stage-btn" id="miniStageOpacityBtn" title="半透明">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/>
+              </svg>
+            </button>
+            <button type="button" class="mini-stage-send" id="miniStageSendBtn" title="发送">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="button" class="mini-stage-restore-card-btn" id="miniStageExpandFullBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          <span>还原完整工作台界面</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 桌面微型“小 i”悬浮徽标 (默认隐藏，大窗口工作台模式不打扰，快捷交互使用顶部导航栏小 i) -->
+    <div id="floatingICapsule" class="floating-i-capsule" style="display: none;" title="点击展开小 i 智能体交互弹窗">
+      <span class="capsule-letter">i</span>
+      <span class="capsule-glow"></span>
+      <span class="capsule-badge-dot"></span>
+    </div>
 
     <div id="toastContainer" class="toast-container"></div>
 

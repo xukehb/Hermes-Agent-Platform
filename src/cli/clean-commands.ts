@@ -61,7 +61,7 @@ export function registerCleanCommands(root: Command, globals: () => GlobalOption
       if (isDryRun) {
         const lines = [
           `\n🧹 ════════════════════════════════════════════════════════════════════`,
-          `   CodexConnect 本地宿主机 AI 智能磁盘体检报告 (Dry-Run 模式)`,
+          `   Hermes Agent Platform 本地宿主机 AI 智能磁盘体检报告 (Dry-Run 模式)`,
           `════════════════════════════════════════════════════════════════════`,
           `   AI 健康评分:    ${report.healthScore} 分 (${report.healthScore >= 90 ? '🟢 空间充裕' : report.healthScore >= 70 ? '🟡 建议优化' : '🔴 空间偏紧'})`,
           `   AI 智能诊断:    ${report.aiDiagnosis}`,
@@ -95,7 +95,7 @@ export function registerCleanCommands(root: Command, globals: () => GlobalOption
 
       const lines = [
         `\n🧹 ════════════════════════════════════════════════════════════════════`,
-        `   CodexConnect 本地宿主机磁盘清理完成！`,
+        `   Hermes Agent Platform 本地宿主机磁盘清理完成！`,
         `════════════════════════════════════════════════════════════════════`,
         `   本次成功释放空间:  ${formatBytes(result.cleanedBytes)}`,
         `────────────────────────────────────────────────────────────────────`,

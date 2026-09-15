@@ -6,7 +6,7 @@ export function registerHostCommands(root: Command, globals: () => GlobalOptions
   root
     .command('host')
     .alias('sysinfo')
-    .description('查看当前运行 CodexConnect 的宿主主机全景硬件指标与资源占用')
+    .description('查看当前运行 Hermes Agent Platform 的宿主主机全景硬件指标与资源占用')
     .action(async () => {
       const g = globals();
       const ctx = new CliContext(g);
@@ -16,7 +16,7 @@ export function registerHostCommands(root: Command, globals: () => GlobalOptions
 
       const lines = [
         `\n🖥️ ════════════════════════════════════════════════════════════════════`,
-        `   CodexConnect 宿主主机全景系统状态 (Host System Dashboard)`,
+        `   Hermes Agent Platform 宿主主机全景系统状态 (Host System Dashboard)`,
         `════════════════════════════════════════════════════════════════════`,
         `   主机名称:  ${info.network.hostname} (用户: ${info.os.user})`,
         `   操作系统:  ${info.os.type} ${info.os.release} (${info.os.platform} / ${info.os.arch})`,
