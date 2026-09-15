@@ -54,7 +54,7 @@ jobs:
           - os: windows-latest
             artifact: windows-x64
             command: npm run dist:win -- --x64
-            files: release/*.exe
+            files: release/Hermes-Agent-Platform-*.exe
           - os: ubuntu-latest
             artifact: ubuntu-x64
             command: npm run dist:linux -- --x64

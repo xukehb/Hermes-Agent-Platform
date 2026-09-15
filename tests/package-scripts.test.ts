@@ -76,6 +76,8 @@ describe('package scripts', () => {
     expect(workflow).toContain('actions/upload-artifact@v4');
     expect(workflow).toContain('actions/download-artifact@v4');
     expect(workflow).toContain('softprops/action-gh-release@v2');
+    expect(workflow).toContain('files: release/Hermes-Agent-Platform-*.exe');
+    expect(workflow).not.toContain('files: release/*.exe');
   });
 
   it('does not expose legacy desktop product names at runtime', () => {
