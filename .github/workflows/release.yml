@@ -1,0 +1,118 @@
+name: Release desktop installers
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate v0.1.3 source
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify tag matches package version
+        shell: bash
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          package_version="$(node -p "require('./package.json').version")"
+          test "$tag_version" = "$package_version"
+
+      - name: Rebuild native module for Node.js
+        run: npm run rebuild:node
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run type checking
+        run: npm run typecheck
+
+  package:
+    name: Package ${{ matrix.artifact }}
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: windows-x64
+            command: npm run dist:win -- --x64
+            files: release/*.exe
+          - os: ubuntu-latest
+            artifact: ubuntu-x64
+            command: npm run dist:linux -- --x64
+            files: release/*.deb
+          - os: macos-15
+            artifact: macos-arm64
+            command: npm run dist:mac -- --arm64
+            files: release/*.dmg
+          - os: macos-13
+            artifact: macos-x64
+            command: npm run dist:mac -- --x64
+            files: release/*.dmg
+    runs-on: ${{ matrix.os }}
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build installer
+        run: ${{ matrix.command }}
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Publish GitHub Release
+    needs: [validate, package]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download installers
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Hermes Agent Platform v0.1.3
+          body: |
+            Hermes Agent Platform v0.1.3 desktop installers.
+
+            These packages are not code-signed. Windows SmartScreen or macOS Gatekeeper may display a warning on first launch.
+          files: artifacts/**/*
+          fail_on_unmatched_files: true
