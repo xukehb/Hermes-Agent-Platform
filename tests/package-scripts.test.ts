@@ -46,6 +46,9 @@ describe('package scripts', () => {
     expect(packageJson.scripts?.['dist:win']).toContain('electron-builder --win');
     expect(packageJson.scripts?.['dist:linux']).toContain('electron-builder --linux deb');
     expect(packageJson.scripts?.['dist:mac']).toContain('electron-builder --mac dmg');
+    expect(packageJson.scripts?.['dist:win']).toContain('--publish never');
+    expect(packageJson.scripts?.['dist:linux']).toContain('--publish never');
+    expect(packageJson.scripts?.['dist:mac']).toContain('--publish never');
   });
 
   it('configures the required installer targets', () => {

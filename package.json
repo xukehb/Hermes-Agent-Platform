@@ -22,9 +22,9 @@
     "gui": "npm run build && npm run rebuild:electron && electron dist/src/gui/main.js",
     "gui:dev": "npm run build && npm run rebuild:electron && electron dist/src/gui/main.js",
     "dist": "npm run dist:win",
-    "dist:win": "npm run build && npm run rebuild:electron && electron-builder --win",
-    "dist:linux": "npm run build && npm run rebuild:electron && electron-builder --linux deb",
-    "dist:mac": "npm run build && npm run rebuild:electron && electron-builder --mac dmg",
+    "dist:win": "npm run build && npm run rebuild:electron && electron-builder --win --publish never",
+    "dist:linux": "npm run build && npm run rebuild:electron && electron-builder --linux deb --publish never",
+    "dist:mac": "npm run build && npm run rebuild:electron && electron-builder --mac dmg --publish never",
     "dist:dir": "npm run build && npm run rebuild:electron && electron-builder --dir"
   },
   "build": {
