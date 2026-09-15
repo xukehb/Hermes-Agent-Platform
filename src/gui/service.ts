@@ -622,6 +622,7 @@ export class GuiService {
   ) {}
 
   snapshot(): object {
+    loadSavedEnvIntoProcess();
     const loaded = loadConfig({ path: this.configPath });
     const resolver = new ConfigResolver(loaded, {}, process.env);
     const registry = new ProviderRegistry(resolver.resolveProviders(), { env: process.env });
@@ -2568,6 +2569,7 @@ export class GuiService {
   }
 
   async chat(input: GuiChatInput, onStream?: (event: Record<string, unknown>) => void): Promise<object> {
+    loadSavedEnvIntoProcess();
     const rawInput = input.input.trim();
     const resolver = this.resolver();
     const availableModels = [...resolver.resolveModels().values()];
