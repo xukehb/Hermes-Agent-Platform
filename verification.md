@@ -181,3 +181,10 @@
 - Ubuntu 产物：`release/Hermes-Agent-Platform-0.1.4-Ubuntu-amd64.deb`，113822288 bytes，SHA-256 `e3e06b22d7aa723d4ef241a359df0e17cd07932c60deb5e7ca86d9290172f4df`。
 - DEB 与清单：版本 `0.1.4`、架构 `amd64`、维护者正确；`latest-linux.yml` 文件、大小和 SHA-512 一致；包类型为 `deb`。
 - 发布边界：Windows/macOS 与 GitHub Release 需由 `v0.1.4` 标签 workflow 终验；未签名包仍可能触发系统提示。
+
+## 2026-09-16 Hermes Agent Platform v0.1.4 GitHub 发布终验（Codex）
+
+- Workflow `35053912143`：源码验证、Windows x64、Ubuntu x64、macOS arm64、macOS x64、Publish GitHub Release 全部 `success`。
+- Release：[Hermes Agent Platform v0.1.4](https://github.com/xukehb/Hermes-Agent-Platform/releases/tag/v0.1.4)，正式公开版。
+- 资产：Windows Setup/Portable、Ubuntu amd64 DEB、macOS arm64/x64 DMG+ZIP、blockmap，以及 `latest.yml`、`latest-linux.yml`、`latest-mac.yml`。
+- 名称检查：公开资产中不存在 `ChatGPTConnect` 或 `CodexConnect`。

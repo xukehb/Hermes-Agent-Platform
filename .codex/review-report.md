@@ -180,3 +180,5 @@ GitHub Actions 运行 `34940545569` 的验证、四平台构建和 Release 发�
 | 综合 | 97 | 建议通过并发布 v0.1.4 |
 
 GitHub provider 指向 `xukehb/Hermes-Agent-Platform`，Windows、DEB、macOS ZIP 更新元数据均进入发布流程，macOS 双架构清单由受测脚本合并。`dist:mac` 已避免命令行 `dmg` 覆盖配置，确保 DMG 与 ZIP 同时生成。已知风险为未签名包提示，以及 Windows Portable 用户更新后进入 NSIS 安装器流程。
+
+发布终审：GitHub Actions `35053912143` 六个 job 全部成功，Release `v0.1.4` 已公开，资产含 Windows、Ubuntu、macOS 双架构 DMG/ZIP 和三份 updater 清单；旧产品名检查通过。

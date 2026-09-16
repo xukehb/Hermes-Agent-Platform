@@ -146,3 +146,10 @@ npx tsx src/cli/bin.ts -c .tmp-probe/hap.toml init
 - `latest-linux.yml` 版本、文件名、大小和 SHA-512 与 DEB 一致；`resources/package-type` 为 `deb`。
 - DEB SHA-256：`e3e06b22d7aa723d4ef241a359df0e17cd07932c60deb5e7ca86d9290172f4df`。
 - Windows 与 macOS 包由 GitHub 原生 runner 构建；未签名包可能触发 SmartScreen 或 Gatekeeper。
+
+## 十三、2026-09-16 v0.1.4 发布终验（Codex）
+
+- GitHub Actions 运行 `35053912143` 成功，源码验证、Windows x64、Ubuntu x64、macOS arm64、macOS x64 和 Release 发布全部成功。
+- Release 为正式版（`draft=false`、`prerelease=false`）：https://github.com/xukehb/Hermes-Agent-Platform/releases/tag/v0.1.4
+- 公共资产包含 2 个 Windows EXE、1 个 Ubuntu DEB、4 个 macOS 安装包（双架构 DMG+ZIP）、对应 blockmap，以及 `latest.yml`、`latest-linux.yml`、`latest-mac.yml`。
+- 资产名称均以 `Hermes-Agent-Platform-0.1.4-` 开头，未出现 `ChatGPTConnect` 或 `CodexConnect`。

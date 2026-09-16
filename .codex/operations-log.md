@@ -258,3 +258,6 @@
 - `apply_patch`：修复 `dist:mac` 目标覆盖问题，并将原生模块辅助脚本从硬编码 ABI 改为动态检测。
 - `vitest` / `tsc` / `eslint`：专项 46/46、全量 777/777、类型检查、lint 与编译全部通过。
 - `electron-builder` / `dpkg-deb`：重新构建并核对 0.1.4 Ubuntu amd64 DEB、更新清单和哈希。
+
+- `GitHub Actions`：首次发布暴露并修复 macOS Electron 路径、artifact 下载顺序、macOS DMG/ZIP 清单过滤和 stale release 清理四个 CI 边界；最终运行 `35053912143` 六个 job 全部成功。
+- `GitHub API`：公开 Release `v0.1.4` 已生成，资产清单包含 Windows、Ubuntu、macOS 双架构 DMG/ZIP、blockmap 和 latest updater YAML，未包含旧产品名。

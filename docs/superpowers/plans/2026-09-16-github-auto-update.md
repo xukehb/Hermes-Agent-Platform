@@ -154,6 +154,6 @@ Expected: version 0.1.4, Hermes product identity, executable present, updater me
 
 Record commands, outputs, known unsigned-package limitations, and review score in the four audit files. Commit only task-owned files while preserving pre-existing user changes.
 
-- [ ] **Step 5: Publish and verify v0.1.4**
+- [x] **Step 5: Publish and verify v0.1.4**
 
 Push `main`, create and push tag `v0.1.4`, wait for the native runner workflow, then query the public GitHub Release API. Verify the formal release, all platform installers, updater metadata, and absence of legacy product names.
