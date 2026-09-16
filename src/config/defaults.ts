@@ -141,7 +141,7 @@ export const BUILTIN = {
   provider: {
     wireApi: 'chat' as WireApi,
     defaultProtocol: 'openai-tools' as ProtocolName,
-    requestMaxRetries: 4,
+    requestMaxRetries: 5,
     streamMaxRetries: 5,
     streamIdleTimeoutMs: 300_000,
     /** Anthropic max_tokens 必填时的兜底值（FR-LOOP-011A） */

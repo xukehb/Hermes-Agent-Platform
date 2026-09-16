@@ -33,6 +33,8 @@ export interface WireRequest {
   maxTokens?: number;
   /** 停止序列。hermes-native 用它在 </tool_call> 处收束 */
   stop?: string[];
+  /** 重试回调：通知上层发生了可恢复错误并即将进行第 attempt 次重试（1 <= attempt <= maxRetries） */
+  onRetry?: (attempt: number, maxRetries: number, error: unknown) => void;
 }
 
 /**

@@ -117,6 +117,22 @@ export class DesktopUpdateController {
     }
   }
 
+  async checkForUpdates(): Promise<DesktopUpdateState> {
+    if (!this.options.isPackaged) {
+      this.setState({ status: 'idle', currentVersion: this.options.currentVersion });
+      return this.getState();
+    }
+    this.setState({ status: 'checking', currentVersion: this.options.currentVersion });
+    try {
+      await this.options.updater.checkForUpdates();
+    } catch (error) {
+      const normalized = error instanceof Error ? error : new Error(String(error));
+      this.options.onCheckError?.(normalized);
+      this.setState({ status: 'idle', currentVersion: this.options.currentVersion });
+    }
+    return this.getState();
+  }
+
   download(): Promise<void> {
     if (this.downloadPromise) return this.downloadPromise;
     if (!this.available) return Promise.reject(new Error('没有可下载的更新'));

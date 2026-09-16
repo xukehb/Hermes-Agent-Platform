@@ -333,6 +333,28 @@ describe('AgentOrchestrator 降级与上限', () => {
     expect(outcome.protocol).toBe('openai-tools');
   });
 
+  it('模型单轮出现可恢复异常（如空响应）时自动重试本轮并发出 notice 通知', async () => {
+    const h = harness();
+    // 第 1 次返回空响应（触发 PROVIDER_STREAM_IDLE）
+    h.primary.push({ events: [{ type: 'finish', reason: 'stop' }] });
+    // 第 2 次重试成功返回正文
+    h.primary.push(textTurn('重试后成功输出内容。'));
+
+    const notices: string[] = [];
+    const outcome = await h.orchestrator.runTask({
+      input: '请输出内容',
+      sessionKey: 'tg:retry-turn',
+      onEvent: (event) => {
+        if (event.type === 'notice') notices.push(event.message);
+      },
+    });
+
+    expect(outcome.status).toBe('done');
+    expect(outcome.text).toBe('重试后成功输出内容。');
+    expect(h.primary.callCount).toBe(2);
+    expect(notices.some((msg) => msg.includes('自动重试'))).toBe(true);
+  });
+
   it('达到轮数上限时给出提示并汇总中间结论', async () => {
     const h = harness(['max_iterations = 2']);
     seedWorkspace(h, 'alpha', 'notes.md', '循环读取的内容。');
@@ -406,6 +428,54 @@ describe('AgentOrchestrator 中止与配额', () => {
 });
 
 describe('AgentOrchestrator 观测接口', () => {
+  it('从中断任务创建继承执行参数的新恢复任务', async () => {
+    const h = harness();
+    const sourceId = 'task-interrupted';
+    h.orchestrator.store('alpha').beginTask({
+      taskId: sourceId,
+      agentId: 'alpha',
+      sessionKey: 'tg:resume',
+      status: 'interrupted',
+      startedAt: '2026-09-16T08:00:00.000Z',
+      finishedAt: '2026-09-16T08:01:00.000Z',
+      iterations: 1,
+      usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+      model: 'mockp/model-a',
+      input: '完成恢复中心',
+      workspace: join(h.root, 'custom-workspace'),
+      requestedModel: 'mockp/model-a',
+      requestedTools: ['read_file'],
+      resumeCount: 0,
+    });
+    h.primary.push(textTurn('已核对现有状态并完成剩余工作。'));
+
+    const outcome = await h.orchestrator.resumeTask(sourceId);
+    const resumed = h.orchestrator.findTask(outcome.taskId);
+
+    expect(outcome.taskId).not.toBe(sourceId);
+    expect(outcome.agentId).toBe('alpha');
+    expect(outcome.sessionKey).toBe('tg:resume');
+    expect(resumed).toMatchObject({
+      parentTaskId: sourceId,
+      resumeCount: 1,
+      workspace: join(h.root, 'custom-workspace'),
+      requestedModel: 'mockp/model-a',
+      requestedTools: ['read_file'],
+    });
+    expect(h.orchestrator.store('alpha').history('tg:resume').some((msg) => msg.content.includes('不要重复执行已产生副作用的工具操作'))).toBe(true);
+  });
+
+  it('拒绝恢复不存在或已完成的任务', async () => {
+    const h = harness();
+    await expect(h.orchestrator.resumeTask('missing')).rejects.toMatchObject({ code: 'TASK_NOT_FOUND' });
+    h.orchestrator.store('alpha').beginTask({
+      taskId: 'task-done', agentId: 'alpha', sessionKey: 'tg:done', status: 'done',
+      startedAt: '2026-09-16T08:00:00.000Z', iterations: 1,
+      usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 }, model: 'mockp/model-a', input: '已完成',
+    });
+    await expect(h.orchestrator.resumeTask('task-done')).rejects.toMatchObject({ code: 'TASK_NOT_RESUMABLE' });
+  });
+
   it('usageSince 聚合用量，status 汇总会话状态', async () => {
     const h = harness();
     h.primary.push(

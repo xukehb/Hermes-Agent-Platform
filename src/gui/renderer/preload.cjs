@@ -8,6 +8,7 @@ async function call(channel, ...payload) {
 
 contextBridge.exposeInMainWorld('hap', {
   getUpdateState: () => call('gui:update:getState'),
+  checkForUpdates: () => call('gui:update:check'),
   downloadUpdate: () => call('gui:update:download'),
   installUpdate: () => call('gui:update:install'),
   onUpdateState: (callback) => {

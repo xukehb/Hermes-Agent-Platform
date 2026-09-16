@@ -29,6 +29,7 @@ import {
   defaultProviderFactory,
   errorTurn,
   isAbortError,
+  isTransientGatewayError,
   mapAnthropicStopReason,
   mapChatFinishReason,
   mentionsStreamOptions,
@@ -495,6 +496,103 @@ describe('OpenAI 兼容客户端 · chat 线制', () => {
     );
     expect(attempts).toBe(1);
     expect(textOfWireEvents(events)).toBe('半句');
+    expect(error.code).toBe('PROVIDER_UNREACHABLE');
+  });
+
+  it('瞬时网关 400 错误（如 No tool call found）被识别为可恢复并重试 5 次', async () => {
+    const errorMsg = '400 No tool call found for function call output with call_id fc_WvdUAZly23pcY1LZv93M9iIy.';
+    expect(isTransientGatewayError(errorMsg)).toBe(true);
+
+    const norm = normalizeProviderError(Object.assign(new Error(errorMsg), { status: 400 }), {
+      providerId: 'xkk',
+      model: 'gpt-5.6-sol',
+      phase: 'request',
+    });
+    expect(norm.recoverable).toBe(true);
+    expect(norm.code).toBe('PROVIDER_UNREACHABLE');
+
+    let attempts = 0;
+    const retryLogs: Array<{ attempt: number; maxRetries: number }> = [];
+    const client = new OpenAiCompatibleClient({
+      provider: makeProvider({ streamMaxRetries: 5 }),
+      apiKey: 'k',
+      client: chatClientWith(async () => {
+        attempts += 1;
+        if (attempts <= 2) {
+          throw Object.assign(new Error(errorMsg), { status: 400, headers: { 'retry-after': '0' } });
+        }
+        return streamOf([{ choices: [{ delta: { content: '成功恢复' }, finish_reason: 'stop' }] }] as Record<string, unknown>[]);
+      }),
+    });
+
+    const req = makeRequest();
+    req.onRetry = (att, max) => retryLogs.push({ attempt: att, maxRetries: max });
+
+    const result = textOfWireEvents(await collectWireEvents(client.send(req)));
+    expect(result).toBe('成功恢复');
+    expect(attempts).toBe(3); // 1 initial + 2 retries = 3
+    expect(retryLogs).toEqual([
+      { attempt: 1, maxRetries: 5 },
+      { attempt: 2, maxRetries: 5 },
+    ]);
+  });
+
+  it('OpenAI 标准 500/流式服务端错误（无 status 字段）被识别为可恢复并重试', async () => {
+    const errorMsg = 'An error occurred while processing your request. You can retry your request, or contact us through our help center at help.openai.com if the error persists. Please include the request ID ff620fc1-0b9f-493a-8ef2-a175e2d9256c in your message.';
+    expect(isTransientGatewayError(errorMsg)).toBe(true);
+
+    const norm = normalizeProviderError(new Error(errorMsg), {
+      providerId: 'xkk',
+      model: 'gpt-6',
+      phase: 'request',
+    });
+    expect(norm.recoverable).toBe(true);
+    expect(norm.code).toBe('PROVIDER_UNREACHABLE');
+
+    let attempts = 0;
+    const client = new OpenAiCompatibleClient({
+      provider: makeProvider({ streamMaxRetries: 5 }),
+      apiKey: 'k',
+      client: chatClientWith(async () => {
+        attempts += 1;
+        if (attempts <= 1) {
+          throw new Error(errorMsg);
+        }
+        return streamOf([{ choices: [{ delta: { content: '已成功从服务故障重试恢复' }, finish_reason: 'stop' }] }] as Record<string, unknown>[]);
+      }),
+    });
+
+    const result = textOfWireEvents(await collectWireEvents(client.send(makeRequest())));
+    expect(result).toBe('已成功从服务故障重试恢复');
+    expect(attempts).toBe(2);
+  });
+
+  it('超过 5 次重试后标记 retriesExhausted 并上抛', async () => {
+    let attempts = 0;
+    const retryLogs: number[] = [];
+    const client = new OpenAiCompatibleClient({
+      provider: makeProvider({ streamMaxRetries: 5 }),
+      apiKey: 'k',
+      client: chatClientWith(async () => {
+        attempts += 1;
+        throw Object.assign(new Error('502 Bad Gateway'), { status: 502, headers: { 'retry-after': '0' } });
+      }),
+    });
+
+    const req = makeRequest();
+    req.onRetry = (att) => retryLogs.push(att);
+
+    const error = asHapError(
+      await captureError(async () => {
+        for await (const event of client.send(req)) {
+          // drain
+        }
+      }),
+    );
+
+    expect(attempts).toBe(6); // 1 initial + 5 retries = 6
+    expect(retryLogs).toEqual([1, 2, 3, 4, 5]);
+    expect(error.context.retriesExhausted).toBe(true);
     expect(error.code).toBe('PROVIDER_UNREACHABLE');
   });
 

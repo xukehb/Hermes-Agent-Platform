@@ -49,6 +49,14 @@ describe('DesktopUpdateController', () => {
     expect(controller.getState()).toEqual({ status: 'idle', currentVersion: '0.1.3' });
   });
 
+  it('manually triggers checkForUpdates when requested', async () => {
+    const updater = new FakeUpdater();
+    const controller = new DesktopUpdateController({ updater, isPackaged: true, currentVersion: '0.1.5' });
+
+    await controller.checkForUpdates();
+    expect(updater.checkForUpdates).toHaveBeenCalledTimes(1);
+  });
+
   it('maps update availability and release notes to serializable state', () => {
     const updater = new FakeUpdater();
     const controller = new DesktopUpdateController({ updater, isPackaged: true, currentVersion: '0.1.3' });

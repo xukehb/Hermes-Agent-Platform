@@ -33,6 +33,10 @@ export type HapErrorCode =
   | 'MODEL_NOT_FOUND'
   | 'PROVIDER_NOT_FOUND'
   | 'TASK_ABORTED'
+  | 'TASK_NOT_FOUND'
+  | 'TASK_NOT_RESUMABLE'
+  | 'TASK_RESUME_DATA_MISSING'
+  | 'TASK_ALREADY_RESUMING'
   | 'CHANNEL_DISCONNECTED';
 
 /** 平台错误基类。code 决定 §6 表格中的处置分支。 */
@@ -70,16 +74,33 @@ export class ConfigError extends FatalError {
   }
 }
 
-/** 判断错误是否值得重试（FR-PROV-006）：429、5xx、连接中断三类。 */
+/** 判断错误是否值得重试（FR-PROV-006）：429、5xx、瞬时网关错误、连接中断等。 */
 export function isRetryable(error: unknown): boolean {
   if (error instanceof HapError) {
-    return error.code === 'PROVIDER_RATE_LIMIT' || error.code === 'PROVIDER_UNREACHABLE' || error.code === 'PROVIDER_STREAM_IDLE';
+    if (!error.recoverable) return false;
+    return (
+      error.code === 'PROVIDER_RATE_LIMIT' ||
+      error.code === 'PROVIDER_UNREACHABLE' ||
+      error.code === 'PROVIDER_STREAM_IDLE' ||
+      error.code === 'TAG_UNCLOSED'
+    );
   }
   const status = readStatus(error);
   if (status === 429) return true;
-  if (status !== undefined && status >= 500) return true;
+  if (status !== undefined && (status === 408 || status === 499 || status >= 500)) return true;
+  const detail = describeError(error);
+  if (/no tool call found|function call output with call_id|parallel tool call|an error occurred while processing your request|retry your request|help\.openai\.com|server_error|internal.*server.*error|upstream.*(?:connect|request|error|reset)|bad gateway|gateway timeout|service unavailable|server is busy|service is busy|system is busy|overloaded|concurrent request|temporar|gateway/i.test(detail)) return true;
   const code = readSysCode(error);
-  return code === 'ECONNRESET' || code === 'ECONNREFUSED' || code === 'ETIMEDOUT' || code === 'EPIPE' || code === 'ENOTFOUND' || code === 'UND_ERR_SOCKET';
+  return (
+    code === 'ECONNRESET' ||
+    code === 'ECONNREFUSED' ||
+    code === 'ETIMEDOUT' ||
+    code === 'ECONNABORTED' ||
+    code === 'EPIPE' ||
+    code === 'ENOTFOUND' ||
+    code === 'UND_ERR_SOCKET' ||
+    code === 'ERR_STREAM_PREMATURE_CLOSE'
+  );
 }
 
 /** 从各 SDK 抛出的错误对象中提取 HTTP 状态码。 */
@@ -88,10 +109,21 @@ export function readStatus(error: unknown): number | undefined {
   const record = error as Record<string, unknown>;
   if (typeof record.status === 'number') return record.status;
   if (typeof record.statusCode === 'number') return record.statusCode;
+  if (typeof record.status_code === 'number') return record.status_code;
+  if (typeof record.status === 'string') {
+    const parsed = Number.parseInt(record.status, 10);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
   const response = record.response;
   if (typeof response === 'object' && response !== null) {
     const status = (response as Record<string, unknown>).status;
     if (typeof status === 'number') return status;
+  }
+  const nested = record.error;
+  if (typeof nested === 'object' && nested !== null) {
+    const nestedRec = nested as Record<string, unknown>;
+    if (typeof nestedRec.status === 'number') return nestedRec.status;
+    if (typeof nestedRec.code === 'number') return nestedRec.code;
   }
   return undefined;
 }

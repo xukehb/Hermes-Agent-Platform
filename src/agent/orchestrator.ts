@@ -40,6 +40,7 @@ import { MemoryStore, recallRelevantMemories } from '../memory/index.js';
 import type {
   LoopRequest,
   RunTaskRequest,
+  ResumeTaskOptions,
   SessionStore,
   TaskEvent,
   TaskOutcome,
@@ -372,6 +373,12 @@ export class AgentOrchestrator {
       iterations: 0,
       usage: emptyUsage(),
       model: primaryName,
+      input: decision.input,
+      ...(request.workspace === undefined ? {} : { workspace: request.workspace }),
+      ...(explicitModel === '' ? {} : { requestedModel: explicitModel }),
+      ...(request.tools === undefined ? {} : { requestedTools: [...request.tools.allow] }),
+      ...(request.parentTaskId === undefined ? {} : { parentTaskId: request.parentTaskId }),
+      resumeCount: request.resumeCount ?? 0,
     };
 
     try {
@@ -733,6 +740,72 @@ export class AgentOrchestrator {
       if (row !== undefined) return row;
     }
     return undefined;
+  }
+
+  /**
+   * 从可恢复终态创建一个新任务。
+   *
+   * 恢复使用新 taskId，并要求智能体先核对当前工作区，避免崩溃前已经产生的
+   * 文件、命令或外部请求副作用被机械重放。
+   */
+  async resumeTask(taskId: string, options: ResumeTaskOptions = {}): Promise<TaskOutcome> {
+    const source = this.findTask(taskId);
+    if (source === undefined) {
+      throw new FatalError('TASK_NOT_FOUND', `未找到任务: ${taskId}`, {
+        userMessage: `未找到可恢复任务：${taskId}`,
+        context: { taskId },
+      });
+    }
+    if (!['interrupted', 'failed', 'aborted'].includes(source.status)) {
+      throw new FatalError('TASK_NOT_RESUMABLE', `任务状态不允许恢复: ${source.status}`, {
+        userMessage: `任务 ${taskId} 当前状态为 ${source.status}，不能恢复。`,
+        context: { taskId, status: source.status },
+      });
+    }
+    if (source.input === undefined || source.input.trim() === '') {
+      throw new FatalError('TASK_RESUME_DATA_MISSING', `任务缺少原始指令: ${taskId}`, {
+        userMessage: `任务 ${taskId} 缺少原始执行信息，无法安全恢复。`,
+        context: { taskId },
+      });
+    }
+    const chainIds = new Set([taskId]);
+    let ancestor = source.parentTaskId;
+    while (ancestor !== undefined && !chainIds.has(ancestor)) {
+      chainIds.add(ancestor);
+      ancestor = this.findTask(ancestor)?.parentTaskId;
+    }
+    const alreadyRunning = this.runningTasks().some((running) => {
+      const row = this.findTask(running.taskId);
+      return row?.parentTaskId !== undefined && chainIds.has(row.parentTaskId);
+    });
+    if (alreadyRunning) {
+      throw new FatalError('TASK_ALREADY_RESUMING', `任务已有恢复执行: ${taskId}`, {
+        userMessage: `任务 ${taskId} 已有恢复任务正在运行。`,
+        context: { taskId },
+      });
+    }
+
+    const input = [
+      `恢复任务 ${taskId}。原始目标：${source.input}`,
+      '',
+      '请先检查当前工作区、会话历史与已有产物，判断中断前哪些步骤已经完成；只继续未完成部分。不要重复执行已产生副作用的工具操作。完成后说明复用了哪些现有结果以及继续完成了什么。',
+    ].join('\n');
+    const request: RunTaskRequest = {
+      agentId: source.agentId,
+      sessionKey: source.sessionKey,
+      input,
+      parentTaskId: taskId,
+      resumeCount: (source.resumeCount ?? 0) + 1,
+    };
+    if (source.workspace !== undefined) request.workspace = source.workspace;
+    if (source.requestedModel !== undefined) request.model = source.requestedModel;
+    if (source.requestedTools !== undefined) {
+      const configured = this.agents.agent(source.agentId).tools;
+      request.tools = { ...configured, allow: [...source.requestedTools] };
+    }
+    if (options.signal !== undefined) request.signal = options.signal;
+    if (options.onEvent !== undefined) request.onEvent = options.onEvent;
+    return this.runTask(request);
   }
 
   /**

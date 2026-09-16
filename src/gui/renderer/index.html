@@ -58,12 +58,13 @@
 
       <!-- 侧边栏底部：左下角仅保留系统设置中心按钮 -->
       <div class="sidebar-bottom-panel sidebar-settings-only">
-        <div class="nav nav-settings-btn" data-view="settings" id="navSettingsBtn" title="系统设置中心 (Settings)" data-i18n-title="rail.settingsTooltip">
+        <div class="nav nav-settings-btn" data-view="settings" id="navSettingsBtn" title="系统设置中心 (Settings)" data-i18n-title="rail.settingsTooltip" style="display:flex;align-items:center;">
           <svg class="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"/>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
           <span class="nav-text" data-i18n="rail.settings">系统设置</span>
+          <span class="sidebar-version-tag" id="sidebarVersionTag" style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-left:auto;padding:2px 6px;border-radius:4px;opacity:0.85;cursor:pointer;transition:all 150ms ease;" title="点击直达软件版本与检查更新" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--primary)';" onmouseout="this.style.background='transparent';this.style.color='var(--text-muted)';">v0.1.8</span>
         </div>
       </div>
     </aside>
@@ -161,6 +162,13 @@
                 </div>
 
                 <div class="more-menu-divider"></div>
+
+                <!-- 关于与版本更新 -->
+                <button id="aboutVersionMoreBtn" class="more-menu-item-btn" title="查看软件版本、运行环境与检查更新" data-i18n-title="more.aboutVersionTooltip">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  <span data-i18n="more.aboutVersion">关于与版本更新</span>
+                  <span class="badge" id="moreMenuVersionBadge" style="margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:#10b981;background:rgba(16,185,129,0.12);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.8</span>
+                </button>
 
                 <!-- 切换语言 -->
                 <button id="toggleLangMoreBtn" class="more-menu-item-btn" title="切换界面语言 (Switch Language)" data-i18n-title="more.switchLanguageTooltip">
@@ -731,6 +739,10 @@
               <p class="page-subtitle" style="margin:4px 0 0 0;font-size:12.5px;color:var(--text-muted);" data-i18n="settings.subtitle">集中管理模型服务商、智能体角色、Skill & MCP 扩展、消息通道、定时任务、计算节点与安全策略</p>
             </div>
             <div style="display:flex;align-items:center;gap:10px;">
+              <button type="button" class="btn secondary" id="headerCheckUpdateBtn" style="font-size:12px;padding:5px 12px;display:inline-flex;align-items:center;gap:6px;border-radius:6px;cursor:pointer;" title="查看软件版本并检查 GitHub 更新">
+                <span class="badge" id="headerVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;color:#10b981;background:rgba(16,185,129,0.12);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.8</span>
+                <span id="headerCheckUpdateBtnText" style="font-size:12px;">检查更新</span>
+              </button>
               <button type="button" class="btn secondary" id="backToChatBtn" onclick="show('chat')" style="font-size:12.5px;padding:6px 14px;display:inline-flex;align-items:center;gap:6px;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
                 <span data-i18n="settings.backToChat">返回对话工作台</span>
@@ -770,8 +782,8 @@
             <button type="button" class="settings-tab-btn" data-tab="permissions" onclick="window.switchSettingsTab('permissions')" data-i18n="settings.tabPermissions">
               权限与安全策略
             </button>
-            <button type="button" class="settings-tab-btn" data-tab="system" onclick="window.switchSettingsTab('system')" data-i18n="settings.tabSystem">
-              CLI 同步与运行日志
+            <button type="button" class="settings-tab-btn" data-tab="system" onclick="window.switchSettingsTab('system')" data-i18n="settings.tabSystem" id="settingsSystemTabBtn">
+              版本更新与系统日志
             </button>
           </div>
 
@@ -2092,9 +2104,59 @@
             </div>
           </div>
 
-          <!-- Tab 11 内容: CLI 同步与运行日志 -->
+          <!-- Tab 11 内容: 系统版本、更新与运行日志 -->
           <div id="settingsPane_system" class="settings-pane" style="display:none;">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+              <div class="card" style="grid-column: 1 / -1;" id="aboutSoftwareCard">
+                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                  <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:8px;background:rgba(99,102,241,0.12);color:var(--primary);display:grid;place-items:center;flex-shrink:0;">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    </div>
+                    <div>
+                      <div style="font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;">
+                        <span>关于与软件版本 (About Hermes)</span>
+                        <span class="badge" id="appCurrentVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;padding:2px 8px;background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.3);border-radius:6px;font-weight:600;">v0.1.8</span>
+                      </div>
+                      <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">Hermes Agent Platform · 赫尔墨斯多智能体协同开发平台</div>
+                    </div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <button type="button" class="btn primary" id="manualCheckUpdateBtn" style="font-size:12px;padding:5px 14px;display:inline-flex;align-items:center;gap:6px;">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
+                      <span id="manualCheckUpdateBtnText">检查新版本</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="card-body" style="padding:16px;">
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
+                    <div style="padding:12px 14px;background:var(--bg-main);border:1px solid var(--border-default);border-radius:8px;">
+                      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:600;">当前安装版本</div>
+                      <div style="font-size:16px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin-top:4px;" id="aboutSoftwareVersionText">v0.1.8</div>
+                      <div style="font-size:11px;color:#10b981;margin-top:2px;">已内置自动重试与全协议适配</div>
+                    </div>
+                    <div style="padding:12px 14px;background:var(--bg-main);border:1px solid var(--border-default);border-radius:8px;">
+                      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:600;">自动更新状态</div>
+                      <div id="updateCheckStatusText" style="font-size:13px;font-weight:600;color:var(--text-main);margin-top:4px;">
+                        <div>状态: <strong style="color:#10b981;">就绪</strong></div>
+                        <div id="lastUpdateCheckTime" style="font-size:11px;color:var(--text-muted);margin-top:2px;">启动时已自动检测</div>
+                      </div>
+                    </div>
+                    <div style="padding:12px 14px;background:var(--bg-main);border:1px solid var(--border-default);border-radius:8px;">
+                      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:600;">开源项目与版本发布</div>
+                      <div style="font-size:13px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                        <a href="https://github.com/xukehb/Hermes-Agent-Platform/releases" target="_blank" style="color:var(--primary);text-decoration:none;font-weight:600;">GitHub Releases ↗</a>
+                      </div>
+                      <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">xukehb/Hermes-Agent-Platform</div>
+                    </div>
+                  </div>
+                  <div style="color:var(--text-muted);font-size:12px;line-height:1.7;border-top:1px solid var(--border-default);padding-top:12px;">
+                    <div>• <b>自动静默检测</b>：桌面端每次启动时自动向官方 GitHub Releases 通道查询最新版本。</div>
+                    <div>• <b>无缝升级</b>：点击【检查新版本】可随时主动核对更新；下载完成后支持一键重启并平滑安装。</div>
+                  </div>
+                </div>
+              </div>
+
               <div class="card">
                 <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
                   <div>
@@ -5029,7 +5091,7 @@
         <div class="desktop-update-actions">
           <button type="button" class="btn secondary" id="desktopUpdateLaterBtn" data-i18n="update.later">稍后</button>
           <button type="button" class="btn primary" id="desktopUpdateDownloadBtn" data-i18n="update.download">一键更新</button>
-          <button type="button" class="btn primary" id="desktopUpdateInstallBtn" data-i18n="update.install" hidden>重启并安装</button>
+          <button type="button" class="btn primary" id="desktopUpdateInstallBtn" data-i18n="update.install" hidden style="display: none;">重启并安装</button>
         </div>
       </div>
     </dialog>

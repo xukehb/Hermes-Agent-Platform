@@ -9185,7 +9185,12 @@ body.is-mini-mode #miniModeStage {
 }
 
 .desktop-update-progress { display: grid; gap: 7px; }
-.desktop-update-progress[hidden], .desktop-update-error[hidden] { display: none; }
+[hidden],
+.desktop-update-actions .btn[hidden],
+.desktop-update-progress[hidden],
+.desktop-update-error[hidden] {
+  display: none !important;
+}
 .desktop-update-progress-meta { display: flex; justify-content: space-between; color: var(--text-secondary); font-size: 12px; }
 .desktop-update-progress-track { height: 8px; overflow: hidden; border-radius: 4px; background: var(--bg-main); border: 1px solid var(--border-default); }
 .desktop-update-progress-track > div { width: 0; height: 100%; background: var(--primary); transition: width 180ms ease; }

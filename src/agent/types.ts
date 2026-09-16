@@ -120,6 +120,15 @@ export interface RunTaskRequest {
   signal?: AbortSignal | undefined;
   onEvent?: TaskEventSink | undefined;
   executionContext?: TaskExecutionContext | undefined;
+  /** 内部恢复链元数据；外部调用方通常无需传入。 */
+  parentTaskId?: string | undefined;
+  resumeCount?: number | undefined;
+}
+
+/** 恢复任务时允许覆盖的瞬态执行选项。 */
+export interface ResumeTaskOptions {
+  signal?: AbortSignal | undefined;
+  onEvent?: TaskEventSink | undefined;
 }
 
 /** 任务结果。 */
@@ -149,6 +158,18 @@ export interface TaskRow {
   title?: string;
   error?: string;
   tracePath?: string;
+  /** 可恢复任务保存的原始有效指令。 */
+  input?: string;
+  /** 任务调用时覆盖的工作目录。 */
+  workspace?: string;
+  /** 任务调用时显式选择的模型。 */
+  requestedModel?: string;
+  /** 任务调用时显式限制的工具集合。 */
+  requestedTools?: string[];
+  /** 恢复任务的直接来源任务。 */
+  parentTaskId?: string;
+  /** 当前恢复链已经恢复的次数。 */
+  resumeCount?: number;
 }
 
 /** 用量明细行（FR-TASK-007 的三个维度）。 */

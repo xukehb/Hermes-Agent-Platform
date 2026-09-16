@@ -7385,6 +7385,9 @@ const SETTINGS_VIEW_TAB_MAP = {
   system: 'system',
   logs: 'system',
   targets: 'system',
+  about: 'system',
+  version: 'system',
+  update: 'system',
 };
 
 function show(view) {
@@ -8432,6 +8435,17 @@ window.hap?.onChatStream?.((data) => {
     streamingCursorTimer = setTimeout(() => {
       document.querySelectorAll('.streaming-cursor').forEach((el) => el.remove());
     }, 600);
+  } else if (data.type === 'notice') {
+    if (data.message) {
+      showToast(data.message, 'warning');
+      const contentText = $('streamingContentText');
+      if (contentText && !session.liveContent) {
+        const pillText = contentText.querySelector('.thinking-loading-pill span:not(.thinking-pulse-dot)');
+        if (pillText) {
+          pillText.textContent = data.message;
+        }
+      }
+    }
   } else if (data.type === 'text') {
     // 收到完整回合终态文本时，更新正文并彻底清除光标
     clearTimeout(streamingCursorTimer);
@@ -14603,11 +14617,20 @@ function renderDesktopUpdateState(state) {
   $('desktopUpdateCurrentVersion').textContent = state.currentVersion || '-';
   $('desktopUpdateNewVersion').textContent = state.version || '-';
   $('desktopUpdateNotes').textContent = state.releaseNotes || updateText('update.noNotes', '本次更新包含功能改进和问题修复。');
-  progress.hidden = state.status !== 'downloading';
-  error.hidden = state.status !== 'error';
-  downloadBtn.hidden = state.status === 'downloading' || state.status === 'downloaded';
-  installBtn.hidden = state.status !== 'downloaded';
-  laterBtn.disabled = state.status === 'downloading';
+  const isDownloaded = state.status === 'downloaded';
+  const isDownloading = state.status === 'downloading';
+  const isError = state.status === 'error';
+
+  progress.hidden = !isDownloading;
+  error.hidden = !isError;
+  downloadBtn.hidden = isDownloading || isDownloaded;
+  installBtn.hidden = !isDownloaded;
+
+  progress.style.display = isDownloading ? 'grid' : 'none';
+  error.style.display = isError ? 'block' : 'none';
+  downloadBtn.style.display = (isDownloading || isDownloaded) ? 'none' : '';
+  installBtn.style.display = isDownloaded ? '' : 'none';
+  laterBtn.disabled = isDownloading;
 
   if (state.status === 'available') {
     statusText.textContent = updateText('update.available', '新版本已准备好下载');
@@ -14633,8 +14656,65 @@ function renderDesktopUpdateState(state) {
 
 function initDesktopUpdater() {
   if (!window.hap?.onUpdateState || !window.hap?.getUpdateState) return;
-  window.hap.onUpdateState(renderDesktopUpdateState);
-  window.hap.getUpdateState().then(renderDesktopUpdateState).catch(() => {});
+
+  const updateVersionUI = (version) => {
+    const ver = version ? `v${version}` : 'v0.1.8';
+    const badge = $('appCurrentVersionBadge');
+    if (badge) badge.textContent = ver;
+    const sideTag = $('sidebarVersionTag');
+    if (sideTag) sideTag.textContent = ver;
+    const headerBadge = $('headerVersionBadge');
+    if (headerBadge) headerBadge.textContent = ver;
+    const moreBadge = $('moreMenuVersionBadge');
+    if (moreBadge) moreBadge.textContent = ver;
+    const softwareVer = $('aboutSoftwareVersionText');
+    if (softwareVer) softwareVer.textContent = ver;
+  };
+
+  window.hap.onUpdateState((state) => {
+    renderDesktopUpdateState(state);
+    updateVersionUI(state?.currentVersion);
+  });
+  window.hap.getUpdateState().then((state) => {
+    renderDesktopUpdateState(state);
+    updateVersionUI(state?.currentVersion);
+  }).catch(() => {});
+
+  const handleManualCheck = async (btnTextEl) => {
+    const statusEl = $('updateCheckStatusText');
+    if (btnTextEl) btnTextEl.textContent = '检测中...';
+    try {
+      const state = await window.hap.checkForUpdates?.();
+      if (state && (state.status === 'available' || state.status === 'downloading' || state.status === 'downloaded')) {
+        renderDesktopUpdateState(state);
+      } else {
+        showToast(`当前已是最新版本 (${state?.currentVersion ? 'v' + state.currentVersion : 'v0.1.8'})`, 'success');
+        if (statusEl) {
+          statusEl.innerHTML = `<div>当前状态: <strong style="color:#10b981;">已是最新版</strong></div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">刚刚已检查</div>`;
+        }
+      }
+    } catch (err) {
+      showToast('检查更新失败: ' + err.message, 'error');
+    } finally {
+      if (btnTextEl) btnTextEl.textContent = '检查更新';
+      const manualText = $('manualCheckUpdateBtnText');
+      if (manualText) manualText.textContent = '检查新版本';
+    }
+  };
+
+  $('manualCheckUpdateBtn')?.addEventListener('click', () => handleManualCheck($('manualCheckUpdateBtnText')));
+  $('headerCheckUpdateBtn')?.addEventListener('click', () => handleManualCheck($('headerCheckUpdateBtnText')));
+  $('sidebarVersionTag')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    show('system');
+    $('aboutSoftwareCard')?.scrollIntoView({ behavior: 'smooth' });
+  });
+  $('aboutVersionMoreBtn')?.addEventListener('click', () => {
+    const headerMoreMenu = $('headerMoreMenu');
+    if (headerMoreMenu) headerMoreMenu.style.display = 'none';
+    show('system');
+    $('aboutSoftwareCard')?.scrollIntoView({ behavior: 'smooth' });
+  });
 
   $('desktopUpdateLaterBtn')?.addEventListener('click', () => $('desktopUpdateDialog')?.close());
   $('desktopUpdateDownloadBtn')?.addEventListener('click', async () => {
@@ -14653,7 +14733,12 @@ function initDesktopUpdater() {
       await window.hap.installUpdate();
     } catch (err) {
       button.disabled = false;
-      showToast(updateText('update.failed', '更新安装失败') + ': ' + err.message, 'error');
+      const msg = err?.message || String(err);
+      if (msg.includes('尚未下载完成')) {
+        showToast('更新包尚未下载完成，请先点击【一键更新】', 'warning');
+      } else {
+        showToast(updateText('update.installFailed', '更新安装失败') + ': ' + msg, 'error');
+      }
     }
   });
 }

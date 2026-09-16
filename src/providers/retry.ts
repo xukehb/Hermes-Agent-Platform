@@ -26,13 +26,43 @@ const RETRYABLE_SYS_CODES = new Set([
   'ECONNRESET',
   'ECONNREFUSED',
   'ETIMEDOUT',
+  'ECONNABORTED',
   'EPIPE',
   'ENOTFOUND',
   'EAI_AGAIN',
   'UND_ERR_SOCKET',
   'UND_ERR_CONNECT_TIMEOUT',
   'UND_ERR_HEADERS_TIMEOUT',
+  'UND_ERR_BODY_TIMEOUT',
+  'UND_ERR_RESPONSE_STATUS_CODE',
+  'ERR_STREAM_PREMATURE_CLOSE',
 ]);
+
+/**
+ * 判定错误是否属于网关/代理中继层的瞬时同步异常，或上游服务端的偶发故障。
+ * 典型场景：
+ * 1. 代理层将 Chat Completions 转译为 Responses/原生格式时，并行 tool_calls 状态在网关各节点未同步完成，
+ *    返回类似 "No tool call found for function call output with call_id..."。
+ * 2. OpenAI 或代理网关在流式输出中返回的 500/502/503 或未附带 status 的服务故障：
+ *    "An error occurred while processing your request. You can retry your request, or contact us through our help center..."
+ * 3. 代理或网关内部报告的 transient / overloaded / concurrency / rate limit 异常。
+ */
+export function isTransientGatewayError(detail: string): boolean {
+  return /no tool call found|function call output with call_id|parallel tool call|server is busy|service is busy|system is busy|overloaded|concurrent request|temporar|gateway|an error occurred while processing your request|retry your request|help\.openai\.com|server_error|internal.*server.*error|upstream.*(?:connect|request|error|reset)|bad gateway|gateway timeout|service unavailable|cloudflare|ray id/i.test(detail);
+}
+
+function isServerErrorObject(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  const record = error as Record<string, unknown>;
+  if (record.type === 'server_error' || record.type === 'internal_server_error') return true;
+  const nested = record.error;
+  if (typeof nested === 'object' && nested !== null) {
+    const nestedRec = nested as Record<string, unknown>;
+    if (nestedRec.type === 'server_error' || nestedRec.type === 'internal_server_error') return true;
+  }
+  return false;
+}
+
 
 /** 归一化所需的调用上下文。全部字段都会进入 trace，故不含凭据本身。 */
 export interface ProviderErrorContext {
@@ -105,6 +135,22 @@ export function normalizeProviderError(error: unknown, context: ProviderErrorCon
   if (status === 404) {
     return new FatalError('MODEL_NOT_FOUND', '端点或模型不存在（' + where + '）：' + detail, {
       userMessage: '模型标识在该提供商上不存在，请用 hap provider models 核对。',
+      context: base,
+      cause: error,
+    });
+  }
+
+  if (isServerErrorObject(error) || ((status === 400 || status === undefined) && isTransientGatewayError(detail))) {
+    return new RecoverableError('PROVIDER_UNREACHABLE', '上游服务或网关瞬时异常（' + where + (status === undefined ? '' : '，HTTP ' + String(status)) + '）：' + detail, {
+      userMessage: '上游服务或网关瞬时异常，正在自动重试。',
+      context: base,
+      cause: error,
+    });
+  }
+
+  if (status === 408 || status === 499) {
+    return new RecoverableError('PROVIDER_UNREACHABLE', '提供商请求超时或连接中断（' + where + '，HTTP ' + String(status) + '）：' + detail, {
+      userMessage: '提供商连接超时或中断，正在重试。',
       context: base,
       cause: error,
     });

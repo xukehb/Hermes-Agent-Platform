@@ -55,6 +55,7 @@ async function invoke<T>(handler: () => Promise<T> | T): Promise<{ ok: true; dat
 
 function registerIpc(): void {
   ipcMain.handle('gui:update:getState', () => invoke(() => desktopUpdater.getState()));
+  ipcMain.handle('gui:update:check', () => invoke(() => desktopUpdater.checkForUpdates()));
   ipcMain.handle('gui:update:download', () => invoke(() => desktopUpdater.download()));
   ipcMain.handle('gui:update:install', () => invoke(() => desktopUpdater.quitAndInstall()));
   ipcMain.handle('gui:snapshot', () => invoke(() => service.snapshot()));

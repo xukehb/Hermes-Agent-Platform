@@ -68,7 +68,8 @@ export class AnthropicClient implements ProviderClient {
   }
 
   async *send(request: WireRequest, signal?: AbortSignal): AsyncIterable<WireEvent> {
-    const maxAttempts = Math.max(0, this.provider.streamMaxRetries) + 1;
+    const maxRetries = Math.max(0, this.provider.streamMaxRetries);
+    const maxAttempts = maxRetries + 1;
     for (let attempt = 1; ; attempt += 1) {
       let emitted = false;
       try {
@@ -85,7 +86,17 @@ export class AnthropicClient implements ProviderClient {
           phase: emitted ? 'stream' : 'request',
         });
         // 已有事件外泄时不能重放：会造成重复正文。交给上层按降级链换模型（FR-LOOP-015）
-        if (emitted || attempt >= maxAttempts || !normalized.recoverable) throw normalized;
+        if (emitted || attempt >= maxAttempts || !normalized.recoverable) {
+          if (attempt >= maxAttempts) {
+            normalized.context.retriesExhausted = true;
+          }
+          throw normalized;
+        }
+        try {
+          request.onRetry?.(attempt, maxRetries, normalized);
+        } catch {
+          // 忽略上层回调异常，保证退避与重试正常执行
+        }
         await sleep(computeBackoffMs(attempt, error), signal);
       }
     }

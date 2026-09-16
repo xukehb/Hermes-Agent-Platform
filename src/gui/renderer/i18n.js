@@ -59,6 +59,8 @@
       'more.deleteChatTooltip': '删除当前会话',
       'more.switchLanguage': '切换语言 (English)',
       'more.switchLanguageTooltip': '切换中英文界面 (Switch to English)',
+      'more.aboutVersion': '关于与版本更新',
+      'more.aboutVersionTooltip': '查看软件版本、运行环境、系统日志与检查更新',
 
       // 外观弹出层 (Appearance & Opacity Popover)
       'popover.languageTitle': '界面语言 (Language)',
@@ -150,7 +152,7 @@
       'settings.tabServers': '远程服务器集群',
       'settings.tabProjects': '工作区项目库',
       'settings.tabPermissions': '权限与安全策略',
-      'settings.tabSystem': 'CLI 同步与运行日志',
+      'settings.tabSystem': '版本更新与系统日志',
 
       // 任务与历史弹窗 (Modals)
       'modal.historyTitle': '全局会话历史记录 (Conversation History)',
@@ -171,6 +173,7 @@
       'update.download': '一键更新',
       'update.retry': '重新下载',
       'update.install': '重启并安装',
+      'update.installFailed': '更新安装失败',
 
       // 通用提示与操作 (Common)
       'common.save': '保存',
@@ -231,6 +234,8 @@
       'more.deleteChatTooltip': 'Delete current conversation',
       'more.switchLanguage': 'Switch Language (中文)',
       'more.switchLanguageTooltip': 'Toggle Chinese / English interface (切换为中文)',
+      'more.aboutVersion': 'About & Version Updates',
+      'more.aboutVersionTooltip': 'View app version, runtime environment, logs & check updates',
 
       // 外观弹出层 (Appearance & Opacity Popover)
       'popover.languageTitle': 'Interface Language',
@@ -322,7 +327,7 @@
       'settings.tabServers': 'Remote Clusters',
       'settings.tabProjects': 'Workspace Projects',
       'settings.tabPermissions': 'Security & Permissions',
-      'settings.tabSystem': 'CLI Sync & Logs',
+      'settings.tabSystem': 'Version Updates & Logs',
 
       // 任务与历史弹窗 (Modals)
       'modal.historyTitle': 'Conversation History',
@@ -343,6 +348,7 @@
       'update.download': 'Update Now',
       'update.retry': 'Retry Download',
       'update.install': 'Restart and Install',
+      'update.installFailed': 'Failed to install update',
 
       // 通用提示与操作 (Common)
       'common.save': 'Save',

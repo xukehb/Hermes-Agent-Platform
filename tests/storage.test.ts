@@ -176,6 +176,27 @@ describe.each(implementations)('%s 任务记录', (_name, create) => {
     expect(store.task('task-none')).toBeUndefined();
   });
 
+  it('持久化任务恢复所需的原始执行参数与来源关系', () => {
+    const store = create();
+    store.beginTask(taskRow({
+      input: '继续完成登录模块',
+      workspace: '/workspace/demo',
+      requestedModel: 'mockp/model-b',
+      requestedTools: ['read_file', 'apply_patch'],
+      parentTaskId: 'task-parent',
+      resumeCount: 2,
+    }));
+
+    expect(store.task('task-1')).toMatchObject({
+      input: '继续完成登录模块',
+      workspace: '/workspace/demo',
+      requestedModel: 'mockp/model-b',
+      requestedTools: ['read_file', 'apply_patch'],
+      parentTaskId: 'task-parent',
+      resumeCount: 2,
+    });
+  });
+
   it('updateTask 合并补丁字段', () => {
     const store = create();
     store.beginTask(taskRow());

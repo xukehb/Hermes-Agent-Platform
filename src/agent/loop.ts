@@ -35,6 +35,7 @@ import type {
 import type { ConfigResolver } from '../config/index.js';
 import { protocolAdapter } from '../protocol/index.js';
 import type { ProtocolEvent } from '../protocol/index.js';
+import { computeBackoffMs, sleep } from '../providers/index.js';
 import type { ProviderRegistry } from '../providers/index.js';
 import { ToolExecutor } from '../tools/index.js';
 import type { ToolContext, ToolRegistry } from '../tools/index.js';
@@ -433,6 +434,7 @@ export class AgentLoop {
     },
   ): Promise<{ outcome: TurnOutcome; planIndex: number }> {
     const failures: string[] = [];
+    const maxTurnRetries = 5;
 
     for (let index = startIndex; index < chain.length; index += 1) {
       this.throwIfAborted(request);
@@ -453,78 +455,115 @@ export class AgentLoop {
         maxTokens: plan.maxTokens,
       });
 
-      const startedAt = Date.now();
-      try {
-        const client = this.deps.providers.client(plan.providerId);
-        const parser = adapter.createParser();
-        const events: ProtocolEvent[] = [];
-        for await (const wire of client.send(wireRequest, request.signal)) {
-          const parsed = parser.push(wire);
-          events.push(...parsed);
-          for (const pe of parsed) {
-            if (pe.type === 'text' && pe.text !== '') {
-              request.onEvent?.({ type: 'token_delta', text: pe.text });
-            } else if (pe.type === 'reasoning' && pe.text !== '') {
-              request.onEvent?.({ type: 'reasoning_delta', text: pe.text });
-            }
-          }
-        }
-        request.onEvent?.({ type: 'stream_end' });
-        events.push(...parser.end());
-        const outcome = foldTurn(events);
-        const durationMs = Date.now() - startedAt;
-
-        const trace: TraceEvent = {
-          kind: 'request',
-          at: new Date().toISOString(),
-          providerId: plan.providerId,
-          model: plan.fullName,
-          protocol: plan.protocol,
-          iteration: hooks.onIteration,
-          durationMs,
-        };
-        if (outcome.usage.totalTokens > 0) trace.usage = outcome.usage;
-        request.onTrace?.(trace);
-
-        // 未闭合标签意味着这段输出不可信：其中的工具调用一律不执行，
-        // 按 FR-LOOP-007 交给降级链重试本轮
-        if (outcome.incomplete.length > 0) {
-          throw new RecoverableError('TAG_UNCLOSED', '流结束时存在未闭合协议标签：' + outcome.incomplete.join('、'), {
-            context: { model: plan.fullName, tags: outcome.incomplete },
-          });
-        }
-        // 空响应同样视为本轮失败：没有正文也没有工具调用，继续循环只会空转
-        if (outcome.text === '' && outcome.calls.length === 0 && outcome.finishReason !== 'length') {
-          throw new RecoverableError('PROVIDER_STREAM_IDLE', '模型返回空响应', {
-            context: { model: plan.fullName },
-          });
-        }
-
-        return { outcome, planIndex: index };
-      } catch (error) {
-        this.throwIfAborted(request);
-        const reason = describeError(error);
-        failures.push(reason);
+      wireRequest.onRetry = (attempt, maxRetries, err) => {
+        const reason = describeError(err);
+        request.onEvent?.({
+          type: 'notice',
+          message: `模型 ${plan.fullName} 请求异常（${reason}），正在进行第 ${attempt}/${maxRetries} 次自动重试...`,
+        });
         request.onTrace?.({
           kind: 'note',
           at: new Date().toISOString(),
-          message: '模型 ' + plan.fullName + ' 本轮请求失败：' + reason,
-          data: { model: plan.fullName, iteration: hooks.onIteration, retryable: isRetryable(error) },
+          message: `模型 ${plan.fullName} 请求异常，正在进行第 ${attempt}/${maxRetries} 次自动重试...`,
+          data: { model: plan.fullName, attempt, maxRetries, error: reason },
         });
-        if (index === chain.length - 1) {
-          const attemptedModels = chain.slice(startIndex).map((item) => item.fullName);
-          const userMessage = attemptedModels.length === 1
-            ? '本次任务失败：模型 ' + attemptedModels[0] + ' 请求失败：' + reason
-              + '。请稍后重试，或用 hap provider check 检查提供商可用性。'
-            : '本次任务失败：已尝试模型 '
-              + attemptedModels.join('、')
-              + ' 均未成功。最后一次失败原因：' + reason
-              + '。请稍后重试，或用 hap provider check 检查提供商可用性。';
-          throw new FatalError('FALLBACK_EXHAUSTED', '降级链全部失败：' + failures.join(' | '), {
-            userMessage,
-            context: { failures, models: chain.map((item) => item.fullName) },
-            cause: error,
+      };
+
+      for (let turnAttempt = 0; turnAttempt <= maxTurnRetries; turnAttempt += 1) {
+        const startedAt = Date.now();
+        try {
+          const client = this.deps.providers.client(plan.providerId);
+          const parser = adapter.createParser();
+          const events: ProtocolEvent[] = [];
+          for await (const wire of client.send(wireRequest, request.signal)) {
+            const parsed = parser.push(wire);
+            events.push(...parsed);
+            for (const pe of parsed) {
+              if (pe.type === 'text' && pe.text !== '') {
+                request.onEvent?.({ type: 'token_delta', text: pe.text });
+              } else if (pe.type === 'reasoning' && pe.text !== '') {
+                request.onEvent?.({ type: 'reasoning_delta', text: pe.text });
+              }
+            }
+          }
+          request.onEvent?.({ type: 'stream_end' });
+          events.push(...parser.end());
+          const outcome = foldTurn(events);
+          const durationMs = Date.now() - startedAt;
+
+          const trace: TraceEvent = {
+            kind: 'request',
+            at: new Date().toISOString(),
+            providerId: plan.providerId,
+            model: plan.fullName,
+            protocol: plan.protocol,
+            iteration: hooks.onIteration,
+            durationMs,
+          };
+          if (outcome.usage.totalTokens > 0) trace.usage = outcome.usage;
+          request.onTrace?.(trace);
+
+          // 未闭合标签意味着这段输出不可信：其中的工具调用一律不执行，
+          // 按 FR-LOOP-007 交给降级链重试本轮
+          if (outcome.incomplete.length > 0) {
+            throw new RecoverableError('TAG_UNCLOSED', '流结束时存在未闭合协议标签：' + outcome.incomplete.join('、'), {
+              context: { model: plan.fullName, tags: outcome.incomplete },
+            });
+          }
+          // 空响应同样视为本轮失败：没有正文也没有工具调用，继续循环只会空转
+          if (outcome.text === '' && outcome.calls.length === 0 && outcome.finishReason !== 'length') {
+            throw new RecoverableError('PROVIDER_STREAM_IDLE', '模型返回空响应', {
+              context: { model: plan.fullName },
+            });
+          }
+
+          return { outcome, planIndex: index };
+        } catch (error) {
+          this.throwIfAborted(request);
+          const reason = describeError(error);
+          const isErrorRetryable = isRetryable(error);
+          const isExhausted = (error as { context?: Record<string, unknown> })?.context?.retriesExhausted === true;
+
+          // 若属于可恢复异常（如流中断、TAG_UNCLOSED、空响应）且底层未耗尽重试次数，在当前模型上退避重试本回合
+          if (isErrorRetryable && !isExhausted && turnAttempt < maxTurnRetries) {
+            const nextAttempt = turnAttempt + 1;
+            request.onEvent?.({
+              type: 'notice',
+              message: `模型 ${plan.fullName} 本轮响应异常（${reason}），正在进行第 ${nextAttempt}/${maxTurnRetries} 次自动重试...`,
+            });
+            request.onTrace?.({
+              kind: 'note',
+              at: new Date().toISOString(),
+              message: `模型 ${plan.fullName} 本轮响应异常，正在进行第 ${nextAttempt}/${maxTurnRetries} 次自动重试...`,
+              data: { model: plan.fullName, attempt: nextAttempt, maxRetries: maxTurnRetries, error: reason },
+            });
+            await sleep(computeBackoffMs(nextAttempt, error), request.signal);
+            continue;
+          }
+
+          failures.push(reason);
+          request.onTrace?.({
+            kind: 'note',
+            at: new Date().toISOString(),
+            message: '模型 ' + plan.fullName + ' 本轮请求失败：' + reason,
+            data: { model: plan.fullName, iteration: hooks.onIteration, retryable: isErrorRetryable },
           });
+          if (index === chain.length - 1) {
+            const attemptedModels = chain.slice(startIndex).map((item) => item.fullName);
+            const userMessage = attemptedModels.length === 1
+              ? '本次任务失败：模型 ' + attemptedModels[0] + ' 请求失败：' + reason
+                + '。请稍后重试，或用 hap provider check 检查提供商可用性。'
+              : '本次任务失败：已尝试模型 '
+                + attemptedModels.join('、')
+                + ' 均未成功。最后一次失败原因：' + reason
+                + '。请稍后重试，或用 hap provider check 检查提供商可用性。';
+            throw new FatalError('FALLBACK_EXHAUSTED', '降级链全部失败：' + failures.join(' | '), {
+              userMessage,
+              context: { failures, models: chain.map((item) => item.fullName) },
+              cause: error,
+            });
+          }
+          break; // 当前模型已无重试机会，跳出回合重试循环，尝试降级链中的下一个模型
         }
       }
     }

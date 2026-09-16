@@ -63,7 +63,13 @@ const SCHEMA = [
     model TEXT NOT NULL DEFAULT '',
     title TEXT,
     error TEXT,
-    trace_path TEXT
+    trace_path TEXT,
+    input TEXT,
+    workspace TEXT,
+    requested_model TEXT,
+    requested_tools TEXT,
+    parent_task_id TEXT,
+    resume_count INTEGER NOT NULL DEFAULT 0
   )`,
   'CREATE INDEX IF NOT EXISTS idx_tasks_session ON tasks (session_key, started_at)',
   'CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks (status)',
@@ -108,6 +114,12 @@ interface TaskRecord {
   title: string | null;
   error: string | null;
   trace_path: string | null;
+  input: string | null;
+  workspace: string | null;
+  requested_model: string | null;
+  requested_tools: string | null;
+  parent_task_id: string | null;
+  resume_count: number;
 }
 
 interface UsageRecord {
@@ -169,6 +181,13 @@ function toTaskRow(record: TaskRecord): TaskRow {
   if (record.title !== null) row.title = record.title;
   if (record.error !== null) row.error = record.error;
   if (record.trace_path !== null) row.tracePath = record.trace_path;
+  if (record.input !== null) row.input = record.input;
+  if (record.workspace !== null) row.workspace = record.workspace;
+  if (record.requested_model !== null) row.requestedModel = record.requested_model;
+  const requestedTools = parseJson<string[]>(record.requested_tools);
+  if (requestedTools !== undefined) row.requestedTools = requestedTools;
+  if (record.parent_task_id !== null) row.parentTaskId = record.parent_task_id;
+  row.resumeCount = record.resume_count;
   return row;
 }
 
@@ -230,6 +249,7 @@ export class SqliteSessionStore implements SessionStore {
       this.db = new Database(path);
       for (const statement of SCHEMA) this.db.exec(statement);
       this.migrateUsageColumns();
+      this.migrateTaskColumns();
     } catch {
       this.fallback = new MemorySessionStore(path);
     }
@@ -252,6 +272,21 @@ export class SqliteSessionStore implements SessionStore {
     this.db!.exec('CREATE INDEX IF NOT EXISTS idx_usage_server_at ON usage(server_id, at)');
     this.db!.exec('CREATE INDEX IF NOT EXISTS idx_usage_session_at ON usage(session_key, at)');
     this.db!.exec('CREATE INDEX IF NOT EXISTS idx_usage_task ON usage(task_id)');
+  }
+
+  /** 为已有数据库补齐可恢复任务字段。 */
+  private migrateTaskColumns(): void {
+    const rows = this.db!.prepare('PRAGMA table_info(tasks)').all() as ColumnRecord[];
+    const columns = new Set(rows.map((row) => row.name));
+    const add = (name: string, sql: string): void => {
+      if (!columns.has(name)) this.db!.exec(sql);
+    };
+    add('input', 'ALTER TABLE tasks ADD COLUMN input TEXT');
+    add('workspace', 'ALTER TABLE tasks ADD COLUMN workspace TEXT');
+    add('requested_model', 'ALTER TABLE tasks ADD COLUMN requested_model TEXT');
+    add('requested_tools', 'ALTER TABLE tasks ADD COLUMN requested_tools TEXT');
+    add('parent_task_id', 'ALTER TABLE tasks ADD COLUMN parent_task_id TEXT');
+    add('resume_count', 'ALTER TABLE tasks ADD COLUMN resume_count INTEGER NOT NULL DEFAULT 0');
   }
 
   history(sessionKey: string, limit?: number): AgentMessage[] {
@@ -330,8 +365,9 @@ export class SqliteSessionStore implements SessionStore {
     if (this.fallback) return this.fallback.beginTask(row);
     this.db!.prepare(
       `INSERT INTO tasks (task_id, agent_id, session_key, status, started_at, finished_at, iterations,
-        prompt_tokens, completion_tokens, total_tokens, model, title, error, trace_path)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        prompt_tokens, completion_tokens, total_tokens, model, title, error, trace_path, input, workspace,
+        requested_model, requested_tools, parent_task_id, resume_count)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(task_id) DO UPDATE SET status = excluded.status`,
     ).run(
       row.taskId,
@@ -348,6 +384,12 @@ export class SqliteSessionStore implements SessionStore {
       row.title ?? null,
       row.error ?? null,
       row.tracePath ?? null,
+      row.input ?? null,
+      row.workspace ?? null,
+      row.requestedModel ?? null,
+      row.requestedTools === undefined ? null : JSON.stringify(row.requestedTools),
+      row.parentTaskId ?? null,
+      row.resumeCount ?? 0,
     );
   }
 
@@ -371,6 +413,12 @@ export class SqliteSessionStore implements SessionStore {
     if (patch.title !== undefined) put('title', patch.title);
     if (patch.error !== undefined) put('error', patch.error);
     if (patch.tracePath !== undefined) put('trace_path', patch.tracePath);
+    if (patch.input !== undefined) put('input', patch.input);
+    if (patch.workspace !== undefined) put('workspace', patch.workspace);
+    if (patch.requestedModel !== undefined) put('requested_model', patch.requestedModel);
+    if (patch.requestedTools !== undefined) put('requested_tools', JSON.stringify(patch.requestedTools));
+    if (patch.parentTaskId !== undefined) put('parent_task_id', patch.parentTaskId);
+    if (patch.resumeCount !== undefined) put('resume_count', patch.resumeCount);
     if (sets.length === 0) return;
     values.push(taskId);
     this.db!.prepare('UPDATE tasks SET ' + sets.join(', ') + ' WHERE task_id = ?').run(...values);

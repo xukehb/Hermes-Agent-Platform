@@ -28,7 +28,7 @@ import type { TaskEvent } from '../agent/index.js';
 import { HapError } from '../domain/index.js';
 import { launchWithInjection, planInjection, targetCommand, writeInjection, type InjectionTarget } from '../inject/index.js';
 
-const VERSION = '0.1.0';
+const VERSION = '0.1.8';
 
 /** 组装根命令。导出以便测试直接 parseAsync，不必起子进程。 */
 export function buildProgram(): Command {
