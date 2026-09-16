@@ -103,6 +103,7 @@ describe('package scripts', () => {
     expect(workflow.indexOf('Check out release tooling')).toBeLessThan(
       workflow.indexOf('Download installers'),
     );
+    expect(workflow).toContain('Clean release directory');
   });
 
   it('does not expose legacy desktop product names at runtime', () => {

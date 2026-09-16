@@ -97,6 +97,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Clean release directory
+        shell: bash
+        run: rm -rf release
+
       - name: Build installer
         run: ${{ matrix.command }}
 
