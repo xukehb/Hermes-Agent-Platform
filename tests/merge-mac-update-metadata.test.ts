@@ -14,14 +14,20 @@ describe('macOS updater metadata merge', () => {
     mkdirSync(x64Dir);
     writeFileSync(join(armDir, 'latest-mac-macos-arm64.yml'), yaml.dump({
       version: '0.1.4',
-      files: [{ url: 'Hermes-Agent-Platform-0.1.4-macOS-arm64.zip', sha512: 'arm', size: 10 }],
+      files: [
+        { url: 'Hermes-Agent-Platform-0.1.4-macOS-arm64.dmg', sha512: 'arm-dmg', size: 9 },
+        { url: 'Hermes-Agent-Platform-0.1.4-macOS-arm64.zip', sha512: 'arm', size: 10 },
+      ],
       path: 'Hermes-Agent-Platform-0.1.4-macOS-arm64.zip',
       sha512: 'arm',
       releaseDate: '2026-09-16T00:00:00.000Z',
     }));
     writeFileSync(join(x64Dir, 'latest-mac-macos-x64.yml'), yaml.dump({
       version: '0.1.4',
-      files: [{ url: 'Hermes-Agent-Platform-0.1.4-macOS-x64.zip', sha512: 'x64', size: 20 }],
+      files: [
+        { url: 'Hermes-Agent-Platform-0.1.4-macOS-x64.dmg', sha512: 'x64-dmg', size: 19 },
+        { url: 'Hermes-Agent-Platform-0.1.4-macOS-x64.zip', sha512: 'x64', size: 20 },
+      ],
       path: 'Hermes-Agent-Platform-0.1.4-macOS-x64.zip',
       sha512: 'x64',
       releaseDate: '2026-09-16T00:00:00.000Z',

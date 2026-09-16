@@ -23,7 +23,8 @@ if (metadataPaths.length !== 2) {
 const [first, second] = metadataPaths.map((path) => yaml.load(readFileSync(path, 'utf8')));
 if (!first || !second || first.version !== second.version) throw new Error('macOS 更新清单版本不一致');
 
-const files = [...(first.files ?? []), ...(second.files ?? [])];
+const files = [...(first.files ?? []), ...(second.files ?? [])]
+  .filter((file) => file.url?.endsWith('.zip'));
 const urls = new Set(files.map((file) => file.url));
 if (files.length !== 2 || urls.size !== 2 || !files.every((file) => file.url?.endsWith('.zip'))) {
   throw new Error('macOS 更新清单必须包含 arm64 和 x64 两个 ZIP');
