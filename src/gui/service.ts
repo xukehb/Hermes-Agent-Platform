@@ -3035,7 +3035,7 @@ export class GuiService {
       };
     }
 
-    const orchestrator = new AgentOrchestrator({ configPath: this.configPath, historyLimit: 20 });
+    const orchestrator = new AgentOrchestrator({ configPath: this.configPath });
     const events: Array<Record<string, unknown>> = [];
     const chatController = new AbortController();
     const taskId = randomUUID();

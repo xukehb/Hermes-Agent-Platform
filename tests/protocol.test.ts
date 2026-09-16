@@ -437,6 +437,25 @@ describe('openai-tools 适配器', () => {
     expect(deepseek).toEqual(openai);
     expect(new DeepSeekAdapter().name).toBe('deepseek');
   });
+
+  it('openai-tools 自动过滤孤立 tool 消息，防止 400 No tool call found', () => {
+    const history = [
+      { role: 'tool' as const, content: '孤立结果', toolResult: { callId: 'orphan_call', name: 'shell', content: 'err', isError: true } },
+      { role: 'user' as const, content: '请帮我看文件' },
+      { role: 'assistant' as const, content: '好的', toolCalls: [{ id: 'valid_call', name: 'shell', args: {} }] },
+      { role: 'tool' as const, content: '合法结果', toolResult: { callId: 'valid_call', name: 'shell', content: 'ok', isError: false } },
+    ];
+
+    const chatReq = new OpenAiToolsAdapter().buildRequest(history, ctx({ wireApi: 'chat' }));
+    const chatMsgs = chatReq.messages as Array<Record<string, unknown>>;
+    expect(chatMsgs.map((m) => m.role)).toEqual(['user', 'assistant', 'tool']);
+    expect(chatMsgs[2]?.tool_call_id).toBe('valid_call');
+
+    const respReq = new OpenAiToolsAdapter().buildRequest(history, ctx({ wireApi: 'responses' }));
+    const respInputs = respReq.messages as Array<Record<string, unknown>>;
+    expect(respInputs.map((m) => m.type || m.role)).toEqual(['user', 'assistant', 'function_call', 'function_call_output']);
+    expect(respInputs[3]?.call_id).toBe('valid_call');
+  });
 });
 
 describe('anthropic 适配器四处不对称（FR-LOOP-011A）', () => {

@@ -10,7 +10,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { AgentOrchestrator } from '../src/agent/index.js';
+import { AgentOrchestrator, sanitizeHistorySlice } from '../src/agent/index.js';
 import type { TaskEvent } from '../src/agent/index.js';
 import type { ProviderFactory } from '../src/providers/index.js';
 import { MockProviderClient, errorTurn, textTurn, toolCallTurn } from '../src/providers/mock.js';
@@ -449,5 +449,20 @@ describe('AgentOrchestrator 观测接口', () => {
   it('内存存储模式下 recoverInterrupted 返回空列表', () => {
     const h = harness();
     expect(h.orchestrator.recoverInterrupted()).toEqual([]);
+  });
+
+  it('sanitizeHistorySlice 过滤开头与孤立的 tool 消息，防止 400 No tool call found', () => {
+    const raw = [
+      { role: 'tool' as const, content: '孤立结果0', toolResult: { callId: 'orphan_0', name: 'shell', content: 'res0', isError: false } },
+      { role: 'user' as const, content: '你好' },
+      { role: 'assistant' as const, content: '', toolCalls: [{ id: 'c1', name: 'shell', args: {} }] },
+      { role: 'tool' as const, content: '结果1', toolResult: { callId: 'c1', name: 'shell', content: 'res1', isError: false } },
+      { role: 'tool' as const, content: '孤立结果2', toolResult: { callId: 'orphan_2', name: 'shell', content: 'res2', isError: false } },
+      { role: 'assistant' as const, content: '完成' },
+    ];
+
+    const sanitized = sanitizeHistorySlice(raw);
+    expect(sanitized.map((m) => m.role)).toEqual(['user', 'assistant', 'tool', 'assistant']);
+    expect(sanitized[2]?.toolResult?.callId).toBe('c1');
   });
 });

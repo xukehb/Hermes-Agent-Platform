@@ -520,10 +520,11 @@ export class AgentOrchestrator {
     return composeSystemPrompt(agent, options);
   }
 
-  /** 读会话历史，按 historyLimit 截断。 */
+  /** 读会话历史，按 historyLimit 截断并进行安全性校验。 */
   private readHistory(store: SessionStore, sessionKey: string): AgentMessage[] {
     const limit = this.options.historyLimit;
-    return limit === undefined ? store.history(sessionKey) : store.history(sessionKey, limit);
+    const raw = limit === undefined ? store.history(sessionKey) : store.history(sessionKey, limit);
+    return sanitizeHistorySlice(raw);
   }
 
   /** 日预算闸门（FR-TASK-007）。预算为 0 视为不限。 */
@@ -796,4 +797,41 @@ function readTraceFile(filePath: string | undefined): TraceEvent[] {
 export function noticesOf(events: readonly TaskEvent[]): string[] {
   return events.filter((event): event is Extract<TaskEvent, { type: 'notice' }> => event.type === 'notice')
     .map((event) => event.message);
+}
+
+/**
+ * 校验并清理截断后的历史切片：
+ * 1. 绝不允许历史以 role: 'tool' 消息开头（必然缺少前置发起调用的 assistant）；
+ * 2. 绝不允许包含孤立的 tool 消息（其 callId 无对应的 assistant.toolCalls 声明）；
+ * 3. 若发生截断，剥离断头的不完整调用对，保证消息序列严格符合 LLM API 规范。
+ */
+export function sanitizeHistorySlice(messages: readonly AgentMessage[]): AgentMessage[] {
+  let startIndex = 0;
+  while (startIndex < messages.length && messages[startIndex]?.role === 'tool') {
+    startIndex += 1;
+  }
+  const sliced = startIndex > 0 ? messages.slice(startIndex) : [...messages];
+
+  const declaredCalls = new Set<string>();
+  const sanitized: AgentMessage[] = [];
+
+  for (const msg of sliced) {
+    if (msg.role === 'assistant' && msg.toolCalls && msg.toolCalls.length > 0) {
+      for (const call of msg.toolCalls) {
+        if (call.id) declaredCalls.add(call.id);
+      }
+      sanitized.push(msg);
+      continue;
+    }
+    if (msg.role === 'tool') {
+      const callId = msg.toolResult?.callId;
+      if (callId && declaredCalls.has(callId)) {
+        sanitized.push(msg);
+      }
+      continue;
+    }
+    sanitized.push(msg);
+  }
+
+  return sanitized;
 }

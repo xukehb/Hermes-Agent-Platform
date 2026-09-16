@@ -67,11 +67,16 @@ function responsesUserContent(message: AgentMessage): unknown {
 
 export function buildChatMessages(history: readonly AgentMessage[]): unknown[] {
   const messages: unknown[] = [];
+  const knownCallIds = new Set<string>();
+
   for (const message of history) {
     if (message.role === 'system') continue;
     if (message.role === 'tool') {
       const result = message.toolResult;
-      if (result === undefined) continue;
+      if (result === undefined || !result.callId) continue;
+      // 严密防御：若前文无对应的 assistant tool_calls 声明此 callId，
+      // 发送 role: 'tool' 会被 OpenAI/兼容端点直接判定 400 No tool call found
+      if (!knownCallIds.has(result.callId)) continue;
       messages.push({ role: 'tool', tool_call_id: result.callId, content: toolResultText(result) });
       continue;
     }
@@ -86,6 +91,9 @@ export function buildChatMessages(history: readonly AgentMessage[]): unknown[] {
       content: message.content !== '' ? message.content : null,
     };
     if (calls.length > 0) {
+      for (const call of calls) {
+        if (call.id) knownCallIds.add(call.id);
+      }
       entry.tool_calls = calls.map((call) => ({
         id: call.id,
         type: 'function',
@@ -100,11 +108,14 @@ export function buildChatMessages(history: readonly AgentMessage[]): unknown[] {
 
 export function buildResponsesInput(history: readonly AgentMessage[]): unknown[] {
   const input: unknown[] = [];
+  const knownCallIds = new Set<string>();
+
   for (const message of history) {
     if (message.role === 'system') continue;
     if (message.role === 'tool') {
       const result = message.toolResult;
-      if (result === undefined) continue;
+      if (result === undefined || !result.callId) continue;
+      if (!knownCallIds.has(result.callId)) continue;
       input.push({ type: 'function_call_output', call_id: result.callId, output: toolResultText(result) });
       continue;
     }
@@ -114,6 +125,7 @@ export function buildResponsesInput(history: readonly AgentMessage[]): unknown[]
     }
     if (message.content !== '') input.push({ role: 'assistant', content: message.content });
     for (const call of message.toolCalls ?? []) {
+      if (call.id) knownCallIds.add(call.id);
       input.push({
         type: 'function_call',
         call_id: call.id,
