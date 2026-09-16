@@ -39,6 +39,8 @@ describe('package scripts', () => {
       'utf8',
     );
     expect(nativeHelper).toContain('process.versions.modules');
+    expect(nativeHelper).toContain("require('electron')");
+    expect(nativeHelper).not.toContain("'dist', 'electron'");
     expect(nativeHelper).not.toContain("'node-v137-linux-x64'");
   });
 

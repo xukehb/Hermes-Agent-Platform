@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, copyFileSync, unlinkSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { join } from 'node:path';
 
 const projectRoot = process.cwd();
@@ -13,9 +14,8 @@ const isElectron = process.argv.includes('--electron');
 const isNode = process.argv.includes('--node');
 
 function readElectronAbi(): string {
-  const electronBinary = process.platform === 'win32'
-    ? join(projectRoot, 'node_modules', 'electron', 'dist', 'electron.exe')
-    : join(projectRoot, 'node_modules', 'electron', 'dist', 'electron');
+  const require = createRequire(import.meta.url);
+  const electronBinary = require('electron') as string;
   return execFileSync(electronBinary, ['-p', 'process.versions.modules'], {
     encoding: 'utf8',
     env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
