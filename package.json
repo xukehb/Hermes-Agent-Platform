@@ -77,7 +77,7 @@
       "artifactName": "Hermes-Agent-Platform-${version}-macOS-${arch}.${ext}"
     },
     "linux": {
-      "icon": "build/icon.png",
+      "icon": "build/icons",
       "target": [
         "deb"
       ],

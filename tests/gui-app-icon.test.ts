@@ -32,7 +32,15 @@ describe('desktop app icon', () => {
   it('uses platform icons and includes the runtime PNG in packaged files', () => {
     expect(pkg.build.win.icon).toBe('build/icon.ico');
     expect(pkg.build.mac?.icon).toBe('build/icon.icns');
-    expect(pkg.build.linux?.icon).toBe('build/icon.png');
+    expect(pkg.build.linux?.icon).toBe('build/icons');
+
+    for (const size of [16, 24, 32, 48, 64, 128, 256, 512]) {
+      const icon = readFileSync(resolve(root, `build/icons/${size}x${size}.png`));
+      expect(icon.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+      expect(icon.readUInt32BE(16)).toBe(size);
+      expect(icon.readUInt32BE(20)).toBe(size);
+    }
+
     expect(pkg.build.files).toContain('dist/**/*');
 
     const main = readFileSync(resolve(root, 'src/gui/main.ts'), 'utf8');
