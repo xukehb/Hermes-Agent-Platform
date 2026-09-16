@@ -130,3 +130,19 @@ npx tsx src/cli/bin.ts -c .tmp-probe/hap.toml init
 - Release：https://github.com/xukehb/Hermes-Agent-Platform/releases/tag/v0.1.3
 - 收尾阶段本地复核：两次 `npm run rebuild:node` 均在 `node-gyp` 临时目录收尾阶段失败；改用预编译包后得到 Electron ABI 136，而 Node 22 要求 ABI 127，故 `npm test` 为 59/61 文件、745/751 用例通过，6 项均因 `better-sqlite3` ABI 不匹配失败。连续三次相关失败后已按规则停止重试。此结果不否定此前 Node 22 下 751/751 的成功记录，也不影响上述 GitHub 原生 runner 的发布结果，但表明当前本地 `node_modules` 需要重新安装后才能再次运行完整测试。
 - 同一收尾复核中，`npm run typecheck` 与 `npm run build` 均以退出码 0 完成。
+
+## 十二、2026-09-16 v0.1.4 GitHub 自动更新验证（Codex）
+
+| 阶段 | 命令 | 结果 |
+|---|---|---|
+| 专项验证 | updater、GUI、打包与 macOS 清单测试 | 6 文件 / 46 项全部通过 |
+| 类型与静态检查 | `npm run typecheck`、`npm run lint` | 均退出码 0 |
+| 编译 | `npm run build` | 退出码 0 |
+| 原生模块 | `npm run rebuild:node` | Node ABI 127 构建并校验成功 |
+| 全量测试 | `npm test` | 65 文件 / 777 项全部通过 |
+| Ubuntu 打包 | `npm run dist:linux -- --x64` | 退出码 0，生成 113822288 bytes DEB |
+
+- DEB 元数据：Package `hermes-agent-platform`、Version `0.1.4`、Architecture `amd64`、Maintainer `Hermes Agent Platform Team`。
+- `latest-linux.yml` 版本、文件名、大小和 SHA-512 与 DEB 一致；`resources/package-type` 为 `deb`。
+- DEB SHA-256：`e3e06b22d7aa723d4ef241a359df0e17cd07932c60deb5e7ca86d9290172f4df`。
+- Windows 与 macOS 包由 GitHub 原生 runner 构建；未签名包可能触发 SmartScreen 或 Gatekeeper。

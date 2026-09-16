@@ -249,3 +249,12 @@
 - Release：https://github.com/xukehb/Hermes-Agent-Platform/releases/tag/v0.1.3
 - `exec_command`：Node 22 收尾复核中两次源码重建分别因 `.deps` 与 `node_gyp_bins` 临时目录缺失失败；第三次改用预编译包后因 Electron ABI 136 与 Node ABI 127 不匹配，测试结果为 59/61 文件、745/751 用例通过。连续三次相关失败后停止重试并重新评估，未继续修改原生依赖。
 - `exec_command`：停止原生模块重试后独立执行 `npm run typecheck` 与 `npm run build`，两者退出码均为 0。
+
+## 2026-09-16：v0.1.4 GitHub 启动自动更新
+
+- `rg` / `git diff` / `sed`：扫描 Electron、renderer、打包配置、测试和既有未提交改动；缺少 `code-index`、`sequential-thinking`、`shrimp-task-manager`、`exa`，降级到本地工具。
+- `apply_patch`：新增更新控制器、IPC、启动检查、更新弹窗与中英文文案；升级版本并配置 GitHub provider。
+- `apply_patch`：扩展 Release workflow 上传更新清单、blockmap 与 macOS ZIP；新增双架构 macOS 清单合并和旧产品名阻断。
+- `apply_patch`：修复 `dist:mac` 目标覆盖问题，并将原生模块辅助脚本从硬编码 ABI 改为动态检测。
+- `vitest` / `tsc` / `eslint`：专项 46/46、全量 777/777、类型检查、lint 与编译全部通过。
+- `electron-builder` / `dpkg-deb`：重新构建并核对 0.1.4 Ubuntu amd64 DEB、更新清单和哈希。

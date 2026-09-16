@@ -169,3 +169,14 @@ GitHub Actions 运行 `34940545569` 的验证、四平台构建和 Release 发�
 终审评分：技术质量 97/100，需求匹配 100/100，验证完整性 98/100，综合 98/100；建议通过。唯一已知风险仍是安装包未签名，Windows SmartScreen 和 macOS Gatekeeper 可能提示。Release：https://github.com/xukehb/Hermes-Agent-Platform/releases/tag/v0.1.3
 
 收尾复核补充：当前本地 `better-sqlite3` 在源码重建时连续遇到 `node-gyp` 临时目录异常，改用预编译包又得到 Electron ABI 136，与 Node 22 ABI 127 不匹配；本轮全量测试因此为 745/751，6 项失败均在加载原生模块处。已依照连续三次相关失败规则停止重试。发布结论仍以标签提交上的 GitHub 六 job 全绿和公开资产白名单为准；本地依赖目录需重新安装后方可恢复全量测试能力。
+
+## 12. 2026-09-16 v0.1.4 GitHub 自动更新审查（Codex）
+
+| 维度 | 分数 | 依据 |
+|---|---:|---|
+| 技术质量 | 96 | 状态机与主进程隔离；IPC 最小化；下载去重、错误重试、进度边界均有测试 |
+| 需求匹配 | 98 | 启动检查一次；新版弹窗；主动一键下载并重启安装；版本升级至 0.1.4 |
+| 验证完整性 | 96 | 777 项全量测试、类型、lint、编译和真实 DEB 打包通过 |
+| 综合 | 97 | 建议通过并发布 v0.1.4 |
+
+GitHub provider 指向 `xukehb/Hermes-Agent-Platform`，Windows、DEB、macOS ZIP 更新元数据均进入发布流程，macOS 双架构清单由受测脚本合并。`dist:mac` 已避免命令行 `dmg` 覆盖配置，确保 DMG 与 ZIP 同时生成。已知风险为未签名包提示，以及 Windows Portable 用户更新后进入 NSIS 安装器流程。

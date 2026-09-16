@@ -170,3 +170,14 @@
 本地收尾复核说明：两次 `npm run rebuild:node` 在 `node-gyp` 临时目录收尾阶段失败，随后官方预编译包安装为 Electron ABI 136，与 Node 22 所需 ABI 127 不匹配。本轮 `npm test` 因此得到 61 个文件中 59 个通过、751 项中 745 项通过；6 项失败均发生在加载 `better-sqlite3` 时。连续三次相关失败后按规则停止重试。此前同版本 Node 22 环境已有 751/751 成功记录，且正式发布由 GitHub 的四个平台原生 runner 构建并全部成功；当前限制仅影响本地 `node_modules` 的再次验证能力。
 
 不依赖该原生模块加载的 `npm run typecheck` 与 `npm run build` 已在 Node 22.23.2 下重新执行，均以退出码 0 完成。
+
+## 2026-09-16 Hermes Agent Platform v0.1.4 自动更新验证（Codex）
+
+- 启动行为：仅在打包应用窗口加载完成后检查一次 GitHub Release；开发模式不检查。
+- 用户流程：新版弹窗展示版本与说明；一键下载展示进度、速度和大小；下载后重启安装。
+- 更新配置：`electron-updater@6.8.9`，provider 为 `xukehb/Hermes-Agent-Platform`；自动下载和退出自动安装均关闭。
+- 自动测试：专项 6 文件 / 46 项、完整测试 65 文件 / 777 项全部通过。
+- 静态验证：Node 22.23.2 下 typecheck、lint、build 均退出码 0。
+- Ubuntu 产物：`release/Hermes-Agent-Platform-0.1.4-Ubuntu-amd64.deb`，113822288 bytes，SHA-256 `e3e06b22d7aa723d4ef241a359df0e17cd07932c60deb5e7ca86d9290172f4df`。
+- DEB 与清单：版本 `0.1.4`、架构 `amd64`、维护者正确；`latest-linux.yml` 文件、大小和 SHA-512 一致；包类型为 `deb`。
+- 发布边界：Windows/macOS 与 GitHub Release 需由 `v0.1.4` 标签 workflow 终验；未签名包仍可能触发系统提示。
