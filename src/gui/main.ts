@@ -1,5 +1,5 @@
 import { app, BrowserWindow, ipcMain, Menu, screen, shell } from 'electron';
-import { autoUpdater } from 'electron-updater';
+import electronUpdater from 'electron-updater';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DesktopUpdateController, type DesktopUpdaterAdapter } from './desktop-updater.js';
@@ -15,6 +15,7 @@ if (process.platform === 'linux') {
 
 const service = new GuiService();
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const { autoUpdater } = electronUpdater;
 const updaterAdapter: DesktopUpdaterAdapter = {
   get autoDownload() { return autoUpdater.autoDownload; },
   set autoDownload(value) { autoUpdater.autoDownload = value; },

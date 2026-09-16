@@ -10,6 +10,12 @@ const renderer = readFileSync(resolve(root, 'src/gui/renderer/app.js'), 'utf8');
 const styles = readFileSync(resolve(root, 'src/gui/renderer/styles.css'), 'utf8');
 
 describe('desktop update IPC contract', () => {
+  it('loads the CommonJS electron-updater package through its default export', () => {
+    expect(main).toContain("import electronUpdater from 'electron-updater'");
+    expect(main).toContain('const { autoUpdater } = electronUpdater');
+    expect(main).not.toContain("import { autoUpdater } from 'electron-updater'");
+  });
+
   it('exposes state, download, install, and event subscription through preload', () => {
     expect(preload).toContain("getUpdateState: () => call('gui:update:getState')");
     expect(preload).toContain("downloadUpdate: () => call('gui:update:download')");
