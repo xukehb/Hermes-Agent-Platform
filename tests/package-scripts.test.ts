@@ -100,6 +100,9 @@ describe('package scripts', () => {
     expect(workflow).toContain('release/*.zip');
     expect(workflow).toContain('Reject legacy artifact names');
     expect(workflow).not.toContain('Hermes Agent Platform v0.1.3');
+    expect(workflow.indexOf('Check out release tooling')).toBeLessThan(
+      workflow.indexOf('Download installers'),
+    );
   });
 
   it('does not expose legacy desktop product names at runtime', () => {

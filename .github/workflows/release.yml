@@ -120,11 +120,6 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Download installers
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
       - name: Check out release tooling
         uses: actions/checkout@v4
 
@@ -136,6 +131,11 @@ jobs:
 
       - name: Install release tooling
         run: npm ci
+
+      - name: Download installers
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
       - name: Merge macOS update metadata
         run: node scripts/merge-mac-update-metadata.mjs artifacts
