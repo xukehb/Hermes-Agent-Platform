@@ -86,6 +86,7 @@ describe('ChannelContactStore (多通道通用联系人与智能体路由中枢)
     expect(feishuContact.name).toBe('前端研发组 (飞书)');
     expect(feishuContact.isRoom).toBe(true);
     expect(feishuContact.channel).toBe('feishu');
+    expect(feishuContact.agentId).toBeUndefined();
     expect(feishuContact.lastMessage).toBe('请帮我 review 这个 PR');
 
     // 记录智能体回写消息

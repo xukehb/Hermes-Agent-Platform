@@ -5324,10 +5324,24 @@ function populateAgentModelOptions(selectedModel = '') {
   const modelSelect = $('agentInputModel');
   if (!modelSelect) return;
 
+  const targetModel = (typeof selectedModel === 'object' && selectedModel !== null)
+    ? (selectedModel.primary || '')
+    : String(selectedModel || '');
+
+  const isModelMatched = (model) => {
+    if (!targetModel) return false;
+    return model.alias === targetModel ||
+      model.fullName === targetModel ||
+      (model.fullName && targetModel.includes('/') && model.fullName.toLowerCase() === targetModel.toLowerCase()) ||
+      (model.alias && targetModel.includes('/') && targetModel.endsWith('/' + model.alias));
+  };
+
+  const hasMatch = (state.models || []).some(isModelMatched);
+
   modelSelect.innerHTML = `
-    <option value="" ${selectedModel ? '' : 'selected'}>继承全局默认模型</option>
+    <option value="" ${!targetModel || !hasMatch ? 'selected' : ''}>继承全局默认模型</option>
   ` + (state.models || []).map((model) => `
-    <option value="${esc(model.alias)}" ${model.alias === selectedModel ? 'selected' : ''}>
+    <option value="${esc(model.alias)}" ${isModelMatched(model) ? 'selected' : ''}>
       ${esc(model.alias)} (${esc(model.providerId || model.provider)})
     </option>
   `).join('');
@@ -5438,7 +5452,11 @@ window.openAgentDialog = (agentId) => {
   $('agentModalEmoji').textContent = agent.emoji || '';
   $('agentModalTitle').textContent = `配置智能体: ${agent.id}`;
   $('agentSubmitBtn').textContent = '保存配置';
-  $('agentInputFallbackModels').value = joinAgentFieldList(agent.fallbackModels);
+  const primaryModel = (typeof agent.model === 'object' && agent.model !== null)
+    ? (agent.model.primary || '')
+    : (agent.model || '');
+  const fallbackList = agent.fallbackModels || (typeof agent.model === 'object' && agent.model !== null ? agent.model.fallbacks : []);
+  $('agentInputFallbackModels').value = joinAgentFieldList(fallbackList);
   $('agentInputUtilityModel').value = agent.utilityModel || '';
   $('agentInputProtocol').value = agent.protocol || '';
   $('agentInputAllowTools').value = joinAgentFieldList(agent.allowTools);
@@ -5451,7 +5469,7 @@ window.openAgentDialog = (agentId) => {
   $('agentInputSystemPrompt').value = agent.systemPrompt || '';
   $('agentInputDescription').value = agent.description || '';
   $('agentInputToolTier').value = agent.toolTier || 'coding';
-  populateAgentModelOptions(agent.model || '');
+  populateAgentModelOptions(primaryModel);
 
   $('agentModal').showModal();
 };
@@ -6146,7 +6164,7 @@ async function renderWeChatView() {
       if (agents.length > 0) {
         $('wxAgentSelect').innerHTML = agents.map((a) => `<option value="${esc(a.id)}">${esc(formatAgentLabel(a))}</option>`).join('');
       }
-      $('wxAgentSelect').value = wxConfig.defaultAgent || (agents[0]?.id || 'ops');
+      $('wxAgentSelect').value = wxConfig.defaultAgent || (agents[0]?.id || 'coder');
     }
     if ($('wxWorkspaceInput') && !$('wxWorkspaceInput').value) {
       $('wxWorkspaceInput').value = wxConfig.workspace || currentActiveProject || '';
@@ -6272,10 +6290,176 @@ async function renderWeChatView() {
     if (confirmBox) {
       confirmBox.style.display = (wxConfig.running && wxConfig.status !== 'connected') ? 'block' : 'none';
     }
+
+    await renderWeChatContactsList();
   } catch (err) {
     console.error('加载微信配置失败:', err);
   }
 }
+
+async function renderWeChatContactsList() {
+  const container = $('wxContactsList');
+  if (!container) return;
+
+  try {
+    const contacts = (await window.hap.listWeChatContacts()) || [];
+    if (contacts.length === 0) {
+      container.innerHTML = `
+        <div style="color:var(--text-muted);padding:8px 4px;text-align:center;font-size:11px;">
+          暂无专属路由规则（默认由当前微信默认智能体响应）
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        ${contacts.map((c) => {
+          const isRoom = c.isRoom || c.type === 'room';
+          const typeIcon = isRoom ? '👥' : '👤';
+          const agentBadge = c.agentId
+            ? `<span class="badge" style="background:var(--primary-subtle);color:var(--primary);font-size:10px;padding:1px 5px;">${esc(c.agentId)}</span>`
+            : `<span class="badge neutral" style="font-size:10px;padding:1px 5px;">默认智能体</span>`;
+          const replyBadge = c.autoReply !== false
+            ? `<span class="badge success" style="font-size:10px;padding:1px 5px;">自动回复</span>`
+            : `<span class="badge warning" style="font-size:10px;padding:1px 5px;">已停用</span>`;
+          const replyModeText = c.replyMode === 'mention' ? '@响应' : (c.replyMode === 'manual' ? '仅记录' : '全量响应');
+
+          return `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 6px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:4px;gap:6px;">
+              <div style="display:flex;align-items:center;gap:5px;overflow:hidden;flex:1;">
+                <span>${typeIcon}</span>
+                <span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px;" title="${esc(c.name)}">${esc(c.name)}</span>
+                <span style="color:var(--text-muted);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:85px;" title="${esc(c.id)}">(${esc(c.id)})</span>
+                ${agentBadge}
+                ${replyBadge}
+                <span style="font-size:10px;color:var(--text-muted);">${replyModeText}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:3px;">
+                <button type="button" class="btn text-btn edit-wx-contact-btn" data-id="${esc(c.id)}" style="padding:1px 4px;font-size:10.5px;color:var(--primary);" title="编辑">编辑</button>
+                <button type="button" class="btn text-btn del-wx-contact-btn" data-id="${esc(c.id)}" style="padding:1px 4px;font-size:10.5px;color:var(--danger, #ef4444);" title="删除">删除</button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+
+    container.querySelectorAll('.edit-wx-contact-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const contact = contacts.find((item) => item.id === id);
+        if (contact) {
+          openWxContactModal(contact);
+        }
+      });
+    });
+
+    container.querySelectorAll('.del-wx-contact-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        if (!confirm(`确定要删除联系人/群聊 "${id}" 的路由规则吗？`)) return;
+        try {
+          await window.hap.removeWeChatContact(id);
+          showToast('已移除该路由规则', 'success');
+          await renderWeChatContactsList();
+        } catch (err) {
+          showToast('移除失败：' + err.message, 'error');
+        }
+      });
+    });
+  } catch (err) {
+    console.error('加载微信联系人失败:', err);
+  }
+}
+
+function openWxContactModal(contact = null) {
+  const modal = $('wxContactModal');
+  if (!modal) return;
+
+  const title = $('wxContactModalTitle');
+  const inputId = $('wxContactInputId');
+  const inputName = $('wxContactInputName');
+  const inputType = $('wxContactInputType');
+  const inputAgent = $('wxContactInputAgent');
+  const inputReplyMode = $('wxContactInputReplyMode');
+  const inputAutoReply = $('wxContactInputAutoReply');
+  const inputWorkspace = $('wxContactInputWorkspace');
+
+  if (inputAgent) {
+    const agents = state.agents || [];
+    inputAgent.innerHTML = `
+      <option value="">(继承微信默认智能体)</option>
+      ${agents.map((a) => `<option value="${esc(a.id)}">${esc(formatAgentLabel(a))}</option>`).join('')}
+    `;
+  }
+
+  if (contact) {
+    if (title) title.textContent = '编辑微信路由规则';
+    if (inputId) {
+      inputId.value = contact.id;
+      inputId.disabled = true;
+    }
+    if (inputName) inputName.value = contact.name || '';
+    if (inputType) inputType.value = contact.type || (contact.isRoom ? 'room' : 'user');
+    if (inputAgent) inputAgent.value = contact.agentId || '';
+    if (inputReplyMode) inputReplyMode.value = contact.replyMode || 'all';
+    if (inputAutoReply) inputAutoReply.checked = contact.autoReply !== false;
+    if (inputWorkspace) inputWorkspace.value = contact.workspace || '';
+  } else {
+    if (title) title.textContent = '添加微信路由规则';
+    if (inputId) {
+      inputId.value = '';
+      inputId.disabled = false;
+    }
+    if (inputName) inputName.value = '';
+    if (inputType) inputType.value = 'user';
+    if (inputAgent) inputAgent.value = '';
+    if (inputReplyMode) inputReplyMode.value = 'all';
+    if (inputAutoReply) inputAutoReply.checked = true;
+    if (inputWorkspace) inputWorkspace.value = '';
+  }
+
+  modal.showModal();
+}
+
+$('wxContactForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = $('wxContactInputId')?.value.trim();
+  const name = $('wxContactInputName')?.value.trim();
+  const type = $('wxContactInputType')?.value || 'user';
+  const agentId = $('wxContactInputAgent')?.value.trim() || undefined;
+  const replyMode = $('wxContactInputReplyMode')?.value || 'all';
+  const autoReply = $('wxContactInputAutoReply')?.checked !== false;
+  const workspace = $('wxContactInputWorkspace')?.value.trim() || undefined;
+
+  if (!id || !name) {
+    showToast('联系人 ID 和备注名称为必填项', 'warning');
+    return;
+  }
+
+  try {
+    await window.hap.upsertWeChatContact({
+      id,
+      name,
+      type,
+      isRoom: type === 'room',
+      agentId,
+      replyMode,
+      autoReply,
+      workspace,
+    });
+    showToast('微信路由规则已保存！', 'success');
+    $('wxContactModal')?.close();
+    await renderWeChatContactsList();
+  } catch (err) {
+    showToast('保存路由规则失败：' + err.message, 'error');
+  }
+});
+
+$('openAddWxContactDialogBtn')?.addEventListener('click', () => {
+  openWxContactModal();
+});
 
 $('confirmWxLoginBtn')?.addEventListener('click', async () => {
   try {

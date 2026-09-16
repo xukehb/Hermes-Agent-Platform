@@ -167,7 +167,7 @@ export class ChannelContactStore {
         name: contactName,
         type: msg.isRoom ? 'room' : 'user',
         isRoom: msg.isRoom,
-        agentId: 'coder',
+        agentId: undefined,
         autoReply: true,
         replyMode: msg.isRoom ? 'mention' : 'all',
         lastMessage: msg.text,

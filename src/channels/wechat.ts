@@ -69,7 +69,7 @@ export class WeChatChannel implements Channel {
   readonly name = 'wechat' as const;
 
   private readonly options: WeChatChannelOptions;
-  private readonly config: ResolvedWeChatChannel;
+  private config: ResolvedWeChatChannel;
   private readonly dispatcher: ChannelDispatcher;
   private readonly sender: OutboundSender;
   private readonly charLimit: number;
@@ -105,6 +105,14 @@ export class WeChatChannel implements Channel {
 
   get qrCodeText(): string | undefined {
     return this.latestQrText;
+  }
+
+  /** 热重载微信通道配置（FR-CFG-005） */
+  reload(options?: { channels?: ResolvedChannels; limits?: ResolvedLimits }): void {
+    if (options?.channels?.wechat) {
+      this.config = options.channels.wechat;
+      this.log(`[WeChat] 通道配置已热重载，当前默认智能体: ${this.config.defaultAgent || '未指定'}`);
+    }
   }
 
   async start(): Promise<void> {
@@ -244,8 +252,14 @@ export class WeChatChannel implements Channel {
       }
     }
 
+    const knownAgents = this.options.host.agentIds ? this.options.host.agentIds() : [];
+    const fallbackAgent = knownAgents[0] || 'coder';
+
     // 联系人绑定属于可回退偏好；仅消息中的 @agent 作为严格的显式选择。
-    const contactAgentId = !agentId ? contact.agentId : undefined;
+    // 若联系人绑定的 agentId 已不存在于系统，则自动忽略并回退到通道默认智能体
+    const validContactAgentId = (!agentId && contact.agentId && (knownAgents.length === 0 || knownAgents.includes(contact.agentId)))
+      ? contact.agentId
+      : undefined;
 
     // 若联系人关闭了自动回复
     if (!contact.autoReply || contact.replyMode === 'manual') {
@@ -253,7 +267,7 @@ export class WeChatChannel implements Channel {
       return;
     }
 
-    const assignedAgent = agentId || contactAgentId || this.config.defaultAgent || 'ops';
+    const assignedAgent = agentId || validContactAgentId || this.config.defaultAgent || fallbackAgent;
 
     const target: OutboundTarget = {
       channel: 'wechat',
@@ -266,9 +280,18 @@ export class WeChatChannel implements Channel {
           text: formatted,
         });
         if (!this.personalDriver) return undefined;
-        return this.personalDriver.sendMessage(targetId, formatted);
+        try {
+          return await this.personalDriver.sendMessage(targetId, formatted);
+        } catch (err) {
+          this.log(`[WeChat] 出站消息发送至 [${targetId}] 失败: ${describeError(err)}`);
+          throw err;
+        }
       },
     };
+
+    const effectiveDefaultAgent = validContactAgentId || this.config.defaultAgent || fallbackAgent;
+
+    const effectiveAgentId = agentId || validContactAgentId;
 
     const inbound: InboundMessage = {
       channel: 'wechat',
@@ -277,8 +300,8 @@ export class WeChatChannel implements Channel {
       receivedAt: new Date().toISOString(),
       target,
       ...(msg.attachments !== undefined ? { attachments: msg.attachments } : {}),
-      ...(agentId !== undefined ? { agentId } : {}),
-      ...((contactAgentId || this.config.defaultAgent) !== undefined ? { defaultAgent: contactAgentId || this.config.defaultAgent } : {}),
+      ...(effectiveAgentId !== undefined ? { agentId: effectiveAgentId } : {}),
+      ...(effectiveDefaultAgent !== undefined ? { defaultAgent: effectiveDefaultAgent } : {}),
     };
 
     this.dispatcher.submit(inbound);

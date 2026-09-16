@@ -283,4 +283,70 @@ describe('WeChatChannel 基础测试', () => {
     expect(host.requests[0]?.input).toBe('请审查代码');
     expect(host.requests[0]?.sessionKey).toBe('wecom:from_staff_01');
   });
+
+  test('支持热重载通道配置并将新消息路由至新的 default_agent', async () => {
+    const host = new StubHost();
+    const driver: WeChatPersonalDriver = { start: async () => undefined, stop: async () => undefined, sendMessage: async () => undefined };
+    const channel = new WeChatChannel({
+      host,
+      channels: channelsOf({ defaultAgent: 'coder' }),
+      limits,
+      paths,
+      personalDriverFactory: () => driver,
+    });
+
+    await channel.start();
+
+    // 第一次发送：使用初始配置中的 defaultAgent ('coder')
+    await channel.handlePersonalMessage({
+      id: 'm_reload_1',
+      fromId: 'wx_user_reload_1',
+      fromName: '测试用户1',
+      isRoom: false,
+      text: '任务一',
+    });
+
+    expect(host.requests.length).toBe(1);
+    expect(host.requests[0]?.channelDefaultAgent).toBe('coder');
+
+    // 热重载通道：将 defaultAgent 更新为 'writer'
+    channel.reload({
+      channels: channelsOf({ defaultAgent: 'writer' }),
+    });
+
+    // 第二次发送：应动态生效为 'writer'
+    await channel.handlePersonalMessage({
+      id: 'm_reload_2',
+      fromId: 'wx_user_reload_2',
+      fromName: '测试用户2',
+      isRoom: false,
+      text: '任务二',
+    });
+
+    expect(host.requests.length).toBe(2);
+    expect(host.requests[1]?.channelDefaultAgent).toBe('writer');
+
+    // 3) 若联系人配置了特定专属智能体，则以其 agentId 优先分派
+    const { WeChatContactStore } = await import('../src/channels/wechat-contacts.js');
+    const store = WeChatContactStore.getInstance();
+    store.upsertContact({
+      id: 'wx_user_custom',
+      name: '定制用户',
+      agentId: 'writer',
+      autoReply: true,
+    });
+    await channel.handlePersonalMessage({
+      id: 'm_contact_1',
+      fromId: 'wx_user_custom',
+      fromName: '定制用户',
+      isRoom: false,
+      text: '定制任务',
+    });
+
+    await channel.stop();
+
+    expect(host.requests.length).toBe(3);
+    expect(host.requests[2]?.agentId).toBe('writer');
+  });
 });
+

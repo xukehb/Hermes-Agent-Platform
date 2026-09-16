@@ -1044,6 +1044,7 @@ export class GuiService {
     const result = upsertGuiAgent(this.configPath, input);
     const id = input.id.trim();
     this.info('已更新智能体配置：' + id);
+    this.reloadRunningChannels();
     return result;
   }
 
@@ -1055,6 +1056,7 @@ export class GuiService {
     }
     const result = new ConfigWriter(this.configPath).setGlobals({ defaultAgent: id });
     this.info('已设置默认智能体：' + id);
+    this.reloadRunningChannels();
     return result;
   }
 
@@ -1069,6 +1071,7 @@ export class GuiService {
     }
     const result = new ConfigWriter(this.configPath).setGlobals({ defaultModel: alias });
     this.info('已设置全局默认模型：' + alias);
+    this.reloadRunningChannels();
     return result;
   }
 
@@ -1149,6 +1152,7 @@ export class GuiService {
     const id = rawId.trim();
     const result = removeGuiAgent(this.configPath, id);
     this.info('已删除智能体配置：' + id);
+    this.reloadRunningChannels();
     return result;
   }
 
@@ -3479,11 +3483,27 @@ export class GuiService {
   }
 
   private wechatManager: WeChatChannel | undefined;
+  private wechatOrchestrator: AgentOrchestrator | undefined;
   private wechatRunning = false;
   private wechatStatus: 'idle' | 'waiting_qr' | 'connected' | 'error' = 'idle';
   private wechatQrCode: string | undefined;
   private wechatLoginUser: string | undefined;
   private wechatError: string | undefined;
+
+  private reloadRunningChannels(): void {
+    if (this.wechatOrchestrator) {
+      try {
+        this.wechatOrchestrator.reload();
+        this.wechatManager?.reload({
+          channels: this.wechatOrchestrator.config.resolveChannels(),
+          limits: this.wechatOrchestrator.config.resolveLimits(),
+        });
+        this.info('已向运行中的微信服务同步最新配置');
+      } catch (err) {
+        this.error('向微信服务同步配置失败: ' + describeError(err));
+      }
+    }
+  }
 
   async getWeChatConfig(): Promise<GuiWeChatConfig> {
     const resolver = this.resolver();
@@ -3493,7 +3513,7 @@ export class GuiService {
     const declaredAgents = resolver.listAgentIds();
     const defaultAgentId = (wx.defaultAgent && declaredAgents.includes(wx.defaultAgent))
       ? wx.defaultAgent
-      : (declaredAgents[0] || wx.defaultAgent || 'ops');
+      : (declaredAgents[0] || wx.defaultAgent || 'coder');
     
     let agentWorkspace: string | undefined;
     try {
@@ -3556,7 +3576,9 @@ export class GuiService {
     if (config.workspace !== undefined && config.workspace.trim()) {
       if (!hapConfig.agents) hapConfig.agents = {};
       if (!hapConfig.agents.entries) hapConfig.agents.entries = {};
-      const agentKey = config.defaultAgent || hapConfig.channels.wechat.default_agent || 'ops';
+      const resolver = this.resolver();
+      const declaredAgents = resolver.listAgentIds();
+      const agentKey = config.defaultAgent || hapConfig.channels.wechat.default_agent || declaredAgents[0] || 'coder';
       if (!hapConfig.agents.entries[agentKey]) hapConfig.agents.entries[agentKey] = {};
       hapConfig.agents.entries[agentKey].workspace = config.workspace.trim();
     }
@@ -3564,6 +3586,7 @@ export class GuiService {
     // @ts-expect-error private commit
     writer.commit(hapConfig, exists, raw, '更新微信/企业微信配置');
     this.info('微信通道配置已保存');
+    this.reloadRunningChannels();
     return this.getWeChatConfig();
   }
 
@@ -3611,6 +3634,7 @@ export class GuiService {
     const orchestrator = new AgentOrchestrator({ configPath: this.configPath });
     await orchestrator.loadMcpTools();
 
+    this.wechatOrchestrator = orchestrator;
     this.wechatStatus = 'waiting_qr';
 
     const manager = new WeChatChannel({
@@ -3651,13 +3675,17 @@ export class GuiService {
     } catch (error) {
       await manager.stop();
       this.wechatManager = undefined;
+      this.wechatOrchestrator = undefined;
       this.wechatRunning = false;
       this.wechatStatus = 'error';
       this.wechatError = describeError(error);
       throw error;
     }
 
-    if (this.wechatManager !== manager) return { ok: true, message: '微信启动已取消' };
+    if (this.wechatManager !== manager) {
+      this.wechatOrchestrator = undefined;
+      return { ok: true, message: '微信启动已取消' };
+    }
 
     if (manager.qrCodeText) {
       this.wechatQrCode = manager.qrCodeText;
@@ -3679,6 +3707,7 @@ export class GuiService {
   async stopWeChatService(): Promise<{ ok: boolean; message: string }> {
     const manager = this.wechatManager;
     this.wechatManager = undefined;
+    this.wechatOrchestrator = undefined;
     this.wechatRunning = false;
     try {
       await manager?.stop();

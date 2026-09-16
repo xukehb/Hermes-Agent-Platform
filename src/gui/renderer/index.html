@@ -4421,6 +4421,78 @@
       </div>
     </dialog>
 
+    <!-- 弹窗: 微信联系人/群聊路由规则 (WeChat Contact Routing Rule Modal) -->
+    <dialog id="wxContactModal" class="modal modal-md">
+      <form id="wxContactForm" class="modal-form-wrap" style="padding:24px 28px;">
+        <div class="modal-header-row" style="margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border-default);">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%);color:#fff;display:grid;place-items:center;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </div>
+            <div>
+              <h2 id="wxContactModalTitle" style="font-size:16.5px;margin:0;font-weight:700;">添加微信路由规则</h2>
+              <p style="font-size:12px;color:var(--text-muted);margin:2px 0 0 0;">为特定微信好友或群聊绑定专属智能体与工作区</p>
+            </div>
+          </div>
+          <button type="button" class="btn-close" id="closeWxContactModalBtn" onclick="$('wxContactModal')?.close()" aria-label="关闭" title="关闭"></button>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>联系人 / 群聊 ID *</label>
+            <input name="id" id="wxContactInputId" placeholder="例如：wxid_xxx 或 xxx@chatroom" required />
+          </div>
+
+          <div class="form-group">
+            <label>备注 / 显示名称 *</label>
+            <input name="name" id="wxContactInputName" placeholder="例如：架构研发群、产品经理张三" required />
+          </div>
+
+          <div class="form-group">
+            <label>类型 *</label>
+            <select name="type" id="wxContactInputType">
+              <option value="user">单聊 / 微信个人好友</option>
+              <option value="room">群聊 / 微信群</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>绑定专属智能体</label>
+            <select name="agentId" id="wxContactInputAgent">
+              <option value="">(继承微信默认智能体)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>回复模式</label>
+            <select name="replyMode" id="wxContactInputReplyMode">
+              <option value="all">全量回复 (接收所有消息均回复)</option>
+              <option value="mention">仅 @ 时回复 (群聊推荐)</option>
+              <option value="manual">手动模式 (仅记录，不自动回复)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>自动回复状态</label>
+            <div style="display:flex;align-items:center;gap:8px;padding-top:6px;">
+              <input type="checkbox" id="wxContactInputAutoReply" checked style="width:16px;height:16px;" />
+              <label for="wxContactInputAutoReply" style="margin:0;cursor:pointer;font-size:13px;">启用此联系人/群聊的自动回复</label>
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label>专属工程工作区 (可选)</label>
+            <input name="workspace" id="wxContactInputWorkspace" placeholder="例如：/home/user/my-project，留空继承通道或智能体默认工作区" />
+          </div>
+        </div>
+
+        <div class="modal-actions-row" style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border-default);">
+          <button type="button" class="btn secondary" onclick="$('wxContactModal')?.close()">取消</button>
+          <button type="submit" class="btn primary" id="saveWxContactBtn">保存规则</button>
+        </div>
+      </form>
+    </dialog>
+
     <!-- 弹窗: Git Commit Markdown 规范文档设置 (Git Commit Rule Markdown Modal) -->
     <dialog id="gitCommitRuleDialog" class="modal modal-lg">
       <div class="commit-rule-modal-wrap">

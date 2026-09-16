@@ -340,7 +340,7 @@ export class ChannelDispatcher {
         const list = this.options.host.agentsList ? this.options.host.agentsList() : [];
         const ids = this.options.host.agentIds();
         const currentAgent = this.options.host.sessionAgent ? this.options.host.sessionAgent(message.sessionKey) : undefined;
-        const activeId = currentAgent || message.agentId || message.defaultAgent || ids[0] || 'ops';
+        const activeId = currentAgent || message.agentId || message.defaultAgent || ids[0] || 'coder';
 
         if (list.length > 0) {
           const lines = [
@@ -365,7 +365,7 @@ export class ChannelDispatcher {
       case 'agent': {
         const ids = this.options.host.agentIds();
         const currentAgent = this.options.host.sessionAgent ? this.options.host.sessionAgent(message.sessionKey) : undefined;
-        const activeId = currentAgent || message.agentId || message.defaultAgent || ids[0] || 'ops';
+        const activeId = currentAgent || message.agentId || message.defaultAgent || ids[0] || 'coder';
 
         if (command.agentId === undefined) {
           const status = this.options.host.status(message.sessionKey, activeId);
