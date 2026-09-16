@@ -1,6 +1,8 @@
 import { app, BrowserWindow, ipcMain, Menu, screen, shell } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DesktopUpdateController, type DesktopUpdaterAdapter } from './desktop-updater.js';
 import { GuiService } from './service.js';
 
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
@@ -13,6 +15,25 @@ if (process.platform === 'linux') {
 
 const service = new GuiService();
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const updaterAdapter: DesktopUpdaterAdapter = {
+  get autoDownload() { return autoUpdater.autoDownload; },
+  set autoDownload(value) { autoUpdater.autoDownload = value; },
+  get autoInstallOnAppQuit() { return autoUpdater.autoInstallOnAppQuit; },
+  set autoInstallOnAppQuit(value) { autoUpdater.autoInstallOnAppQuit = value; },
+  on(event, listener) {
+    autoUpdater.on(event, listener as never);
+    return this;
+  },
+  checkForUpdates: () => autoUpdater.checkForUpdates(),
+  downloadUpdate: () => autoUpdater.downloadUpdate(),
+  quitAndInstall: (isSilent, isForceRunAfter) => autoUpdater.quitAndInstall(isSilent, isForceRunAfter),
+};
+const desktopUpdater = new DesktopUpdateController({
+  updater: updaterAdapter,
+  isPackaged: app.isPackaged,
+  currentVersion: app.getVersion(),
+  onCheckError: (error) => service.error(`检查 GitHub 更新失败：${error.message}`),
+});
 
 let mainWindow: BrowserWindow | null = null;
 let isMiniMode = false;
@@ -32,6 +53,9 @@ async function invoke<T>(handler: () => Promise<T> | T): Promise<{ ok: true; dat
 }
 
 function registerIpc(): void {
+  ipcMain.handle('gui:update:getState', () => invoke(() => desktopUpdater.getState()));
+  ipcMain.handle('gui:update:download', () => invoke(() => desktopUpdater.download()));
+  ipcMain.handle('gui:update:install', () => invoke(() => desktopUpdater.quitAndInstall()));
   ipcMain.handle('gui:snapshot', () => invoke(() => service.snapshot()));
   ipcMain.handle('gui:importProject', () => invoke(() => service.importProject()));
   ipcMain.handle('gui:addProject', (_event, input) => invoke(() => service.addProject(input)));
@@ -283,8 +307,16 @@ async function createWindow(): Promise<void> {
   });
 
   mainWindow = window;
+  const unsubscribeUpdater = desktopUpdater.subscribe((state) => {
+    if (!window.isDestroyed()) window.webContents.send('gui:update:state', state);
+  });
   mainWindow.on('closed', () => {
+    unsubscribeUpdater();
     mainWindow = null;
+  });
+
+  window.webContents.once('did-finish-load', () => {
+    void desktopUpdater.checkOnStartup();
   });
 
   // 监听键盘输入事件，支持 Ctrl+Shift+I / F12 开关控制台，Ctrl+R / F5 快速刷新

@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, copyFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -6,35 +7,33 @@ const moduleRoot = join(projectRoot, 'node_modules', 'better-sqlite3');
 const releaseNode = join(moduleRoot, 'build', 'Release', 'better_sqlite3.node');
 const bindingDir = join(moduleRoot, 'lib', 'binding');
 
-const electronAbiDir = join(bindingDir, 'node-v136-linux-x64');
-const electronTarget = join(electronAbiDir, 'better_sqlite3.node');
+const platform = process.platform;
+const arch = process.arch;
+const isElectron = process.argv.includes('--electron');
+const isNode = process.argv.includes('--node');
 
-const nodeAbiDir = join(bindingDir, 'node-v137-linux-x64');
-const nodeTarget = join(nodeAbiDir, 'better_sqlite3.node');
+function readElectronAbi(): string {
+  const electronBinary = process.platform === 'win32'
+    ? join(projectRoot, 'node_modules', 'electron', 'dist', 'electron.exe')
+    : join(projectRoot, 'node_modules', 'electron', 'dist', 'electron');
+  return execFileSync(electronBinary, ['-p', 'process.versions.modules'], {
+    encoding: 'utf8',
+    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+  }).trim();
+}
 
-mkdirSync(electronAbiDir, { recursive: true });
-mkdirSync(nodeAbiDir, { recursive: true });
+const abi = isElectron && !isNode ? readElectronAbi() : process.versions.modules;
+const targetDir = join(bindingDir, `node-v${abi}-${platform}-${arch}`);
+const target = join(targetDir, 'better_sqlite3.node');
+mkdirSync(targetDir, { recursive: true });
 
 if (existsSync(releaseNode)) {
-  const isElectron = process.argv.includes('--electron') || Boolean(process.versions.electron);
-  const isNode = process.argv.includes('--node');
-  if (isElectron && !isNode) {
-    copyFileSync(releaseNode, electronTarget);
-    console.log('[Native Addon] Saved Electron ABI 136 better_sqlite3.node');
-  } else {
-    copyFileSync(releaseNode, nodeTarget);
-    console.log('[Native Addon] Saved Node ABI 137 better_sqlite3.node');
-  }
+  copyFileSync(releaseNode, target);
+  console.log(`[Native Addon] Saved ${isElectron && !isNode ? 'Electron' : 'Node'} ABI ${abi} better_sqlite3.node`);
   try {
     unlinkSync(releaseNode);
   } catch {}
 }
 
-if (existsSync(electronTarget) && existsSync(nodeTarget)) {
-  console.log('[Native Addon] Dual ABI bindings verified for both Electron (136) and Node (137).');
-} else {
-  console.log('[Native Addon] Status:', {
-    electronBinding: existsSync(electronTarget),
-    nodeBinding: existsSync(nodeTarget),
-  });
-}
+if (!existsSync(target)) throw new Error(`未找到 ABI ${abi} 的 better_sqlite3.node`);
+console.log(`[Native Addon] Verified ${target}`);

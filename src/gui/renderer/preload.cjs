@@ -7,6 +7,14 @@ async function call(channel, ...payload) {
 }
 
 contextBridge.exposeInMainWorld('hap', {
+  getUpdateState: () => call('gui:update:getState'),
+  downloadUpdate: () => call('gui:update:download'),
+  installUpdate: () => call('gui:update:install'),
+  onUpdateState: (callback) => {
+    const listener = (_event, state) => callback(state);
+    ipcRenderer.on('gui:update:state', listener);
+    return () => ipcRenderer.removeListener('gui:update:state', listener);
+  },
   snapshot: () => call('gui:snapshot'),
   importProject: () => call('gui:importProject'),
   addProject: (input) => call('gui:addProject', input),
@@ -179,4 +187,3 @@ contextBridge.exposeInMainWorld('hap', {
     ipcRenderer.removeAllListeners('gui:window:miniModeChanged');
   },
 });
-

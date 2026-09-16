@@ -518,6 +518,36 @@ function renderMarkdownContent(rawText) {
   // 引用块 (Blockquote)
   safe = safe.replace(/^\> (.*$)/gim, '<blockquote class="md-quote">$1</blockquote>');
 
+  // 智能建议快捷回复交互化 (自动将 '你可以直接回复：' 转换为现代点击即发的交互胶囊)
+  const suggestRegex = /(?:你可以直接回复|你也可以回复|快捷回复|建议回复|建议下一步|你可以通过以下方式继续|you can reply with|suggested replies|suggested next steps)[：:]\s*((?:[\r\n]+(?:\s*[-*]|\s*\d+\.)\s+[^\r\n]+)+)/gi;
+  safe = safe.replace(suggestRegex, (match, listBody) => {
+    const rawItems = listBody.split(/\r?\n/).map(l => l.trim()).filter(l => /^(?:[-*]|\d+\.)\s+/.test(l));
+    if (rawItems.length === 0) return match;
+    const chipsHtml = rawItems.map(item => {
+      const cleanText = item.replace(/^(?:[-*]|\d+\.)\s+/, '').replace(/^\*\*|\*\*$/g, '').replace(/^`|`$/g, '').trim();
+      if (!cleanText) return '';
+      const promptAttr = cleanText.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      const titleTooltip = window.I18N ? window.I18N.t('chat.clickToSend', '点击直接发送此回复') : '点击直接发送此回复';
+      return `<button type="button" class="suggested-reply-chip" data-hero-prompt="${promptAttr}" title="${esc(titleTooltip)}">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"/></svg>
+        <span>${esc(cleanText)}</span>
+      </button>`;
+    }).filter(Boolean).join('');
+
+    const sectionTitle = window.I18N ? window.I18N.t('chat.suggestedReplies', '建议快捷回复') : '建议快捷回复';
+    return `
+      <div class="suggested-replies-wrap">
+        <div class="suggested-replies-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span data-i18n="chat.suggestedReplies">${esc(sectionTitle)}</span>
+        </div>
+        <div class="suggested-replies-chips">
+          ${chipsHtml}
+        </div>
+      </div>
+    `;
+  });
+
   // 任务复选框
   safe = safe.replace(/^[\*\-] \[ \] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:center;gap:6px;margin:3px 0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);"><rect x="3" y="3" width="18" height="18" rx="2"/></svg><span>$1</span></div>');
   safe = safe.replace(/^[\*\-] \[x\] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:center;gap:6px;margin:3px 0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--success);"><polyline points="20 6 9 17 4 12"/></svg><span style="text-decoration:line-through;color:var(--text-muted);">$1</span></div>');
@@ -1906,6 +1936,34 @@ function initOpacityAndGlass() {
     document.body.classList.toggle('no-blur', !enabled);
     localStorage.setItem('hap_glass_mode', enabled ? '1' : '0');
   });
+
+  // 界面语言切换芯片 (中英文)
+  document.querySelectorAll('.lang-quick-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      const lang = chip.getAttribute('data-lang');
+      if (lang && window.I18N) {
+        window.I18N.setLanguage(lang);
+      }
+    });
+  });
+
+  // More 菜单中的语言轮换按钮
+  $('toggleLangMoreBtn')?.addEventListener('click', () => {
+    if (window.I18N) {
+      window.I18N.toggleLanguage();
+    }
+  });
+
+  // 监听语言切换事件，同步状态文本
+  window.addEventListener('languagechange', () => {
+    const rangeInput = $('opacityRangeInput');
+    const clamped = rangeInput ? parseInt(rangeInput.value, 10) : 100;
+    const displayLabel = $('appearanceDisplayLabel') || $('opacityDisplayLabel');
+    if (displayLabel) {
+      const baseText = window.I18N ? window.I18N.t('header.appearance', '外观') : '外观';
+      displayLabel.textContent = clamped < 100 ? `${baseText} (${clamped}%)` : baseText;
+    }
+  });
 }
 
 function setWindowOpacity(val, syncInput = true) {
@@ -1930,7 +1988,8 @@ function setWindowOpacity(val, syncInput = true) {
 
   const displayLabel = $('appearanceDisplayLabel') || $('opacityDisplayLabel');
   if (displayLabel) {
-    displayLabel.textContent = clamped < 100 ? `外观 (${clamped}%)` : '外观';
+    const baseText = window.I18N ? window.I18N.t('header.appearance', '外观') : '外观';
+    displayLabel.textContent = clamped < 100 ? `${baseText} (${clamped}%)` : baseText;
   }
 
   if (syncInput) {
@@ -2788,7 +2847,7 @@ function renderGitFileRow(f, isStaged) {
   const s = f.status || '';
   if (s.includes('U') || s === 'AA' || s === 'DD') {
     badgeClass = 'C';
-    badgeLabel = 'U';
+    badgeLabel = '冲突';
   } else if (s.includes('?') || s.includes('A')) {
     badgeClass = 'A';
     badgeLabel = isStaged ? 'A' : 'U';
@@ -14333,3 +14392,86 @@ $('logoutWxBtn')?.addEventListener('click', async () => {
     await renderWeChatView();
   }
 });
+
+function updateText(key, fallback) {
+  return window.I18N ? window.I18N.t(key, fallback) : fallback;
+}
+
+function formatUpdateBytes(value) {
+  const bytes = Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
+  if (bytes < 1024) return `${Math.round(bytes)} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function renderDesktopUpdateState(state) {
+  const dialog = $('desktopUpdateDialog');
+  if (!dialog || !state || state.status === 'idle' || state.status === 'checking') return;
+
+  const progress = $('desktopUpdateProgress');
+  const error = $('desktopUpdateError');
+  const downloadBtn = $('desktopUpdateDownloadBtn');
+  const installBtn = $('desktopUpdateInstallBtn');
+  const laterBtn = $('desktopUpdateLaterBtn');
+  const statusText = $('desktopUpdateStatusText');
+  const percent = Math.max(0, Math.min(100, Number(state.percent) || 0));
+
+  $('desktopUpdateCurrentVersion').textContent = state.currentVersion || '-';
+  $('desktopUpdateNewVersion').textContent = state.version || '-';
+  $('desktopUpdateNotes').textContent = state.releaseNotes || updateText('update.noNotes', '本次更新包含功能改进和问题修复。');
+  progress.hidden = state.status !== 'downloading';
+  error.hidden = state.status !== 'error';
+  downloadBtn.hidden = state.status === 'downloading' || state.status === 'downloaded';
+  installBtn.hidden = state.status !== 'downloaded';
+  laterBtn.disabled = state.status === 'downloading';
+
+  if (state.status === 'available') {
+    statusText.textContent = updateText('update.available', '新版本已准备好下载');
+    downloadBtn.textContent = updateText('update.download', '一键更新');
+    downloadBtn.disabled = false;
+  } else if (state.status === 'downloading') {
+    statusText.textContent = updateText('update.downloading', '正在从 GitHub 下载更新');
+    $('desktopUpdateProgressText').textContent = `${percent.toFixed(1)}%`;
+    $('desktopUpdateProgressBar').style.width = `${percent}%`;
+    $('desktopUpdateSpeedText').textContent = `${formatUpdateBytes(state.bytesPerSecond)}/s`;
+    $('desktopUpdateSizeText').textContent = `${formatUpdateBytes(state.transferred)} / ${formatUpdateBytes(state.total)}`;
+  } else if (state.status === 'downloaded') {
+    statusText.textContent = updateText('update.downloaded', '更新已下载完成');
+  } else if (state.status === 'error') {
+    statusText.textContent = updateText('update.failed', '更新下载失败');
+    error.textContent = state.message || updateText('common.error', '操作失败');
+    downloadBtn.textContent = updateText('update.retry', '重新下载');
+    downloadBtn.disabled = !state.retryable;
+  }
+
+  if (!dialog.open) dialog.showModal();
+}
+
+function initDesktopUpdater() {
+  if (!window.hap?.onUpdateState || !window.hap?.getUpdateState) return;
+  window.hap.onUpdateState(renderDesktopUpdateState);
+  window.hap.getUpdateState().then(renderDesktopUpdateState).catch(() => {});
+
+  $('desktopUpdateLaterBtn')?.addEventListener('click', () => $('desktopUpdateDialog')?.close());
+  $('desktopUpdateDownloadBtn')?.addEventListener('click', async () => {
+    const button = $('desktopUpdateDownloadBtn');
+    button.disabled = true;
+    try {
+      await window.hap.downloadUpdate();
+    } catch {
+      // 主进程会推送带有可重试信息的 error 状态。
+    }
+  });
+  $('desktopUpdateInstallBtn')?.addEventListener('click', async () => {
+    const button = $('desktopUpdateInstallBtn');
+    button.disabled = true;
+    try {
+      await window.hap.installUpdate();
+    } catch (err) {
+      button.disabled = false;
+      showToast(updateText('update.failed', '更新安装失败') + ': ' + err.message, 'error');
+    }
+  });
+}
+
+initDesktopUpdater();

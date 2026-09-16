@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Validate v0.1.3 source
+    name: Validate release source
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
@@ -54,19 +54,33 @@ jobs:
           - os: windows-latest
             artifact: windows-x64
             command: npm run dist:win -- --x64
-            files: release/Hermes-Agent-Platform-*.exe
+            files: |
+              release/Hermes-Agent-Platform-*.exe
+              release/latest*.yml
+              release/*.blockmap
           - os: ubuntu-latest
             artifact: ubuntu-x64
             command: npm run dist:linux -- --x64
-            files: release/*.deb
+            files: |
+              release/*.deb
+              release/latest*.yml
+              release/*.blockmap
           - os: macos-15
             artifact: macos-arm64
             command: npm run dist:mac -- --arm64
-            files: release/*.dmg
+            files: |
+              release/*.dmg
+              release/*.zip
+              release/latest*.yml
+              release/*.blockmap
           - os: macos-15-intel
             artifact: macos-x64
             command: npm run dist:mac -- --x64
-            files: release/*.dmg
+            files: |
+              release/*.dmg
+              release/*.zip
+              release/latest*.yml
+              release/*.blockmap
     runs-on: ${{ matrix.os }}
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -85,6 +99,11 @@ jobs:
 
       - name: Build installer
         run: ${{ matrix.command }}
+
+      - name: Preserve architecture-specific macOS metadata
+        if: startsWith(matrix.artifact, 'macos-')
+        shell: bash
+        run: mv release/latest-mac.yml "release/latest-mac-${{ matrix.artifact }}.yml"
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
@@ -106,12 +125,35 @@ jobs:
         with:
           path: artifacts
 
+      - name: Check out release tooling
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install release tooling
+        run: npm ci
+
+      - name: Merge macOS update metadata
+        run: node scripts/merge-mac-update-metadata.mjs artifacts
+
+      - name: Reject legacy artifact names
+        shell: bash
+        run: |
+          if find artifacts -type f | grep -E '(ChatGPTConnect|CodexConnect)'; then
+            echo 'Legacy product name found in release artifacts.' >&2
+            exit 1
+          fi
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          name: Hermes Agent Platform v0.1.3
+          name: Hermes Agent Platform ${{ github.ref_name }}
           body: |
-            Hermes Agent Platform v0.1.3 desktop installers.
+            Hermes Agent Platform ${{ github.ref_name }} desktop installers with startup GitHub update support.
 
             These packages are not code-signed. Windows SmartScreen or macOS Gatekeeper may display a warning on first launch.
           files: artifacts/**/*

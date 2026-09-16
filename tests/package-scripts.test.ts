@@ -10,9 +10,11 @@ describe('package scripts', () => {
     author?: string;
     desktopName?: string;
     scripts?: Record<string, string>;
+    dependencies?: Record<string, string>;
     build?: {
       productName?: string;
       copyright?: string;
+      publish?: Array<{ provider?: string; owner?: string; repo?: string }>;
       win?: { target?: string[] };
       linux?: {
         target?: string[];
@@ -32,20 +34,33 @@ describe('package scripts', () => {
 
   it('forces a source rebuild when switching native modules back to Node.js', () => {
     expect(packageJson.scripts?.['rebuild:node']).toContain('--build-from-source');
+    const nativeHelper = readFileSync(
+      join(process.cwd(), 'scripts', 'ensure-native-addons.ts'),
+      'utf8',
+    );
+    expect(nativeHelper).toContain('process.versions.modules');
+    expect(nativeHelper).not.toContain("'node-v137-linux-x64'");
   });
 
-  it('uses the v0.1.3 Hermes product identity', () => {
-    expect(packageJson.version).toBe('0.1.3');
+  it('uses the v0.1.4 Hermes product identity and GitHub updater', () => {
+    expect(packageJson.version).toBe('0.1.4');
     expect(packageJson.author).toBe('Hermes Agent Platform Team');
     expect(packageJson.desktopName).toBe('hermes-agent-platform.desktop');
     expect(packageJson.build?.productName).toBe('Hermes Agent Platform');
     expect(packageJson.build?.copyright).toContain('Hermes Agent Platform');
+    expect(packageJson.dependencies?.['electron-updater']).toBe('6.8.9');
+    expect(packageJson.build?.publish).toContainEqual({
+      provider: 'github',
+      owner: 'xukehb',
+      repo: 'Hermes-Agent-Platform',
+    });
   });
 
   it('provides native packaging commands for every release platform', () => {
     expect(packageJson.scripts?.['dist:win']).toContain('electron-builder --win');
     expect(packageJson.scripts?.['dist:linux']).toContain('electron-builder --linux deb');
-    expect(packageJson.scripts?.['dist:mac']).toContain('electron-builder --mac dmg');
+    expect(packageJson.scripts?.['dist:mac']).toContain('electron-builder --mac --publish never');
+    expect(packageJson.scripts?.['dist:mac']).not.toContain('--mac dmg');
     expect(packageJson.scripts?.['dist:win']).toContain('--publish never');
     expect(packageJson.scripts?.['dist:linux']).toContain('--publish never');
     expect(packageJson.scripts?.['dist:mac']).toContain('--publish never');
@@ -59,7 +74,7 @@ describe('package scripts', () => {
       maintainer: 'Hermes Agent Platform Team',
       syncDesktopName: true,
     });
-    expect(packageJson.build?.mac?.target).toEqual(['dmg']);
+    expect(packageJson.build?.mac?.target).toEqual(['dmg', 'zip']);
   });
 
   it('publishes native artifacts from a version tag workflow', () => {
@@ -76,8 +91,13 @@ describe('package scripts', () => {
     expect(workflow).toContain('actions/upload-artifact@v4');
     expect(workflow).toContain('actions/download-artifact@v4');
     expect(workflow).toContain('softprops/action-gh-release@v2');
-    expect(workflow).toContain('files: release/Hermes-Agent-Platform-*.exe');
+    expect(workflow).toContain('release/Hermes-Agent-Platform-*.exe');
     expect(workflow).not.toContain('files: release/*.exe');
+    expect(workflow).toContain('release/latest*.yml');
+    expect(workflow).toContain('release/*.blockmap');
+    expect(workflow).toContain('release/*.zip');
+    expect(workflow).toContain('Reject legacy artifact names');
+    expect(workflow).not.toContain('Hermes Agent Platform v0.1.3');
   });
 
   it('does not expose legacy desktop product names at runtime', () => {
