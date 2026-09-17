@@ -4039,6 +4039,43 @@ body.sidebar-collapsed .config-footer-row {
   color: var(--text-main);
 }
 
+/* 全局按钮禁用与加载态规范 */
+.btn:disabled,
+.btn[disabled],
+.btn.is-disabled {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+  filter: grayscale(20%);
+}
+
+.btn.is-loading,
+.btn.btn-loading {
+  pointer-events: none !important;
+  cursor: wait !important;
+  opacity: 0.9 !important;
+  position: relative;
+}
+
+.btn-spinner {
+  width: 13px;
+  height: 13px;
+  border: 2.2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  display: inline-block;
+  animation: btnSpin 0.65s linear infinite;
+  margin-right: 6px;
+  vertical-align: -2px;
+  flex-shrink: 0;
+}
+
+@keyframes btnSpin {
+  to { transform: rotate(360deg); }
+}
+
 /* 开关 Switch */
 .switch {
   position: relative;
@@ -9749,8 +9786,147 @@ body.is-mini-mode #miniModeStage {
 .desktop-update-progress-track > div { width: 0; height: 100%; background: var(--primary); transition: width 180ms ease; }
 .desktop-update-size { color: var(--text-muted); font-size: 11px; text-align: right; }
 .desktop-update-error { padding: 10px 12px; color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); border-radius: var(--radius-sm); font-size: 12px; overflow-wrap: anywhere; }
-.desktop-update-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 4px; }
-.desktop-update-actions .btn { min-width: 104px; }
+.desktop-update-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 4px;
+}
+
+.desktop-update-actions .btn {
+  min-width: 112px;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 稍后按钮 */
+#desktopUpdateLaterBtn {
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+}
+#desktopUpdateLaterBtn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-main);
+  border-color: var(--border-hover);
+}
+
+/* 确认升级按钮 - 科技电光渐变与专属图标 */
+#desktopUpdateDownloadBtn {
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 50%, #4f46e5 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 3px 12px rgba(37, 99, 235, 0.35);
+}
+
+#desktopUpdateDownloadBtn::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  background-color: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='7 10 12 15 17 10'/%3E%3Cline x1='12' y1='15' x2='12' y2='3'/%3E%3C/svg%3E") no-repeat center / contain;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='7 10 12 15 17 10'/%3E%3Cline x1='12' y1='15' x2='12' y2='3'/%3E%3C/svg%3E") no-repeat center / contain;
+  margin-right: 2px;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+#desktopUpdateDownloadBtn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 50%, #4338ca 100%);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
+  transform: translateY(-1.5px);
+}
+#desktopUpdateDownloadBtn:hover:not(:disabled)::before {
+  transform: translateY(1.5px);
+}
+#desktopUpdateDownloadBtn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+}
+
+/* 重启并安装按钮 - 翡翠绿活力渐变 + 脉冲微光呼应就绪状态 */
+#desktopUpdateInstallBtn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 3px 14px rgba(16, 185, 129, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  animation: installGlowPulse 2.5s infinite ease-in-out;
+}
+
+@keyframes installGlowPulse {
+  0%, 100% {
+    box-shadow: 0 3px 14px rgba(16, 185, 129, 0.35), 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 18px rgba(16, 185, 129, 0.5), 0 0 0 4px rgba(16, 185, 129, 0.15);
+  }
+}
+
+#desktopUpdateInstallBtn::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  background-color: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='23 4 23 10 17 10'/%3E%3Cpolyline points='1 20 1 14 7 14'/%3E%3Cpath d='M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15'/%3E%3C/svg%3E") no-repeat center / contain;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='23 4 23 10 17 10'/%3E%3Cpolyline points='1 20 1 14 7 14'/%3E%3Cpath d='M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15'/%3E%3C/svg%3E") no-repeat center / contain;
+  margin-right: 2px;
+  flex-shrink: 0;
+  transition: transform 0.4s ease;
+}
+
+#desktopUpdateInstallBtn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.55);
+  transform: translateY(-1.5px);
+}
+#desktopUpdateInstallBtn:hover:not(:disabled)::before {
+  transform: rotate(90deg);
+}
+#desktopUpdateInstallBtn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* 按钮进入加载中 (is-loading) 状态样式：停止脉冲、指针等待、转动齿轮 */
+#desktopUpdateDownloadBtn.is-loading,
+#desktopUpdateInstallBtn.is-loading {
+  animation: none !important;
+  cursor: wait !important;
+  pointer-events: none !important;
+  opacity: 0.9 !important;
+}
+
+#desktopUpdateDownloadBtn.is-loading::before,
+#desktopUpdateInstallBtn.is-loading::before {
+  content: '' !important;
+  width: 14px !important;
+  height: 14px !important;
+  border: 2.2px solid rgba(255, 255, 255, 0.35) !important;
+  border-top-color: #ffffff !important;
+  border-radius: 50% !important;
+  animation: btnSpin 0.65s linear infinite !important;
+  background: none !important;
+  mask: none !important;
+  -webkit-mask: none !important;
+  margin-right: 6px !important;
+  display: inline-block !important;
+  vertical-align: -2px !important;
+  transform: none !important;
+}
 
 @media (max-width: 560px) {
   .desktop-update-panel { padding: 18px; }

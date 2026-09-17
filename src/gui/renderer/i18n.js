@@ -197,9 +197,14 @@
       'update.releaseNotes': '更新内容',
       'update.noNotes': '本次更新包含功能改进和问题修复。',
       'update.later': '稍后',
-      'update.download': '一键更新',
+      'update.download': '确认升级',
+      'update.downloadingBtn': '正在准备升级...',
+      'update.connecting': '正在连接升级服务器并拉取新版本...',
       'update.retry': '重新下载',
       'update.install': '重启并安装',
+      'update.installingBtn': '正在重启应用...',
+      'update.restartingStatus': '正在关闭客户端并启动升级安装程序，请稍候...',
+      'update.restartingToast': '正在准备重启并安装，客户端稍后将自动重新打开...',
       'update.installFailed': '更新安装失败',
 
       // 通用提示与操作 (Common)
@@ -399,9 +404,14 @@
       'update.releaseNotes': 'Release Notes',
       'update.noNotes': 'This release includes improvements and bug fixes.',
       'update.later': 'Later',
-      'update.download': 'Update Now',
+      'update.download': 'Confirm Upgrade',
+      'update.downloadingBtn': 'Preparing Upgrade...',
+      'update.connecting': 'Connecting to update server and fetching release...',
       'update.retry': 'Retry Download',
       'update.install': 'Restart and Install',
+      'update.installingBtn': 'Restarting App...',
+      'update.restartingStatus': 'Closing client and starting upgrade installer, please wait...',
+      'update.restartingToast': 'Preparing to restart and install, app will reopen shortly...',
       'update.installFailed': 'Failed to install update',
 
       // 通用提示与操作 (Common)

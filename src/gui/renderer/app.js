@@ -15337,6 +15337,10 @@ function formatUpdateBytes(value) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+let isDownloadingUpdate = false;
+let isInstallingUpdate = false;
+let isCheckingUpdate = false;
+
 function renderDesktopUpdateState(state) {
   const dialog = $('desktopUpdateDialog');
   if (!dialog || !state || state.status === 'idle' || state.status === 'checking') return;
@@ -15365,25 +15369,41 @@ function renderDesktopUpdateState(state) {
   error.style.display = isError ? 'block' : 'none';
   downloadBtn.style.display = (isDownloading || isDownloaded) ? 'none' : '';
   installBtn.style.display = isDownloaded ? '' : 'none';
-  laterBtn.disabled = isDownloading;
+  laterBtn.disabled = isDownloading || isInstallingUpdate;
 
   if (state.status === 'available') {
+    isDownloadingUpdate = false;
+    isInstallingUpdate = false;
     statusText.textContent = updateText('update.available', '新版本已准备好下载');
-    downloadBtn.textContent = updateText('update.download', '一键更新');
+    downloadBtn.classList.remove('is-loading');
+    downloadBtn.textContent = updateText('update.download', '确认升级');
     downloadBtn.disabled = false;
   } else if (state.status === 'downloading') {
+    isDownloadingUpdate = true;
     statusText.textContent = updateText('update.downloading', '正在从 GitHub 下载更新');
     $('desktopUpdateProgressText').textContent = `${percent.toFixed(1)}%`;
     $('desktopUpdateProgressBar').style.width = `${percent}%`;
     $('desktopUpdateSpeedText').textContent = `${formatUpdateBytes(state.bytesPerSecond)}/s`;
     $('desktopUpdateSizeText').textContent = `${formatUpdateBytes(state.transferred)} / ${formatUpdateBytes(state.total)}`;
   } else if (state.status === 'downloaded') {
-    statusText.textContent = updateText('update.downloaded', '更新已下载完成');
+    isDownloadingUpdate = false;
+    if (!isInstallingUpdate) {
+      statusText.textContent = updateText('update.downloaded', '更新已下载完成');
+      installBtn.classList.remove('is-loading');
+      installBtn.textContent = updateText('update.install', '重启并安装');
+      installBtn.disabled = false;
+      laterBtn.disabled = false;
+    }
   } else if (state.status === 'error') {
+    isDownloadingUpdate = false;
+    isInstallingUpdate = false;
     statusText.textContent = updateText('update.failed', '更新下载失败');
     error.textContent = state.message || updateText('common.error', '操作失败');
+    downloadBtn.classList.remove('is-loading');
     downloadBtn.textContent = updateText('update.retry', '重新下载');
     downloadBtn.disabled = !state.retryable;
+    installBtn.classList.remove('is-loading');
+    laterBtn.disabled = false;
   }
 
   if (!dialog.open) dialog.showModal();
@@ -15393,7 +15413,7 @@ function initDesktopUpdater() {
   if (!window.hap?.onUpdateState || !window.hap?.getUpdateState) return;
 
   const updateVersionUI = (version) => {
-    const ver = version ? `v${version}` : 'v0.1.11';
+    const ver = version ? `v${version}` : 'v0.1.12';
     const badge = $('appCurrentVersionBadge');
     if (badge) badge.textContent = ver;
     const sideTag = $('sidebarVersionTag');
@@ -15416,6 +15436,17 @@ function initDesktopUpdater() {
   }).catch(() => {});
 
   const handleManualCheck = async (btnTextEl) => {
+    if (isCheckingUpdate) return;
+    isCheckingUpdate = true;
+    const manualBtn = $('manualCheckUpdateBtn');
+    const headerBtn = $('headerCheckUpdateBtn');
+    if (manualBtn) {
+      manualBtn.disabled = true;
+      manualBtn.classList.add('is-loading');
+    }
+    if (headerBtn) {
+      headerBtn.classList.add('is-loading');
+    }
     const statusEl = $('updateCheckStatusText');
     if (btnTextEl) btnTextEl.textContent = '检测中...';
     try {
@@ -15423,7 +15454,7 @@ function initDesktopUpdater() {
       if (state && (state.status === 'available' || state.status === 'downloading' || state.status === 'downloaded')) {
         renderDesktopUpdateState(state);
       } else {
-        showToast(`当前已是最新版本 (${state?.currentVersion ? 'v' + state.currentVersion : 'v0.1.11'})`, 'success');
+        showToast(`当前已是最新版本 (${state?.currentVersion ? 'v' + state.currentVersion : 'v0.1.12'})`, 'success');
         if (statusEl) {
           statusEl.innerHTML = `<div>当前状态: <strong style="color:#10b981;">已是最新版</strong></div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">刚刚已检查</div>`;
         }
@@ -15431,6 +15462,14 @@ function initDesktopUpdater() {
     } catch (err) {
       showToast('检查更新失败: ' + err.message, 'error');
     } finally {
+      isCheckingUpdate = false;
+      if (manualBtn) {
+        manualBtn.disabled = false;
+        manualBtn.classList.remove('is-loading');
+      }
+      if (headerBtn) {
+        headerBtn.classList.remove('is-loading');
+      }
       if (btnTextEl) btnTextEl.textContent = '检查更新';
       const manualText = $('manualCheckUpdateBtnText');
       if (manualText) manualText.textContent = '检查新版本';
@@ -15452,25 +15491,69 @@ function initDesktopUpdater() {
   });
 
   $('desktopUpdateLaterBtn')?.addEventListener('click', () => $('desktopUpdateDialog')?.close());
-  $('desktopUpdateDownloadBtn')?.addEventListener('click', async () => {
+
+  $('desktopUpdateDownloadBtn')?.addEventListener('click', async (e) => {
+    e?.preventDefault?.();
+    if (isDownloadingUpdate) return;
+    isDownloadingUpdate = true;
     const button = $('desktopUpdateDownloadBtn');
-    button.disabled = true;
+    if (button) {
+      button.disabled = true;
+      button.classList.add('is-loading');
+      button.textContent = updateText('update.downloadingBtn', '正在准备升级...');
+    }
+    const statusText = $('desktopUpdateStatusText');
+    if (statusText) {
+      statusText.textContent = updateText('update.connecting', '正在连接升级服务器并拉取新版本...');
+    }
     try {
       await window.hap.downloadUpdate();
     } catch {
       // 主进程会推送带有可重试信息的 error 状态。
+      isDownloadingUpdate = false;
+      if (button) {
+        button.disabled = false;
+        button.classList.remove('is-loading');
+        button.textContent = updateText('update.download', '确认升级');
+      }
     }
   });
-  $('desktopUpdateInstallBtn')?.addEventListener('click', async () => {
+
+  $('desktopUpdateInstallBtn')?.addEventListener('click', async (e) => {
+    e?.preventDefault?.();
+    if (isInstallingUpdate) return;
+    isInstallingUpdate = true;
     const button = $('desktopUpdateInstallBtn');
-    button.disabled = true;
+    const laterBtn = $('desktopUpdateLaterBtn');
+    if (button) {
+      button.disabled = true;
+      button.classList.add('is-loading');
+      button.textContent = updateText('update.installingBtn', '正在重启应用...');
+    }
+    if (laterBtn) {
+      laterBtn.disabled = true;
+    }
+    const statusText = $('desktopUpdateStatusText');
+    if (statusText) {
+      statusText.textContent = updateText('update.restartingStatus', '正在关闭客户端并启动升级安装程序，请稍候...');
+    }
+    showToast(updateText('update.restartingToast', '正在准备重启并安装，客户端稍后将自动重新打开...'), 'info');
+
     try {
       await window.hap.installUpdate();
     } catch (err) {
-      button.disabled = false;
+      isInstallingUpdate = false;
+      if (button) {
+        button.disabled = false;
+        button.classList.remove('is-loading');
+        button.textContent = updateText('update.install', '重启并安装');
+      }
+      if (laterBtn) {
+        laterBtn.disabled = false;
+      }
       const msg = err?.message || String(err);
       if (msg.includes('尚未下载完成')) {
-        showToast('更新包尚未下载完成，请先点击【一键更新】', 'warning');
+        showToast('更新包尚未下载完成，请先点击【确认升级】', 'warning');
       } else {
         showToast(updateText('update.installFailed', '更新安装失败') + ': ' + msg, 'error');
       }
