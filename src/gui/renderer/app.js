@@ -1759,14 +1759,15 @@ $('exportChatMarkdownBtn')?.addEventListener('click', exportCurrentSessionToMark
 // 全局多主题系统 (6 大专业色彩设计主题)
 // ==========================================================================
 
-const AVAILABLE_THEMES = ['dark', 'light', 'cyber', 'aurora', 'sunset', 'glass'];
+const AVAILABLE_THEMES = ['dark', 'light', 'cyber', 'aurora', 'sunset', 'glass', 'vibrant'];
 const THEME_NAMES = {
   dark: '曜石深空',
   light: '极简冷玉',
   cyber: '赛博霓虹',
   aurora: '极光松岭',
   sunset: '落日熔金',
-  glass: '流光玻璃'
+  glass: '流光玻璃',
+  vibrant: '活力幻彩'
 };
 
 function initTheme() {
@@ -14973,7 +14974,7 @@ function initDesktopUpdater() {
   if (!window.hap?.onUpdateState || !window.hap?.getUpdateState) return;
 
   const updateVersionUI = (version) => {
-    const ver = version ? `v${version}` : 'v0.1.8';
+    const ver = version ? `v${version}` : 'v0.1.9';
     const badge = $('appCurrentVersionBadge');
     if (badge) badge.textContent = ver;
     const sideTag = $('sidebarVersionTag');
@@ -15003,7 +15004,7 @@ function initDesktopUpdater() {
       if (state && (state.status === 'available' || state.status === 'downloading' || state.status === 'downloaded')) {
         renderDesktopUpdateState(state);
       } else {
-        showToast(`当前已是最新版本 (${state?.currentVersion ? 'v' + state.currentVersion : 'v0.1.8'})`, 'success');
+        showToast(`当前已是最新版本 (${state?.currentVersion ? 'v' + state.currentVersion : 'v0.1.9'})`, 'success');
         if (statusEl) {
           statusEl.innerHTML = `<div>当前状态: <strong style="color:#10b981;">已是最新版</strong></div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">刚刚已检查</div>`;
         }

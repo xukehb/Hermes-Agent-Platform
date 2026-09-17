@@ -68,7 +68,7 @@
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
           <span class="nav-text" data-i18n="rail.settings">系统设置</span>
-          <span class="sidebar-version-tag" id="sidebarVersionTag" style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-left:auto;padding:2px 6px;border-radius:4px;opacity:0.85;cursor:pointer;transition:all 150ms ease;" title="点击直达软件版本与检查更新" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--primary)';" onmouseout="this.style.background='transparent';this.style.color='var(--text-muted)';">v0.1.8</span>
+          <span class="sidebar-version-tag" id="sidebarVersionTag" style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-left:auto;padding:2px 6px;border-radius:4px;opacity:0.85;cursor:pointer;transition:all 150ms ease;" title="点击直达软件版本与检查更新" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--primary)';" onmouseout="this.style.background='transparent';this.style.color='var(--text-muted)';">v0.1.9</span>
         </div>
       </div>
     </aside>
@@ -171,7 +171,7 @@
                 <button id="aboutVersionMoreBtn" class="more-menu-item-btn" title="查看软件版本、运行环境与检查更新" data-i18n-title="more.aboutVersionTooltip">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                   <span data-i18n="more.aboutVersion">关于与版本更新</span>
-                  <span class="badge" id="moreMenuVersionBadge" style="margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:#10b981;background:rgba(16,185,129,0.12);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.8</span>
+                  <span class="badge" id="moreMenuVersionBadge" style="margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:#10b981;background:rgba(16,185,129,0.12);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.9</span>
                 </button>
 
                 <!-- 切换语言 -->
@@ -744,7 +744,7 @@
             </div>
             <div style="display:flex;align-items:center;gap:10px;">
               <button type="button" class="btn secondary" id="headerCheckUpdateBtn" style="font-size:12px;padding:5px 12px;display:inline-flex;align-items:center;gap:6px;border-radius:6px;cursor:pointer;" title="查看软件版本并检查 GitHub 更新">
-                <span class="badge" id="headerVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;color:#10b981;background:rgba(16,185,129,0.12);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.8</span>
+                <span class="badge" id="headerVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;color:#10b981;background:rgba(16,185,129,0.12);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.9</span>
                 <span id="headerCheckUpdateBtnText" style="font-size:12px;">检查更新</span>
               </button>
               <button type="button" class="btn secondary" id="backToChatBtn" onclick="show('chat')" style="font-size:12.5px;padding:6px 14px;display:inline-flex;align-items:center;gap:6px;">
@@ -2120,7 +2120,7 @@
                     <div>
                       <div style="font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;">
                         <span>关于与软件版本 (About Hermes)</span>
-                        <span class="badge" id="appCurrentVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;padding:2px 8px;background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.3);border-radius:6px;font-weight:600;">v0.1.8</span>
+                        <span class="badge" id="appCurrentVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;padding:2px 8px;background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.3);border-radius:6px;font-weight:600;">v0.1.9</span>
                       </div>
                       <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">Hermes Agent Platform · 赫尔墨斯多智能体协同开发平台</div>
                     </div>
@@ -2136,7 +2136,7 @@
                   <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
                     <div style="padding:12px 14px;background:var(--bg-main);border:1px solid var(--border-default);border-radius:8px;">
                       <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:600;">当前安装版本</div>
-                      <div style="font-size:16px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin-top:4px;" id="aboutSoftwareVersionText">v0.1.8</div>
+                      <div style="font-size:16px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin-top:4px;" id="aboutSoftwareVersionText">v0.1.9</div>
                       <div style="font-size:11px;color:#10b981;margin-top:2px;">已内置自动重试与全协议适配</div>
                     </div>
                     <div style="padding:12px 14px;background:var(--bg-main);border:1px solid var(--border-default);border-radius:8px;">
@@ -4688,7 +4688,7 @@
             </div>
             <div>
               <h2 style="margin: 0; font-size: 16px; font-weight: 600;">界面色彩风格与多主题系统</h2>
-              <p style="margin: 2px 0 0; font-size: 12px; color: var(--text-muted);">精选 6 款经过光学对比度调校的高质感专业主题</p>
+              <p style="margin: 2px 0 0; font-size: 12px; color: var(--text-muted);">精选 7 款经过光学对比度调校的高质感专业主题</p>
             </div>
           </div>
           <button type="button" class="btn-close" id="closeThemePickerModalBtn" aria-label="关闭" title="关闭"></button>
@@ -4782,6 +4782,21 @@
                 <span class="theme-active-tag">当前使用</span>
               </div>
               <p class="theme-desc">通透亚克力磨砂，深度配合半透明模式，桌面背景若隐若现。</p>
+            </div>
+          </div>
+
+          <!-- 7. 活力幻彩 -->
+          <div class="theme-select-card" data-theme-id="vibrant">
+            <div class="theme-card-preview theme-preview-vibrant">
+              <div class="theme-swatch-surface"></div>
+              <div class="theme-swatch-accent"></div>
+            </div>
+            <div class="theme-card-info">
+              <div class="theme-card-header">
+                <span class="theme-name">活力幻彩 (Vibrant Pulse)</span>
+                <span class="theme-active-tag">当前使用</span>
+              </div>
+              <p class="theme-desc">跃动生命力，深曜靛蓝底色融合紫罗兰、电光青蓝与晨曦热粉流光。</p>
             </div>
           </div>
         </div>
@@ -4973,9 +4988,10 @@
         <button type="button" class="theme-quick-chip" data-theme-id="aurora" data-i18n="theme.aurora">极光松岭</button>
         <button type="button" class="theme-quick-chip" data-theme-id="sunset" data-i18n="theme.sunset">落日熔金</button>
         <button type="button" class="theme-quick-chip" data-theme-id="glass" data-i18n="theme.glass">流光玻璃</button>
+        <button type="button" class="theme-quick-chip" data-theme-id="vibrant" data-i18n="theme.vibrant">活力幻彩</button>
       </div>
 
-      <button type="button" class="btn text-btn" id="popoverOpenThemeModalBtn" style="width: 100%; justify-content: center; font-size: 11px; padding: 4px; color: var(--primary);" data-i18n="popover.themeDetails">查看 6 款主题设计详情 ▾</button>
+      <button type="button" class="btn text-btn" id="popoverOpenThemeModalBtn" style="width: 100%; justify-content: center; font-size: 11px; padding: 4px; color: var(--primary);" data-i18n="popover.themeDetails">查看 7 款主题设计详情 ▾</button>
 
       <div class="popover-divider"></div>
 
