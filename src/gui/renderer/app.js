@@ -2189,18 +2189,22 @@ function applyWallpaper(wallpaperId, save = true) {
 
   if (validId === 'none') {
     document.body.classList.remove('has-wallpaper');
+    document.documentElement.classList.remove('has-wallpaper');
     layer.style.backgroundImage = 'none';
   } else if (validId === 'custom') {
     const customImage = localStorage.getItem('hap_wallpaper_custom');
     if (customImage) {
       document.body.classList.add('has-wallpaper');
+      document.documentElement.classList.add('has-wallpaper');
       layer.style.backgroundImage = `url("${customImage}")`;
     } else {
       document.body.classList.remove('has-wallpaper');
+      document.documentElement.classList.remove('has-wallpaper');
       layer.style.backgroundImage = 'none';
     }
   } else {
     document.body.classList.add('has-wallpaper');
+    document.documentElement.classList.add('has-wallpaper');
     layer.classList.add('wp-preset-' + validId);
     layer.style.backgroundImage = '';
   }
@@ -15389,7 +15393,7 @@ function initDesktopUpdater() {
   if (!window.hap?.onUpdateState || !window.hap?.getUpdateState) return;
 
   const updateVersionUI = (version) => {
-    const ver = version ? `v${version}` : 'v0.1.10';
+    const ver = version ? `v${version}` : 'v0.1.11';
     const badge = $('appCurrentVersionBadge');
     if (badge) badge.textContent = ver;
     const sideTag = $('sidebarVersionTag');
@@ -15419,7 +15423,7 @@ function initDesktopUpdater() {
       if (state && (state.status === 'available' || state.status === 'downloading' || state.status === 'downloaded')) {
         renderDesktopUpdateState(state);
       } else {
-        showToast(`当前已是最新版本 (${state?.currentVersion ? 'v' + state.currentVersion : 'v0.1.10'})`, 'success');
+        showToast(`当前已是最新版本 (${state?.currentVersion ? 'v' + state.currentVersion : 'v0.1.11'})`, 'success');
         if (statusEl) {
           statusEl.innerHTML = `<div>当前状态: <strong style="color:#10b981;">已是最新版</strong></div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">刚刚已检查</div>`;
         }

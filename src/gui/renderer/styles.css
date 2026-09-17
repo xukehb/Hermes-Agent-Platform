@@ -1357,16 +1357,17 @@ body.sidebar-collapsed .config-footer-row {
 
 /* 顶部 Header (ChatGPT / Antigravity Style) */
 .chat-header {
-  height: 48px;
-  border-bottom: 1px solid var(--border-default);
+  height: 44px;
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 18px;
-  background: var(--bg-surface);
+  padding: 0 16px;
+  background: var(--bg-app);
   position: sticky;
   top: 0;
   z-index: 20;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .header-left-tools {
@@ -1380,11 +1381,11 @@ body.sidebar-collapsed .config-footer-row {
   align-items: center;
   gap: 6px;
   background: var(--bg-surface);
-  border: 1px solid var(--border-default);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-pill);
-  height: 30px;
+  height: 28px;
   padding: 0 10px;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-main);
   cursor: pointer;
@@ -1395,7 +1396,7 @@ body.sidebar-collapsed .config-footer-row {
 
 .model-switch-pill:hover {
   background: var(--bg-hover);
-  border-color: var(--border-hover);
+  border-color: var(--border-default);
 }
 
 .model-brand-badge {
@@ -1435,9 +1436,9 @@ body.sidebar-collapsed .config-footer-row {
   align-items: center;
   gap: 6px;
   background: var(--bg-surface);
-  border: 1px solid var(--border-default);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-pill);
-  height: 30px;
+  height: 28px;
   padding: 0 10px;
   font-size: 11.5px;
   font-weight: 500;
@@ -1452,7 +1453,7 @@ body.sidebar-collapsed .config-footer-row {
 .workspace-pill-badge:hover {
   background: var(--bg-hover);
   color: var(--text-main);
-  border-color: var(--border-hover);
+  border-color: var(--border-default);
 }
 
 .workspace-pill-badge svg {
@@ -8012,17 +8013,17 @@ body.glass-mode .floating-popover {
    ========================================================================== */
 :root {
   --wallpaper-image: none;
-  --wallpaper-opacity: 0.45;
+  --wallpaper-opacity: 0.85;
   --wallpaper-blur: 0px;
   --wallpaper-size: cover;
   --wallpaper-position: center center;
   --wallpaper-repeat: no-repeat;
-  --wallpaper-overlay-bg: rgba(15, 23, 42, 0.4);
-  --wallpaper-overlay-opacity: 0.4;
+  --wallpaper-overlay-bg: rgba(15, 23, 42, 0.25);
+  --wallpaper-overlay-opacity: 0.25;
 }
 
 [data-theme="light"] {
-  --wallpaper-overlay-bg: rgba(255, 255, 255, 0.45);
+  --wallpaper-overlay-bg: rgba(255, 255, 255, 0.2);
 }
 
 .app-wallpaper-layer {
@@ -8052,16 +8053,17 @@ body.glass-mode .floating-popover {
   transition: opacity 0.35s ease, background-color 0.3s ease;
 }
 
+html.has-wallpaper,
+body.has-wallpaper {
+  background-color: transparent !important;
+}
+
 body.has-wallpaper .app-wallpaper-layer {
-  opacity: var(--wallpaper-opacity, 0.45);
+  opacity: var(--wallpaper-opacity, 0.85);
 }
 
 body.has-wallpaper .app-wallpaper-overlay {
-  opacity: var(--wallpaper-overlay-opacity, 0.4);
-}
-
-body.has-wallpaper {
-  background-color: transparent !important;
+  opacity: var(--wallpaper-overlay-opacity, 0.25);
 }
 
 body.has-wallpaper .main-content {
@@ -8077,15 +8079,47 @@ body.has-wallpaper .chat-thread-container {
 }
 
 body.has-wallpaper .rail {
-  background-color: color-mix(in srgb, var(--bg-sidebar) calc(var(--ui-opacity, 0.9) * 100%), transparent) !important;
-  backdrop-filter: blur(20px) saturate(160%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+  background-color: color-mix(in srgb, var(--bg-sidebar) calc(var(--ui-opacity, 0.75) * 65%), transparent) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border-right: 1px solid var(--border-subtle) !important;
+}
+
+body.has-wallpaper .rail .projects-filter-bar,
+body.has-wallpaper .rail .sidebar-bottom-panel,
+body.has-wallpaper .rail .projects-tree-section,
+body.has-wallpaper .rail .global-nav-group,
+body.has-wallpaper .rail .new-conversation-box {
+  background-color: transparent !important;
 }
 
 body.has-wallpaper .chat-header {
-  background-color: color-mix(in srgb, var(--bg-surface) calc(var(--ui-opacity, 0.88) * 100%), transparent) !important;
+  background-color: color-mix(in srgb, var(--bg-surface) calc(var(--ui-opacity, 0.7) * 45%), transparent) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+}
+
+body.has-wallpaper .composer-dock {
+  background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--bg-app) 35%, transparent) 100%) !important;
+}
+
+body.has-wallpaper .composer-island-card {
+  background: color-mix(in srgb, var(--bg-surface) 86%, transparent) !important;
   backdrop-filter: blur(20px) saturate(160%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+  box-shadow: 0 10px 32px -4px rgba(0, 0, 0, 0.18), 0 0 0 1px var(--border-subtle) !important;
+}
+
+body.has-wallpaper .page-container {
+  background-color: transparent !important;
+}
+
+body.has-wallpaper .card,
+body.has-wallpaper .stat-card {
+  background-color: color-mix(in srgb, var(--bg-card) 85%, transparent) !important;
+  backdrop-filter: blur(16px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
 }
 
 body.has-wallpaper .status-bar {
@@ -8105,6 +8139,7 @@ body.has-wallpaper .msg-row.assistant .assistant-content {
 body.has-wallpaper .user-bubble {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  background-color: color-mix(in srgb, var(--bg-user-bubble) 85%, transparent) !important;
 }
 
 /* 预设壁纸样式 */
@@ -8305,11 +8340,11 @@ body.has-wallpaper .user-bubble {
 .header-capsule-group {
   display: inline-flex;
   align-items: center;
-  border: 1px solid var(--border-default);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-pill);
   background: var(--bg-surface);
   overflow: hidden;
-  padding: 2px;
+  padding: 1px;
   gap: 2px;
 }
 
@@ -8343,10 +8378,10 @@ body.has-wallpaper .user-bubble {
 }
 
 .sidebar-toggle-btn {
-  width: 30px !important;
-  height: 30px !important;
+  width: 28px !important;
+  height: 28px !important;
   border-radius: var(--radius-pill) !important;
-  border: 1px solid var(--border-default) !important;
+  border: 1px solid var(--border-subtle) !important;
   background: var(--bg-surface) !important;
   display: inline-flex !important;
   align-items: center !important;
@@ -8359,7 +8394,7 @@ body.has-wallpaper .user-bubble {
 .sidebar-toggle-btn:hover {
   background: var(--bg-hover) !important;
   color: var(--text-main) !important;
-  border-color: var(--border-hover) !important;
+  border-color: var(--border-default) !important;
 }
 
 .appearance-trigger-btn,
@@ -8367,16 +8402,16 @@ body.has-wallpaper .user-bubble {
   display: inline-flex !important;
   align-items: center !important;
   gap: 5px !important;
-  height: 30px !important;
-  padding: 0 11px !important;
-  border: 1px solid var(--border-default) !important;
+  height: 28px !important;
+  padding: 0 10px !important;
+  border: 1px solid var(--border-subtle) !important;
   border-radius: var(--radius-pill) !important;
   background: var(--bg-surface) !important;
   color: var(--text-secondary) !important;
-  font-size: 12px !important;
+  font-size: 11.5px !important;
   font-weight: 500 !important;
   cursor: pointer !important;
-  box-shadow: var(--shadow-xs) !important;
+  box-shadow: none !important;
   transition: all 0.15s ease !important;
 }
 
@@ -8398,16 +8433,16 @@ body.has-wallpaper .user-bubble {
   display: inline-flex !important;
   align-items: center !important;
   gap: 4px !important;
-  height: 30px !important;
-  padding: 0 11px !important;
-  border: 1px solid var(--border-default) !important;
+  height: 28px !important;
+  padding: 0 10px !important;
+  border: 1px solid var(--border-subtle) !important;
   border-radius: var(--radius-pill) !important;
   background: var(--bg-surface) !important;
   color: var(--text-secondary) !important;
-  font-size: 12px !important;
+  font-size: 11.5px !important;
   font-weight: 500 !important;
   cursor: pointer !important;
-  box-shadow: var(--shadow-xs) !important;
+  box-shadow: none !important;
   transition: all 0.15s ease !important;
 }
 
@@ -8415,7 +8450,7 @@ body.has-wallpaper .user-bubble {
 .btn.header-more-btn:hover {
   background: var(--bg-hover) !important;
   color: var(--text-main) !important;
-  border-color: var(--border-hover) !important;
+  border-color: var(--border-default) !important;
 }
 
 .git-capsule-btn,
@@ -8423,16 +8458,16 @@ body.has-wallpaper .user-bubble {
   display: inline-flex !important;
   align-items: center !important;
   gap: 6px !important;
-  height: 30px !important;
-  padding: 0 11px !important;
-  border: 1px solid var(--border-default) !important;
+  height: 28px !important;
+  padding: 0 10px !important;
+  border: 1px solid var(--border-subtle) !important;
   border-radius: var(--radius-pill) !important;
   background: var(--bg-surface) !important;
   color: var(--text-secondary) !important;
-  font-size: 12px !important;
+  font-size: 11.5px !important;
   font-weight: 500 !important;
   cursor: pointer !important;
-  box-shadow: var(--shadow-xs) !important;
+  box-shadow: none !important;
   transition: all 0.15s ease !important;
 }
 
@@ -8440,7 +8475,7 @@ body.has-wallpaper .user-bubble {
 .btn.git-capsule-btn:hover {
   background: var(--bg-hover) !important;
   color: var(--text-main) !important;
-  border-color: var(--border-hover) !important;
+  border-color: var(--border-default) !important;
 }
 
 .header-more-menu {
