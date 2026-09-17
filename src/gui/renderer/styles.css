@@ -489,6 +489,82 @@
   --glass-blur: 28px;
 }
 
+/* 7. 活力幻彩 (Vibrant Pulse / Prism Energy) */
+[data-theme="vibrant"] {
+  color-scheme: dark;
+  --bg-app: #080a18;
+  --bg-surface: #10132b;
+  --bg-surface-raised: #171b3c;
+  --bg-surface-elevated: #1e244e;
+  --bg-sidebar: #0b0d21;
+  --bg-sidebar-hover: #191d40;
+  --bg-sidebar-active: rgba(139, 92, 246, 0.22);
+  --bg-sidebar-pill: #1a1e42;
+  --bg-user-bubble: #1a1d3f;
+  --bg-input-box: #121530;
+  --bg-card: #10132b;
+  --bg-card-hover: #191d40;
+  --bg-subtle: #131633;
+  --bg-hover: #1c2148;
+  --bg-active: #252b5e;
+  --code-bg: #090b1c;
+  --code-header-bg: #111432;
+  --code-border: rgba(139, 92, 246, 0.25);
+  --code-text: #f5f3ff;
+  --code-muted: #c4b5fd;
+  --border-subtle: rgba(139, 92, 246, 0.1);
+  --border-light: rgba(139, 92, 246, 0.22);
+  --border-default: rgba(139, 92, 246, 0.18);
+  --border-input: rgba(139, 92, 246, 0.32);
+  --border-hover: rgba(236, 72, 153, 0.55);
+  --border-dark: #581c87;
+  --border-strong: #8b5cf6;
+  --border-focus: #a78bfa;
+  --text-main: #fdf4ff;
+  --text-secondary: #e9d5ff;
+  --text-muted: #c084fc;
+  --text-placeholder: #8b5cf6;
+  --primary: #8b5cf6;
+  --primary-hover: #a78bfa;
+  --primary-active: #7c3aed;
+  --primary-subtle: rgba(139, 92, 246, 0.2);
+  --primary-border: rgba(139, 92, 246, 0.42);
+  --primary-black: #8b5cf6;
+  --primary-black-hover: #a78bfa;
+  --accent: #06b6d4;
+  --accent-hover: #22d3ee;
+  --accent-soft: rgba(6, 182, 212, 0.2);
+  --accent-border: rgba(6, 182, 212, 0.42);
+  --accent-pink: #ec4899;
+  --accent-glow: rgba(139, 92, 246, 0.48);
+  --gradient-vibrant: linear-gradient(135deg, #8b5cf6 0%, #ec4899 50%, #06b6d4 100%);
+  --danger: #fb7185;
+  --danger-hover: #f43f5e;
+  --danger-soft: rgba(244, 63, 94, 0.18);
+  --danger-border: rgba(244, 63, 94, 0.36);
+  --success: #10b981;
+  --success-hover: #34d399;
+  --success-soft: rgba(16, 185, 129, 0.18);
+  --success-border: rgba(16, 185, 129, 0.36);
+  --warning: #fbbf24;
+  --warning-hover: #f59e0b;
+  --warning-soft: rgba(245, 158, 11, 0.18);
+  --warning-border: rgba(245, 158, 11, 0.36);
+  --blue-badge: #8b5cf6;
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.75);
+  --shadow-input: 0 2px 18px rgba(139, 92, 246, 0.28);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-card-hover: 0 10px 30px rgba(139, 92, 246, 0.35);
+  --shadow-dropdown: 0 16px 36px rgba(0, 0, 0, 0.85);
+  --shadow-modal: 0 24px 60px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(139, 92, 246, 0.35);
+  --glass-bg: rgba(16, 19, 43, 0.84);
+  --glass-border: rgba(139, 92, 246, 0.28);
+  --glass-blur: 28px;
+}
+
 /* ==========================================================================
    智能暗黑模式中和器 (Adaptive Dark-Family Immunity)
    - 自动拦截并矫正页面中残留的浅色硬编码内联样式，确保暗黑模式完美沉浸
@@ -508,7 +584,13 @@
 [data-theme="sunset"] [style*="background:#ffffff"],
 [data-theme="sunset"] [style*="background: #ffffff"],
 [data-theme="glass"] [style*="background:#ffffff"],
-[data-theme="glass"] [style*="background: #ffffff"] {
+[data-theme="glass"] [style*="background: #ffffff"],
+[data-theme="vibrant"] [style*="background:#ffffff"],
+[data-theme="vibrant"] [style*="background: #ffffff"],
+[data-theme="vibrant"] [style*="background:#fff"],
+[data-theme="vibrant"] [style*="background: #fff"],
+[data-theme="vibrant"] [style*="background: white"],
+[data-theme="vibrant"] [style*="background:white"] {
   background: var(--bg-surface) !important;
 }
 
@@ -519,7 +601,11 @@
 [data-theme="cyber"] [style*="background:#f8fafc"],
 [data-theme="aurora"] [style*="background:#f8fafc"],
 [data-theme="sunset"] [style*="background:#f8fafc"],
-[data-theme="glass"] [style*="background:#f8fafc"] {
+[data-theme="glass"] [style*="background:#f8fafc"],
+[data-theme="vibrant"] [style*="background:#f8fafc"],
+[data-theme="vibrant"] [style*="background: #f8fafc"],
+[data-theme="vibrant"] [style*="background:#f1f5f9"],
+[data-theme="vibrant"] [style*="background: #f1f5f9"] {
   background: var(--bg-subtle) !important;
 }
 
@@ -532,7 +618,13 @@
 [data-theme="cyber"] [style*="color:#0f172a"],
 [data-theme="aurora"] [style*="color:#0f172a"],
 [data-theme="sunset"] [style*="color:#0f172a"],
-[data-theme="glass"] [style*="color:#0f172a"] {
+[data-theme="glass"] [style*="color:#0f172a"],
+[data-theme="vibrant"] [style*="color:#0f172a"],
+[data-theme="vibrant"] [style*="color: #0f172a"],
+[data-theme="vibrant"] [style*="color:#1e293b"],
+[data-theme="vibrant"] [style*="color: #1e293b"],
+[data-theme="vibrant"] [style*="color:#334155"],
+[data-theme="vibrant"] [style*="color: #334155"] {
   color: var(--text-main) !important;
 }
 
@@ -541,7 +633,9 @@
 [data-theme="cyber"] [style*="color:#64748b"],
 [data-theme="aurora"] [style*="color:#64748b"],
 [data-theme="sunset"] [style*="color:#64748b"],
-[data-theme="glass"] [style*="color:#64748b"] {
+[data-theme="glass"] [style*="color:#64748b"],
+[data-theme="vibrant"] [style*="color:#64748b"],
+[data-theme="vibrant"] [style*="color: #64748b"] {
   color: var(--text-muted) !important;
 }
 
@@ -550,7 +644,9 @@
 [data-theme="cyber"] [style*="#e2e8f0"],
 [data-theme="aurora"] [style*="#e2e8f0"],
 [data-theme="sunset"] [style*="#e2e8f0"],
-[data-theme="glass"] [style*="#e2e8f0"] {
+[data-theme="glass"] [style*="#e2e8f0"],
+[data-theme="vibrant"] [style*="#e2e8f0"],
+[data-theme="vibrant"] [style*="#cbd5e1"] {
   border-color: var(--border-default) !important;
 }
 
@@ -568,7 +664,10 @@
 [data-theme="sunset"] textarea,
 [data-theme="glass"] select,
 [data-theme="glass"] input,
-[data-theme="glass"] textarea {
+[data-theme="glass"] textarea,
+[data-theme="vibrant"] select,
+[data-theme="vibrant"] input,
+[data-theme="vibrant"] textarea {
   background-color: var(--bg-input-box);
   color: var(--text-main);
   border-color: var(--border-input);
@@ -578,7 +677,8 @@
 [data-theme="cyber"] option,
 [data-theme="aurora"] option,
 [data-theme="sunset"] option,
-[data-theme="glass"] option {
+[data-theme="glass"] option,
+[data-theme="vibrant"] option {
   background-color: var(--bg-surface-raised);
   color: var(--text-main);
 }
@@ -7785,6 +7885,300 @@ body.glass-mode .floating-popover {
 
 .chat-thread-container {
   background-color: var(--bg-app) !important;
+}
+
+/* ==========================================================================
+   个性化背景图片与动态壁纸系统 (Personalized Wallpaper System)
+   ========================================================================== */
+:root {
+  --wallpaper-image: none;
+  --wallpaper-opacity: 0.45;
+  --wallpaper-blur: 0px;
+  --wallpaper-size: cover;
+  --wallpaper-position: center center;
+  --wallpaper-repeat: no-repeat;
+  --wallpaper-overlay-bg: rgba(15, 23, 42, 0.4);
+  --wallpaper-overlay-opacity: 0.4;
+}
+
+[data-theme="light"] {
+  --wallpaper-overlay-bg: rgba(255, 255, 255, 0.45);
+}
+
+.app-wallpaper-layer {
+  position: fixed;
+  inset: -30px;
+  z-index: -2;
+  pointer-events: none;
+  background-image: var(--wallpaper-image);
+  background-size: var(--wallpaper-size, cover);
+  background-position: var(--wallpaper-position, center center);
+  background-repeat: var(--wallpaper-repeat, no-repeat);
+  opacity: 0;
+  filter: blur(var(--wallpaper-blur, 0px)) saturate(110%);
+  -webkit-filter: blur(var(--wallpaper-blur, 0px)) saturate(110%);
+  transform: translateZ(0);
+  will-change: opacity, filter, background-image;
+  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), filter 0.25s ease, background-image 0.4s ease;
+}
+
+.app-wallpaper-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--wallpaper-overlay-bg);
+  opacity: 0;
+  transition: opacity 0.35s ease, background-color 0.3s ease;
+}
+
+body.has-wallpaper .app-wallpaper-layer {
+  opacity: var(--wallpaper-opacity, 0.45);
+}
+
+body.has-wallpaper .app-wallpaper-overlay {
+  opacity: var(--wallpaper-overlay-opacity, 0.4);
+}
+
+body.has-wallpaper {
+  background-color: transparent !important;
+}
+
+body.has-wallpaper .main-content {
+  background-color: transparent !important;
+}
+
+body.has-wallpaper .view {
+  background-color: transparent !important;
+}
+
+body.has-wallpaper .chat-thread-container {
+  background-color: transparent !important;
+}
+
+body.has-wallpaper .rail {
+  background-color: color-mix(in srgb, var(--bg-sidebar) calc(var(--ui-opacity, 0.9) * 100%), transparent) !important;
+  backdrop-filter: blur(20px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+}
+
+body.has-wallpaper .chat-header {
+  background-color: color-mix(in srgb, var(--bg-surface) calc(var(--ui-opacity, 0.88) * 100%), transparent) !important;
+  backdrop-filter: blur(20px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+}
+
+body.has-wallpaper .status-bar {
+  background-color: color-mix(in srgb, var(--bg-surface) calc(var(--ui-opacity, 0.9) * 100%), transparent) !important;
+  backdrop-filter: blur(16px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(150%) !important;
+}
+
+body.has-wallpaper .msg-row.assistant .assistant-content {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] body.has-wallpaper .msg-row.assistant .assistant-content {
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
+}
+
+body.has-wallpaper .user-bubble {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* 预设壁纸样式 */
+.wp-preset-nebula {
+  background-image: radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.55), transparent 45%),
+                    radial-gradient(circle at 80% 80%, rgba(236, 72, 153, 0.45), transparent 50%),
+                    radial-gradient(circle at 50% 40%, rgba(14, 165, 233, 0.35), transparent 60%),
+                    radial-gradient(circle at 80% 20%, rgba(168, 85, 247, 0.4), transparent 40%),
+                    linear-gradient(180deg, #080c18 0%, #03060c 100%) !important;
+}
+
+.wp-preset-cyber {
+  background-image: linear-gradient(rgba(14, 165, 233, 0.14) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(14, 165, 233, 0.14) 1px, transparent 1px),
+                    radial-gradient(circle at 50% 0%, rgba(236, 72, 153, 0.38), transparent 70%),
+                    radial-gradient(circle at 100% 100%, rgba(99, 102, 241, 0.3), transparent 60%),
+                    linear-gradient(180deg, #070b14 0%, #02050a 100%) !important;
+  background-size: 36px 36px, 36px 36px, 100% 100%, 100% 100%, 100% 100% !important;
+}
+
+.wp-preset-aurora {
+  background-image: radial-gradient(ellipse at 30% 20%, rgba(16, 185, 129, 0.45), transparent 50%),
+                    radial-gradient(ellipse at 70% 60%, rgba(5, 150, 105, 0.4), transparent 55%),
+                    radial-gradient(circle at 50% 90%, rgba(6, 78, 59, 0.5), transparent 60%),
+                    radial-gradient(circle at 85% 15%, rgba(45, 212, 191, 0.3), transparent 45%),
+                    linear-gradient(180deg, #04120e 0%, #020806 100%) !important;
+}
+
+.wp-preset-sunset {
+  background-image: radial-gradient(circle at 80% 20%, rgba(245, 158, 11, 0.48), transparent 55%),
+                    radial-gradient(circle at 20% 80%, rgba(217, 119, 6, 0.4), transparent 60%),
+                    radial-gradient(circle at 50% 40%, rgba(180, 83, 9, 0.25), transparent 65%),
+                    radial-gradient(circle at 10% 20%, rgba(251, 191, 36, 0.2), transparent 45%),
+                    linear-gradient(180deg, #160c07 0%, #090503 100%) !important;
+}
+
+.wp-preset-mesh {
+  background-image: radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.42) 0px, transparent 50%),
+                    radial-gradient(at 100% 0%, rgba(244, 63, 94, 0.38) 0px, transparent 50%),
+                    radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.4) 0px, transparent 50%),
+                    radial-gradient(at 0% 100%, rgba(168, 85, 247, 0.38) 0px, transparent 50%),
+                    linear-gradient(180deg, #0a0e1c 0%, #03050a 100%) !important;
+}
+
+.wp-preset-carbon {
+  background-image: radial-gradient(black 15%, transparent 16%),
+                    radial-gradient(black 15%, transparent 16%),
+                    radial-gradient(rgba(255, 255, 255, 0.08) 15%, transparent 20%),
+                    radial-gradient(rgba(255, 255, 255, 0.08) 15%, transparent 20%),
+                    linear-gradient(180deg, #101318 0%, #0a0c10 100%) !important;
+  background-position: 0 0, 10px 10px, 0 1px, 10px 11px, 0 0 !important;
+  background-size: 20px 20px, 20px 20px, 20px 20px, 20px 20px, 100% 100% !important;
+}
+
+/* 壁纸选择卡片网格 */
+.wallpaper-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.wallpaper-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1.5px solid var(--border-default);
+  border-radius: 8px;
+  padding: 8px 6px;
+  background: var(--bg-surface);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.wallpaper-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.wallpaper-card.active {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, var(--bg-surface));
+  box-shadow: 0 0 0 1px var(--primary), var(--shadow-sm);
+}
+
+.wallpaper-card.active .wallpaper-name {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.wallpaper-preview {
+  width: 100%;
+  height: 48px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-size: cover;
+  background-position: center;
+}
+
+.wallpaper-name {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.wp-preview-none {
+  background: var(--bg-card);
+  color: var(--text-muted);
+}
+
+.wp-preview-nebula {
+  background: radial-gradient(circle at 20% 20%, #6366f1, transparent 50%),
+              radial-gradient(circle at 80% 80%, #ec4899, transparent 50%),
+              radial-gradient(circle at 50% 40%, #0ea5e9, transparent 60%),
+              #080c18;
+}
+
+.wp-preview-cyber {
+  background: linear-gradient(rgba(14, 165, 233, 0.25) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(14, 165, 233, 0.25) 1px, transparent 1px),
+              radial-gradient(circle at 50% 0%, #ec4899, transparent 80%),
+              #070b14;
+  background-size: 12px 12px, 12px 12px, 100% 100%, 100% 100%;
+}
+
+.wp-preview-aurora {
+  background: radial-gradient(circle at 30% 20%, #10b981, transparent 50%),
+              radial-gradient(circle at 70% 70%, #059669, transparent 55%),
+              #04120e;
+}
+
+.wp-preview-sunset {
+  background: radial-gradient(circle at 80% 20%, #f59e0b, transparent 55%),
+              radial-gradient(circle at 20% 80%, #b45309, transparent 60%),
+              #160c07;
+}
+
+.wp-preview-mesh {
+  background: radial-gradient(at 0% 0%, #6366f1 0px, transparent 50%),
+              radial-gradient(at 100% 0%, #f43f5e 0px, transparent 50%),
+              radial-gradient(at 100% 100%, #0ea5e9 0px, transparent 50%),
+              radial-gradient(at 0% 100%, #a855f7 0px, transparent 50%),
+              #0a0e1c;
+}
+
+.wp-preview-carbon {
+  background: radial-gradient(black 15%, transparent 16%) 0 0,
+              radial-gradient(black 15%, transparent 16%) 6px 6px,
+              #121418;
+  background-size: 12px 12px;
+}
+
+.wp-preview-custom {
+  background: var(--bg-card);
+  color: var(--primary);
+  background-size: cover;
+  background-position: center;
+}
+
+/* 快速弹层内的壁纸芯片 */
+.wallpaper-quick-chip {
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.wallpaper-quick-chip:hover {
+  border-color: var(--primary);
+  color: var(--text-main);
+}
+
+.wallpaper-quick-chip.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff !important;
+  font-weight: 600;
 }
 
 /* 顶部视觉胶囊群组与精简布局 (Streamlined Header Capsule System) */

@@ -7,6 +7,7 @@ const html = readFileSync(resolve(rendererDir, 'index.html'), 'utf8');
 const app = readFileSync(resolve(rendererDir, 'app.js'), 'utf8');
 const css = readFileSync(resolve(rendererDir, 'styles.css'), 'utf8');
 const preload = readFileSync(resolve(rendererDir, 'preload.cjs'), 'utf8');
+const i18n = readFileSync(resolve(rendererDir, 'i18n.js'), 'utf8');
 const main = readFileSync(resolve(process.cwd(), 'src/gui/main.ts'), 'utf8');
 const serviceSource = readFileSync(resolve(process.cwd(), 'src/gui/service.ts'), 'utf8');
 
@@ -247,6 +248,52 @@ describe('Electron renderer UI contracts', () => {
     expect(app).toContain("line.type === 'add' ? '+' : line.type === 'delete' ? '-' : ' '");
     // Ensure hunk badge shows chunk range and header
     expect(app).toContain('const hunkBadge = `@@ -${hunk.oldStart},${hunk.oldLines} +${hunk.newStart},${hunk.newLines} @@');
+  });
+
+  it('implements the personalized background image and wallpaper system', () => {
+    // 1. DOM layer presence
+    expect(html).toContain('id="appWallpaperLayer"');
+    expect(html).toContain('id="appWallpaperOverlay"');
+    expect(html).toContain('class="theme-wallpaper-section"');
+    expect(html).toContain('class="wallpaper-cards-grid"');
+    expect(html).toContain('id="uploadWallpaperBtn"');
+    expect(html).toContain('id="wallpaperFileInput"');
+    expect(html).toContain('id="wallpaperUrlInput"');
+    expect(html).toContain('id="wallpaperOpacityRange"');
+    expect(html).toContain('id="wallpaperBlurRange"');
+    expect(html).toContain('id="wallpaperDimRange"');
+    expect(html).toContain('id="wallpaperFitSelect"');
+    expect(html).toContain('id="popoverWallpaperChips"');
+
+    // 2. CSS rules
+    expect(css).toContain('.app-wallpaper-layer');
+    expect(css).toContain('.app-wallpaper-overlay');
+    expect(css).toContain('body.has-wallpaper');
+    expect(css).toContain('.wp-preset-nebula');
+    expect(css).toContain('.wp-preset-cyber');
+    expect(css).toContain('.wp-preset-aurora');
+    expect(css).toContain('.wp-preset-sunset');
+    expect(css).toContain('.wp-preset-mesh');
+    expect(css).toContain('.wp-preset-carbon');
+    expect(css).toContain('.wallpaper-card');
+    expect(css).toContain('.wallpaper-quick-chip');
+
+    // 3. Controller functions in app.js
+    expect(app).toContain('AVAILABLE_WALLPAPERS');
+    expect(app).toContain('initWallpaperSystem()');
+    expect(app).toContain('applyWallpaper(');
+    expect(app).toContain('setWallpaperOpacity(');
+    expect(app).toContain('setWallpaperBlur(');
+    expect(app).toContain('setWallpaperDim(');
+    expect(app).toContain('setWallpaperFit(');
+    expect(app).toContain('compressImageForWallpaper(');
+
+    // 4. i18n support
+    expect(i18n).toContain("'wallpaper.sectionTitle'");
+    expect(i18n).toContain("'wallpaper.uploadBtn'");
+    expect(i18n).toContain("'wallpaper.nebula'");
+    expect(i18n).toContain("'wallpaper.cyber'");
+    expect(i18n).toContain("'wallpaper.aurora'");
   });
 });
 

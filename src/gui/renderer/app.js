@@ -1913,6 +1913,19 @@ function initOpacityAndGlass() {
     }
   });
 
+  // 打开完整壁纸详细配置
+  $('popoverOpenWallpaperModalBtn')?.addEventListener('click', () => {
+    hideAllPopovers();
+    const modal = $('themePickerModal');
+    if (modal) {
+      if (typeof modal.showModal === 'function') modal.showModal();
+      else modal.style.display = 'block';
+      setTimeout(() => {
+        document.querySelector('.theme-wallpaper-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 50);
+    }
+  });
+
   // 滑块事件 (支持弹层滑块与模态框滑块联动)
   $('opacityRangeInput')?.addEventListener('input', (e) => {
     setWindowOpacity(e.target.value, false);
@@ -2005,6 +2018,308 @@ function setWindowOpacity(val, syncInput = true) {
 }
 
 initOpacityAndGlass();
+
+// ==========================================================================
+// 个性化背景图片与动态壁纸系统 (Personalized Wallpaper System)
+// ==========================================================================
+
+const AVAILABLE_WALLPAPERS = ['none', 'nebula', 'cyber', 'aurora', 'sunset', 'mesh', 'carbon', 'custom'];
+
+function initWallpaperSystem() {
+  const layer = $('appWallpaperLayer');
+  if (!layer) return;
+
+  const savedWallpaper = localStorage.getItem('hap_wallpaper_id') || 'none';
+  const savedOpacity = localStorage.getItem('hap_wallpaper_opacity') || '45';
+  const savedBlur = localStorage.getItem('hap_wallpaper_blur') || '0';
+  const savedDim = localStorage.getItem('hap_wallpaper_dim') || '40';
+  const savedFit = localStorage.getItem('hap_wallpaper_fit') || 'cover';
+  const savedCustom = localStorage.getItem('hap_wallpaper_custom') || '';
+
+  // 恢复自定义图片预览
+  if (savedCustom) {
+    const customPreview = $('customWallpaperPreview');
+    if (customPreview) {
+      customPreview.style.backgroundImage = `url("${savedCustom}")`;
+      customPreview.innerHTML = '';
+    }
+  }
+
+  // 初始化微调数值
+  setWallpaperOpacity(savedOpacity, false);
+  setWallpaperBlur(savedBlur, false);
+  setWallpaperDim(savedDim, false);
+  setWallpaperFit(savedFit, false);
+
+  // 渲染并应用当前壁纸
+  applyWallpaper(savedWallpaper, false);
+
+  // 绑定模态框预设壁纸卡片点击
+  document.querySelectorAll('.wallpaper-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      const wpId = card.getAttribute('data-wallpaper-id');
+      if (!wpId) return;
+      if (wpId === 'custom' && !localStorage.getItem('hap_wallpaper_custom')) {
+        // 如果自定义尚未上传图片，直接引导选择本地图片
+        $('wallpaperFileInput')?.click();
+      } else {
+        applyWallpaper(wpId, true);
+      }
+    });
+  });
+
+  // 绑定外观快速弹层壁纸芯片点击
+  document.querySelectorAll('.wallpaper-quick-chip').forEach((chip) => {
+    chip.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wpId = chip.getAttribute('data-wallpaper-id');
+      if (!wpId) return;
+      if (wpId === 'custom' && !localStorage.getItem('hap_wallpaper_custom')) {
+        hideAllPopovers();
+        const modal = $('themePickerModal');
+        if (modal) {
+          if (typeof modal.showModal === 'function') modal.showModal();
+          else modal.style.display = 'block';
+          setTimeout(() => {
+            document.querySelector('.theme-wallpaper-section')?.scrollIntoView({ behavior: 'smooth' });
+          }, 50);
+        }
+      } else {
+        applyWallpaper(wpId, true);
+      }
+    });
+  });
+
+  // 本地图片文件选择与上传
+  $('uploadWallpaperBtn')?.addEventListener('click', () => {
+    $('wallpaperFileInput')?.click();
+  });
+
+  $('wallpaperFileInput')?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      showToast('正在优化并加载背景图片...', 'info');
+      const dataUrl = await compressImageForWallpaper(file);
+      localStorage.setItem('hap_wallpaper_custom', dataUrl);
+      const customPreview = $('customWallpaperPreview');
+      if (customPreview) {
+        customPreview.style.backgroundImage = `url("${dataUrl}")`;
+        customPreview.innerHTML = '';
+      }
+      applyWallpaper('custom', true);
+      showToast('个性化背景图片已成功应用！', 'success');
+    } catch (err) {
+      showToast('处理图片失败: ' + (err.message || '未知错误'), 'error');
+    } finally {
+      e.target.value = '';
+    }
+  });
+
+  // 网络图片 URL 应用
+  $('applyWallpaperUrlBtn')?.addEventListener('click', () => {
+    const input = $('wallpaperUrlInput');
+    const url = input?.value?.trim();
+    if (!url) {
+      showToast('请输入有效的图片链接地址', 'warning');
+      return;
+    }
+    localStorage.setItem('hap_wallpaper_custom', url);
+    const customPreview = $('customWallpaperPreview');
+    if (customPreview) {
+      customPreview.style.backgroundImage = `url("${url}")`;
+      customPreview.innerHTML = '';
+    }
+    applyWallpaper('custom', true);
+    if (input) input.value = '';
+    showToast('网络背景图片已成功应用！', 'success');
+  });
+
+  // 回车键应用 URL
+  $('wallpaperUrlInput')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      $('applyWallpaperUrlBtn')?.click();
+    }
+  });
+
+  // 清除壁纸按钮
+  $('clearWallpaperBtn')?.addEventListener('click', () => {
+    applyWallpaper('none', true);
+    showToast('已恢复纯色无壁纸背景', 'info');
+  });
+
+  // 微调滑块事件绑定
+  $('wallpaperOpacityRange')?.addEventListener('input', (e) => {
+    setWallpaperOpacity(e.target.value, false);
+  });
+  $('wallpaperOpacityRange')?.addEventListener('change', (e) => {
+    setWallpaperOpacity(e.target.value, true);
+  });
+
+  $('wallpaperBlurRange')?.addEventListener('input', (e) => {
+    setWallpaperBlur(e.target.value, false);
+  });
+  $('wallpaperBlurRange')?.addEventListener('change', (e) => {
+    setWallpaperBlur(e.target.value, true);
+  });
+
+  $('wallpaperDimRange')?.addEventListener('input', (e) => {
+    setWallpaperDim(e.target.value, false);
+  });
+  $('wallpaperDimRange')?.addEventListener('change', (e) => {
+    setWallpaperDim(e.target.value, true);
+  });
+
+  $('wallpaperFitSelect')?.addEventListener('change', (e) => {
+    setWallpaperFit(e.target.value, true);
+  });
+}
+
+function applyWallpaper(wallpaperId, save = true) {
+  const layer = $('appWallpaperLayer');
+  if (!layer) return;
+
+  const validId = AVAILABLE_WALLPAPERS.includes(wallpaperId) ? wallpaperId : 'none';
+
+  // 清除旧预设 class
+  AVAILABLE_WALLPAPERS.forEach((id) => {
+    layer.classList.remove('wp-preset-' + id);
+  });
+
+  if (validId === 'none') {
+    document.body.classList.remove('has-wallpaper');
+    layer.style.backgroundImage = 'none';
+  } else if (validId === 'custom') {
+    const customImage = localStorage.getItem('hap_wallpaper_custom');
+    if (customImage) {
+      document.body.classList.add('has-wallpaper');
+      layer.style.backgroundImage = `url("${customImage}")`;
+    } else {
+      document.body.classList.remove('has-wallpaper');
+      layer.style.backgroundImage = 'none';
+    }
+  } else {
+    document.body.classList.add('has-wallpaper');
+    layer.classList.add('wp-preset-' + validId);
+    layer.style.backgroundImage = '';
+  }
+
+  // 同步模态框卡片 active 状态
+  document.querySelectorAll('.wallpaper-card').forEach((card) => {
+    const id = card.getAttribute('data-wallpaper-id');
+    card.classList.toggle('active', id === validId);
+  });
+
+  // 同步快速弹层芯片 active 状态
+  document.querySelectorAll('.wallpaper-quick-chip').forEach((chip) => {
+    const id = chip.getAttribute('data-wallpaper-id');
+    chip.classList.toggle('active', id === validId);
+  });
+
+  if (save) {
+    localStorage.setItem('hap_wallpaper_id', validId);
+  }
+}
+
+function setWallpaperOpacity(val, save = true) {
+  const num = Math.max(10, Math.min(100, Number(val) || 45));
+  document.documentElement.style.setProperty('--wallpaper-opacity', String(num / 100));
+  const badge = $('wallpaperOpacityValueText');
+  if (badge) badge.textContent = num + '%';
+  const range = $('wallpaperOpacityRange');
+  if (range && range.value !== String(num)) range.value = String(num);
+  if (save) localStorage.setItem('hap_wallpaper_opacity', String(num));
+}
+
+function setWallpaperBlur(val, save = true) {
+  const num = Math.max(0, Math.min(30, Number(val) || 0));
+  document.documentElement.style.setProperty('--wallpaper-blur', num + 'px');
+  const badge = $('wallpaperBlurValueText');
+  if (badge) badge.textContent = num + 'px';
+  const range = $('wallpaperBlurRange');
+  if (range && range.value !== String(num)) range.value = String(num);
+  if (save) localStorage.setItem('hap_wallpaper_blur', String(num));
+}
+
+function setWallpaperDim(val, save = true) {
+  const num = Math.max(0, Math.min(90, Number(val) || 40));
+  document.documentElement.style.setProperty('--wallpaper-overlay-opacity', String(num / 100));
+  const badge = $('wallpaperDimValueText');
+  if (badge) badge.textContent = num + '%';
+  const range = $('wallpaperDimRange');
+  if (range && range.value !== String(num)) range.value = String(num);
+  if (save) localStorage.setItem('hap_wallpaper_dim', String(num));
+}
+
+function setWallpaperFit(val, save = true) {
+  const fit = ['cover', 'contain', 'repeat'].includes(val) ? val : 'cover';
+  if (fit === 'repeat') {
+    document.documentElement.style.setProperty('--wallpaper-size', 'auto');
+    document.documentElement.style.setProperty('--wallpaper-repeat', 'repeat');
+  } else if (fit === 'contain') {
+    document.documentElement.style.setProperty('--wallpaper-size', 'contain');
+    document.documentElement.style.setProperty('--wallpaper-repeat', 'no-repeat');
+  } else {
+    document.documentElement.style.setProperty('--wallpaper-size', 'cover');
+    document.documentElement.style.setProperty('--wallpaper-repeat', 'no-repeat');
+  }
+  const select = $('wallpaperFitSelect');
+  if (select && select.value !== fit) select.value = fit;
+  if (save) localStorage.setItem('hap_wallpaper_fit', fit);
+}
+
+function compressImageForWallpaper(file) {
+  return new Promise((resolve, reject) => {
+    if (file.type === 'image/svg+xml') {
+      const reader = new FileReader();
+      reader.onerror = reject;
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const MAX_W = 1920;
+        const MAX_H = 1080;
+        let w = img.width;
+        let h = img.height;
+
+        if (w > MAX_W || h > MAX_H) {
+          if (w / h > MAX_W / MAX_H) {
+            h = Math.round((h * MAX_W) / w);
+            w = MAX_W;
+          } else {
+            w = Math.round((w * MAX_H) / h);
+            h = MAX_H;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+
+        let dataUrl;
+        try {
+          dataUrl = canvas.toDataURL('image/webp', 0.85);
+        } catch {
+          dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        }
+        resolve(dataUrl);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+initWallpaperSystem();
 
 // ==========================================================================
 // Mini 模式与“小 i”交互弹窗系统 (Mini Mode & Mini 'i' Popover)

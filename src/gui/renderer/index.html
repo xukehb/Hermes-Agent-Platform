@@ -11,6 +11,10 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <!-- 全局背景图片与动态壁纸图层 (Fixed Wallpaper Backdrop Layer) -->
+    <div id="appWallpaperLayer" class="app-wallpaper-layer" aria-hidden="true"></div>
+    <div id="appWallpaperOverlay" class="app-wallpaper-overlay" aria-hidden="true"></div>
+
     <!-- 左侧侧边栏 (ChatGPT / Codex 官方树形项目导航架构) -->
     <aside class="rail">
       <!-- 顶部：+ New Conversation 大按钮 -->
@@ -4782,6 +4786,132 @@
           </div>
         </div>
 
+        <!-- 背景图片与动态壁纸专区 (Background Wallpaper Gallery) -->
+        <div class="theme-wallpaper-section" style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-default);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              <span style="font-size: 13px; font-weight: 600;" data-i18n="wallpaper.sectionTitle">个性化背景图片与动态壁纸</span>
+            </div>
+            <button type="button" class="btn secondary" id="clearWallpaperBtn" style="font-size: 11px; padding: 2px 8px; height: 24px;" data-i18n="wallpaper.clearBtn">清除壁纸</button>
+          </div>
+          <p style="margin: 0 0 10px; font-size: 11.5px; color: var(--text-muted);" data-i18n="wallpaper.sectionSubtitle">精选 7 款高质感视觉壁纸或上传本地图片，可自由调节透明度、磨砂柔焦与暗化遮罩</p>
+
+          <!-- 预设壁纸网格 (8 款预设与自定义) -->
+          <div class="wallpaper-cards-grid">
+            <!-- 1. 无壁纸 -->
+            <div class="wallpaper-card active" data-wallpaper-id="none" title="默认无背景壁纸">
+              <div class="wallpaper-preview wp-preview-none">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </div>
+              <span class="wallpaper-name" data-i18n="wallpaper.none">纯净无壁纸</span>
+            </div>
+
+            <!-- 2. 深空星云 -->
+            <div class="wallpaper-card" data-wallpaper-id="nebula" title="深邃星云与微弱星芒">
+              <div class="wallpaper-preview wp-preview-nebula"></div>
+              <span class="wallpaper-name" data-i18n="wallpaper.nebula">深空星云</span>
+            </div>
+
+            <!-- 3. 赛博霓虹 -->
+            <div class="wallpaper-card" data-wallpaper-id="cyber" title="科技发光网格与光晕">
+              <div class="wallpaper-preview wp-preview-cyber"></div>
+              <span class="wallpaper-name" data-i18n="wallpaper.cyber">赛博霓虹</span>
+            </div>
+
+            <!-- 4. 北欧极光 -->
+            <div class="wallpaper-card" data-wallpaper-id="aurora" title="幽深森林绿意与极光薄荷流光">
+              <div class="wallpaper-preview wp-preview-aurora"></div>
+              <span class="wallpaper-name" data-i18n="wallpaper.aurora">北欧极光</span>
+            </div>
+
+            <!-- 5. 落日流金 -->
+            <div class="wallpaper-card" data-wallpaper-id="sunset" title="温暖琥珀暮色与落日金晕">
+              <div class="wallpaper-preview wp-preview-sunset"></div>
+              <span class="wallpaper-name" data-i18n="wallpaper.sunset">落日流金</span>
+            </div>
+
+            <!-- 6. 流光拟彩 -->
+            <div class="wallpaper-card" data-wallpaper-id="mesh" title="优雅现代多重色散流动渐变">
+              <div class="wallpaper-preview wp-preview-mesh"></div>
+              <span class="wallpaper-name" data-i18n="wallpaper.mesh">流光拟彩</span>
+            </div>
+
+            <!-- 7. 极客碳纤 -->
+            <div class="wallpaper-card" data-wallpaper-id="carbon" title="暗黑极客几何微纹理">
+              <div class="wallpaper-preview wp-preview-carbon"></div>
+              <span class="wallpaper-name" data-i18n="wallpaper.carbon">极客碳纤</span>
+            </div>
+
+            <!-- 8. 自定义图片 -->
+            <div class="wallpaper-card" data-wallpaper-id="custom" id="customWallpaperCard" title="使用您上传的本地或网络图片">
+              <div class="wallpaper-preview wp-preview-custom" id="customWallpaperPreview">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              </div>
+              <span class="wallpaper-name" data-i18n="wallpaper.custom">自定义图片</span>
+            </div>
+          </div>
+
+          <!-- 自定义图片上传及网络 URL 栏 -->
+          <div class="wallpaper-upload-bar" style="display: flex; gap: 8px; align-items: center; margin-top: 10px; margin-bottom: 12px; flex-wrap: wrap;">
+            <input type="file" id="wallpaperFileInput" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" style="display: none;" />
+            <button type="button" class="btn secondary" id="uploadWallpaperBtn" style="font-size: 12px; padding: 5px 12px; display: inline-flex; align-items: center; gap: 6px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span data-i18n="wallpaper.uploadBtn">+ 上传本地图片</span>
+            </button>
+            <div style="flex: 1; min-width: 180px; display: flex; gap: 6px;">
+              <input type="text" id="wallpaperUrlInput" placeholder="或输入外部图片 URL 地址..." data-i18n-placeholder="wallpaper.urlPlaceholder" style="flex: 1; font-size: 12px; padding: 5px 8px; height: 28px;" />
+              <button type="button" class="btn secondary" id="applyWallpaperUrlBtn" style="font-size: 11.5px; padding: 4px 10px; height: 28px;" data-i18n="wallpaper.urlApply">应用</button>
+            </div>
+          </div>
+
+          <!-- 壁纸微调控制群 (不透明度、柔和模糊、暗化遮罩、适配模式) -->
+          <div class="wallpaper-sliders-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px;">
+            <!-- 不透明度 -->
+            <div class="wallpaper-control-item">
+              <div style="display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;">
+                <span data-i18n="wallpaper.opacityLabel">壁纸不透明度</span>
+                <span class="opacity-value-badge" id="wallpaperOpacityValueText">45%</span>
+              </div>
+              <input type="range" id="wallpaperOpacityRange" min="10" max="100" step="5" value="45" class="opacity-range-slider" />
+            </div>
+
+            <!-- 磨砂柔焦模糊 -->
+            <div class="wallpaper-control-item">
+              <div style="display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;">
+                <span data-i18n="wallpaper.blurLabel">磨砂模糊度 (柔焦)</span>
+                <span class="opacity-value-badge" id="wallpaperBlurValueText">0px</span>
+              </div>
+              <input type="range" id="wallpaperBlurRange" min="0" max="30" step="2" value="0" class="opacity-range-slider" />
+            </div>
+
+            <!-- 防眩目对比度遮罩 -->
+            <div class="wallpaper-control-item">
+              <div style="display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;">
+                <span data-i18n="wallpaper.dimLabel">遮罩深浅 (防眩目)</span>
+                <span class="opacity-value-badge" id="wallpaperDimValueText">40%</span>
+              </div>
+              <input type="range" id="wallpaperDimRange" min="0" max="90" step="5" value="40" class="opacity-range-slider" />
+            </div>
+
+            <!-- 图像适配模式 -->
+            <div class="wallpaper-control-item">
+              <div style="display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 4px;">
+                <span data-i18n="wallpaper.fitModeLabel">图像适配模式</span>
+              </div>
+              <select id="wallpaperFitSelect" style="width: 100%; font-size: 12px; padding: 4px 8px; height: 28px;">
+                <option value="cover" data-i18n="wallpaper.fitCover">撑满铺满 (Cover)</option>
+                <option value="contain" data-i18n="wallpaper.fitContain">等比完整 (Contain)</option>
+                <option value="repeat" data-i18n="wallpaper.fitTile">平铺纹理 (Tile)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <!-- 半透明与毛玻璃透亮调节 -->
         <div class="theme-opacity-section" style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-default);">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
@@ -4846,6 +4976,20 @@
       </div>
 
       <button type="button" class="btn text-btn" id="popoverOpenThemeModalBtn" style="width: 100%; justify-content: center; font-size: 11px; padding: 4px; color: var(--primary);" data-i18n="popover.themeDetails">查看 6 款主题设计详情 ▾</button>
+
+      <div class="popover-divider"></div>
+
+      <div class="popover-section-title" data-i18n="popover.wallpaperTitle">背景图片与壁纸</div>
+      <div class="popover-theme-chips" id="popoverWallpaperChips">
+        <button type="button" class="wallpaper-quick-chip active" data-wallpaper-id="none" data-i18n="wallpaper.none">纯净无壁纸</button>
+        <button type="button" class="wallpaper-quick-chip" data-wallpaper-id="nebula" data-i18n="wallpaper.nebula">深空星云</button>
+        <button type="button" class="wallpaper-quick-chip" data-wallpaper-id="cyber" data-i18n="wallpaper.cyber">赛博霓虹</button>
+        <button type="button" class="wallpaper-quick-chip" data-wallpaper-id="aurora" data-i18n="wallpaper.aurora">北欧极光</button>
+        <button type="button" class="wallpaper-quick-chip" data-wallpaper-id="sunset" data-i18n="wallpaper.sunset">落日流金</button>
+        <button type="button" class="wallpaper-quick-chip" data-wallpaper-id="custom" data-i18n="wallpaper.custom">自定义图片</button>
+      </div>
+
+      <button type="button" class="btn text-btn" id="popoverOpenWallpaperModalBtn" style="width: 100%; justify-content: center; font-size: 11px; padding: 4px; color: var(--primary);" data-i18n="popover.wallpaperDetails">壁纸与磨砂柔焦详细配置 ▾</button>
 
       <div class="popover-divider"></div>
 
