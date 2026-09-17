@@ -96,6 +96,16 @@ export interface HostTopProcess {
   memoryFormatted: string;
 }
 
+export interface HostGpuInfo {
+  index: number;
+  name: string;
+  vendor: 'nvidia' | 'apple' | 'amd' | 'intel' | 'unknown';
+  memoryTotalBytes: number;
+  memoryFreeBytes?: number;
+  driverVersion?: string;
+  cudaVersion?: string;
+}
+
 export interface HostSystemInfo {
   os: HostOsInfo;
   cpu: HostCpuInfo;
@@ -105,6 +115,7 @@ export interface HostSystemInfo {
   topProcesses: HostTopProcess[];
   loadAvg: number[];
   timestamp: number;
+  gpus?: HostGpuInfo[];
 }
 
 /** 计算 CPU 实时使用率（基于多核空闲与非空闲时钟滴答数） */
@@ -265,6 +276,138 @@ function getTopProcesses(limit = 6): HostTopProcess[] {
   return cachedTopProcesses.slice(0, limit);
 }
 
+let cachedGpuInfo: HostGpuInfo[] = [];
+let lastGpuScanTime = 0;
+
+/** 探测本机显卡与可用显存 (支持 NVIDIA nvidia-smi / Apple Silicon 统一内存 / Windows wmic / Linux lspci) */
+export function getGpuInfo(): HostGpuInfo[] {
+  const now = Date.now();
+  if (cachedGpuInfo.length > 0 && now - lastGpuScanTime < 25000) {
+    return cachedGpuInfo;
+  }
+
+  const list: HostGpuInfo[] = [];
+
+  // 1. 优先尝试探测 NVIDIA GPU (Linux / Windows)
+  try {
+    const output = execSync(
+      'nvidia-smi --query-gpu=index,name,memory.total,memory.free,driver_version --format=csv,noheader,nounits',
+      { timeout: 1000, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }
+    );
+    const lines = output.trim().split('\n').filter(Boolean);
+    for (const line of lines) {
+      const parts = line.split(',').map((s) => s.trim());
+      if (parts.length >= 4) {
+        const index = parseInt(parts[0] || '0', 10);
+        const name = parts[1] || 'NVIDIA GPU';
+        const totalMb = parseFloat(parts[2] || '0');
+        const freeMb = parseFloat(parts[3] || '0');
+        const driverVersion = parts[4] || '';
+        list.push({
+          index: isNaN(index) ? 0 : index,
+          name,
+          vendor: 'nvidia',
+          memoryTotalBytes: Math.round(totalMb * 1024 * 1024),
+          memoryFreeBytes: Math.round(freeMb * 1024 * 1024),
+          driverVersion,
+        });
+      }
+    }
+    if (list.length > 0) {
+      cachedGpuInfo = list;
+      lastGpuScanTime = now;
+      return list;
+    }
+  } catch {}
+
+  // 2. 探测 Apple Silicon (macOS Metal 统一内存架构)
+  if (process.platform === 'darwin') {
+    try {
+      const brand = execSync('sysctl -n machdep.cpu.brand_string', { timeout: 800, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
+      if (brand.toLowerCase().includes('apple')) {
+        const totalMem = os.totalmem();
+        const freeMem = os.freemem();
+        list.push({
+          index: 0,
+          name: `${brand} (Apple Unified Memory)`,
+          vendor: 'apple',
+          memoryTotalBytes: totalMem,
+          memoryFreeBytes: freeMem,
+        });
+        cachedGpuInfo = list;
+        lastGpuScanTime = now;
+        return list;
+      }
+    } catch {}
+  }
+
+  // 3. Windows WMIC 备用探测
+  if (process.platform === 'win32') {
+    try {
+      const output = execSync('wmic path win32_VideoController get Name,AdapterRAM /format:csv', { timeout: 1200, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
+      const lines = output.trim().split('\n').filter(Boolean);
+      let idx = 0;
+      for (const line of lines) {
+        const parts = line.split(',').map((s) => s.trim());
+        if (parts.length >= 2 && parts[1] && !parts[1].toLowerCase().includes('name')) {
+          const rawRam = parseInt(parts[0] || '0', 10);
+          const name = parts[1];
+          let vendor: 'nvidia' | 'amd' | 'intel' | 'unknown' = 'unknown';
+          const lowerName = name.toLowerCase();
+          if (lowerName.includes('nvidia') || lowerName.includes('geforce') || lowerName.includes('rtx')) vendor = 'nvidia';
+          else if (lowerName.includes('amd') || lowerName.includes('radeon')) vendor = 'amd';
+          else if (lowerName.includes('intel') || lowerName.includes('iris') || lowerName.includes('arc')) vendor = 'intel';
+
+          list.push({
+            index: idx++,
+            name,
+            vendor,
+            memoryTotalBytes: rawRam > 0 ? rawRam : 0,
+          });
+        }
+      }
+      if (list.length > 0) {
+        cachedGpuInfo = list;
+        lastGpuScanTime = now;
+        return list;
+      }
+    } catch {}
+  }
+
+  // 4. Linux lspci 备用探测（当 nvidia-smi 不可用时）
+  if (process.platform === 'linux') {
+    try {
+      const output = execSync('lspci | grep -E "VGA|3D controller"', { timeout: 800, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
+      const lines = output.trim().split('\n').filter(Boolean);
+      let idx = 0;
+      for (const line of lines) {
+        const cleanLine = line.replace(/^[0-9a-f:.]+\s+[^:]+:\s*/i, '').trim();
+        let vendor: 'nvidia' | 'amd' | 'intel' | 'unknown' = 'unknown';
+        const lower = cleanLine.toLowerCase();
+        if (lower.includes('nvidia')) vendor = 'nvidia';
+        else if (lower.includes('amd') || lower.includes('advanced micro') || lower.includes('radeon')) vendor = 'amd';
+        else if (lower.includes('intel')) vendor = 'intel';
+
+        list.push({
+          index: idx++,
+          name: cleanLine || 'Graphics Adapter',
+          vendor,
+          memoryTotalBytes: 0,
+        });
+      }
+      if (list.length > 0) {
+        cachedGpuInfo = list;
+        lastGpuScanTime = now;
+        return list;
+      }
+    } catch {}
+  }
+
+  cachedGpuInfo = list;
+  lastGpuScanTime = now;
+  return list;
+}
+
 /** 获取当前宿主主机的超详细实时系统与硬件指标 */
 export function getHostSystemInfo(): HostSystemInfo {
   const cpus = os.cpus();
@@ -362,6 +505,7 @@ export function getHostSystemInfo(): HostSystemInfo {
     topProcesses: getTopProcesses(6),
     loadAvg: os.loadavg(),
     timestamp: Date.now(),
+    gpus: getGpuInfo(),
   };
 }
 

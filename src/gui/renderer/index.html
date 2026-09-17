@@ -68,7 +68,7 @@
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
           <span class="nav-text" data-i18n="rail.settings">系统设置</span>
-          <span class="sidebar-version-tag" id="sidebarVersionTag" style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-left:auto;padding:2px 6px;border-radius:4px;opacity:0.85;cursor:pointer;transition:all 150ms ease;" title="点击直达软件版本与检查更新" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--primary)';" onmouseout="this.style.background='transparent';this.style.color='var(--text-muted)';">v0.1.9</span>
+          <span class="sidebar-version-tag" id="sidebarVersionTag" style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-left:auto;padding:2px 6px;border-radius:4px;opacity:0.85;cursor:pointer;transition:all 150ms ease;" title="点击直达软件版本与检查更新" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--primary)';" onmouseout="this.style.background='transparent';this.style.color='var(--text-muted)';">v0.1.10</span>
         </div>
       </div>
     </aside>
@@ -171,7 +171,7 @@
                 <button id="aboutVersionMoreBtn" class="more-menu-item-btn" title="查看软件版本、运行环境与检查更新" data-i18n-title="more.aboutVersionTooltip">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                   <span data-i18n="more.aboutVersion">关于与版本更新</span>
-                  <span class="badge" id="moreMenuVersionBadge" style="margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:#10b981;background:rgba(16,185,129,0.12);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.9</span>
+                  <span class="badge" id="moreMenuVersionBadge" style="margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:#10b981;background:rgba(16,185,129,0.12);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.10</span>
                 </button>
 
                 <!-- 切换语言 -->
@@ -744,7 +744,7 @@
             </div>
             <div style="display:flex;align-items:center;gap:10px;">
               <button type="button" class="btn secondary" id="headerCheckUpdateBtn" style="font-size:12px;padding:5px 12px;display:inline-flex;align-items:center;gap:6px;border-radius:6px;cursor:pointer;" title="查看软件版本并检查 GitHub 更新">
-                <span class="badge" id="headerVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;color:#10b981;background:rgba(16,185,129,0.12);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.9</span>
+                <span class="badge" id="headerVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;color:#10b981;background:rgba(16,185,129,0.12);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.10</span>
                 <span id="headerCheckUpdateBtnText" style="font-size:12px;">检查更新</span>
               </button>
               <button type="button" class="btn secondary" id="backToChatBtn" onclick="show('chat')" style="font-size:12.5px;padding:6px 14px;display:inline-flex;align-items:center;gap:6px;">
@@ -785,6 +785,9 @@
             </button>
             <button type="button" class="settings-tab-btn" data-tab="permissions" onclick="window.switchSettingsTab('permissions')" data-i18n="settings.tabPermissions">
               权限与安全策略
+            </button>
+            <button type="button" class="settings-tab-btn" data-tab="gateway" onclick="window.switchSettingsTab('gateway')" data-i18n="settings.tabGateway" id="settingsGatewayTabBtn">
+              API 分发网关
             </button>
             <button type="button" class="settings-tab-btn" data-tab="system" onclick="window.switchSettingsTab('system')" data-i18n="settings.tabSystem" id="settingsSystemTabBtn">
               版本更新与系统日志
@@ -844,6 +847,10 @@
 
                   <!-- 右侧全局操作按钮组 -->
                   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                    <button type="button" class="btn primary" id="openModelHubBtn" onclick="window.openModelHubModal()" style="font-size:12px;padding:6px 14px;background:linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);color:#fff;border:none;box-shadow:0 2px 6px rgba(99,102,241,0.3);display:inline-flex;align-items:center;gap:6px;">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                      <span>🚀 开源模型中心 (硬件推荐一键部署)</span>
+                    </button>
                     <button type="button" class="btn secondary" id="testAllProvidersBtn" onclick="window.testAllProviders(this)" style="font-size:12px;padding:6px 12px;display:inline-flex;align-items:center;gap:4px;">
                       测试全部服务商
                     </button>
@@ -2120,7 +2127,7 @@
                     <div>
                       <div style="font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;">
                         <span>关于与软件版本 (About Hermes)</span>
-                        <span class="badge" id="appCurrentVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;padding:2px 8px;background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.3);border-radius:6px;font-weight:600;">v0.1.9</span>
+                        <span class="badge" id="appCurrentVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;padding:2px 8px;background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.3);border-radius:6px;font-weight:600;">v0.1.10</span>
                       </div>
                       <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">Hermes Agent Platform · 赫尔墨斯多智能体协同开发平台</div>
                     </div>
@@ -2136,7 +2143,7 @@
                   <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
                     <div style="padding:12px 14px;background:var(--bg-main);border:1px solid var(--border-default);border-radius:8px;">
                       <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:600;">当前安装版本</div>
-                      <div style="font-size:16px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin-top:4px;" id="aboutSoftwareVersionText">v0.1.9</div>
+                      <div style="font-size:16px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin-top:4px;" id="aboutSoftwareVersionText">v0.1.10</div>
                       <div style="font-size:11px;color:#10b981;margin-top:2px;">已内置自动重试与全协议适配</div>
                     </div>
                     <div style="padding:12px 14px;background:var(--bg-main);border:1px solid var(--border-default);border-radius:8px;">
@@ -2194,6 +2201,202 @@
                   <div id="logsViewer" class="code-preview-box" style="display:none;"></div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- Tab 12 内容: API 分发网关与模型共享服务 (参考 cockpit-tools Codex API 服务) -->
+          <div id="settingsPane_gateway" class="settings-pane" style="display:none;">
+            <div class="card" style="border:none;box-shadow:none;background:transparent;">
+              
+              <!-- 顶部状态大横幅：运行状态、Base URL 快捷复制、全局开关与监听设置 -->
+              <div class="card" style="margin-bottom:16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow-xs);">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;">
+                  <div>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                      <span id="gatewayStatusDot" style="width:10px;height:10px;border-radius:50%;background:#10b981;box-shadow:0 0 8px rgba(16,185,129,0.5);"></span>
+                      <h3 style="margin:0;font-size:17px;font-weight:700;color:var(--text-main);">OpenAI 兼容模型分发网关</h3>
+                      <span id="gatewayStatusBadge" class="badge" style="background:rgba(16,185,129,0.12);color:#10b981;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:4px;">运行中 (Active)</span>
+                    </div>
+                    <p style="margin:6px 0 0 0;font-size:12.5px;color:var(--text-muted);">
+                      将部署的本地开源大模型（基于 Ollama）及已配置的云端模型，统一对外提供标准 OpenAI API 代理分发，支持 Cursor、Continue、Cherry Studio、局域网协同设备一键接入
+                    </p>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <button type="button" class="btn secondary" id="gatewayRefreshOverviewBtn" style="font-size:12px;padding:6px 12px;display:inline-flex;align-items:center;gap:6px;">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                      <span>刷新状态</span>
+                    </button>
+                    <button type="button" class="btn primary" id="gatewayMasterToggleBtn" style="font-size:12.5px;padding:6px 16px;">
+                      网关服务控制
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 端点地址与局域网接入卡片 -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border-default);">
+                  <div style="background:var(--bg-main);padding:10px 14px;border-radius:8px;border:1px solid var(--border-default);display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                      <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">本地接口地址 (Localhost Base URL)</div>
+                      <div style="font-family:var(--font-mono);font-size:13px;color:var(--text-main);font-weight:600;margin-top:2px;" id="gatewayLocalUrlText">http://127.0.0.1:3000/v1</div>
+                    </div>
+                    <button type="button" class="btn secondary" id="gatewayCopyLocalUrlBtn" style="font-size:11.5px;padding:4px 10px;">复制</button>
+                  </div>
+
+                  <div style="background:var(--bg-main);padding:10px 14px;border-radius:8px;border:1px solid var(--border-default);display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                      <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">局域网共享地址 (LAN Base URL)</div>
+                      <div style="font-family:var(--font-mono);font-size:13px;color:var(--text-main);font-weight:600;margin-top:2px;" id="gatewayLanUrlText">http://192.168.x.x:3000/v1</div>
+                    </div>
+                    <button type="button" class="btn secondary" id="gatewayCopyLanUrlBtn" style="font-size:11.5px;padding:4px 10px;">复制</button>
+                  </div>
+                </div>
+
+                <!-- 监听与故障转移配置栏 -->
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:18px;margin-top:12px;font-size:12.5px;color:var(--text-muted);">
+                  <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                    <input type="checkbox" id="gatewayLanBindCheckbox" />
+                    <span>启用局域网共享监听 (0.0.0.0)</span>
+                  </label>
+                  <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                    <input type="checkbox" id="gatewayAllowAnonymousCheckbox" />
+                    <span>允许本机回环无 Key 免密访问 (仅 127.0.0.1)</span>
+                  </label>
+                  <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                    <input type="checkbox" id="gatewayFallbackToCloudCheckbox" checked />
+                    <span>本地模型调用异常时自动故障转移至云端 (Failover)</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- 4 个统计数据指标卡 -->
+              <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
+                <div class="card metric-stat-card" style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);">
+                  <div style="width:38px;height:38px;border-radius:8px;background:#f0f9ff;color:#0284c7;display:grid;place-items:center;font-size:18px;flex-shrink:0;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                  </div>
+                  <div>
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;">今日请求总数</div>
+                    <div style="font-size:19px;font-weight:700;color:var(--text-main);margin-top:2px;" id="statGatewayTodayRequests">0</div>
+                  </div>
+                </div>
+
+                <div class="card metric-stat-card" style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);">
+                  <div style="width:38px;height:38px;border-radius:8px;background:#ecfdf5;color:#10b981;display:grid;place-items:center;font-size:18px;flex-shrink:0;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                  </div>
+                  <div>
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;">今日消耗 Tokens</div>
+                    <div style="font-size:19px;font-weight:700;color:#10b981;margin-top:2px;" id="statGatewayTodayTokens">0</div>
+                  </div>
+                </div>
+
+                <div class="card metric-stat-card" style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);">
+                  <div style="width:38px;height:38px;border-radius:8px;background:#faf5ff;color:#a855f7;display:grid;place-items:center;font-size:18px;flex-shrink:0;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                  </div>
+                  <div>
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;">活跃 API 密钥</div>
+                    <div style="font-size:19px;font-weight:700;color:var(--text-main);margin-top:2px;" id="statGatewayActiveKeys">0</div>
+                  </div>
+                </div>
+
+                <div class="card metric-stat-card" style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);">
+                  <div style="width:38px;height:38px;border-radius:8px;background:#fff7ed;color:#f97316;display:grid;place-items:center;font-size:18px;flex-shrink:0;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  </div>
+                  <div>
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;">平均推理延迟</div>
+                    <div style="font-size:19px;font-weight:700;color:var(--text-main);margin-top:2px;" id="statGatewayAvgLatency">0 ms</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 网关二级选项卡：密钥管理 / 模型别名映射 / 客户端一键接入 / 审计调用日志 -->
+              <div class="settings-nav-tabs" style="margin-bottom:14px;border-bottom:1px solid var(--border-default);padding-bottom:2px;">
+                <button type="button" class="settings-tab-btn active" id="gatewaySubTabBtn_keys" onclick="window.switchGatewaySubTab('keys')">
+                  🔑 API 密钥管理
+                </button>
+                <button type="button" class="settings-tab-btn" id="gatewaySubTabBtn_aliases" onclick="window.switchGatewaySubTab('aliases')">
+                  🔀 模型别名与路由
+                </button>
+                <button type="button" class="settings-tab-btn" id="gatewaySubTabBtn_presets" onclick="window.switchGatewaySubTab('presets')">
+                  🚀 外部客户端接入预设
+                </button>
+                <button type="button" class="settings-tab-btn" id="gatewaySubTabBtn_logs" onclick="window.switchGatewaySubTab('logs')">
+                  📊 请求审计与调用日志
+                </button>
+              </div>
+
+              <!-- 子 Pane 1: API 密钥管理 -->
+              <div id="gatewaySubPane_keys" class="gateway-subpane" style="display:block;">
+                <div class="card" style="padding:16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                    <div>
+                      <h4 style="margin:0;font-size:14px;font-weight:700;">API 密钥列表</h4>
+                      <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">为不同工具或团队成员分发独立密钥，支持权限受限与速率上限控制</div>
+                    </div>
+                    <button type="button" class="btn primary" id="gatewayCreateKeyBtn" style="font-size:12px;padding:6px 14px;display:inline-flex;align-items:center;gap:6px;">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      <span>新建 API 密钥</span>
+                    </button>
+                  </div>
+                  <div id="gatewayKeysTableContainer" style="overflow-x:auto;">
+                    <!-- 动态渲染 Key 表格 -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- 子 Pane 2: 模型别名与路由映射 -->
+              <div id="gatewaySubPane_aliases" class="gateway-subpane" style="display:none;">
+                <div class="card" style="padding:16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                    <div>
+                      <h4 style="margin:0;font-size:14px;font-weight:700;">模型别名与路由重定向规则</h4>
+                      <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">将第三方工具写死的模型名称（如 gpt-4o）自动转发至本地模型（如 qwen2.5-coder:7b）或高性价比云端模型</div>
+                    </div>
+                    <button type="button" class="btn primary" id="gatewayCreateAliasBtn" style="font-size:12px;padding:6px 14px;display:inline-flex;align-items:center;gap:6px;">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      <span>添加别名规则</span>
+                    </button>
+                  </div>
+                  <div id="gatewayAliasesTableContainer" style="overflow-x:auto;">
+                    <!-- 动态渲染别名表格 -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- 子 Pane 3: 外部客户端接入预设 -->
+              <div id="gatewaySubPane_presets" class="gateway-subpane" style="display:none;">
+                <div class="card" style="padding:16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;">
+                  <div style="margin-bottom:14px;">
+                    <h4 style="margin:0;font-size:14px;font-weight:700;">常用开发工具一键接入指引</h4>
+                    <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">点击即可一键复制客户端配置，直接在 Cursor、VS Code、Cherry Studio 中调用本平台模型</div>
+                  </div>
+                  <div id="gatewayPresetsGrid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(360px, 1fr));gap:14px;">
+                    <!-- 动态渲染配置预设卡片 -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- 子 Pane 4: 请求审计与调用日志 -->
+              <div id="gatewaySubPane_logs" class="gateway-subpane" style="display:none;">
+                <div class="card" style="padding:16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                    <div>
+                      <h4 style="margin:0;font-size:14px;font-weight:700;">网关请求审计日志</h4>
+                      <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">实时追踪外部调用的时间戳、来源 IP、消耗 Token、耗时与响应状态</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <button type="button" class="btn secondary" id="gatewayRefreshLogsBtn" style="font-size:11.5px;padding:4px 10px;">刷新日志</button>
+                      <button type="button" class="btn secondary" id="gatewayClearLogsBtn" style="font-size:11.5px;padding:4px 10px;">清空日志</button>
+                    </div>
+                  </div>
+                  <div id="gatewayLogsTableContainer" style="overflow-x:auto;">
+                    <!-- 动态渲染请求日志表格 -->
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
@@ -2616,6 +2819,110 @@
           </div>
         </div>
       </form>
+    </dialog>
+
+    <!-- 弹窗: 开源大模型中心与一键部署 (Model Hub Modal) -->
+    <dialog id="modelHubModal" class="modal modal-lg" style="max-width:1080px;width:95vw;max-height:90vh;border-radius:14px;overflow:hidden;padding:0;">
+      <div class="modal-form-wrap" style="max-height:90vh;display:flex;flex-direction:column;padding:0;overflow:hidden;background:var(--bg-surface);">
+        <!-- 模态框顶部导航条 -->
+        <div style="padding:16px 20px;border-bottom:1px solid var(--border-default);display:flex;justify-content:space-between;align-items:center;background:var(--bg-surface);">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);color:#fff;display:grid;place-items:center;box-shadow:0 3px 10px rgba(99,102,241,0.3);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <h2 style="font-size:17px;font-weight:700;color:var(--text-main);margin:0;">开源大模型中心 (Model Hub)</h2>
+                <span class="badge info" style="font-size:11px;">硬件适配 · 一键安装</span>
+              </div>
+              <p style="margin:2px 0 0 0;font-size:12px;color:var(--text-secondary);">根据本机真实硬件算力推荐最优大模型，支持本地 Ollama 引擎一键流式部署并自动接入智能体</p>
+            </div>
+          </div>
+          <button type="button" class="btn-close" id="closeModelHubBtn" onclick="window.closeModelHubModal()" aria-label="关闭" title="关闭"></button>
+        </div>
+
+        <!-- 模态框主体滚动区 -->
+        <div style="padding:16px 20px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:14px;">
+          <!-- 1. 硬件算力诊断与适配卡片 -->
+          <div id="modelHubHwBanner" class="card" style="padding:14px 16px;background:linear-gradient(135deg, rgba(99,102,241,0.06) 0%, rgba(168,85,247,0.04) 100%);border:1px solid rgba(99,102,241,0.2);border-radius:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">
+              <div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="font-size:13.5px;font-weight:700;color:var(--text-main);" id="hubHwTitle">🖥️ 正在探测本机硬件...</span>
+                  <span class="badge" id="hubHwBadge" style="background:#e0e7ff;color:#4338ca;font-size:11px;">算力诊断</span>
+                </div>
+                <div style="margin-top:4px;font-size:12px;color:var(--text-secondary);" id="hubHwAdvice">
+                  正在分析 CPU、内存、独显与显存数据...
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <div class="hw-chip" id="chipCpu" style="font-size:11px;padding:4px 8px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:6px;">CPU: --</div>
+                <div class="hw-chip" id="chipRam" style="font-size:11px;padding:4px 8px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:6px;">内存: --</div>
+                <div class="hw-chip" id="chipGpu" style="font-size:11px;padding:4px 8px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:6px;">显存: --</div>
+                <div class="hw-chip" id="chipDisk" style="font-size:11px;padding:4px 8px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:6px;">可用磁盘: --</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. 本地推理引擎 (Ollama) 看护状态条 -->
+          <div id="modelHubEngineBar" style="padding:10px 14px;background:var(--bg-subtle);border:1px solid var(--border-subtle);border-radius:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span id="engineStatusDot" style="width:10px;height:10px;border-radius:50%;background:#94a3b8;display:inline-block;"></span>
+              <div>
+                <span style="font-size:12.5px;font-weight:600;color:var(--text-main);" id="engineStatusText">正在检查 Ollama 本地引擎状态...</span>
+                <span style="font-size:11.5px;color:var(--text-muted);margin-left:6px;" id="engineStatusSub"></span>
+              </div>
+            </div>
+            <div id="engineActionBtns" style="display:flex;gap:8px;align-items:center;">
+              <button type="button" class="btn secondary" id="refreshEngineStatusBtn" onclick="window.refreshModelHub()" style="font-size:11.5px;padding:4px 10px;">刷新状态</button>
+            </div>
+          </div>
+
+          <!-- 3. 分类筛选选项卡与检索条 -->
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+            <div class="market-tabs-bar" id="hubCategoryTabs" style="margin-bottom:0;">
+              <button type="button" class="market-tab-btn active" data-hub-cat="all" onclick="window.onModelHubFilterChange('all')">
+                <span>全部模型</span>
+                <span class="market-tab-badge" id="hubCountAll">0</span>
+              </button>
+              <button type="button" class="market-tab-btn" data-hub-cat="recommended" onclick="window.onModelHubFilterChange('recommended')">
+                <span>🌟 本机最佳推荐</span>
+                <span class="market-tab-badge" id="hubCountRec" style="background:#fef3c7;color:#d97706;">0</span>
+              </button>
+              <button type="button" class="market-tab-btn" data-hub-cat="coding" onclick="window.onModelHubFilterChange('coding')">
+                <span>💻 代码大模型</span>
+                <span class="market-tab-badge" id="hubCountCoding">0</span>
+              </button>
+              <button type="button" class="market-tab-btn" data-hub-cat="reasoning" onclick="window.onModelHubFilterChange('reasoning')">
+                <span>🧠 深度思考推理</span>
+                <span class="market-tab-badge" id="hubCountReasoning">0</span>
+              </button>
+              <button type="button" class="market-tab-btn" data-hub-cat="fast" onclick="window.onModelHubFilterChange('fast')">
+                <span>⚡ 轻量端侧极速</span>
+                <span class="market-tab-badge" id="hubCountFast">0</span>
+              </button>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:8px;min-width:200px;">
+              <input type="text" id="hubSearchInput" oninput="window.onModelHubSearch(this.value)" placeholder="搜索模型 (如 r1, qwen, 7b)..." style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--border-default);background:var(--bg-surface);width:100%;" />
+            </div>
+          </div>
+
+          <!-- 4. 模型卡片列表网格 -->
+          <div id="modelHubGrid" class="model-hub-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:12px;">
+            <!-- 动态渲染模型卡片 -->
+          </div>
+        </div>
+
+        <!-- 模态框底部操作栏 -->
+        <div style="padding:12px 20px;border-top:1px solid var(--border-default);background:var(--bg-subtle);display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:11.5px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <span>提示：模型下载完成后将自动注册进 HAP，可在对话窗口顶部模型选择器中直接调用。</span>
+          </div>
+          <button type="button" class="btn secondary" onclick="window.closeModelHubModal()" style="font-size:12px;padding:5px 14px;">关闭</button>
+        </div>
+      </div>
     </dialog>
 
     <!-- 弹窗 2: 模型 新增/修改 (Model Dialog) -->
@@ -5254,6 +5561,68 @@
           <button type="button" class="btn primary" id="desktopUpdateInstallBtn" data-i18n="update.install" hidden style="display: none;">重启并安装</button>
         </div>
       </div>
+    </dialog>
+
+    <!-- 弹窗: 新建 API 密钥 -->
+    <dialog id="gatewayKeyDialog" class="modal modal-md">
+      <form id="gatewayKeyForm" class="modal-form-wrap" onsubmit="return false;">
+        <div class="modal-header-row">
+          <h2 id="gatewayKeyDialogTitle">新建 API 密钥</h2>
+          <button type="button" class="btn-close" id="closeGatewayKeyDialogBtn" aria-label="关闭" title="关闭"></button>
+        </div>
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>密钥备注名称 *</label>
+            <input type="text" id="gatewayKeyInputName" required placeholder="例如：Cursor IDE 专属、同事张三" />
+          </div>
+          <div class="form-group full-width">
+            <label>允许访问模型 (可选)</label>
+            <input type="text" id="gatewayKeyInputModels" placeholder="留空表示允许访问全部模型。指定多模型请用英文逗号隔开，例如：qwen2.5-coder:7b, deepseek-chat" />
+            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">留空表示放行平台内所有可用模型。</div>
+          </div>
+          <div class="form-group full-width">
+            <label>每分钟调用频率上限 (RPM)</label>
+            <input type="number" id="gatewayKeyInputRpm" min="0" value="60" placeholder="0 表示不限制" />
+            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">每分钟最大允许请求次数，0 为不限速。</div>
+          </div>
+        </div>
+        <div class="modal-actions-row">
+          <button type="button" class="btn secondary" id="cancelGatewayKeyBtn">取消</button>
+          <button type="button" class="btn primary" id="saveGatewayKeyBtn">保存并生成密钥</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- 弹窗: 添加模型别名重定向规则 -->
+    <dialog id="gatewayAliasDialog" class="modal modal-md">
+      <form id="gatewayAliasForm" class="modal-form-wrap" onsubmit="return false;">
+        <div class="modal-header-row">
+          <h2 id="gatewayAliasDialogTitle">添加模型别名重定向规则</h2>
+          <button type="button" class="btn-close" id="closeGatewayAliasDialogBtn" aria-label="关闭" title="关闭"></button>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>客户端请求别名 (Alias) *</label>
+            <input type="text" id="gatewayAliasInputAlias" required placeholder="例如：gpt-4o, claude-3-5-sonnet" />
+          </div>
+          <div class="form-group">
+            <label>实际映射目标模型 (Target) *</label>
+            <input type="text" id="gatewayAliasInputTarget" required placeholder="例如：qwen2.5-coder:7b, deepseek-chat" />
+          </div>
+          <div class="form-group full-width">
+            <label>故障转移备用模型 (Fallback，可选)</label>
+            <input type="text" id="gatewayAliasInputFallback" placeholder="当目标模型异常或本地 Ollama 未启动时自动调用的模型，如 deepseek/deepseek-chat" />
+          </div>
+          <div class="form-group full-width">
+            <label>规则说明备注 (可选)</label>
+            <input type="text" id="gatewayAliasInputDesc" placeholder="例如：Cursor 编码请求重定向至本地优质模型" />
+          </div>
+        </div>
+        <div class="modal-actions-row">
+          <button type="button" class="btn secondary" id="cancelGatewayAliasBtn">取消</button>
+          <button type="button" class="btn primary" id="saveGatewayAliasBtn">保存别名规则</button>
+        </div>
+      </form>
     </dialog>
 
     <div id="toastContainer" class="toast-container"></div>

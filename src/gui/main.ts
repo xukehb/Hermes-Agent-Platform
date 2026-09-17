@@ -145,6 +145,16 @@ function registerIpc(): void {
   ipcMain.handle('gui:listSymbols', (_event, file) => invoke(() => service.listSymbols(file)));
   ipcMain.handle('gui:getWebInfo', () => invoke(() => service.getWebInfo()));
   ipcMain.handle('gui:getHostSysInfo', () => invoke(() => service.getHostSysInfo()));
+  ipcMain.handle('gui:ollama:getStatus', () => invoke(() => service.getOllamaStatus()));
+  ipcMain.handle('gui:ollama:getRecommendedModels', (_event, categoryFilter) => invoke(() => service.getRecommendedModels(categoryFilter)));
+  ipcMain.handle('gui:ollama:startService', () => invoke(() => service.startOllamaService()));
+  ipcMain.handle('gui:ollama:cancelPull', (_event, modelTag) => invoke(() => service.cancelOllamaPull(modelTag)));
+  ipcMain.handle('gui:ollama:deleteModel', (_event, modelTag) => invoke(() => service.deleteOllamaModel(modelTag)));
+  ipcMain.handle('gui:ollama:pullModel', (_event, modelTag) => invoke(() => service.pullOllamaModel(modelTag, (progress) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('gui:ollama:pullProgress', progress);
+    }
+  })));
   ipcMain.handle('gui:getTelegramConfig', () => invoke(() => service.getTelegramConfig()));
   ipcMain.handle('gui:saveTelegramConfig', (_event, config) => invoke(() => service.saveTelegramConfig(config)));
   ipcMain.handle('gui:testTelegramBot', (_event, token) => invoke(() => service.testTelegramBot(token)));
@@ -216,6 +226,21 @@ function registerIpc(): void {
     }
     return { ok: false, error: '非法 URL 地址' };
   });
+
+  // API 分发网关 (Gateway) IPC 接口
+  ipcMain.handle('gui:getGatewayOverview', () => invoke(() => service.getGatewayOverview()));
+  ipcMain.handle('gui:getGatewayConfig', () => invoke(() => service.getGatewayConfig()));
+  ipcMain.handle('gui:updateGatewayConfig', (_event, patch) => invoke(() => service.updateGatewayConfig(patch)));
+  ipcMain.handle('gui:listGatewayKeys', () => invoke(() => service.listGatewayKeys()));
+  ipcMain.handle('gui:createGatewayKey', (_event, input) => invoke(() => service.createGatewayKey(input)));
+  ipcMain.handle('gui:updateGatewayKey', (_event, payload) => invoke(() => service.updateGatewayKey(payload.id, payload.patch)));
+  ipcMain.handle('gui:deleteGatewayKey', (_event, id) => invoke(() => service.deleteGatewayKey(id)));
+  ipcMain.handle('gui:listGatewayAliases', () => invoke(() => service.listGatewayAliases()));
+  ipcMain.handle('gui:upsertGatewayAlias', (_event, input) => invoke(() => service.upsertGatewayAlias(input)));
+  ipcMain.handle('gui:deleteGatewayAlias', (_event, id) => invoke(() => service.deleteGatewayAlias(id)));
+  ipcMain.handle('gui:listGatewayLogs', (_event, limit) => invoke(() => service.listGatewayLogs(limit)));
+  ipcMain.handle('gui:clearGatewayLogs', () => invoke(() => service.clearGatewayLogs()));
+  ipcMain.handle('gui:getGatewayClientPresets', (_event, key) => invoke(() => service.getGatewayClientPresets(key)));
 
   // 窗口系统控制、透明度调节与 Mini 模式 IPC 接口
   ipcMain.handle('gui:window:minimize', () => {

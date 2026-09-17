@@ -30,6 +30,7 @@ import { RemoteClientManager, RemoteServerStore, type RemoteServerConfig } from 
 import { getHostSystemInfo, scanLocalDisk, cleanLocalDisk, lookupIpGeo } from '../system/index.js';
 import { parseUnifiedDiff } from '../tools/diff-parser.js';
 import { execa } from 'execa';
+import { getGatewayService } from '../gateway/index.js';
 
 export interface WebServerOptions {
   port?: number;
@@ -185,6 +186,14 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
   const authToken = options.auth;
   const maxBodyBytes = options.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES;
   const rendererDir = options.rendererDir || join(process.cwd(), 'src', 'gui', 'renderer');
+  const gatewayService = getGatewayService(undefined, configPath);
+
+  // OpenAI 兼容网关端点允许跨域调用
+  app.use('/v1/*', cors({
+    origin: '*',
+    allowHeaders: ['Authorization', 'Content-Type', 'Accept'],
+    allowMethods: ['GET', 'POST', 'OPTIONS'],
+  }));
 
   if (options.corsOrigins !== undefined && options.corsOrigins.length > 0) {
     app.use('*', cors({
@@ -197,7 +206,12 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
   // 认证和请求体上限必须覆盖 API、HTML 和静态资源。
   if (authToken) {
     app.use('*', async (c, next) => {
-      if (c.req.path === '/login' || c.req.path === '/auth/login') {
+      if (
+        c.req.path === '/login' ||
+        c.req.path === '/auth/login' ||
+        c.req.path === '/v1' ||
+        c.req.path.startsWith('/v1/')
+      ) {
         await next();
         return;
       }
@@ -767,6 +781,120 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
     }
   });
 
+  // 10. OpenAI 兼容模型分发网关端点 (参考 cockpit-tools Codex API 服务)
+  app.get('/v1/models', async (c) => {
+    try {
+      const models = await gatewayService.listModels();
+      return c.json({ object: 'list', data: models });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return c.json({ error: { message: msg, type: 'internal_error' } }, 500);
+    }
+  });
+
+  app.post('/v1/chat/completions', async (c) => {
+    try {
+      const body = await c.req.json();
+      const clientIp = c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || '127.0.0.1';
+      const auth = c.req.header('authorization');
+      return await gatewayService.dispatchChatCompletion(body, clientIp, auth, c.req.raw.signal);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return c.json({ error: { message: msg, type: 'invalid_request_error' } }, 400);
+    }
+  });
+
+  // 11. 网关控制与配置 REST 接口
+  app.get('/api/gateway/overview', (c) => {
+    const port = options.port || 3000;
+    return c.json({ ok: true, data: gatewayService.getOverview(port) });
+  });
+
+  app.get('/api/gateway/config', (c) => {
+    return c.json({ ok: true, data: gatewayService.getConfig() });
+  });
+
+  app.post('/api/gateway/config', async (c) => {
+    try {
+      const patch = await c.req.json();
+      const updated = gatewayService.updateConfig(patch);
+      return c.json({ ok: true, data: updated });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return c.json({ ok: false, error: msg }, 400);
+    }
+  });
+
+  app.get('/api/gateway/keys', (c) => {
+    return c.json({ ok: true, data: gatewayService.listKeys() });
+  });
+
+  app.post('/api/gateway/keys', async (c) => {
+    try {
+      const input = await c.req.json();
+      const key = gatewayService.createKey(input);
+      return c.json({ ok: true, data: key });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return c.json({ ok: false, error: msg }, 400);
+    }
+  });
+
+  app.patch('/api/gateway/keys/:id', async (c) => {
+    try {
+      const id = c.req.param('id');
+      const patch = await c.req.json();
+      const updated = gatewayService.updateKey(id, patch);
+      return c.json({ ok: true, data: updated });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return c.json({ ok: false, error: msg }, 400);
+    }
+  });
+
+  app.delete('/api/gateway/keys/:id', (c) => {
+    const id = c.req.param('id');
+    const ok = gatewayService.deleteKey(id);
+    return c.json({ ok: true, data: { deleted: ok } });
+  });
+
+  app.get('/api/gateway/aliases', (c) => {
+    return c.json({ ok: true, data: gatewayService.listAliases() });
+  });
+
+  app.post('/api/gateway/aliases', async (c) => {
+    try {
+      const input = await c.req.json();
+      const alias = gatewayService.upsertAlias(input);
+      return c.json({ ok: true, data: alias });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return c.json({ ok: false, error: msg }, 400);
+    }
+  });
+
+  app.delete('/api/gateway/aliases/:id', (c) => {
+    const id = c.req.param('id');
+    const ok = gatewayService.deleteAlias(id);
+    return c.json({ ok: true, data: { deleted: ok } });
+  });
+
+  app.get('/api/gateway/logs', (c) => {
+    const limit = Number(c.req.query('limit')) || 100;
+    return c.json({ ok: true, data: gatewayService.listLogs(limit) });
+  });
+
+  app.delete('/api/gateway/logs', (c) => {
+    gatewayService.clearLogs();
+    return c.json({ ok: true, data: { cleared: true } });
+  });
+
+  app.get('/api/gateway/client-presets', (c) => {
+    const port = options.port || 3000;
+    const key = c.req.query('key');
+    return c.json({ ok: true, data: gatewayService.getClientPresets(port, key) });
+  });
+
   // 静态页面服务与 Web 适配层
   app.get('/', (c) => {
     const htmlPath = join(rendererDir, 'index.html');
@@ -1002,7 +1130,20 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
           gitDiff: async (projectPath, file) => {
             const res = await fetch('/api/git/diff?projectPath=' + encodeURIComponent(projectPath) + (file ? '&file=' + encodeURIComponent(file) : ''), { headers: authHeader }).then(r => r.json());
             return res.data || { diff: '' };
-          }
+          },
+          getGatewayOverview: async () => readApi(await fetch('/api/gateway/overview', { headers: authHeader })),
+          getGatewayConfig: async () => readApi(await fetch('/api/gateway/config', { headers: authHeader })),
+          updateGatewayConfig: async (patch) => readApi(await fetch('/api/gateway/config', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeader }, body: JSON.stringify(patch) })),
+          listGatewayKeys: async () => readApi(await fetch('/api/gateway/keys', { headers: authHeader })),
+          createGatewayKey: async (input) => readApi(await fetch('/api/gateway/keys', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeader }, body: JSON.stringify(input) })),
+          updateGatewayKey: async (id, patch) => readApi(await fetch('/api/gateway/keys/' + encodeURIComponent(id), { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...authHeader }, body: JSON.stringify(patch) })),
+          deleteGatewayKey: async (id) => readApi(await fetch('/api/gateway/keys/' + encodeURIComponent(id), { method: 'DELETE', headers: authHeader })),
+          listGatewayAliases: async () => readApi(await fetch('/api/gateway/aliases', { headers: authHeader })),
+          upsertGatewayAlias: async (input) => readApi(await fetch('/api/gateway/aliases', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeader }, body: JSON.stringify(input) })),
+          deleteGatewayAlias: async (id) => readApi(await fetch('/api/gateway/aliases/' + encodeURIComponent(id), { method: 'DELETE', headers: authHeader })),
+          listGatewayLogs: async (limit) => readApi(await fetch('/api/gateway/logs?limit=' + (limit || 100), { headers: authHeader })),
+          clearGatewayLogs: async () => readApi(await fetch('/api/gateway/logs', { method: 'DELETE', headers: authHeader })),
+          getGatewayClientPresets: async (key) => readApi(await fetch('/api/gateway/client-presets' + (key ? '?key=' + encodeURIComponent(key) : ''), { headers: authHeader }))
         };
       </script>
     `;

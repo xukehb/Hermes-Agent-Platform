@@ -24,15 +24,26 @@ import {
 import { MemoryStore, type MemoryCard } from '../memory/index.js';
 import { AstSymbolIndexer } from '../tools/ast-indexer/index.js';
 import { getLocalIpAddresses } from '../web/server.js';
+import { getGatewayService } from '../gateway/index.js';
 import {
   getHostSystemInfo,
   scanLocalDisk,
   cleanLocalDisk,
   lookupIpGeo,
+  checkOllamaStatus,
+  startOllamaDaemon,
+  pullOllamaModelStream,
+  deleteOllamaModel as removeOllamaModel,
+  getHardwareRecommendationProfile,
+  OPEN_SOURCE_MODEL_CATALOG,
   type HostSystemInfo,
   type DiskScanReport,
   type DiskCleanResult,
   type IpGeoInfo,
+  type OllamaStatusResult,
+  type OllamaPullProgress,
+  type HardwareRecommendationProfile,
+  type ModelCategory,
 } from '../system/index.js';
 import {
   RemoteServerStore,
@@ -616,6 +627,7 @@ export class GuiService {
   } | null = null;
   private mcpPlaygroundManager?: McpManager;
   private mcpPlaygroundModules?: Map<string, ToolModule>;
+  private readonly activeOllamaPulls = new Map<string, AbortController>();
 
   constructor(
     private readonly configPath = resolveConfigPath(undefined, process.env),
@@ -2831,6 +2843,116 @@ export class GuiService {
     return getHostSystemInfo();
   }
 
+  // 获取本地 Ollama 引擎状态与已安装模型
+  async getOllamaStatus(): Promise<OllamaStatusResult> {
+    return checkOllamaStatus();
+  }
+
+  // 根据电脑硬件配置获取开源大模型推荐矩阵与评分列表
+  async getRecommendedModels(categoryFilter?: ModelCategory | 'all'): Promise<HardwareRecommendationProfile> {
+    const sysInfo = getHostSystemInfo();
+    const ollamaStatus = await checkOllamaStatus();
+    const installedSet = new Set<string>(ollamaStatus.installedModels);
+    return getHardwareRecommendationProfile(sysInfo, installedSet, categoryFilter);
+  }
+
+  // 尝试在本地拉起 Ollama 服务 (ollama serve)
+  async startOllamaService(): Promise<{ ok: boolean; message: string }> {
+    return startOllamaDaemon();
+  }
+
+  // 一键拉取开源模型 (流式上报进度，完成后自动注册进 HAP 配置)
+  async pullOllamaModel(
+    modelTag: string,
+    onProgress: (progress: OllamaPullProgress) => void
+  ): Promise<{ ok: boolean; message: string }> {
+    const existing = this.activeOllamaPulls.get(modelTag);
+    if (existing) {
+      existing.abort();
+    }
+    const controller = new AbortController();
+    this.activeOllamaPulls.set(modelTag, controller);
+
+    try {
+      this.info(`开始一键拉取并部署本地模型：${modelTag}`);
+      await pullOllamaModelStream(modelTag, {
+        signal: controller.signal,
+        onProgress,
+      });
+
+      // 拉取成功后自动注册进 HAP 系统服务商与模型列表中
+      await this.registerOllamaDownloadedModel(modelTag);
+      this.info(`本地模型 ${modelTag} 已成功部署并就绪！`);
+      return { ok: true, message: `模型 ${modelTag} 已成功部署并就绪！` };
+    } catch (err) {
+      if (controller.signal.aborted) {
+        this.info(`已取消拉取模型：${modelTag}`);
+        return { ok: false, message: '已取消拉取' };
+      }
+      const msg = err instanceof Error ? err.message : String(err);
+      this.error(`拉取模型 ${modelTag} 失败：${msg}`);
+      throw err;
+    } finally {
+      this.activeOllamaPulls.delete(modelTag);
+    }
+  }
+
+  // 取消正在进行的模型下载
+  cancelOllamaPull(modelTag: string): { ok: boolean; message: string } {
+    const controller = this.activeOllamaPulls.get(modelTag);
+    if (controller) {
+      controller.abort();
+      this.activeOllamaPulls.delete(modelTag);
+      this.info(`已取消模型 ${modelTag} 的下载任务`);
+      return { ok: true, message: `已取消下载 ${modelTag}` };
+    }
+    return { ok: false, message: `未找到正在下载的任务：${modelTag}` };
+  }
+
+  // 删除本地已安装的 Ollama 模型
+  async deleteOllamaModel(modelTag: string): Promise<{ ok: boolean; message: string }> {
+    const result = await removeOllamaModel(modelTag);
+    if (result.ok) {
+      try {
+        this.removeModel(`ollama/${modelTag}`);
+      } catch {}
+    }
+    return result;
+  }
+
+  // 自动注册已下载模型到 HAP 系统中
+  async registerOllamaDownloadedModel(modelTag: string): Promise<void> {
+    const catalogItem = OPEN_SOURCE_MODEL_CATALOG.find((m) => m.id === modelTag);
+    const alias = `ollama/${modelTag}`;
+    const writer = new ConfigWriter(this.configPath);
+
+    const resolver = this.resolver();
+    const existingProvider = resolver.resolveProviders().get('ollama');
+    if (!existingProvider) {
+      writer.upsertProvider('ollama', {
+        name: 'Ollama (本地运行)',
+        base_url: 'http://127.0.0.1:11434/v1',
+        wire_api: 'chat',
+        default_protocol: catalogItem?.protocol || 'openai-tools',
+      });
+    }
+
+    writer.upsertModel(alias, {
+      provider: 'ollama',
+      model: modelTag,
+      display_name: catalogItem?.displayName || `Ollama ${modelTag}`,
+      protocol: catalogItem?.protocol || 'openai-tools',
+      capabilities: catalogItem?.category === 'reasoning' ? ['reasoning', 'streaming'] : ['tools', 'streaming'],
+    });
+
+    const state = readState();
+    if (state.hiddenModels?.includes(alias)) {
+      state.hiddenModels = state.hiddenModels.filter((m) => m !== alias);
+      writeState(state);
+    }
+    this.info(`已自动将已下载模型 ${modelTag} 注册进系统配置 (${alias})`);
+  }
+
   syncTarget(input: GuiSyncInput): object {
     const resolver = this.resolver();
     const model = [...resolver.resolveModels().values()].find((item) => item.fullName === input.model || item.alias === input.model);
@@ -4556,6 +4678,60 @@ export class GuiService {
 
   async getIpGeoInfo(ip?: string): Promise<IpGeoInfo> {
     return lookupIpGeo(ip);
+  }
+
+  // --- API 分发网关 (Gateway) 业务接口 ---
+  getGatewayOverview() {
+    return getGatewayService(undefined, this.configPath).getOverview(3000);
+  }
+
+  getGatewayConfig() {
+    return getGatewayService(undefined, this.configPath).getConfig();
+  }
+
+  updateGatewayConfig(patch: any) {
+    return getGatewayService(undefined, this.configPath).updateConfig(patch);
+  }
+
+  listGatewayKeys() {
+    return getGatewayService(undefined, this.configPath).listKeys();
+  }
+
+  createGatewayKey(input: { name: string; allowedModels?: string[]; rateLimitRpm?: number }) {
+    return getGatewayService(undefined, this.configPath).createKey(input);
+  }
+
+  updateGatewayKey(id: string, patch: any) {
+    return getGatewayService(undefined, this.configPath).updateKey(id, patch);
+  }
+
+  deleteGatewayKey(id: string) {
+    return getGatewayService(undefined, this.configPath).deleteKey(id);
+  }
+
+  listGatewayAliases() {
+    return getGatewayService(undefined, this.configPath).listAliases();
+  }
+
+  upsertGatewayAlias(input: any) {
+    return getGatewayService(undefined, this.configPath).upsertAlias(input);
+  }
+
+  deleteGatewayAlias(id: string) {
+    return getGatewayService(undefined, this.configPath).deleteAlias(id);
+  }
+
+  listGatewayLogs(limit?: number) {
+    return getGatewayService(undefined, this.configPath).listLogs(limit);
+  }
+
+  clearGatewayLogs() {
+    getGatewayService(undefined, this.configPath).clearLogs();
+    return true;
+  }
+
+  getGatewayClientPresets(key?: string) {
+    return getGatewayService(undefined, this.configPath).getClientPresets(3000, key);
   }
 
   private info(message: string): void {

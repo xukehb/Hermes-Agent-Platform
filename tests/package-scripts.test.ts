@@ -44,8 +44,8 @@ describe('package scripts', () => {
     expect(nativeHelper).not.toContain("'node-v137-linux-x64'");
   });
 
-  it('uses the v0.1.9 Hermes product identity and GitHub updater', () => {
-    expect(packageJson.version).toBe('0.1.9');
+  it('uses the v0.1.10 Hermes product identity and GitHub updater', () => {
+    expect(packageJson.version).toBe('0.1.10');
     expect(packageJson.author).toBe('Hermes Agent Platform Team');
     expect(packageJson.desktopName).toBe('hermes-agent-platform.desktop');
     expect(packageJson.build?.productName).toBe('Hermes Agent Platform');

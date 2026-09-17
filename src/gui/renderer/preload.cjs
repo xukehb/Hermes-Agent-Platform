@@ -169,6 +169,17 @@ contextBridge.exposeInMainWorld('hap', {
   },
   listMcpTools: (refresh) => call('gui:mcp:listTools', { refresh }),
   callMcpTool: (payload) => call('gui:mcp:callTool', payload),
+  getOllamaStatus: () => call('gui:ollama:getStatus'),
+  getRecommendedModels: (categoryFilter) => call('gui:ollama:getRecommendedModels', categoryFilter),
+  startOllamaService: () => call('gui:ollama:startService'),
+  pullOllamaModel: (modelTag) => call('gui:ollama:pullModel', modelTag),
+  cancelOllamaPull: (modelTag) => call('gui:ollama:cancelPull', modelTag),
+  deleteOllamaModel: (modelTag) => call('gui:ollama:deleteModel', modelTag),
+  onOllamaPullProgress: (callback) => {
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('gui:ollama:pullProgress', listener);
+    return () => ipcRenderer.removeListener('gui:ollama:pullProgress', listener);
+  },
   logs: () => call('gui:logs'),
   clearLogs: () => call('gui:clearLogs'),
   toggleDevTools: () => call('gui:toggleDevTools'),
@@ -187,4 +198,17 @@ contextBridge.exposeInMainWorld('hap', {
   removeMiniModeListeners: () => {
     ipcRenderer.removeAllListeners('gui:window:miniModeChanged');
   },
+  getGatewayOverview: () => call('gui:getGatewayOverview'),
+  getGatewayConfig: () => call('gui:getGatewayConfig'),
+  updateGatewayConfig: (patch) => call('gui:updateGatewayConfig', patch),
+  listGatewayKeys: () => call('gui:listGatewayKeys'),
+  createGatewayKey: (input) => call('gui:createGatewayKey', input),
+  updateGatewayKey: (id, patch) => call('gui:updateGatewayKey', { id, patch }),
+  deleteGatewayKey: (id) => call('gui:deleteGatewayKey', id),
+  listGatewayAliases: () => call('gui:listGatewayAliases'),
+  upsertGatewayAlias: (input) => call('gui:upsertGatewayAlias', input),
+  deleteGatewayAlias: (id) => call('gui:deleteGatewayAlias', id),
+  listGatewayLogs: (limit) => call('gui:listGatewayLogs', limit),
+  clearGatewayLogs: () => call('gui:clearGatewayLogs'),
+  getGatewayClientPresets: (key) => call('gui:getGatewayClientPresets', key),
 });

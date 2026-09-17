@@ -7646,6 +7646,419 @@ window.deleteModel = async (targetAlias) => {
   }
 };
 
+// ==========================================================================
+// 开源大模型中心 (Model Hub) 前端交互与一键部署逻辑
+// ==========================================================================
+let hubActiveCategory = 'all';
+let hubSearchKeyword = '';
+let hubCurrentProfile = null;
+let hubOllamaStatus = null;
+const hubDownloadProgressMap = new Map();
+let hubProgressListenerRegistered = false;
+
+window.openModelHubModal = () => {
+  const dialog = $('modelHubModal');
+  if (!dialog) return;
+
+  if (!hubProgressListenerRegistered && window.hap && window.hap.onOllamaPullProgress) {
+    hubProgressListenerRegistered = true;
+    window.hap.onOllamaPullProgress((progress) => {
+      hubDownloadProgressMap.set(progress.modelTag, progress);
+      if (progress.done) {
+        showToast(`模型 ${progress.modelTag} 已成功下载并自动就绪！`, 'success');
+        hubDownloadProgressMap.delete(progress.modelTag);
+        window.refreshModelHub();
+        if (typeof refresh === 'function') refresh();
+      } else if (progress.error) {
+        showToast(`下载 ${progress.modelTag} 失败: ${progress.error}`, 'error');
+        hubDownloadProgressMap.delete(progress.modelTag);
+        renderModelHubCards();
+      } else {
+        updateHubCardProgress(progress);
+      }
+    });
+  }
+
+  dialog.showModal();
+  window.refreshModelHub();
+};
+
+window.closeModelHubModal = () => {
+  const dialog = $('modelHubModal');
+  if (dialog) dialog.close();
+};
+
+window.onModelHubFilterChange = (category) => {
+  hubActiveCategory = category;
+  const tabs = document.querySelectorAll('#hubCategoryTabs .market-tab-btn');
+  tabs.forEach((tab) => {
+    if (tab.getAttribute('data-hub-cat') === category) {
+      tab.classList.add('active');
+    } else {
+      tab.classList.remove('active');
+    }
+  });
+  renderModelHubCards();
+};
+
+window.onModelHubSearch = (keyword) => {
+  hubSearchKeyword = (keyword || '').trim().toLowerCase();
+  renderModelHubCards();
+};
+
+window.refreshModelHub = async () => {
+  const titleEl = $('hubHwTitle');
+  const adviceEl = $('hubHwAdvice');
+  if (titleEl) titleEl.textContent = '🖥️ 正在探测本机硬件与引擎状态...';
+
+  try {
+    const [ollamaStatus, profile] = await Promise.all([
+      window.hap.getOllamaStatus(),
+      window.hap.getRecommendedModels('all'),
+    ]);
+
+    hubOllamaStatus = ollamaStatus;
+    hubCurrentProfile = profile;
+
+    if (titleEl) titleEl.textContent = `🖥️ ${profile.profileTitle}`;
+    if (adviceEl) adviceEl.textContent = profile.profileAdvice;
+    if ($('chipRam')) $('chipRam').textContent = `物理内存: ${profile.totalRamGb} GB (可用 ${profile.freeRamGb} GB)`;
+    if ($('chipGpu')) {
+      $('chipGpu').textContent = profile.vramTotalGb
+        ? `显存: ${profile.vramTotalGb} GB (${profile.gpuName || '独显'})`
+        : '显存: 无独显 (纯CPU)';
+    }
+    if ($('chipDisk')) $('chipDisk').textContent = `可用磁盘: ${profile.freeDiskGb} GB`;
+
+    const dot = $('engineStatusDot');
+    const text = $('engineStatusText');
+    const sub = $('engineStatusSub');
+    const actions = $('engineActionBtns');
+
+    if (ollamaStatus.isRunning) {
+      if (dot) dot.style.background = '#10b981';
+      if (text) text.textContent = 'Ollama 本地推理引擎正常运行中 (127.0.0.1:11434)';
+      if (sub) sub.textContent = `已收录 ${ollamaStatus.installedModels.length} 个已部署模型`;
+      if (actions) {
+        actions.innerHTML = `
+          <button type="button" class="btn secondary" onclick="window.refreshModelHub()" style="font-size:11.5px;padding:4px 10px;">刷新状态</button>
+        `;
+      }
+    } else if (ollamaStatus.isInstalled) {
+      if (dot) dot.style.background = '#f59e0b';
+      if (text) text.textContent = 'Ollama 客户端已安装，但后台服务尚未启动';
+      if (sub) sub.textContent = '点击右侧按钮可一键在后台拉起服务';
+      if (actions) {
+        actions.innerHTML = `
+          <button type="button" class="btn primary" onclick="window.startOllamaFromHub()" style="font-size:11.5px;padding:4px 12px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);">一键启动服务</button>
+          <button type="button" class="btn secondary" onclick="window.refreshModelHub()" style="font-size:11.5px;padding:4px 10px;">刷新</button>
+        `;
+      }
+    } else {
+      if (dot) dot.style.background = '#ef4444';
+      if (text) text.textContent = '未检测到本地 Ollama 引擎';
+      if (sub) sub.textContent = '安装后即可解锁所有开源大模型一键流式拉取与本地部署';
+      if (actions) {
+        const cmdEsc = escJs(ollamaStatus.installCommand || '');
+        const urlEsc = escJs(ollamaStatus.downloadUrl || 'https://ollama.com');
+        let btns = '';
+        if (ollamaStatus.installCommand) {
+          btns += `<button type="button" class="btn secondary" onclick="window.copyInstallCmd('${cmdEsc}')" style="font-size:11.5px;padding:4px 10px;">复制一键安装命令</button>`;
+        }
+        btns += `<button type="button" class="btn primary" onclick="window.hap.openExternal('${urlEsc}')" style="font-size:11.5px;padding:4px 10px;">下载 Ollama</button>`;
+        btns += `<button type="button" class="btn secondary" onclick="window.refreshModelHub()" style="font-size:11.5px;padding:4px 8px;">已安装后刷新</button>`;
+        actions.innerHTML = btns;
+      }
+    }
+
+    const evals = profile.evaluations || [];
+    if ($('hubCountAll')) $('hubCountAll').textContent = evals.length;
+    if ($('hubCountRec')) $('hubCountRec').textContent = evals.filter(e => e.tier === 'best').length;
+    if ($('hubCountCoding')) $('hubCountCoding').textContent = evals.filter(e => e.model.category === 'coding').length;
+    if ($('hubCountReasoning')) $('hubCountReasoning').textContent = evals.filter(e => e.model.category === 'reasoning').length;
+    if ($('hubCountFast')) $('hubCountFast').textContent = evals.filter(e => e.model.category === 'fast').length;
+
+    renderModelHubCards();
+  } catch (err) {
+    if (titleEl) titleEl.textContent = '⚠️ 探测硬件状态失败';
+    if (adviceEl) adviceEl.textContent = err.message;
+  }
+};
+
+function renderModelHubCards() {
+  const container = $('modelHubGrid');
+  if (!container || !hubCurrentProfile) return;
+
+  let list = hubCurrentProfile.evaluations || [];
+
+  if (hubActiveCategory === 'recommended') {
+    list = list.filter(e => e.tier === 'best');
+  } else if (hubActiveCategory !== 'all') {
+    list = list.filter(e => e.model.category === hubActiveCategory);
+  }
+
+  if (hubSearchKeyword) {
+    list = list.filter(e => {
+      const q = hubSearchKeyword;
+      return (
+        e.model.id.toLowerCase().includes(q) ||
+        e.model.name.toLowerCase().includes(q) ||
+        e.model.displayName.toLowerCase().includes(q) ||
+        e.model.description.toLowerCase().includes(q) ||
+        e.model.tags.some(t => t.toLowerCase().includes(q))
+      );
+    });
+  }
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div style="grid-column: 1 / -1; padding: 40px; text-align: center; color: var(--text-muted);">
+        未找到符合筛选条件的开源模型
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = list.map(e => {
+    const m = e.model;
+    const isDownloading = hubDownloadProgressMap.has(m.id);
+    const progress = hubDownloadProgressMap.get(m.id);
+    const isInstalled = e.isInstalled;
+    const gb = 1024 * 1024 * 1024;
+    const dlSizeGb = (m.downloadSizeBytes / gb).toFixed(1);
+    const recVramGb = (m.recommendedVramBytes / gb).toFixed(1);
+    const recRamGb = (m.recommendedRamBytes / gb).toFixed(0);
+
+    let tierClass = 'tier-' + e.tier;
+    let badgeHtml = m.badge ? `<span class="hub-badge-pill">${esc(m.badge)}</span>` : '';
+
+    let actionButtonHtml = '';
+    if (isDownloading) {
+      actionButtonHtml = `
+        <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="window.cancelHubModelPull('${escJs(m.id)}')">取消拉取</button>
+      `;
+    } else if (isInstalled) {
+      actionButtonHtml = `
+        <span class="badge success" style="font-size:11.5px;padding:4px 8px;">✓ 本地已就绪</span>
+        <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 9px;" onclick="window.setDefaultHubModel('${escJs(m.id)}')">设为主模型</button>
+        <button type="button" class="btn primary" style="font-size:11.5px;padding:4px 10px;" onclick="window.testHubModelChat('${escJs(m.id)}')">去对话</button>
+        <button type="button" class="btn danger" style="font-size:11px;padding:4px 7px;" title="从磁盘删除模型" onclick="window.deleteHubModel('${escJs(m.id)}')">🗑️</button>
+      `;
+    } else {
+      if (e.tier === 'insufficient') {
+        actionButtonHtml = `
+          <button type="button" class="btn danger" style="font-size:11.5px;padding:4px 12px;opacity:0.9;" onclick="window.pullHubModel('${escJs(m.id)}', true)">⚠️ 硬件不足，仍要安装</button>
+        `;
+      } else if (e.tier === 'best') {
+        actionButtonHtml = `
+          <button type="button" class="btn primary" style="font-size:12px;padding:5px 14px;background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);color:#fff;border:none;box-shadow:0 2px 6px rgba(245,158,11,0.3);" onclick="window.pullHubModel('${escJs(m.id)}')">🌟 一键极速部署</button>
+        `;
+      } else {
+        actionButtonHtml = `
+          <button type="button" class="btn primary" style="font-size:12px;padding:5px 14px;" onclick="window.pullHubModel('${escJs(m.id)}')">一键部署安装</button>
+        `;
+      }
+    }
+
+    let progressHtml = '';
+    if (isDownloading && progress) {
+      progressHtml = `
+        <div class="hub-progress-wrap" id="hubProgressWrap_${esc(m.id.replace(/[:.]/g, '_'))}">
+          <div class="hub-progress-track">
+            <div class="hub-progress-bar" style="width: ${progress.percent}%;"></div>
+          </div>
+          <div class="hub-progress-info">
+            <span>${esc(progress.status || '下载中...')} · ${progress.speedFormatted || '--'}</span>
+            <span>${progress.percent}% (${esc(progress.completedFormatted)} / ${esc(progress.totalFormatted)})</span>
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="hub-card ${tierClass}" id="hubCard_${esc(m.id.replace(/[:.]/g, '_'))}">
+        <div>
+          <div class="hub-card-header">
+            <div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span class="hub-model-title">${esc(m.displayName)}</span>
+                ${badgeHtml}
+              </div>
+              <div class="hub-model-family">${esc(m.family)} · 上下文 ${esc(m.contextLength)}</div>
+            </div>
+            <span class="hub-param-pill">${esc(m.paramSize)}</span>
+          </div>
+
+          <p style="margin:8px 0;font-size:12px;color:var(--text-secondary);line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+            ${esc(m.description)}
+          </p>
+
+          <div class="hub-compat-box">
+            <div class="hub-tier-row">
+              <span class="hub-tier-badge ${tierClass}">
+                ${esc(e.tierLabel)}
+              </span>
+              <span class="hub-speed-tag">${esc(e.expectedTokPerSec)}</span>
+            </div>
+            <div class="hub-rationale-text">${esc(e.rationale)}</div>
+            ${e.warning ? `<div class="hub-warning-text">${esc(e.warning)}</div>` : ''}
+          </div>
+
+          <div class="hub-specs-row" style="margin-top:8px;">
+            <span class="hub-spec-tag">下载体积: ~${dlSizeGb} GB</span>
+            <span class="hub-spec-tag">建议显存: ≥${recVramGb} GB</span>
+            <span class="hub-spec-tag">建议内存: ≥${recRamGb} GB</span>
+          </div>
+
+          ${progressHtml}
+        </div>
+
+        <div class="hub-actions-row">
+          ${actionButtonHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateHubCardProgress(progress) {
+  const cardId = 'hubCard_' + progress.modelTag.replace(/[:.]/g, '_');
+  const card = $(cardId);
+  if (!card) {
+    renderModelHubCards();
+    return;
+  }
+  const wrapId = 'hubProgressWrap_' + progress.modelTag.replace(/[:.]/g, '_');
+  let wrap = $(wrapId);
+  if (!wrap) {
+    renderModelHubCards();
+    return;
+  }
+  const bar = wrap.querySelector('.hub-progress-bar');
+  if (bar) bar.style.width = `${progress.percent}%`;
+  const info = wrap.querySelector('.hub-progress-info');
+  if (info) {
+    info.innerHTML = `
+      <span>${esc(progress.status || '下载中...')} · ${progress.speedFormatted || '--'}</span>
+      <span>${progress.percent}% (${esc(progress.completedFormatted)} / ${esc(progress.totalFormatted)})</span>
+    `;
+  }
+}
+
+window.pullHubModel = async (modelTag, force = false) => {
+  if (!hubOllamaStatus || !hubOllamaStatus.isRunning) {
+    showToast('本地 Ollama 引擎尚未启动，请先在上方点击【一键启动服务】或完成安装', 'warning');
+    return;
+  }
+
+  if (force) {
+    const ok = await showConfirm({
+      title: '硬件不足警告',
+      message: `模型 <strong>${esc(modelTag)}</strong> 所需内存超过您的物理配置，运行可能导致卡死。确定仍要拉取吗？`,
+      okText: '执意下载',
+      isDanger: true,
+    });
+    if (!ok) return;
+  }
+
+  hubDownloadProgressMap.set(modelTag, {
+    modelTag,
+    percent: 0,
+    status: '正在连接并解析...',
+    speedFormatted: '--',
+    completedFormatted: '0 B',
+    totalFormatted: '--',
+  });
+  renderModelHubCards();
+  showToast(`已开始下载模型 ${modelTag}，请关注卡片进度条`, 'info');
+
+  try {
+    await window.hap.pullOllamaModel(modelTag);
+  } catch (err) {
+    hubDownloadProgressMap.delete(modelTag);
+    renderModelHubCards();
+    showToast(`下载失败: ${err.message}`, 'error');
+  }
+};
+
+window.cancelHubModelPull = async (modelTag) => {
+  try {
+    await window.hap.cancelOllamaPull(modelTag);
+    hubDownloadProgressMap.delete(modelTag);
+    renderModelHubCards();
+    showToast(`已取消下载 ${modelTag}`, 'info');
+  } catch (err) {
+    showToast(`取消失败: ${err.message}`, 'error');
+  }
+};
+
+window.deleteHubModel = async (modelTag) => {
+  const ok = await showConfirm({
+    title: '删除本地模型',
+    message: `确定要从本地磁盘删除模型 <strong>${esc(modelTag)}</strong> 吗？`,
+    okText: '确认删除',
+    isDanger: true,
+  });
+  if (!ok) return;
+
+  try {
+    const res = await window.hap.deleteOllamaModel(modelTag);
+    if (res.ok) {
+      showToast(`模型 ${modelTag} 已删除`, 'success');
+      window.refreshModelHub();
+      if (typeof refresh === 'function') refresh();
+    } else {
+      showToast(`删除失败: ${res.message}`, 'error');
+    }
+  } catch (err) {
+    showToast(`删除异常: ${err.message}`, 'error');
+  }
+};
+
+window.setDefaultHubModel = async (modelTag) => {
+  const alias = 'ollama/' + modelTag;
+  try {
+    await window.hap.setDefaultModel(alias);
+    showToast(`已将 ${modelTag} 设为系统默认主模型`, 'success');
+    if (typeof refresh === 'function') refresh();
+  } catch (err) {
+    showToast(`设置默认失败: ${err.message}`, 'error');
+  }
+};
+
+window.testHubModelChat = (modelTag) => {
+  const alias = 'ollama/' + modelTag;
+  const select = $('chatModelPickerSelect');
+  if (select) {
+    select.value = alias;
+  }
+  window.closeModelHubModal();
+  if (typeof show === 'function') show('chat');
+  showToast(`已选择模型 [${alias}]，可以开始对话！`, 'success');
+};
+
+window.startOllamaFromHub = async () => {
+  showToast('正在尝试拉起本地 Ollama 服务守护进程...', 'info');
+  try {
+    const res = await window.hap.startOllamaService();
+    if (res.ok) {
+      showToast(res.message, 'success');
+      window.refreshModelHub();
+    } else {
+      showToast(res.message, 'warning');
+    }
+  } catch (err) {
+    showToast('启动异常: ' + err.message, 'error');
+  }
+};
+
+window.copyInstallCmd = (cmd) => {
+  navigator.clipboard.writeText(cmd).then(
+    () => showToast('已将一键安装命令复制到剪贴板，请在系统终端中粘贴执行', 'success'),
+    (err) => showToast('复制失败: ' + err.message, 'error')
+  );
+};
+
 window.openProjectDialog = () => {
   const dialog = $('projectDialog');
   $('projectForm').reset();
@@ -11310,7 +11723,7 @@ window.switchSettingsTab = (tabId) => {
     btn.classList.toggle('active', btn.dataset.tab === tabId);
   });
 
-  const allTabs = ['providers', 'agents', 'skills', 'channels', 'schedules', 'memory', 'host', 'servers', 'projects', 'permissions', 'system'];
+  const allTabs = ['providers', 'agents', 'skills', 'channels', 'schedules', 'memory', 'host', 'servers', 'projects', 'permissions', 'gateway', 'system'];
   allTabs.forEach(t => {
     const pane = $('settingsPane_' + t);
     if (pane) pane.style.display = t === tabId ? 'block' : 'none';
@@ -11340,6 +11753,8 @@ window.switchSettingsTab = (tabId) => {
     renderProjects();
   } else if (tabId === 'permissions') {
     renderPermissions();
+  } else if (tabId === 'gateway') {
+    window.renderGatewayOverview();
   } else if (tabId === 'system') {
     renderTargets();
     renderLogs(currentLogFilter);
@@ -14974,7 +15389,7 @@ function initDesktopUpdater() {
   if (!window.hap?.onUpdateState || !window.hap?.getUpdateState) return;
 
   const updateVersionUI = (version) => {
-    const ver = version ? `v${version}` : 'v0.1.9';
+    const ver = version ? `v${version}` : 'v0.1.10';
     const badge = $('appCurrentVersionBadge');
     if (badge) badge.textContent = ver;
     const sideTag = $('sidebarVersionTag');
@@ -15004,7 +15419,7 @@ function initDesktopUpdater() {
       if (state && (state.status === 'available' || state.status === 'downloading' || state.status === 'downloaded')) {
         renderDesktopUpdateState(state);
       } else {
-        showToast(`当前已是最新版本 (${state?.currentVersion ? 'v' + state.currentVersion : 'v0.1.9'})`, 'success');
+        showToast(`当前已是最新版本 (${state?.currentVersion ? 'v' + state.currentVersion : 'v0.1.10'})`, 'success');
         if (statusEl) {
           statusEl.innerHTML = `<div>当前状态: <strong style="color:#10b981;">已是最新版</strong></div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">刚刚已检查</div>`;
         }
@@ -15059,4 +15474,519 @@ function initDesktopUpdater() {
   });
 }
 
+// ============================================================================
+// API 分发网关交互控制器 (Gateway Controller, 参考 cockpit-tools Codex API 服务)
+// ============================================================================
+let currentGatewayOverview = null;
+let currentGatewaySubTab = 'keys';
+
+window.switchGatewaySubTab = (subTabId) => {
+  currentGatewaySubTab = subTabId;
+  document.querySelectorAll('#settingsPane_gateway .settings-nav-tabs .settings-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.id === `gatewaySubTabBtn_${subTabId}`);
+  });
+  document.querySelectorAll('.gateway-subpane').forEach(p => {
+    p.style.display = p.id === `gatewaySubPane_${subTabId}` ? 'block' : 'none';
+  });
+
+  if (subTabId === 'keys') {
+    window.renderGatewayKeys();
+  } else if (subTabId === 'aliases') {
+    window.renderGatewayAliases();
+  } else if (subTabId === 'presets') {
+    window.renderGatewayPresets();
+  } else if (subTabId === 'logs') {
+    window.renderGatewayLogs();
+  }
+};
+
+window.renderGatewayOverview = async () => {
+  try {
+    const overview = await window.hap.getGatewayOverview?.();
+    if (!overview) return;
+    currentGatewayOverview = overview;
+
+    // 状态点和徽标
+    const dot = $('gatewayStatusDot');
+    const badge = $('gatewayStatusBadge');
+    const toggleBtn = $('gatewayMasterToggleBtn');
+
+    if (overview.enabled) {
+      if (dot) {
+        dot.style.background = '#10b981';
+        dot.style.boxShadow = '0 0 8px rgba(16,185,129,0.5)';
+      }
+      if (badge) {
+        badge.textContent = '运行中 (Active)';
+        badge.style.color = '#10b981';
+        badge.style.background = 'rgba(16,185,129,0.12)';
+      }
+      if (toggleBtn) {
+        toggleBtn.textContent = '暂停网关服务';
+        toggleBtn.className = 'btn secondary';
+      }
+    } else {
+      if (dot) {
+        dot.style.background = '#ef4444';
+        dot.style.boxShadow = '0 0 8px rgba(239,68,68,0.5)';
+      }
+      if (badge) {
+        badge.textContent = '已暂停 (Stopped)';
+        badge.style.color = '#ef4444';
+        badge.style.background = 'rgba(239,68,68,0.12)';
+      }
+      if (toggleBtn) {
+        toggleBtn.textContent = '开启网关服务';
+        toggleBtn.className = 'btn primary';
+      }
+    }
+
+    // URL 文本
+    const localUrlEl = $('gatewayLocalUrlText');
+    if (localUrlEl) localUrlEl.textContent = overview.localBaseUrl || 'http://127.0.0.1:3000/v1';
+
+    const lanUrlEl = $('gatewayLanUrlText');
+    if (lanUrlEl) lanUrlEl.textContent = (overview.lanBaseUrls && overview.lanBaseUrls[0]) || 'http://192.168.x.x:3000/v1';
+
+    // 复选框设置
+    const lanBindCb = $('gatewayLanBindCheckbox');
+    if (lanBindCb) lanBindCb.checked = overview.bind === '0.0.0.0';
+
+    const cfg = await window.hap.getGatewayConfig?.();
+    if (cfg) {
+      const anonCb = $('gatewayAllowAnonymousCheckbox');
+      if (anonCb) anonCb.checked = Boolean(cfg.allowAnonymousLocal);
+
+      const fallbackCb = $('gatewayFallbackToCloudCheckbox');
+      if (fallbackCb) fallbackCb.checked = Boolean(cfg.fallbackToCloud);
+    }
+
+    // 统计指标
+    const stats = overview.stats || {};
+    const todayReqEl = $('statGatewayTodayRequests');
+    if (todayReqEl) todayReqEl.textContent = (stats.todayRequests || 0).toLocaleString();
+
+    const todayTokensEl = $('statGatewayTodayTokens');
+    if (todayTokensEl) todayTokensEl.textContent = (stats.todayTokens || 0).toLocaleString();
+
+    const activeKeysEl = $('statGatewayActiveKeys');
+    if (activeKeysEl) activeKeysEl.textContent = stats.activeKeysCount ?? overview.activeKeysCount ?? 0;
+
+    const avgLatEl = $('statGatewayAvgLatency');
+    if (avgLatEl) avgLatEl.textContent = `${stats.avgLatencyMs || 0} ms`;
+
+    // 刷新当前子选项卡内容
+    window.switchGatewaySubTab(currentGatewaySubTab);
+  } catch (err) {
+    console.error('加载网关总览失败:', err);
+  }
+};
+
+window.renderGatewayKeys = async () => {
+  const container = $('gatewayKeysTableContainer');
+  if (!container) return;
+  try {
+    const keys = await window.hap.listGatewayKeys?.() || [];
+    if (keys.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;">
+          暂无 API 密钥，请点击右上角「新建 API 密钥」以供外部工具调用。
+        </div>`;
+      return;
+    }
+
+    let html = `
+      <table class="data-table" style="width:100%;border-collapse:collapse;font-size:12.5px;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border-default);text-align:left;color:var(--text-muted);">
+            <th style="padding:10px 12px;">密钥名称</th>
+            <th style="padding:10px 12px;">API Key (Token)</th>
+            <th style="padding:10px 12px;">允许访问模型</th>
+            <th style="padding:10px 12px;">速率限制 (RPM)</th>
+            <th style="padding:10px 12px;">累计用量</th>
+            <th style="padding:10px 12px;">状态</th>
+            <th style="padding:10px 12px;text-align:right;">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    for (const k of keys) {
+      const masked = k.key.slice(0, 7) + '...' + k.key.slice(-4);
+      const modelsDisplay = (!k.allowedModels || k.allowedModels.length === 0)
+        ? '<span class="badge" style="font-size:11px;background:rgba(59,130,246,0.12);color:#3b82f6;">全部模型</span>'
+        : k.allowedModels.map(m => `<span class="badge" style="font-size:11px;margin-right:4px;">${escapeHtml(m)}</span>`).join('');
+
+      const rpmDisplay = k.rateLimitRpm > 0 ? `${k.rateLimitRpm} 次/分` : '无限制';
+      const statusBadge = k.enabled
+        ? `<span style="display:inline-flex;align-items:center;gap:4px;color:#10b981;font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:#10b981;"></span>启用</span>`
+        : `<span style="display:inline-flex;align-items:center;gap:4px;color:#ef4444;font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:#ef4444;"></span>停用</span>`;
+
+      html += `
+        <tr style="border-bottom:1px solid var(--border-default);">
+          <td style="padding:10px 12px;font-weight:600;color:var(--text-main);">${escapeHtml(k.name)}</td>
+          <td style="padding:10px 12px;">
+            <span style="font-family:var(--font-mono);font-size:12px;background:var(--bg-main);padding:2px 6px;border-radius:4px;border:1px solid var(--border-default);">${masked}</span>
+            <button type="button" class="btn secondary" style="font-size:11px;padding:2px 6px;margin-left:6px;" onclick="window.copyGatewayKey('${k.key}')">复制</button>
+          </td>
+          <td style="padding:10px 12px;">${modelsDisplay}</td>
+          <td style="padding:10px 12px;color:var(--text-muted);">${rpmDisplay}</td>
+          <td style="padding:10px 12px;font-size:11.5px;">
+            <div>${k.totalRequests || 0} 次请求</div>
+            <div style="color:var(--text-muted);">${(k.totalTokens || 0).toLocaleString()} Tokens</div>
+          </td>
+          <td style="padding:10px 12px;">${statusBadge}</td>
+          <td style="padding:10px 12px;text-align:right;">
+            <button type="button" class="btn secondary" style="font-size:11px;padding:3px 8px;margin-right:6px;" onclick="window.toggleGatewayKey('${k.id}', ${!k.enabled})">${k.enabled ? '停用' : '启用'}</button>
+            <button type="button" class="btn danger" style="font-size:11px;padding:3px 8px;" onclick="window.deleteGatewayKey('${k.id}')">删除</button>
+          </td>
+        </tr>
+      `;
+    }
+
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = `<div style="color:#ef4444;padding:16px;">加载密钥列表失败: ${escapeHtml(err.message)}</div>`;
+  }
+};
+
+window.copyGatewayKey = (key) => {
+  navigator.clipboard.writeText(key).then(() => {
+    showToast('API Key 已复制到剪贴板', 'success');
+  });
+};
+
+window.toggleGatewayKey = async (id, targetState) => {
+  try {
+    await window.hap.updateGatewayKey?.(id, { enabled: targetState });
+    showToast(targetState ? '已启用密钥' : '已停用密钥', 'success');
+    window.renderGatewayOverview();
+  } catch (err) {
+    showToast('更新密钥状态失败: ' + err.message, 'error');
+  }
+};
+
+window.deleteGatewayKey = async (id) => {
+  if (!confirm('确定要删除此 API 密钥吗？删除后使用此 Key 的外部客户端将立即无法访问。')) return;
+  try {
+    await window.hap.deleteGatewayKey?.(id);
+    showToast('API Key 已删除', 'success');
+    window.renderGatewayOverview();
+  } catch (err) {
+    showToast('删除失败: ' + err.message, 'error');
+  }
+};
+
+window.renderGatewayAliases = async () => {
+  const container = $('gatewayAliasesTableContainer');
+  if (!container) return;
+  try {
+    const aliases = await window.hap.listGatewayAliases?.() || [];
+    if (aliases.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;">
+          暂无别名重定向规则，请点击右上角「添加别名规则」。
+        </div>`;
+      return;
+    }
+
+    let html = `
+      <table class="data-table" style="width:100%;border-collapse:collapse;font-size:12.5px;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border-default);text-align:left;color:var(--text-muted);">
+            <th style="padding:10px 12px;">请求别名 (Alias)</th>
+            <th style="padding:10px 12px;">实际映射目标 (Target Model)</th>
+            <th style="padding:10px 12px;">故障转移备选 (Fallback)</th>
+            <th style="padding:10px 12px;">规则说明</th>
+            <th style="padding:10px 12px;text-align:right;">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    for (const a of aliases) {
+      html += `
+        <tr style="border-bottom:1px solid var(--border-default);">
+          <td style="padding:10px 12px;font-family:var(--font-mono);font-weight:700;color:var(--text-main);">${escapeHtml(a.alias)}</td>
+          <td style="padding:10px 12px;color:#10b981;font-weight:600;font-family:var(--font-mono);">${escapeHtml(a.targetModel)}</td>
+          <td style="padding:10px 12px;color:var(--text-muted);font-family:var(--font-mono);">${escapeHtml(a.fallbackModel || '-')}</td>
+          <td style="padding:10px 12px;color:var(--text-muted);">${escapeHtml(a.description || '-')}</td>
+          <td style="padding:10px 12px;text-align:right;">
+            <button type="button" class="btn danger" style="font-size:11px;padding:3px 8px;" onclick="window.deleteGatewayAlias('${a.id}')">删除</button>
+          </td>
+        </tr>
+      `;
+    }
+
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = `<div style="color:#ef4444;padding:16px;">加载别名规则失败: ${escapeHtml(err.message)}</div>`;
+  }
+};
+
+window.deleteGatewayAlias = async (id) => {
+  if (!confirm('确定要删除此模型别名规则吗？')) return;
+  try {
+    await window.hap.deleteGatewayAlias?.(id);
+    showToast('别名规则已删除', 'success');
+    window.renderGatewayAliases();
+  } catch (err) {
+    showToast('删除失败: ' + err.message, 'error');
+  }
+};
+
+window.renderGatewayPresets = async () => {
+  const container = $('gatewayPresetsGrid');
+  if (!container) return;
+  try {
+    const presets = await window.hap.getGatewayClientPresets?.() || [];
+    let html = '';
+    for (const p of presets) {
+      let fieldsHtml = '';
+      if (p.fields && p.fields.length > 0) {
+        fieldsHtml = `
+          <div style="background:var(--bg-main);padding:8px 10px;border-radius:6px;margin:8px 0;font-size:12px;">
+            ${p.fields.map(f => `<div style="display:flex;justify-content:space-between;margin:2px 0;"><span style="color:var(--text-muted);">${escapeHtml(f.label)}:</span><span style="font-family:var(--font-mono);font-weight:600;">${escapeHtml(f.value)}</span></div>`).join('')}
+          </div>`;
+      }
+
+      const encodedSnippet = encodeURIComponent(p.snippet);
+      html += `
+        <div class="card" style="padding:14px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;flex-direction:column;justify-content:space-between;">
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <h4 style="margin:0;font-size:14px;font-weight:700;">${escapeHtml(p.name)}</h4>
+              <button type="button" class="btn secondary" style="font-size:11px;padding:3px 8px;" onclick="window.copyPresetSnippet('${encodedSnippet}')">一键复制配置</button>
+            </div>
+            <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:8px;">${escapeHtml(p.description)}</div>
+            ${fieldsHtml}
+            <pre style="margin:8px 0 0 0;padding:10px;background:var(--bg-main);border-radius:6px;font-size:11.5px;font-family:var(--font-mono);overflow-x:auto;max-height:160px;border:1px solid var(--border-default);"><code>${escapeHtml(p.snippet)}</code></pre>
+          </div>
+        </div>
+      `;
+    }
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = `<div style="color:#ef4444;padding:16px;">加载客户端预设失败: ${escapeHtml(err.message)}</div>`;
+  }
+};
+
+window.copyPresetSnippet = (encodedSnippet) => {
+  const text = decodeURIComponent(encodedSnippet);
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('客户端接入配置已复制到剪贴板！', 'success');
+  });
+};
+
+window.renderGatewayLogs = async () => {
+  const container = $('gatewayLogsTableContainer');
+  if (!container) return;
+  try {
+    const logs = await window.hap.listGatewayLogs?.(60) || [];
+    if (logs.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px;">
+          暂无外部调用审计日志，当有外部 IDE 或客户端通过 /v1/chat/completions 调用时将在此实时显示。
+        </div>`;
+      return;
+    }
+
+    let html = `
+      <table class="data-table" style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border-default);text-align:left;color:var(--text-muted);">
+            <th style="padding:8px 10px;">时间</th>
+            <th style="padding:8px 10px;">状态</th>
+            <th style="padding:8px 10px;">客户端 IP</th>
+            <th style="padding:8px 10px;">所用 Key</th>
+            <th style="padding:8px 10px;">请求模型 ➔ 映射模型</th>
+            <th style="padding:8px 10px;">耗时</th>
+            <th style="padding:8px 10px;">Tokens</th>
+            <th style="padding:8px 10px;">流式</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    for (const log of logs) {
+      const timeStr = new Date(log.timestamp).toLocaleTimeString();
+      const statusBadge = log.status === 200
+        ? `<span class="badge" style="background:rgba(16,185,129,0.12);color:#10b981;font-weight:700;">200 OK</span>`
+        : `<span class="badge" style="background:rgba(239,68,68,0.12);color:#ef4444;font-weight:700;">${log.status}</span>`;
+
+      const modelMapping = log.requestedModel === log.targetModel
+        ? `<span style="font-family:var(--font-mono);">${escapeHtml(log.requestedModel)}</span>`
+        : `<span style="font-family:var(--font-mono);">${escapeHtml(log.requestedModel)}</span> <span style="color:var(--text-muted);">➔</span> <span style="font-family:var(--font-mono);color:#10b981;">${escapeHtml(log.targetModel)}</span>`;
+
+      html += `
+        <tr style="border-bottom:1px solid var(--border-default);">
+          <td style="padding:8px 10px;color:var(--text-muted);font-family:var(--font-mono);">${timeStr}</td>
+          <td style="padding:8px 10px;">${statusBadge}</td>
+          <td style="padding:8px 10px;font-family:var(--font-mono);">${escapeHtml(log.clientIp || '-')}</td>
+          <td style="padding:8px 10px;font-weight:600;">${escapeHtml(log.keyName || '-')}</td>
+          <td style="padding:8px 10px;">${modelMapping}</td>
+          <td style="padding:8px 10px;font-family:var(--font-mono);">${log.latencyMs} ms</td>
+          <td style="padding:8px 10px;font-family:var(--font-mono);">${log.totalTokens}</td>
+          <td style="padding:8px 10px;color:var(--text-muted);">${log.stream ? 'SSE 流式' : '非流式'}</td>
+        </tr>
+      `;
+    }
+
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = `<div style="color:#ef4444;padding:16px;">加载日志失败: ${escapeHtml(err.message)}</div>`;
+  }
+};
+
+function initGatewayEvents() {
+  $('gatewayMasterToggleBtn')?.addEventListener('click', async () => {
+    if (!currentGatewayOverview) return;
+    try {
+      const newState = !currentGatewayOverview.enabled;
+      await window.hap.updateGatewayConfig?.({ enabled: newState });
+      showToast(newState ? 'API 分发网关已启动！' : 'API 分发网关已暂停服务', newState ? 'success' : 'info');
+      window.renderGatewayOverview();
+    } catch (err) {
+      showToast('切换网关状态失败: ' + err.message, 'error');
+    }
+  });
+
+  $('gatewayRefreshOverviewBtn')?.addEventListener('click', () => {
+    window.renderGatewayOverview();
+    showToast('网关状态已刷新', 'info');
+  });
+
+  $('gatewayCopyLocalUrlBtn')?.addEventListener('click', () => {
+    const url = $('gatewayLocalUrlText')?.textContent || '';
+    if (url) {
+      navigator.clipboard.writeText(url);
+      showToast('本地 Base URL 已复制', 'success');
+    }
+  });
+
+  $('gatewayCopyLanUrlBtn')?.addEventListener('click', () => {
+    const url = $('gatewayLanUrlText')?.textContent || '';
+    if (url) {
+      navigator.clipboard.writeText(url);
+      showToast('局域网 Base URL 已复制', 'success');
+    }
+  });
+
+  $('gatewayLanBindCheckbox')?.addEventListener('change', async (e) => {
+    const checked = e.target.checked;
+    try {
+      await window.hap.updateGatewayConfig?.({ bind: checked ? '0.0.0.0' : '127.0.0.1' });
+      showToast(checked ? '已开启局域网共享监听 (0.0.0.0)' : '已恢复仅本机监听 (127.0.0.1)', 'success');
+      window.renderGatewayOverview();
+    } catch (err) {
+      showToast('设置监听地址失败: ' + err.message, 'error');
+    }
+  });
+
+  $('gatewayAllowAnonymousCheckbox')?.addEventListener('change', async (e) => {
+    try {
+      await window.hap.updateGatewayConfig?.({ allowAnonymousLocal: e.target.checked });
+      showToast('已更新本机免密配置', 'success');
+    } catch (err) {
+      showToast('更新失败: ' + err.message, 'error');
+    }
+  });
+
+  $('gatewayFallbackToCloudCheckbox')?.addEventListener('change', async (e) => {
+    try {
+      await window.hap.updateGatewayConfig?.({ fallbackToCloud: e.target.checked });
+      showToast('已更新故障转移配置', 'success');
+    } catch (err) {
+      showToast('更新失败: ' + err.message, 'error');
+    }
+  });
+
+  // 密钥新建弹窗
+  $('gatewayCreateKeyBtn')?.addEventListener('click', () => {
+    const nameInput = $('gatewayKeyInputName');
+    if (nameInput) nameInput.value = '';
+    const modelsInput = $('gatewayKeyInputModels');
+    if (modelsInput) modelsInput.value = '';
+    const rpmInput = $('gatewayKeyInputRpm');
+    if (rpmInput) rpmInput.value = '60';
+    $('gatewayKeyDialog')?.showModal();
+  });
+  $('closeGatewayKeyDialogBtn')?.addEventListener('click', () => $('gatewayKeyDialog')?.close());
+  $('cancelGatewayKeyBtn')?.addEventListener('click', () => $('gatewayKeyDialog')?.close());
+  $('saveGatewayKeyBtn')?.addEventListener('click', async () => {
+    const name = ($('gatewayKeyInputName')?.value || '').trim();
+    if (!name) {
+      showToast('请输入密钥备注名称', 'warning');
+      return;
+    }
+    const rawModels = ($('gatewayKeyInputModels')?.value || '').trim();
+    const allowedModels = rawModels ? rawModels.split(',').map(s => s.trim()).filter(Boolean) : [];
+    const rateLimitRpm = Number($('gatewayKeyInputRpm')?.value) || 0;
+
+    try {
+      const newKey = await window.hap.createGatewayKey?.({ name, allowedModels, rateLimitRpm });
+      $('gatewayKeyDialog')?.close();
+      showToast(`已生成 API 密钥: ${newKey?.key || ''}`, 'success');
+      window.renderGatewayOverview();
+    } catch (err) {
+      showToast('生成密钥失败: ' + err.message, 'error');
+    }
+  });
+
+  // 别名新建弹窗
+  $('gatewayCreateAliasBtn')?.addEventListener('click', () => {
+    const aliasInput = $('gatewayAliasInputAlias');
+    if (aliasInput) aliasInput.value = '';
+    const targetInput = $('gatewayAliasInputTarget');
+    if (targetInput) targetInput.value = '';
+    const fallbackInput = $('gatewayAliasInputFallback');
+    if (fallbackInput) fallbackInput.value = '';
+    const descInput = $('gatewayAliasInputDesc');
+    if (descInput) descInput.value = '';
+    $('gatewayAliasDialog')?.showModal();
+  });
+  $('closeGatewayAliasDialogBtn')?.addEventListener('click', () => $('gatewayAliasDialog')?.close());
+  $('cancelGatewayAliasBtn')?.addEventListener('click', () => $('gatewayAliasDialog')?.close());
+  $('saveGatewayAliasBtn')?.addEventListener('click', async () => {
+    const alias = ($('gatewayAliasInputAlias')?.value || '').trim();
+    const targetModel = ($('gatewayAliasInputTarget')?.value || '').trim();
+    if (!alias || !targetModel) {
+      showToast('请填写客户端请求别名与映射目标模型', 'warning');
+      return;
+    }
+    const fallbackModel = ($('gatewayAliasInputFallback')?.value || '').trim();
+    const description = ($('gatewayAliasInputDesc')?.value || '').trim();
+
+    try {
+      await window.hap.upsertGatewayAlias?.({ alias, targetModel, fallbackModel, description, enabled: true });
+      $('gatewayAliasDialog')?.close();
+      showToast('别名重定向规则已保存', 'success');
+      window.renderGatewayAliases();
+    } catch (err) {
+      showToast('保存别名规则失败: ' + err.message, 'error');
+    }
+  });
+
+  $('gatewayRefreshLogsBtn')?.addEventListener('click', () => {
+    window.renderGatewayLogs();
+    showToast('日志已刷新', 'info');
+  });
+
+  $('gatewayClearLogsBtn')?.addEventListener('click', async () => {
+    if (!confirm('确定要清空所有网关调用日志吗？')) return;
+    try {
+      await window.hap.clearGatewayLogs?.();
+      showToast('网关日志已清空', 'success');
+      window.renderGatewayLogs();
+    } catch (err) {
+      showToast('清空日志失败: ' + err.message, 'error');
+    }
+  });
+}
+
 initDesktopUpdater();
+initGatewayEvents();
+
