@@ -4342,6 +4342,17 @@ export class GuiService {
     }
     const input = cap.buffer || cap.base64!;
     const parsed = await parseWeChatScreen(input);
+    if (!parsed.ok) {
+      return {
+        ok: false,
+        isWeChatRunning: isRunning,
+        sourceType: cap.sourceType,
+        windowName: cap.windowName,
+        dataUrl: cap.dataUrl,
+        parsed,
+        error: parsed.error || '多模态视觉解析失败',
+      };
+    }
     return {
       ok: true,
       isWeChatRunning: isRunning,

@@ -5815,6 +5815,12 @@ window.deleteAgentRole = async (agentId) => {
     await window.hap.removeAgent(agentId);
     showToast(`智能体 [${agentId}] 已删除`, 'success');
     await refresh();
+    if (typeof populateHostingAgentSelects === 'function') {
+      populateHostingAgentSelects();
+    }
+    if (activeHostingContact && typeof populateHostingPolicyForm === 'function') {
+      populateHostingPolicyForm(activeHostingContact);
+    }
   } catch (error) {
     showToast('删除智能体失败：' + error.message, 'error');
   }
@@ -5882,6 +5888,12 @@ $('agentForm')?.addEventListener('submit', async (e) => {
     $('agentModal').close();
     showToast(`智能体 [${id}] ${isCreate ? '已创建' : '配置已保存'}`, 'success');
     await refresh();
+    if (typeof populateHostingAgentSelects === 'function') {
+      populateHostingAgentSelects();
+    }
+    if (activeHostingContact && typeof populateHostingPolicyForm === 'function') {
+      populateHostingPolicyForm(activeHostingContact);
+    }
   } catch (error) {
     showToast(`${isCreate ? '创建' : '更新'}智能体失败：` + error.message, 'error');
   }
@@ -6265,6 +6277,10 @@ function fillSelects() {
     provSelect.innerHTML = state.providers.map((p) => `
       <option value="${esc(p.id)}">${esc(p.name || p.id)}</option>
     `).join('');
+  }
+
+  if (typeof populateHostingAgentSelects === 'function') {
+    populateHostingAgentSelects();
   }
 }
 
@@ -15149,6 +15165,12 @@ function openCustomSelectPopup(select) {
   closeCustomSelectPopup();
   if (!select || select.disabled) return;
 
+  if (select.id === 'hpAgentSelect' || select.id === 'harAgentSelect') {
+    if (typeof populateHostingAgentSelects === 'function') {
+      populateHostingAgentSelects();
+    }
+  }
+
   const children = Array.from(select.children);
   if (children.length === 0) return;
 
@@ -16125,11 +16147,18 @@ let currentHostingFilter = 'all';
 let hostingCooldownTimer = null;
 
 async function initChatHostingView() {
+  try {
+    const snap = await window.hap.snapshot();
+    if (snap && snap.agents) state = snap;
+  } catch (_) {}
   await Promise.all([
     renderHostingOverview(),
     renderHostingContacts(),
   ]);
   populateHostingAgentSelects();
+  if (activeHostingContact) {
+    populateHostingPolicyForm(activeHostingContact);
+  }
 }
 window.initChatHostingView = initChatHostingView;
 
@@ -16325,16 +16354,61 @@ window.openVisionTestModal = async () => {
       }
 
       const p = res.parsed;
+      if (p && !p.ok && p.error) {
+        container.innerHTML = `
+          <div style="padding:16px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;color:#991b1b;display:flex;flex-direction:column;gap:8px;">
+            <div style="font-weight:700;display:flex;align-items:center;gap:6px;">
+              <span>⚠️ 识屏分析遇到错误</span>
+            </div>
+            <div style="font-size:12.5px;line-height:1.5;">${esc(p.error)}</div>
+            <div style="font-size:11.5px;color:#b91c1c;margin-top:4px;">
+              提示：若使用云端大模型识屏，请检查网络或在【设置 -> 模型】中选择可用的模型；在 macOS 下系统将优先采用免 Token 纯本地原生 OCR。
+            </div>
+          </div>
+        `;
+        return;
+      }
+
       const cap = res.captured;
       const lastMsg = p?.lastMessage;
+      const hasText = Boolean(lastMsg?.text && lastMsg.text.trim().length > 0);
+      const isFromMe = Boolean(lastMsg?.isFromMe);
 
       let resultBadge = p?.hasWeChatWindow
         ? '<span class="badge success">已检测到微信界面</span>'
         : '<span class="badge warning">未定位到微信聊天框</span>';
 
-      let replyBadge = p?.needsReply
-        ? '<span class="badge success" style="background:#22c55e;color:#fff;">需智能体回复 (对方发来)</span>'
-        : '<span class="badge neutral">无需回复 (我方已发或未有新内容)</span>';
+      let replyBadge = '';
+      if (!p?.chatTarget || !hasText) {
+        replyBadge = '<span class="badge neutral" style="font-size:11px;">待机中 (无待处理消息)</span>';
+      } else if (p?.needsReply) {
+        replyBadge = '<span class="badge success" style="background:#22c55e;color:#fff;font-size:11px;">需智能体回复 (对方发来新消息)</span>';
+      } else if (isFromMe) {
+        replyBadge = '<span class="badge neutral" style="font-size:11px;">无需回复 (我方刚已发送)</span>';
+      } else {
+        replyBadge = '<span class="badge neutral" style="font-size:11px;">无需回复 (无未读新消息)</span>';
+      }
+
+      let directionHtml = '';
+      if (hasText) {
+        directionHtml = `<strong style="color:${isFromMe ? '#16a34a' : '#2563eb'};">${isFromMe ? '我方发送 (右侧绿色)' : '对方发送 (左侧白色)'}</strong>`;
+      } else {
+        directionHtml = '<span style="color:var(--text-muted);">暂无</span>';
+      }
+
+      const senderText = hasText ? esc(lastMsg?.sender || '未知') : '暂无';
+      const messageText = hasText ? esc(lastMsg.text) : '（当前未进入具体会话，或聊天区域未识别到新气泡）';
+
+      let hintCallout = '';
+      if (!p?.chatTarget || !hasText) {
+        hintCallout = `
+          <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--text-main);line-height:1.45;">
+            💡 <strong>为什么显示待机无需回复？</strong><br/>
+            检测到当前微信处于<strong>主界面空白状态</strong>（右侧大灰标，尚未点击选中任何好友或群聊对话）。<br/>
+            <strong>操作建议：</strong>请在桌面微信中点击选中任意一个好友会话，然后点击下方【重新识屏检测】即可看到实时消息抓取与代答判断。
+          </div>
+        `;
+      }
 
       let imgHtml = '';
       if (res.dataUrl) {
@@ -16358,6 +16432,8 @@ window.openVisionTestModal = async () => {
             <div>${resultBadge}</div>
           </div>
 
+          ${hintCallout}
+
           <div style="padding:14px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;flex-direction:column;gap:10px;">
             <div style="display:flex;align-items:center;justify-content:space-between;">
               <div style="font-size:12.5px;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:6px;">
@@ -16370,11 +16446,11 @@ window.openVisionTestModal = async () => {
 
             <div style="display:flex;flex-direction:column;gap:4px;background:var(--bg-subtle);padding:10px 12px;border-radius:8px;">
               <div style="font-size:11.5px;color:var(--text-muted);display:flex;justify-content:space-between;">
-                <span>最新消息发送者：<strong style="color:var(--text-main);">${esc(lastMsg?.sender || '未知')}</strong></span>
-                <span>方向：<strong style="color:${lastMsg?.isFromMe ? '#16a34a' : '#2563eb'};">${lastMsg?.isFromMe ? '我方发送 (右侧绿色)' : '对方发送 (左侧白色)'}</strong></span>
+                <span>最新消息发送者：<strong style="color:var(--text-main);">${senderText}</strong></span>
+                <span>方向：${directionHtml}</span>
               </div>
               <div style="font-size:13px;color:var(--text-main);margin-top:4px;line-height:1.5;background:var(--bg-surface);padding:8px 10px;border-radius:6px;border:1px solid var(--border-default);">
-                ${esc(lastMsg?.text || '（未识别到文本消息）')}
+                ${messageText}
               </div>
             </div>
 
@@ -16393,8 +16469,43 @@ window.openVisionTestModal = async () => {
     }
   };
 
+  let liveTimer = null;
+  const stopLive = () => {
+    if (liveTimer) {
+      clearInterval(liveTimer);
+      liveTimer = null;
+    }
+  };
+
   const recheckBtn = $('visionTestRecheckBtn');
-  if (recheckBtn) recheckBtn.onclick = runTest;
+  if (recheckBtn) {
+    recheckBtn.onclick = () => {
+      runTest();
+    };
+  }
+
+  const liveToggle = $('visionTestLiveToggle');
+  if (liveToggle) {
+    liveToggle.checked = false;
+    liveToggle.onchange = () => {
+      if (liveToggle.checked) {
+        if (!liveTimer) {
+          liveTimer = setInterval(() => {
+            if (modal.open && liveToggle.checked) {
+              runTest();
+            } else {
+              stopLive();
+            }
+          }, 2000);
+        }
+      } else {
+        stopLive();
+      }
+    };
+  }
+
+  modal.addEventListener('close', stopLive, { once: true });
+
   await runTest();
 };
 
@@ -16424,9 +16535,10 @@ async function renderHostingContacts() {
 
     if (filtered.length === 0) {
       container.innerHTML = `
-        <div style="text-align:center;padding:30px 10px;color:var(--text-muted);font-size:11.5px;">
-          暂无匹配的托管会话规则<br/>
-          <button type="button" class="btn text-btn" id="hostingListEmptyAddBtn" style="font-size:11.5px;color:var(--primary);margin-top:6px;">+ 新建托管规则</button>
+        <div style="text-align:center;padding:26px 10px;color:var(--text-muted);font-size:11.5px;line-height:1.6;">
+          暂无历史托管记录<br/>
+          <span style="font-size:11px;color:var(--text-muted);opacity:0.85;">无需手动添加：启动代管后，好友来信将全量自动代答并自动归档</span><br/>
+          <button type="button" class="btn text-btn" id="hostingListEmptyAddBtn" style="font-size:11.5px;color:var(--primary);margin-top:6px;">+ 特殊好友定制 (可选)</button>
         </div>
       `;
       $('hostingListEmptyAddBtn')?.addEventListener('click', () => openHostingAddRuleModal());
@@ -16501,44 +16613,48 @@ function renderHostingGuideMarkup() {
     <div class="hosting-empty-guide-wrap">
       <div class="hosting-guide-header">
         <div style="font-size:36px;margin-bottom:6px;">🤖💬</div>
-        <h3 style="font-size:16px;font-weight:700;margin:0 0 4px 0;color:var(--text-main);">数字分身智能托管工作台</h3>
-        <p style="font-size:12.5px;color:var(--text-muted);margin:0;max-width:440px;line-height:1.5;">
-          统一托管微信与 QQ 对话，由专属智能体根据个性化人设自动代答，人工回复时自动静默避让
+        <h3 style="font-size:16px;font-weight:700;margin:0 0 4px 0;color:var(--text-main);">微信与 QQ 全量自动托管就绪</h3>
+        <p style="font-size:12.5px;color:var(--text-muted);margin:0;max-width:480px;line-height:1.5;">
+          已支持全量好友自动接管，统一由默认智能体代答。当您在手机上亲自回复时，分身将自动静默避让
         </p>
+      </div>
+      <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:9px 14px;margin-bottom:14px;max-width:520px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-main);line-height:1.4;">
+        <span style="font-size:16px;">💡</span>
+        <div><strong>无需手动录入好友：</strong>启动代管后，任何好友发来消息，智能体都会<strong>自动接管回复</strong>并在此自动归档。</div>
       </div>
       <div class="hosting-guide-steps">
         <div class="hosting-guide-step">
           <div class="step-num">1</div>
           <div class="step-content">
-            <div class="step-title">连接聊天通道（双模式可选）</div>
+            <div class="step-title">启动代管通道（左侧卡片）</div>
             <div class="step-desc">
-              <strong>桌面视觉免扫码（推荐）</strong>：电脑打开微信即可直接代管，零封号风险；<br/>
-              <strong>手机扫码登录</strong>：随时在左侧切换为扫码登录，弹出二维码手机授权。
+              <strong>桌面视觉免扫码（推荐）</strong>：电脑打开微信，点击左侧「启动代管」即可接管，零封号风险；<br/>
+              <strong>手机扫码登录</strong>：也可随时切换为扫码登录，弹出二维码使用微信扫码授权。
             </div>
           </div>
         </div>
         <div class="hosting-guide-step">
           <div class="step-num">2</div>
           <div class="step-content">
-            <div class="step-title">添加托管好友或群聊</div>
+            <div class="step-title">来信自动接管与归档（零配置）</div>
             <div class="step-desc">
-              点击「+ 新建托管规则」输入好友微信号/备注，指定负责代答的智能体。
+              启动代管后，任何微信好友或群发来消息，默认分身智能体都会自动代答并在此归档；仅在需要给特殊重要客户定制专属人设或智能体时才需添加规则。
             </div>
           </div>
         </div>
         <div class="hosting-guide-step">
           <div class="step-num">3</div>
           <div class="step-content">
-            <div class="step-title">定制分身个性人设与防撞车保护</div>
+            <div class="step-title">右侧分身人设与防撞车保护</div>
             <div class="step-desc">
-              可一键套用「商务严谨」、「幽默风趣」、「技术顾问」预设 Prompt，开启拟人化交互。
+              可在右侧策略栏随时调整默认分身人设、记忆库关联，或套用预设 Prompt；人工回复时自动触发静默冷却。
             </div>
           </div>
         </div>
       </div>
       <div class="hosting-guide-actions">
         <button type="button" class="btn primary" id="hostingGuideAddBtn" style="font-size:12.5px;padding:7px 18px;">
-          + 新建托管规则
+          + 特殊好友定制 (可选)
         </button>
         <button type="button" class="btn secondary" id="hostingGuideVisionBtn" style="font-size:12.5px;padding:7px 16px;">
           👁️ 测试桌面微信识屏
@@ -16832,7 +16948,11 @@ function populateHostingPolicyForm(contact) {
   const agentSelect = $('hpAgentSelect');
   if (agentSelect) {
     const agents = state.agents || [];
-    agentSelect.innerHTML = agents.map((a) => `<option value="${esc(a.id)}">${esc(a.id)} (${esc(a.name || a.role || '智能体')})</option>`).join('');
+    agentSelect.innerHTML = agents.map((a) => {
+      const emoji = a.emoji ? `${a.emoji} ` : '';
+      const label = formatAgentLabel(a);
+      return `<option value="${esc(a.id)}">${emoji}${esc(label)}</option>`;
+    }).join('');
     if (contact.agentId && agents.some((a) => a.id === contact.agentId)) {
       agentSelect.value = contact.agentId;
     } else if (agents.length > 0) {
@@ -16855,13 +16975,35 @@ function populateHostingPolicyForm(contact) {
 
 function populateHostingAgentSelects() {
   const agents = state.agents || [];
-  const optionsHtml = agents.map((a) => `<option value="${esc(a.id)}">${esc(a.id)} (${esc(a.name || a.role || '智能体')})</option>`).join('');
+  const optionsHtml = agents.map((a) => {
+    const emoji = a.emoji ? `${a.emoji} ` : '';
+    const label = formatAgentLabel(a);
+    return `<option value="${esc(a.id)}">${emoji}${esc(label)}</option>`;
+  }).join('');
 
   const hpAgent = $('hpAgentSelect');
-  if (hpAgent && hpAgent.children.length === 0) hpAgent.innerHTML = optionsHtml;
+  if (hpAgent) {
+    const currentVal = hpAgent.value;
+    hpAgent.innerHTML = optionsHtml;
+    if (currentVal && agents.some((a) => a.id === currentVal)) {
+      hpAgent.value = currentVal;
+    } else if (activeHostingContact?.agentId && agents.some((a) => a.id === activeHostingContact.agentId)) {
+      hpAgent.value = activeHostingContact.agentId;
+    } else if (agents.length > 0) {
+      hpAgent.value = agents[0].id;
+    }
+  }
 
   const harAgent = $('harAgentSelect');
-  if (harAgent) harAgent.innerHTML = optionsHtml;
+  if (harAgent) {
+    const currentVal = harAgent.value;
+    harAgent.innerHTML = optionsHtml;
+    if (currentVal && agents.some((a) => a.id === currentVal)) {
+      harAgent.value = currentVal;
+    } else if (agents.length > 0) {
+      harAgent.value = agents[0].id;
+    }
+  }
 }
 
 function openHostingAddRuleModal() {
@@ -16874,8 +17016,16 @@ function openHostingAddRuleModal() {
 function initChatHostingEvents() {
   // 刷新按钮
   $('hostingRefreshBtn')?.addEventListener('click', async () => {
+    try {
+      const snap = await window.hap.snapshot();
+      if (snap && snap.agents) state = snap;
+    } catch (_) {}
     await Promise.all([renderHostingOverview(), renderHostingContacts()]);
-    if (activeHostingContact) await renderHostingMessages(activeHostingContact);
+    populateHostingAgentSelects();
+    if (activeHostingContact) {
+      await renderHostingMessages(activeHostingContact);
+      populateHostingPolicyForm(activeHostingContact);
+    }
     showToast('托管数据与状态已刷新', 'info');
   });
 
@@ -16922,6 +17072,21 @@ function initChatHostingEvents() {
 
   $('hostingTogglePolicyBtn')?.addEventListener('click', () => toggleRightPane());
   $('hostingClosePolicyBtn')?.addEventListener('click', () => toggleRightPane(false));
+
+  // 从聊天托管直接直达智能体记忆库
+  $('hpOpenMemoryBtn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    show('settings');
+    window.switchSettingsTab('memory');
+    const targetAgent = $('hpAgentSelect')?.value;
+    if (targetAgent) {
+      const filterSelect = $('memoryAgentFilter');
+      if (filterSelect) {
+        filterSelect.value = targetAgent;
+        renderMemories();
+      }
+    }
+  });
 
   // 新建规则按钮
   $('hostingQuickAddBtn')?.addEventListener('click', () => openHostingAddRuleModal());

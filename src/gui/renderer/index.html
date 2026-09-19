@@ -805,8 +805,8 @@
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                   <span>清空</span>
                 </button>
-                <button type="button" class="btn primary" id="hostingQuickAddBtn" style="font-size:12px;padding:6px 14px;display:inline-flex;align-items:center;gap:5px;">
-                  <span>+ 新建托管规则</span>
+                <button type="button" class="btn primary" id="hostingQuickAddBtn" style="font-size:12px;padding:6px 14px;display:inline-flex;align-items:center;gap:5px;" title="全量好友来信默认自动接管；仅需为特定好友定制独立人设或不同智能体时在此添加">
+                  <span>+ 特殊好友定制 (可选)</span>
                 </button>
               </div>
             </div>
@@ -929,44 +929,48 @@
                 <div class="hosting-empty-guide-wrap">
                   <div class="hosting-guide-header">
                     <div style="font-size:36px;margin-bottom:6px;">🤖💬</div>
-                    <h3 style="font-size:16px;font-weight:700;margin:0 0 4px 0;color:var(--text-main);">数字分身智能托管工作台</h3>
-                    <p style="font-size:12.5px;color:var(--text-muted);margin:0;max-width:440px;line-height:1.5;">
-                      统一托管微信与 QQ 对话，由专属智能体根据个性化人设自动代答，人工回复时自动静默避让
+                    <h3 style="font-size:16px;font-weight:700;margin:0 0 4px 0;color:var(--text-main);">微信与 QQ 全量自动托管就绪</h3>
+                    <p style="font-size:12.5px;color:var(--text-muted);margin:0;max-width:480px;line-height:1.5;">
+                      已支持全量好友自动接管，统一由默认智能体代答。当您在手机上亲自回复时，分身将自动静默避让
                     </p>
+                  </div>
+                  <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:9px 14px;margin-bottom:14px;max-width:520px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-main);line-height:1.4;">
+                    <span style="font-size:16px;">💡</span>
+                    <div><strong>无需手动录入好友：</strong>启动代管后，任何好友发来消息，智能体都会<strong>自动接管回复</strong>并在此自动归档。</div>
                   </div>
                   <div class="hosting-guide-steps">
                     <div class="hosting-guide-step">
                       <div class="step-num">1</div>
                       <div class="step-content">
-                        <div class="step-title">连接聊天通道（双模式可选）</div>
+                        <div class="step-title">启动代管通道（左侧卡片）</div>
                         <div class="step-desc">
-                          <strong>桌面视觉免扫码（推荐）</strong>：电脑打开微信即可直接代管，零封号风险；<br/>
-                          <strong>手机扫码登录</strong>：随时在左侧切换为扫码登录，弹出二维码手机授权。
+                          <strong>桌面视觉免扫码（推荐）</strong>：电脑打开微信，点击左侧「启动代管」即可接管，零封号风险；<br/>
+                          <strong>手机扫码登录</strong>：也可随时切换为扫码登录，弹出二维码使用微信扫码授权。
                         </div>
                       </div>
                     </div>
                     <div class="hosting-guide-step">
                       <div class="step-num">2</div>
                       <div class="step-content">
-                        <div class="step-title">添加托管好友或群聊</div>
+                        <div class="step-title">来信自动接管与归档（零配置）</div>
                         <div class="step-desc">
-                          点击「+ 新建托管规则」输入好友微信号/备注，指定负责代答的智能体。
+                          启动代管后，任何微信好友或群发来消息，默认分身智能体都会自动代答并在此归档；仅在需要给特殊重要客户定制专属人设或智能体时才需添加规则。
                         </div>
                       </div>
                     </div>
                     <div class="hosting-guide-step">
                       <div class="step-num">3</div>
                       <div class="step-content">
-                        <div class="step-title">定制分身个性人设与防撞车保护</div>
+                        <div class="step-title">右侧分身人设与防撞车保护</div>
                         <div class="step-desc">
-                          可一键套用「商务严谨」、「幽默风趣」、「技术顾问」预设 Prompt，开启拟人化交互。
+                          可在右侧策略栏随时调整默认分身人设、记忆库关联，或套用预设 Prompt；人工回复时自动触发静默冷却。
                         </div>
                       </div>
                     </div>
                   </div>
                   <div class="hosting-guide-actions">
                     <button type="button" class="btn primary" id="hostingGuideAddBtn" style="font-size:12.5px;padding:7px 18px;">
-                      + 新建托管规则
+                      + 特殊好友定制 (可选)
                     </button>
                     <button type="button" class="btn secondary" id="hostingGuideVisionBtn" style="font-size:12.5px;padding:7px 16px;">
                       👁️ 测试桌面微信识屏
@@ -1036,7 +1040,12 @@
                   </div>
 
                   <div class="form-group">
-                    <label style="font-size:11.5px;font-weight:600;">响应智能体角色 (Agent)</label>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                      <label style="font-size:11.5px;font-weight:600;margin:0;">响应智能体角色 (Agent)</label>
+                      <button type="button" class="btn text-btn" id="hpOpenMemoryBtn" style="font-size:11px;color:var(--primary);padding:0;" title="打开该智能体绑定的长期向量记忆库">
+                        🧠 打开记忆库 ↗
+                      </button>
+                    </div>
                     <select id="hpAgentSelect"></select>
                   </div>
 
@@ -2005,6 +2014,9 @@
                 <p class="page-subtitle">跨会话沉淀用户开发习惯、架构约束、工程规范与重要偏好</p>
               </div>
               <div class="page-header-actions">
+                <button type="button" class="btn secondary" onclick="show('chatHosting')" style="font-size:12.5px;padding:6px 12px;display:inline-flex;align-items:center;gap:4px;">
+                  ← 返回聊天托管
+                </button>
                 <button type="button" class="btn secondary" onclick="window.rebuildMemoryIndex()">重建索引</button>
                 <button type="button" class="btn primary" onclick="window.openAddMemoryDialog()">+ 添加记忆条目</button>
               </div>
@@ -5983,7 +5995,12 @@
     <dialog id="hostingAddRuleModal" class="modal modal-md">
       <form id="hostingAddRuleForm" class="modal-form-wrap" onsubmit="return false;">
         <div class="modal-header-row">
-          <h2 id="hostingAddRuleModalTitle">新建聊天托管规则</h2>
+          <div>
+            <h2 id="hostingAddRuleModalTitle">特殊好友/群聊托管规则定制 (可选)</h2>
+            <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;font-weight:normal;">
+              💡 日常无需手动录入：启动代管后好友来信会自动接管并在此归档。本弹窗仅用于提前为特定 VIP 好友定制独立人设或专属智能体。
+            </div>
+          </div>
           <button type="button" class="btn-close" id="closeHostingAddRuleBtn" aria-label="关闭" title="关闭"></button>
         </div>
         <div class="form-grid">
@@ -6056,9 +6073,15 @@
         <div id="visionTestContent" style="display:flex;flex-direction:column;gap:12px;max-height:65vh;overflow-y:auto;">
           <!-- 识别测试结果动态注入 -->
         </div>
-        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px;border-top:1px solid var(--border-default);padding-top:12px;">
-          <button type="button" class="btn secondary" id="visionTestRecheckBtn" style="font-size:12px;padding:6px 14px;">🔄 重新识别截屏</button>
-          <button type="button" class="btn primary" onclick="$('visionTestModal')?.close()" style="font-size:12px;padding:6px 18px;">关闭</button>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;border-top:1px solid var(--border-default);padding-top:12px;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-main);cursor:pointer;user-select:none;">
+            <input type="checkbox" id="visionTestLiveToggle" style="cursor:pointer;" />
+            <span style="font-weight:500;">🟢 开启实时持续监听 (Live 巡检，每2秒自动刷新)</span>
+          </label>
+          <div style="display:flex;gap:10px;">
+            <button type="button" class="btn secondary" id="visionTestRecheckBtn" style="font-size:12px;padding:6px 14px;">🔄 重新识别截屏</button>
+            <button type="button" class="btn primary" onclick="$('visionTestModal')?.close()" style="font-size:12px;padding:6px 18px;">关闭</button>
+          </div>
         </div>
       </div>
     </dialog>

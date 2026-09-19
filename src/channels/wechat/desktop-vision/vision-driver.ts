@@ -52,6 +52,7 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
   private readonly processedFingerprints = new Set<string>();
   private readonly fingerprintHistory: string[] = [];
   private lastActiveTarget: string | undefined;
+  private readonly targetCoordsMap = new Map<string, [number, number]>();
 
   constructor(options: DesktopVisionDriverOptions = {}) {
     this.pollIntervalMs = Math.max(1000, options.pollIntervalMs ?? 3000);
@@ -132,7 +133,12 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
       }
 
       if (parsed.chatTarget) {
-        this.lastActiveTarget = parsed.chatTarget;
+        if (parsed.chatTargetCoords) {
+          this.targetCoordsMap.set(parsed.chatTarget, parsed.chatTargetCoords);
+        }
+        if (!parsed.chatTargetCoords) {
+          this.lastActiveTarget = parsed.chatTarget;
+        }
       }
 
       // 3. 判断是否需要回复来自好友的消息
@@ -210,8 +216,13 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
     const myReplyFp = `${targetId}:me:${text.trim()}`;
     this.addFingerprint(myReplyFp);
 
+    const targetCoords = this.targetCoordsMap.get(targetId);
+    const switchToTarget = Boolean(targetCoords || (this.lastActiveTarget && this.lastActiveTarget !== targetId));
+
     const result = await this.sendFn({
       targetName: targetId,
+      targetCoords,
+      switchToTarget,
       text,
       delayMs: 350,
       restoreFocus: true,
@@ -222,6 +233,7 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
       throw new Error(result.error || '桌面自动化发送微信消息失败');
     }
 
+    this.lastActiveTarget = targetId;
     this.log(`[DesktopVision] 消息已成功模拟输入并发送给 [${targetId}]`);
     return `out_${Date.now()}_${randomUUID().slice(0, 6)}`;
   }

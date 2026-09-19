@@ -82,6 +82,7 @@ export interface ProviderRegistryOptions {
 export class ProviderRegistry {
   private providers: Map<string, ResolvedProvider>;
   private readonly env: EnvLike;
+  private readonly useLocalJsonEnv: boolean;
   private readonly gates: GateRegistry | undefined;
   private readonly factory: ProviderFactory;
   private readonly clients = new Map<string, ProviderClient>();
@@ -89,6 +90,7 @@ export class ProviderRegistry {
   constructor(providers: Map<string, ResolvedProvider>, options: ProviderRegistryOptions = {}) {
     this.providers = providers;
     this.env = options.env ?? process.env;
+    this.useLocalJsonEnv = options.env === undefined;
     this.gates = options.gates;
     this.factory = options.factory ?? defaultProviderFactory;
   }
@@ -137,7 +139,7 @@ export class ProviderRegistry {
   credential(provider: ResolvedProvider): string | undefined {
     const envKey = provider.envKey;
     if (envKey === undefined) return undefined;
-    const jsonEnv = loadLocalJsonEnv();
+    const jsonEnv = this.useLocalJsonEnv ? loadLocalJsonEnv() : {};
     const value = this.env[envKey] || jsonEnv[envKey] || (provider.id ? this.env[`${provider.id.toUpperCase()}_API_KEY`] || jsonEnv[`${provider.id.toUpperCase()}_API_KEY`] : undefined);
     if (value === undefined || value.trim() === '') {
       throw new ConfigError('CONFIG_ENV_MISSING', '提供商 ' + provider.id + ' 尚未配置 API Key 密钥凭据（' + envKey + '），请在服务商设置或凭据中心配置 API Key', {
@@ -163,7 +165,7 @@ export class ProviderRegistry {
     if (envKey === undefined) {
       return true;
     }
-    const jsonEnv = loadLocalJsonEnv();
+    const jsonEnv = this.useLocalJsonEnv ? loadLocalJsonEnv() : {};
     const value = this.env[envKey] || jsonEnv[envKey] || (provider.id ? this.env[`${provider.id.toUpperCase()}_API_KEY`] || jsonEnv[`${provider.id.toUpperCase()}_API_KEY`] : undefined);
     return value !== undefined && value.trim() !== '';
   }

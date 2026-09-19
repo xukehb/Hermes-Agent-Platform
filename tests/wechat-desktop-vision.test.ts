@@ -188,4 +188,59 @@ describe('WeChat Desktop Vision Agent (SightFlow 模式视觉代管)', () => {
     const running = await isWeChatRunning();
     expect(typeof running).toBe('boolean');
   });
+
+  it('parseWeChatOcrItems 准确识别聊天视窗中的最新来信与自测发信', async () => {
+    const { parseWeChatOcrItems } = await import('../src/channels/wechat/desktop-vision/ocr-parser.js');
+    const mockItems = [
+      { text: 'Q 搜索', x: 0.12, y: 0.91, width: 0.04, height: 0.02 },
+      { text: '我', x: 0.36, y: 0.91, width: 0.02, height: 0.02 }, // 标题栏
+      { text: '你好', x: 0.84, y: 0.66, width: 0.03, height: 0.02 }, // 我方右侧发出的气泡
+      { text: '你好', x: 0.43, y: 0.58, width: 0.03, height: 0.02 }, // 对方左侧气泡
+      { text: '请回复我', x: 0.43, y: 0.44, width: 0.06, height: 0.02 }, // 对方左侧气泡
+      { text: '请回复收到', x: 0.43, y: 0.30, width: 0.07, height: 0.02 }, // 最新对方左侧气泡 (最低 y)
+    ];
+
+    const res = parseWeChatOcrItems(mockItems);
+    expect(res.ok).toBe(true);
+    expect(res.hasWeChatWindow).toBe(true);
+    expect(res.chatTarget).toBe('我');
+    expect(res.lastMessage?.text).toBe('请回复收到');
+    expect(res.lastMessage?.isFromMe).toBe(false);
+    expect(res.needsReply).toBe(true);
+  });
+
+  it('parseWeChatOcrItems 我方最新发出的绿色气泡不触发 needsReply', async () => {
+    const { parseWeChatOcrItems } = await import('../src/channels/wechat/desktop-vision/ocr-parser.js');
+    const mockItems = [
+      { text: '张三', x: 0.36, y: 0.91, width: 0.02, height: 0.02 }, // 标题栏
+      { text: '明天开会吗？', x: 0.43, y: 0.58, width: 0.06, height: 0.02 }, // 对方气泡
+      { text: '好的，准时参加。', x: 0.84, y: 0.30, width: 0.08, height: 0.02 }, // 我方最新气泡 (最低 y, x >= 0.70)
+    ];
+
+    const res = parseWeChatOcrItems(mockItems);
+    expect(res.ok).toBe(true);
+    expect(res.chatTarget).toBe('张三');
+    expect(res.lastMessage?.text).toBe('好的，准时参加。');
+    expect(res.lastMessage?.isFromMe).toBe(true);
+    expect(res.needsReply).toBe(false);
+  });
+
+  it('parseWeChatOcrItems 遇到当前会话已发但左侧列表有其他联系人待办时，自动切换会话触发回复', async () => {
+    const { parseWeChatOcrItems } = await import('../src/channels/wechat/desktop-vision/ocr-parser.js');
+    const mockItems = [
+      { text: '十一', x: 0.36, y: 0.91, width: 0.02, height: 0.02, isTitle: true }, // 显式标题栏
+      { text: '优化它的主题配色', x: 0.84, y: 0.30, width: 0.08, height: 0.02 }, // 我方右侧绿色气泡
+      { text: '我', x: 0.16, y: 0.82, width: 0.04, height: 0.02 }, // 会话列表联系人
+      { text: '请回复 1', x: 0.16, y: 0.79, width: 0.08, height: 0.02 }, // 会话列表预览
+    ];
+
+    const res = parseWeChatOcrItems(mockItems);
+    expect(res.ok).toBe(true);
+    // 应该识别出需要自动切换到联系人“我”
+    expect(res.chatTarget).toBe('我');
+    expect(res.lastMessage?.text).toBe('请回复 1');
+    expect(res.lastMessage?.isFromMe).toBe(false);
+    expect(res.needsReply).toBe(true);
+  });
 });
+

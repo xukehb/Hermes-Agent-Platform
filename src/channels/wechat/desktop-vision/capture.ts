@@ -89,6 +89,24 @@ async function captureViaElectron(): Promise<CapturedWindow | undefined> {
   return undefined;
 }
 
+/** 获取 macOS 上微信窗口的 Window ID */
+export async function getMacWeChatWindowId(): Promise<number | undefined> {
+  if (process.platform !== 'darwin') return undefined;
+  const binPath = join(process.cwd(), 'bin', 'macos_ocr');
+  if (existsSync(binPath)) {
+    try {
+      const { stdout } = await runCmd(binPath, ['--wechat-wid']);
+      const wid = parseInt(stdout.trim(), 10);
+      if (Number.isFinite(wid) && wid > 0) {
+        return wid;
+      }
+    } catch {
+      // 忽略检测失败
+    }
+  }
+  return undefined;
+}
+
 /** 尝试使用 macOS screencapture 命令抓取微信窗口 */
 async function captureViaMacScreencapture(): Promise<CapturedWindow> {
   if (process.platform !== 'darwin') {
@@ -102,8 +120,15 @@ async function captureViaMacScreencapture(): Promise<CapturedWindow> {
   const tempPath = join(tmpdir(), `hap_wechat_cap_${Date.now()}_${randomUUID().slice(0, 6)}.png`);
 
   try {
-    // 静默截取当前屏幕，快速获得整个工作桌面，后续由多模态大模型聚焦微信窗口
-    await runCmd('/usr/sbin/screencapture', ['-x', '-C', tempPath]);
+    // 优先通过 CoreGraphics 锁定的 WeChat 窗口 ID 精准截取，避免背景干扰
+    const wid = await getMacWeChatWindowId();
+    if (wid) {
+      await runCmd('/usr/sbin/screencapture', ['-l', String(wid), '-x', tempPath]);
+    } else {
+      // 静默截取当前屏幕，快速获得整个工作桌面
+      await runCmd('/usr/sbin/screencapture', ['-x', '-C', tempPath]);
+    }
+
     if (!existsSync(tempPath)) {
       return { ok: false, sourceType: 'none', error: '截图生成失败，文件未找到' };
     }
@@ -117,7 +142,7 @@ async function captureViaMacScreencapture(): Promise<CapturedWindow> {
       buffer,
       base64,
       dataUrl: `data:image/png;base64,${base64}`,
-      windowName: 'WeChat Desktop Screen',
+      windowName: wid ? 'WeChat Desktop Window' : 'WeChat Desktop Screen',
       sourceType: 'screencapture',
     };
   } catch (err) {
@@ -139,3 +164,4 @@ export async function captureWeChatWindow(): Promise<CapturedWindow> {
   }
   return await captureViaMacScreencapture();
 }
+

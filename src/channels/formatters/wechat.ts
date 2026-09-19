@@ -70,10 +70,8 @@ export class WeChatFormatter extends BaseChannelFormatter {
     });
     result = result.replace(AGENT_PATTERNS.toolError, '❌ [$1] 执行异常$2');
     result = result.replace(AGENT_PATTERNS.modelSwitch, '↻ 模型切换：$1 ➔ $2$3');
-    result = result.replace(AGENT_PATTERNS.terminalNote, (_match, model, tokens, taskId) => {
-      return `————————————\n🤖 模型: ${model}  |  📊 用量: ${tokens} tokens  |  🆔 任务: ${taskId}`;
-    });
-    return result;
+    result = result.replace(AGENT_PATTERNS.terminalNote, '');
+    return result.trimEnd();
   }
 }
 

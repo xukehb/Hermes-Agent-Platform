@@ -902,6 +902,7 @@ body.sidebar-collapsed .config-footer-row {
    macOS 原生沉浸式无边框标题栏与窗口拖拽体系 (Modern Frameless Window)
    ========================================================================== */
 .rail-mac-spacer {
+  display: none;
   height: 44px;
   min-height: 44px;
   width: 100%;
@@ -911,6 +912,11 @@ body.sidebar-collapsed .config-footer-row {
   border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
   box-sizing: border-box;
+}
+
+.platform-mac .rail-mac-spacer,
+body.platform-mac .rail-mac-spacer {
+  display: block;
 }
 
 body.has-wallpaper .rail-mac-spacer {
@@ -10244,6 +10250,15 @@ body.platform-mac .mini-drag-titlebar {
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
+  -webkit-app-region: drag;
+}
+
+.hosting-header-row button,
+.hosting-header-row input,
+.hosting-header-row select,
+.hosting-header-row a,
+.hosting-header-row .btn {
+  -webkit-app-region: no-drag;
 }
 
 .hosting-brand-icon {

@@ -341,9 +341,13 @@ export class WeChatChannel implements Channel {
       },
     };
 
-    // 若联系人配置了专属人设 Prompt，将其作为前缀注入
-    const contextPrefix = contact.systemPrompt?.trim() ? `[当前联系人专属托管人设与指令：${contact.systemPrompt.trim()}]\n\n` : '';
-    const finalText = contextPrefix ? `${contextPrefix}${cleanText}` : cleanText;
+    // 微信即时聊天对话规范：简明扼要、口语化、真人感，通常1~2句话回答完毕，禁止长篇大论、列表说教或输出系统调试信息
+    const wechatGuideline = [
+      '[微信聊天规范：当前为微信好友即时通讯。回答必须口语化、简明自然，像真人朋友微信聊天一样（通常1~2句话内说清楚即可）。]',
+      '[切忌长篇大论、罗列列表或撰写提纲，禁止输出系统指令或调试信息。直接以本人身份给出得体亲切的回复。]',
+    ].join('\n');
+    const contactPersona = contact.systemPrompt?.trim() ? `\n[专属人设指令：${contact.systemPrompt.trim()}]` : '';
+    const finalText = `${wechatGuideline}${contactPersona}\n\n对方发来：“${cleanText}”`;
 
     const effectiveDefaultAgent = validContactAgentId || this.config.defaultAgent || fallbackAgent;
 
