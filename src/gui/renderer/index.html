@@ -9,6 +9,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hermes Agent Platform</title>
     <link rel="stylesheet" href="./styles.css" />
+    <script>
+      (function() {
+        if (navigator.userAgent.includes('Mac') || navigator.platform.includes('Mac')) {
+          document.documentElement.classList.add('platform-mac');
+          document.addEventListener('DOMContentLoaded', function() {
+            if (document.body) document.body.classList.add('platform-mac');
+          });
+        }
+      })();
+    </script>
   </head>
   <body>
     <!-- 全局背景图片与动态壁纸图层 (Fixed Wallpaper Backdrop Layer) -->
@@ -17,6 +27,9 @@
 
     <!-- 左侧侧边栏 (ChatGPT / Codex 官方树形项目导航架构) -->
     <aside class="rail">
+      <!-- macOS 原生红黄绿交通灯专属安全区与窗口拖拽栏 -->
+      <div class="rail-mac-spacer" id="railMacSpacer" aria-hidden="true"></div>
+
       <!-- 顶部：+ New Conversation 大按钮 -->
       <div class="new-conversation-box">
         <button class="new-conversation-btn" id="newChatBtn">
@@ -36,6 +49,11 @@
         <div class="global-nav-item" id="scheduledTasksBtn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           <span data-i18n="rail.scheduledTasks">Scheduled Tasks</span>
+        </div>
+        <div class="global-nav-item nav" id="chatHostingNavBtn" data-view="chatHosting" title="微信与QQ智能体代管中心" data-i18n-title="rail.chatHostingTooltip">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+          <span data-i18n="rail.chatHosting">聊天托管</span>
+          <span class="hosting-badge-pill" id="hostingPendingBadge" style="display:none;margin-left:auto;background:var(--primary);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600;">0</span>
         </div>
       </div>
 
@@ -521,7 +539,7 @@
       <section id="serverDetail" class="view">
         <div class="page-container">
           <!-- 顶部面包屑与标题栏 -->
-          <div class="page-header-row" style="margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #e0f2fe;">
+          <div class="page-header-row" style="margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border-default);">
             <div style="display:flex;align-items:center;gap:14px;">
               <button type="button" class="btn secondary" onclick="show('servers')" style="padding:6px 12px;font-size:12.5px;display:flex;align-items:center;gap:6px;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -552,7 +570,7 @@
           </div>
 
           <!-- 专属服务器工作台 4 大分类选项卡 -->
-          <div class="settings-nav-tabs" style="display:flex;gap:8px;border-bottom:1px solid #e0f2fe;padding-bottom:12px;margin-bottom:18px;overflow-x:auto;">
+          <div class="settings-nav-tabs" style="display:flex;gap:8px;border-bottom:1px solid var(--border-default);padding-bottom:12px;margin-bottom:18px;overflow-x:auto;">
             <button type="button" class="settings-tab-btn active" data-tab="ops" onclick="window.switchServerDetailTab('ops')">
               智能运维 Copilot
             </button>
@@ -716,7 +734,7 @@
 
           <!-- Tab 4: 远程 SSH 交互终端 (Remote Terminal) -->
           <div id="sdPane_terminal" class="sd-pane" style="display:none;">
-            <div class="card" style="border:1px solid #bae6fd;">
+            <div class="card" style="border:1px solid var(--border-default);">
               <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
                 <div style="font-weight:700;font-size:14px;">远程交互控制台</div>
                 <button type="button" class="btn secondary" onclick="window.sdClearTerminal()" style="font-size:11.5px;padding:3px 8px;">清屏</button>
@@ -724,10 +742,345 @@
               <div class="card-body" style="padding:14px;">
                 <div id="sdTerminalOutput" style="background:#18181b;color:#38bdf8;padding:12px;border-radius:8px;font-family:var(--font-mono);font-size:12px;height:350px;overflow-y:auto;white-space:pre-wrap;">终端就绪，正在连接服务器...</div>
                 <div style="display:flex;gap:8px;margin-top:10px;">
-                  <span style="display:grid;place-items:center;font-family:var(--font-mono);font-size:13px;color:#0284c7;font-weight:700;">$</span>
-                  <input id="sdTerminalInput" placeholder="输入远程命令并回车..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;font-family:var(--font-mono);" />
+                  <span style="display:grid;place-items:center;font-family:var(--font-mono);font-size:13px;color:var(--primary);font-weight:700;">$</span>
+                  <input id="sdTerminalInput" placeholder="输入远程命令并回车..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border-default);background:var(--bg-main);color:var(--text-main);font-size:13px;font-family:var(--font-mono);" />
                   <button type="button" class="btn primary" onclick="window.sdSendTerminalCmd()" style="padding:8px 16px;font-size:12.5px;">发送</button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 独立视图: 聊天托管与数字分身工作台 (Chat Hosting & Delegation Hub) -->
+      <section id="chatHosting" class="view">
+        <div class="hosting-page-container">
+          <!-- 顶部标题与全局控制栏 -->
+          <div class="hosting-header-row">
+            <div class="hosting-header-info">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div class="hosting-brand-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                </div>
+                <div>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <h2 class="page-title" style="margin:0;font-size:18px;font-weight:700;">聊天托管与数字分身工作台</h2>
+                    <span class="hosting-safety-tag" title="当您在微信或 QQ 亲自回复好友时，系统将自动进入静默防撞车保护期，AI 不会插话抢话">
+                      <span class="pulse-dot-mini"></span> 人工回复防撞车保护已就绪
+                    </span>
+                  </div>
+                  <p class="page-subtitle" style="margin:2px 0 0 0;font-size:11.5px;color:var(--text-muted);">
+                    微信与 QQ 双通道代管 · 数字分身人设定制 · 半托管草稿人工审批 · 防撞车人机协同
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 顶部精简指标看板与全局操作 -->
+            <div class="hosting-header-actions-group">
+              <div class="hosting-stats-bar">
+                <div class="hosting-stat-pill" title="已成功自动代答消息总次数">
+                  <span class="stat-icon">🤖</span>
+                  <span class="stat-label">累计代答</span>
+                  <strong id="hostingStatAutoCount">0</strong>
+                </div>
+                <div class="hosting-stat-pill warning" id="hostingStatDraftPill" style="display:none;" title="点击可筛选查看待您人工确认审核的回复草稿">
+                  <span class="stat-icon">📝</span>
+                  <span class="stat-label">待确认草稿</span>
+                  <strong id="hostingStatDraftCount">0</strong>
+                </div>
+                <div class="hosting-stat-pill info" id="hostingStatCooldownPill" style="display:none;" title="当前处于人工接管防撞车静默期的会话">
+                  <span class="stat-icon">🛡️</span>
+                  <span class="stat-label">人工接管中</span>
+                  <strong id="hostingStatCooldownCount">0</strong>
+                </div>
+              </div>
+
+              <div class="hosting-btn-group">
+                <button type="button" class="btn secondary" id="hostingRefreshBtn" title="刷新状态与消息" style="font-size:12px;padding:6px 11px;display:inline-flex;align-items:center;gap:4px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                  <span>刷新</span>
+                </button>
+                <button type="button" class="btn secondary" id="hostingClearAllBtn" style="font-size:12px;padding:6px 11px;color:var(--danger, #ef4444);display:inline-flex;align-items:center;gap:4px;" title="清空全部托管会话与消息历史记录">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                  <span>清空</span>
+                </button>
+                <button type="button" class="btn primary" id="hostingQuickAddBtn" style="font-size:12px;padding:6px 14px;display:inline-flex;align-items:center;gap:5px;">
+                  <span>+ 新建托管规则</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 核心三栏/两栏工作台布局 -->
+          <div class="hosting-workbench-layout" id="hostingWorkbenchLayout">
+            <!-- 左栏：通道账号状态与会话过滤列表 -->
+            <div class="hosting-left-pane">
+              <!-- 通道网关卡片组合 -->
+              <div class="hosting-accounts-box">
+                <!-- 微信通道卡片 -->
+                <div class="hosting-account-item wx-card" id="hostingWxAccountCard">
+                  <div class="account-item-header">
+                    <div class="account-item-title-group">
+                      <div class="account-icon wx">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                      </div>
+                      <div class="account-info">
+                        <div class="account-title-row">
+                          <span class="account-name">微信 (WeChat)</span>
+                          <span class="badge neutral" id="hostingWxBadge">未连接</span>
+                        </div>
+                        <span class="account-sub" id="hostingWxUser">未登录或离线</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 登录/代管模式标识与说明条 -->
+                  <div class="account-mode-bar">
+                    <span class="badge info" id="hostingWxModeBadge" style="font-size:10px;padding:1px 6px;">💻 桌面免扫码代管</span>
+                    <span class="account-mode-desc" id="hostingWxModeDesc" title="直接接管已登录的桌面微信，零封号风险">
+                      接管电脑已登录微信
+                    </span>
+                  </div>
+
+                  <!-- 微信操作按钮组 -->
+                  <div class="account-actions-row">
+                    <button type="button" class="btn text-btn switch-mode-btn" id="hostingWxSwitchModeBtn" title="切换模式：桌面免扫码视觉代管 / 手机扫码登录协议">
+                      🔄 切换扫码登录
+                    </button>
+                    <div style="display:flex;gap:4px;align-items:center;">
+                      <button type="button" class="btn text-btn vision-test-btn" id="hostingWxTestVisionBtn" style="font-size:11px;color:var(--primary, #2563eb);display:none;" title="测试视觉识别桌面微信窗口">
+                        测试识屏
+                      </button>
+                      <button type="button" class="btn primary-subtle action-main-btn" id="hostingWxActionBtn" style="font-size:11px;font-weight:600;padding:3px 10px;">
+                        启动代管
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- QQ 通道卡片 -->
+                <div class="hosting-account-item qq-card" id="hostingQqAccountCard">
+                  <div class="account-item-header">
+                    <div class="account-item-title-group">
+                      <div class="account-icon qq">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                      </div>
+                      <div class="account-info">
+                        <div class="account-title-row">
+                          <span class="account-name">QQ / OneBot</span>
+                          <span class="badge neutral" id="hostingQqBadge">未连接</span>
+                        </div>
+                        <span class="account-sub" id="hostingQqUser">NapCat / OneBot 协议</span>
+                      </div>
+                    </div>
+                    <button type="button" class="btn text-btn" id="hostingQqActionBtn" style="font-size:11px;color:var(--primary);">
+                      服务配置
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 过滤器与搜索栏 -->
+              <div class="hosting-filter-bar">
+                <div class="hosting-filter-chips">
+                  <button type="button" class="hosting-chip-btn active" data-filter="all">全部</button>
+                  <button type="button" class="hosting-chip-btn" data-filter="auto">全自动</button>
+                  <button type="button" class="hosting-chip-btn" data-filter="draft">待审草稿</button>
+                  <button type="button" class="hosting-chip-btn" data-filter="cooldown">人工中</button>
+                </div>
+                <input type="text" id="hostingContactSearchInput" class="hosting-search-input" placeholder="搜索好友备注或群名称..." />
+              </div>
+
+              <!-- 会话列表容器 -->
+              <div class="hosting-contacts-scroll" id="hostingContactsContainer">
+                <!-- 动态渲染联系人列表 -->
+              </div>
+            </div>
+
+            <!-- 中栏：实时会话消息流与人机协同交互 -->
+            <div class="hosting-mid-pane">
+              <!-- 会话标题栏 -->
+              <div class="hosting-chat-header" id="hostingChatHeader">
+                <div class="chat-header-info">
+                  <span class="chat-target-avatar" id="hostingHeaderAvatar">👤</span>
+                  <div>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                      <span class="chat-target-name" id="hostingHeaderName">请选择左侧托管会话</span>
+                      <span class="badge" id="hostingHeaderChannelBadge" style="display:none;">WX</span>
+                      <span class="badge neutral" id="hostingHeaderModeBadge" style="display:none;">全自动</span>
+                    </div>
+                    <span class="chat-target-sub" id="hostingHeaderSub">暂无选中会话</span>
+                  </div>
+                </div>
+                <div class="chat-header-actions" id="hostingHeaderActions" style="display:none;">
+                  <button type="button" class="btn secondary" id="hostingToggleTakeoverBtn" style="font-size:11.5px;padding:4px 10px;">
+                    🙋 人工接管
+                  </button>
+                  <button type="button" class="btn secondary" id="hostingTogglePolicyBtn" style="font-size:11.5px;padding:4px 10px;" title="展开或收起分身人设策略面板">
+                    ⚙️ 分身策略
+                  </button>
+                </div>
+              </div>
+
+              <!-- 消息瀑布流容器 -->
+              <div class="hosting-messages-stream" id="hostingMessagesStream">
+                <!-- 默认空状态：数字分身 3 步新手向导 -->
+                <div class="hosting-empty-guide-wrap">
+                  <div class="hosting-guide-header">
+                    <div style="font-size:36px;margin-bottom:6px;">🤖💬</div>
+                    <h3 style="font-size:16px;font-weight:700;margin:0 0 4px 0;color:var(--text-main);">数字分身智能托管工作台</h3>
+                    <p style="font-size:12.5px;color:var(--text-muted);margin:0;max-width:440px;line-height:1.5;">
+                      统一托管微信与 QQ 对话，由专属智能体根据个性化人设自动代答，人工回复时自动静默避让
+                    </p>
+                  </div>
+                  <div class="hosting-guide-steps">
+                    <div class="hosting-guide-step">
+                      <div class="step-num">1</div>
+                      <div class="step-content">
+                        <div class="step-title">连接聊天通道（双模式可选）</div>
+                        <div class="step-desc">
+                          <strong>桌面视觉免扫码（推荐）</strong>：电脑打开微信即可直接代管，零封号风险；<br/>
+                          <strong>手机扫码登录</strong>：随时在左侧切换为扫码登录，弹出二维码手机授权。
+                        </div>
+                      </div>
+                    </div>
+                    <div class="hosting-guide-step">
+                      <div class="step-num">2</div>
+                      <div class="step-content">
+                        <div class="step-title">添加托管好友或群聊</div>
+                        <div class="step-desc">
+                          点击「+ 新建托管规则」输入好友微信号/备注，指定负责代答的智能体。
+                        </div>
+                      </div>
+                    </div>
+                    <div class="hosting-guide-step">
+                      <div class="step-num">3</div>
+                      <div class="step-content">
+                        <div class="step-title">定制分身个性人设与防撞车保护</div>
+                        <div class="step-desc">
+                          可一键套用「商务严谨」、「幽默风趣」、「技术顾问」预设 Prompt，开启拟人化交互。
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="hosting-guide-actions">
+                    <button type="button" class="btn primary" id="hostingGuideAddBtn" style="font-size:12.5px;padding:7px 18px;">
+                      + 新建托管规则
+                    </button>
+                    <button type="button" class="btn secondary" id="hostingGuideVisionBtn" style="font-size:12.5px;padding:7px 16px;">
+                      👁️ 测试桌面微信识屏
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 冷却与人工接管状态浮条 (当处于冷却期时显示) -->
+              <div class="hosting-cooldown-banner" id="hostingCooldownBanner" style="display:none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span id="hostingCooldownText">当前会话处于人工接管防撞车冷却期，AI 智能体已静默。</span>
+                <button type="button" class="btn text-btn" id="hostingEndCooldownBtn" style="margin-left:auto;font-size:11px;color:var(--primary);font-weight:600;">
+                  提前解除冷却并恢复托管
+                </button>
+              </div>
+
+              <!-- 底部协同与输入控制台 -->
+              <div class="hosting-chat-input-area" id="hostingInputArea" style="display:none;">
+                <!-- 智能回复备选 Chip 建议条 -->
+                <div class="hosting-suggestions-bar" id="hostingSuggestionsBar">
+                  <div class="suggestions-label">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <span>智能建议回复：</span>
+                  </div>
+                  <div class="suggestions-chips-row" id="hostingSuggestionsRow">
+                    <span class="suggestion-loading">正在构思回复建议...</span>
+                  </div>
+                </div>
+
+                <!-- 消息输入与发送区 -->
+                <div class="hosting-input-box">
+                  <textarea id="hostingMessageInput" class="hosting-textarea" placeholder="以本人身份向对方发送消息 (Enter 发送，发送后自动激活防撞车冷却保护)..." rows="2"></textarea>
+                  <div class="hosting-input-bottom">
+                    <span class="hosting-input-hint">💡 手动发送将自动激活 10 分钟防撞车冷却保护，AI 暂不抢话</span>
+                    <button type="button" class="btn primary" id="hostingSendBtn" style="font-size:12px;padding:6px 14px;">
+                      人工发送
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 右栏：专属托管策略与人设抽屉 -->
+            <div class="hosting-right-pane" id="hostingRightPane">
+              <div class="hosting-policy-header">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span style="font-weight:700;font-size:13px;color:var(--text-main);">专属分身人设与策略</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span id="hostingPolicyTargetName" style="font-size:11px;color:var(--text-muted);">未选择</span>
+                  <button type="button" class="btn text-btn" id="hostingClosePolicyBtn" style="font-size:14px;padding:2px 6px;color:var(--text-muted);" title="收起面板">✕</button>
+                </div>
+              </div>
+
+              <div class="hosting-policy-body" id="hostingPolicyBody" style="display:none;">
+                <form id="hostingPolicyForm" style="display:flex;flex-direction:column;gap:12px;">
+                  <div class="form-group">
+                    <label style="font-size:11.5px;font-weight:600;">托管代答模式 (Hosting Mode)</label>
+                    <select id="hpModeSelect">
+                      <option value="auto">🟢 全自动托管代答 (Auto Reply)</option>
+                      <option value="draft">🔵 半托管草稿确认 (Draft Confirmation)</option>
+                      <option value="mention">🟡 仅在 @ 或唤醒词时回复 (Mention Only)</option>
+                      <option value="manual">⚪ 仅记录不代答 (Manual / Monitor)</option>
+                      <option value="off">🔴 彻底关闭此会话托管 (Disabled)</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label style="font-size:11.5px;font-weight:600;">响应智能体角色 (Agent)</label>
+                    <select id="hpAgentSelect"></select>
+                  </div>
+
+                  <div class="form-group">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                      <label style="font-size:11.5px;font-weight:600;margin:0;">专属分身人设与 Prompt (Persona)</label>
+                      <span style="font-size:10px;color:var(--text-muted);">点击套用模板：</span>
+                    </div>
+                    <!-- 快捷人设模板选择器 -->
+                    <div class="persona-templates-row" id="hpPersonaTemplates">
+                      <button type="button" class="persona-template-chip" data-template="business">💼 商务严谨</button>
+                      <button type="button" class="persona-template-chip" data-template="humor">😄 幽默风趣</button>
+                      <button type="button" class="persona-template-chip" data-template="tech">💻 技术顾问</button>
+                      <button type="button" class="persona-template-chip" data-template="polite">⏳ 客套延后</button>
+                    </div>
+                    <textarea id="hpSystemPromptInput" rows="5" placeholder="例如：我是徐克的 AI 助理，说话幽默严谨。遇到需求请先询问预算和周期；遇到借钱请礼貌表示暂无流动资金并通知本人。"></textarea>
+                  </div>
+
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div class="form-group">
+                      <label style="font-size:11px;font-weight:600;">人工冷却时长 (分)</label>
+                      <input type="number" id="hpCooldownInput" min="1" max="120" value="10" />
+                    </div>
+                    <div class="form-group">
+                      <label style="font-size:11px;font-weight:600;">拟人打字延迟 (秒)</label>
+                      <input type="number" id="hpDelayInput" min="0" max="30" step="0.5" value="2.5" />
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label style="font-size:11px;font-weight:600;">绑定工程或知识工作区 (可选)</label>
+                    <input type="text" id="hpWorkspaceInput" placeholder="例如工作区本地目录路径..." />
+                  </div>
+
+                  <button type="submit" class="btn primary" id="hpSaveBtn" style="margin-top:6px;font-size:12px;font-weight:600;">
+                    保存会话策略
+                  </button>
+                  <button type="button" class="btn text-btn" id="hpDeleteBtn" style="font-size:11px;color:var(--danger, #ef4444);margin-top:2px;">
+                    删除此会话规则
+                  </button>
+                </form>
+              </div>
+              <div id="hostingPolicyEmpty" class="hosting-policy-empty" style="text-align:center;color:var(--text-muted);padding:40px 12px;font-size:12px;">
+                从左侧选择一个联系人或群聊，即可定制专属托管模式与个性化人设 Prompt
               </div>
             </div>
           </div>
@@ -994,7 +1347,7 @@
                 </button>
                 <button type="button" class="market-tab-btn" data-market-tab="playground">
                   <span>MCP 调试台</span>
-                  <span class="market-tab-badge" id="tabCountMcpTools" style="background:#e0e7ff;color:#4338ca;">0</span>
+                  <span class="market-tab-badge" id="tabCountMcpTools">0</span>
                 </button>
               </div>
 
@@ -1143,7 +1496,7 @@
 
             <!-- 通道详细调试与配置子切换导航 -->
             <div style="margin-top:16px;margin-bottom:8px;">
-              <h4 style="margin:0 0 8px 0;font-size:13px;font-weight:600;color:#475569;">各平台通道原生配置与调试 (Platform Channel Settings)</h4>
+              <h4 style="margin:0 0 8px 0;font-size:13px;font-weight:600;color:var(--text-secondary);">各平台通道原生配置与调试 (Platform Channel Settings)</h4>
             </div>
             <div class="channel-subtabs-row">
               <button type="button" class="channel-subtab-btn active" data-subtab="wechat" onclick="window.switchSettingsSubTab('wechat')">
@@ -1198,13 +1551,14 @@
               <div class="channel-split-grid">
                 <!-- 左侧配置表单 -->
                 <div class="card" style="padding:16px;">
-                  <div style="font-weight:700;font-size:13.5px;margin-bottom:12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
+                  <div style="font-weight:700;font-size:13.5px;margin-bottom:12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border-default);padding-bottom:8px;">
                     <span>微信通道通信与授权参数</span>
                   </div>
                   <form id="wxConfigForm" style="display:flex;flex-direction:column;gap:12px;">
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">接入模式 (Integration Mode) *</label>
                       <select id="wxModeSelect">
+                        <option value="desktop_vision">🖥️ 桌面视觉代管 (SightFlow 零封号真实好友代答)</option>
                         <option value="ilink_bot">个人微信扫码绑定 iLink Bot</option>
                         <option value="personal">高级：Wechaty Puppet Service</option>
                         <option value="wecom">企业微信自建应用 (CorpID & Secret 模式)</option>
@@ -1342,7 +1696,7 @@
               <div class="channel-split-grid">
                 <!-- 左侧配置表单 -->
                 <div class="card" style="padding:16px;">
-                  <div style="font-weight:700;font-size:13.5px;margin-bottom:12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid #e2e8f0;padding-bottom:8px;">
+                  <div style="font-weight:700;font-size:13.5px;margin-bottom:12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border-default);padding-bottom:8px;">
                     <span>Telegram 机器人通信凭据</span>
                   </div>
                   <form id="tgConfigForm" style="display:flex;flex-direction:column;gap:12px;">
@@ -4102,9 +4456,9 @@
             <div class="form-group" style="margin-bottom:0;">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
                 <label style="font-size:12.5px;font-weight:600;">画面描述词 (Prompt) *</label>
-                <span style="font-size:11px;color:#0284c7;cursor:pointer;" id="clearImagePromptBtn">清空</span>
+                <span style="font-size:11px;color:var(--primary);cursor:pointer;" id="clearImagePromptBtn">清空</span>
               </div>
-              <textarea id="imageGenPromptInput" rows="4" style="width:100%;box-sizing:border-box;border-radius:8px;padding:10px;font-size:13px;border:1px solid #cbd5e1;resize:vertical;" placeholder="详细描述你想要生成的画面内容、主体、光影、构图与细节 (支持中文或英文)..."></textarea>
+              <textarea id="imageGenPromptInput" rows="4" style="width:100%;box-sizing:border-box;border-radius:8px;padding:10px;font-size:13px;border:1px solid var(--border-default);background:var(--bg-main);color:var(--text-main);resize:vertical;" placeholder="详细描述你想要生成的画面内容、主体、光影、构图与细节 (支持中文或英文)..."></textarea>
             </div>
 
             <!-- 预置灵感标签 -->
@@ -4372,7 +4726,7 @@
           </div>
 
           <div style="display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid var(--border-default);margin-top:14px;">
-            <div style="font-size:11.5px;color:#64748b;">
+            <div style="font-size:11.5px;color:var(--text-muted);">
               申请前请确保域名的 DNS A 记录已成功解析至该服务器公网 IP，且服务器 80/443 端口已对外放行。
             </div>
             <div style="display:flex;gap:8px;">
@@ -4441,7 +4795,7 @@
           </div>
 
           <div style="display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid var(--border-default);margin-top:14px;">
-            <div style="font-size:11.5px;color:#64748b;">
+            <div style="font-size:11.5px;color:var(--text-muted);">
               写入后将自动执行 `nginx -t` 语法自检，验证成功后立即无缝平滑重载。
             </div>
             <div style="display:flex;gap:8px;">
@@ -4741,9 +5095,9 @@
                   <input type="checkbox" id="nodeBotAlertOffline" checked />
                   <span>节点心跳失联/离线自动告警</span>
                 </label>
-                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;grid-column:1 / -1;margin-top:4px;padding-top:6px;border-top:1px dashed #cbd5e1;">
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;grid-column:1 / -1;margin-top:4px;padding-top:6px;border-top:1px dashed var(--border-default);">
                   <input type="checkbox" id="nodeBotAutoHealing" checked />
-                  <span style="font-weight:600;color:#0284c7;">开启 AI 智能自愈 (检测到指标异常时自动唤醒绑定的 Agent 排查并推送自愈报告)</span>
+                  <span style="font-weight:600;color:var(--primary);">开启 AI 智能自愈 (检测到指标异常时自动唤醒绑定的 Agent 排查并推送自愈报告)</span>
                 </label>
               </div>
             </div>
@@ -5623,6 +5977,90 @@
           <button type="button" class="btn primary" id="saveGatewayAliasBtn">保存别名规则</button>
         </div>
       </form>
+    </dialog>
+
+    <!-- 弹窗: 新增/配置聊天托管规则 -->
+    <dialog id="hostingAddRuleModal" class="modal modal-md">
+      <form id="hostingAddRuleForm" class="modal-form-wrap" onsubmit="return false;">
+        <div class="modal-header-row">
+          <h2 id="hostingAddRuleModalTitle">新建聊天托管规则</h2>
+          <button type="button" class="btn-close" id="closeHostingAddRuleBtn" aria-label="关闭" title="关闭"></button>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>目标通信平台 (Channel) *</label>
+            <select id="harChannelSelect">
+              <option value="wechat">微信 (WeChat)</option>
+              <option value="qq">QQ / OneBot</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>会话类型 (Type) *</label>
+            <select id="harTypeSelect">
+              <option value="user">👤 好友单聊 (User)</option>
+              <option value="room">👥 群聊 (Room / Group)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>唯一标识 ID (微信号/QQ号/群号) *</label>
+            <input type="text" id="harIdInput" required placeholder="例如：10001 或 wx_user_xxx 或 987654321" />
+          </div>
+          <div class="form-group">
+            <label>显示备注名称 *</label>
+            <input type="text" id="harNameInput" required placeholder="例如：架构讨论群、张三 (核心客户)" />
+          </div>
+          <div class="form-group">
+            <label>托管代答模式 (Hosting Mode)</label>
+            <select id="harModeSelect">
+              <option value="auto">🟢 全自动托管代答</option>
+              <option value="draft">🔵 半托管草稿确认</option>
+              <option value="mention">🟡 仅在 @ 或唤醒词时回复</option>
+              <option value="manual">⚪ 仅记录不自动代答</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>绑定响应智能体</label>
+            <select id="harAgentSelect"></select>
+          </div>
+          <div class="form-group full-width">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+              <label style="margin:0;">专属人设与 Prompt (可选)</label>
+              <span style="font-size:10px;color:var(--text-muted);">点击套用模板：</span>
+            </div>
+            <div class="persona-templates-row" id="harPersonaTemplates" style="margin-bottom:6px;">
+              <button type="button" class="persona-template-chip" data-template="business">💼 商务严谨</button>
+              <button type="button" class="persona-template-chip" data-template="humor">😄 幽默风趣</button>
+              <button type="button" class="persona-template-chip" data-template="tech">💻 技术顾问</button>
+              <button type="button" class="persona-template-chip" data-template="polite">⏳ 客套延后</button>
+            </div>
+            <textarea id="harSystemPromptInput" rows="4" placeholder="例如：我是徐克的 AI 助理，说话风趣幽默，遇到工作请先记录下来转告本人..."></textarea>
+          </div>
+        </div>
+        <div class="modal-actions-row">
+          <button type="button" class="btn secondary" id="cancelHostingAddRuleBtn">取消</button>
+          <button type="button" class="btn primary" id="saveHostingAddRuleBtn">创建托管规则</button>
+        </div>
+      </form>
+    </dialog>
+ 
+    <!-- 桌面微信视觉识别自测弹窗 (SightFlow 引擎) -->
+    <dialog id="visionTestModal" class="modal modal-md" style="max-width:680px;border-radius:14px;overflow:hidden;">
+      <div class="modal-form-wrap" style="display:flex;flex-direction:column;gap:14px;padding:20px;">
+        <div class="modal-header-row" style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border-default);padding-bottom:12px;">
+          <div style="font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;">
+            <span style="font-size:18px;">👁️</span>
+            <span>桌面微信视觉识别自测 (SightFlow 引擎)</span>
+          </div>
+          <button type="button" class="btn text-btn" onclick="$('visionTestModal')?.close()" style="font-size:16px;">✕</button>
+        </div>
+        <div id="visionTestContent" style="display:flex;flex-direction:column;gap:12px;max-height:65vh;overflow-y:auto;">
+          <!-- 识别测试结果动态注入 -->
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px;border-top:1px solid var(--border-default);padding-top:12px;">
+          <button type="button" class="btn secondary" id="visionTestRecheckBtn" style="font-size:12px;padding:6px 14px;">🔄 重新识别截屏</button>
+          <button type="button" class="btn primary" onclick="$('visionTestModal')?.close()" style="font-size:12px;padding:6px 18px;">关闭</button>
+        </div>
+      </div>
     </dialog>
 
     <div id="toastContainer" class="toast-container"></div>

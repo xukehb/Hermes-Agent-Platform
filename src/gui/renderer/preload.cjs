@@ -6,7 +6,9 @@ async function call(channel, ...payload) {
   return result.data;
 }
 
-contextBridge.exposeInMainWorld('hap', {
+const hapApi = {
+  isMac: process.platform === 'darwin',
+  platform: process.platform,
   getUpdateState: () => call('gui:update:getState'),
   checkForUpdates: () => call('gui:update:check'),
   downloadUpdate: () => call('gui:update:download'),
@@ -136,7 +138,17 @@ contextBridge.exposeInMainWorld('hap', {
   getChannelMessages: (contactId, channel) => call('gui:getChannelMessages', { contactId, channel }),
   upsertChannelContact: (input) => call('gui:upsertChannelContact', input),
   removeChannelContact: (id, channel) => call('gui:removeChannelContact', { id, channel }),
+  clearAllChannelContacts: (channel) => call('gui:clearAllChannelContacts', channel),
   sendChannelMessage: (payload) => call('gui:sendChannelMessage', payload),
+  getHostingOverview: () => call('gui:hosting:getOverview'),
+  sendHumanMessage: (payload) => call('gui:hosting:sendHumanMessage', payload),
+  approveDraft: (messageId) => call('gui:hosting:approveDraft', messageId),
+  discardDraft: (messageId) => call('gui:hosting:discardDraft', messageId),
+  generateQuickReplies: (payload) => call('gui:hosting:generateQuickReplies', payload),
+  triggerContactTakeover: (payload) => call('gui:hosting:triggerTakeover', payload),
+  releaseContactTakeover: (payload) => call('gui:hosting:releaseTakeover', payload),
+  testVisionCapture: () => call('gui:hosting:testVisionCapture'),
+  switchHostingPuppet: (puppet) => call('gui:hosting:switchPuppet', puppet),
   listBots: () => call('gui:listBots'),
   upsertBot: (bot) => call('gui:upsertBot', bot),
   deleteBot: (id) => call('gui:deleteBot', id),
@@ -211,4 +223,7 @@ contextBridge.exposeInMainWorld('hap', {
   listGatewayLogs: (limit) => call('gui:listGatewayLogs', limit),
   clearGatewayLogs: () => call('gui:clearGatewayLogs'),
   getGatewayClientPresets: (key) => call('gui:getGatewayClientPresets', key),
-});
+};
+
+contextBridge.exposeInMainWorld('hap', hapApi);
+contextBridge.exposeInMainWorld('electronAPI', hapApi);

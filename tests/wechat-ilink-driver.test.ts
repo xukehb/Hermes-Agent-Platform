@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   NativeIlinkPersonalDriver,
+  IlinkError,
+  IlinkAccountStore,
   type IlinkApiClient,
   type IlinkQrCreation,
   type IlinkQrStatus,
@@ -148,4 +150,41 @@ describe('NativeIlinkPersonalDriver', () => {
     expect(api.sent).toEqual([{ toUserId: 'user-a', contextToken: 'ctx-a', text: 'pong' }]);
     await driver.stop();
   });
+
+  it('automatically recovers and generates new QR code when stored credentials have expired with ILINK_SESSION_EXPIRED', async () => {
+    const root = tempRoot();
+    const store = new IlinkAccountStore(root, 'bot-a');
+    store.saveAccount({
+      botToken: 'expired-token',
+      ilinkBotId: 'bot-a',
+      baseUrl: 'https://ilinkai.weixin.qq.com',
+      updatedAt: new Date().toISOString(),
+    });
+
+    const api = new FakeApi();
+    let notifyCallCount = 0;
+    api.notifyStart = async () => {
+      notifyCallCount += 1;
+      if (notifyCallCount === 1) {
+        throw new IlinkError('ILINK_SESSION_EXPIRED', 'ILINK_SESSION_EXPIRED: 微信登录已过期，请重新扫码');
+      }
+      api.started = true;
+    };
+
+    const driver = new NativeIlinkPersonalDriver({ accountId: 'bot-a', rootDir: root, apiFactory: () => api, pollIntervalMs: 0 });
+    const qrs: string[] = [];
+    const logins: string[] = [];
+    driver.onQrCode = (qr) => qrs.push(qr);
+    driver.onLogin = (user) => logins.push(user.id);
+
+    await driver.start();
+
+    // Verify it detected the expiration, cleared session, generated a new QR code, and logged in
+    expect(qrs).toEqual(['qr-url-1']);
+    await vi.waitFor(() => expect(logins).toEqual(['bot-a']));
+    await vi.waitFor(() => expect(api.started).toBe(true));
+    expect(notifyCallCount).toBe(2);
+    await driver.stop();
+  });
 });
+

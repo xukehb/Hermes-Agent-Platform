@@ -1,6 +1,7 @@
 import { IlinkApiClient } from './api-client.js';
 import { IlinkAccountStore } from './credential-store.js';
 import { IlinkLoginSession, type LoginState } from './login-session.js';
+import { IlinkError } from './types.js';
 import type { ChannelAttachments } from '../../types.js';
 
 export interface NativeIlinkDriverOptions {
@@ -64,14 +65,31 @@ export class NativeIlinkPersonalDriver {
       // Return once the QR is available so the GUI can display it while polling continues.
       void (async () => {
         let account = this.store.loadAccount();
+        if (account !== undefined) {
+          this.api = this.apiFactory({ token: account.botToken, baseUrl: account.baseUrl });
+          try {
+            await this.api.notifyStart(signal);
+          } catch (error: unknown) {
+            const isExpired = (error instanceof IlinkError && error.code === 'ILINK_SESSION_EXPIRED')
+              || (error instanceof Error && error.message.includes('ILINK_SESSION_EXPIRED'));
+            if (isExpired) {
+              this.log('[WeChat iLink] 微信历史登录凭据已过期，自动清除本地会话并重新生成登录二维码...');
+              this.store.clearSession();
+              account = undefined;
+              this.api = this.apiFactory();
+            } else {
+              throw error;
+            }
+          }
+        }
+
         if (account === undefined) {
           await this.login(generation, resolve);
           account = this.store.loadAccount();
-        } else {
-          this.api = this.apiFactory({ token: account.botToken, baseUrl: account.baseUrl });
+          if (!this.running || generation !== this.generation) return;
+          await this.api.notifyStart(signal);
         }
-        if (!this.running || generation !== this.generation) return;
-        await this.api.notifyStart(signal);
+
         if (!this.running || generation !== this.generation) return;
         this.authenticated = true;
         if (account) this.onLogin?.({ id: account.ilinkBotId, name: 'WeChat iLink Bot' });
@@ -84,6 +102,7 @@ export class NativeIlinkPersonalDriver {
         reject(error);
       });
     });
+
   }
 
   async stop(): Promise<void> {
@@ -182,6 +201,16 @@ export class NativeIlinkPersonalDriver {
       } catch (error) {
         if (!this.running || generation !== this.generation) return;
         this.log('[WeChat iLink] getupdates failed: ' + (error instanceof Error ? error.message : String(error)));
+        const isExpired = (error instanceof IlinkError && error.code === 'ILINK_SESSION_EXPIRED')
+          || (error instanceof Error && error.message.includes('ILINK_SESSION_EXPIRED'));
+        if (isExpired) {
+          this.log('[WeChat iLink] 微信登录凭据已在后台失效，已清除本地会话。');
+          this.store.clearSession();
+          this.running = false;
+          this.authenticated = false;
+          this.onLogout?.('ILINK_SESSION_EXPIRED: 微信登录已过期，请重新扫码');
+          return;
+        }
       }
       if (!this.running || generation !== this.generation) return;
       if (this.pollIntervalMs > 0) await new Promise<void>((resolve) => {

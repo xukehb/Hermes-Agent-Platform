@@ -7,6 +7,7 @@ import { dialog, shell } from 'electron';
 import { execa } from 'execa';
 import { AgentOrchestrator } from '../agent/index.js';
 import { WeChatChannel } from '../channels/wechat.js';
+import { isWeChatRunning, captureWeChatWindow, parseWeChatScreen, type WeChatVisionParseResult } from '../channels/wechat/desktop-vision/index.js';
 import { ChannelManager, TelegramChannel, createChannelHost, parseCommand, HELP_TEXT, ChannelContactStore, WeChatContactStore, FeishuChannel, QQChannel, type ChannelContact, type ChannelChatMessage, type ChannelName, type WeChatContact, type WeChatChatMessage } from '../channels/index.js';
 import { BUILTIN_MODELS, BUILTIN_PROVIDERS, ConfigResolver, ConfigWriter, loadConfig, resolveConfigPath, sanitizeModelRef, type ModelPatch, type ProviderPatch, type ResolvedAgent, type ResolvedProvider } from '../config/index.js';
 import { describeError, type Attachment, type ProtocolName, type WireApi } from '../domain/index.js';
@@ -2254,17 +2255,20 @@ export class GuiService {
     await execa('git', ['config', '--global', 'credential.helper', 'store']);
 
     // 清除已有的 github.com 缓存，避免旧失效 Token 残留导致鉴权失败
+    // 使用 -c credential.helper= -c credential.helper=store 确保仅调用标准文本 store，避免 macOS osxkeychain 等系统外部助手在无 TTY 阻塞
     try {
-      await execa('git', ['credential', 'reject'], {
+      await execa('git', ['-c', 'credential.helper=', '-c', 'credential.helper=store', 'credential', 'reject'], {
         input: 'protocol=https\nhost=github.com\n\n',
+        timeout: 4000,
       });
     } catch {
       // 容错继续
     }
 
     const credentialPayload = `protocol=https\nhost=github.com\nusername=${cleanUsername}\npassword=${cleanToken}\n\n`;
-    await execa('git', ['credential', 'approve'], {
+    await execa('git', ['-c', 'credential.helper=', '-c', 'credential.helper=store', 'credential', 'approve'], {
       input: credentialPayload,
+      timeout: 4000,
     });
 
     try {
@@ -3645,6 +3649,9 @@ export class GuiService {
     return {
       enabled: !!wx.enabled,
       mode: wx.mode || 'personal',
+      puppet: wx.personal?.puppet || (wx.mode === 'ilink_bot' ? 'ilink' : 'service'),
+      visionPollIntervalMs: wx.personal?.visionPollIntervalMs,
+      visionModel: wx.personal?.visionModel,
       defaultAgent: defaultAgentId,
       workspace: agentWorkspace,
       running: this.wechatRunning,
@@ -3681,6 +3688,24 @@ export class GuiService {
     if (config.enabled !== undefined) hapConfig.channels.wechat.enabled = config.enabled;
     if (config.mode !== undefined) hapConfig.channels.wechat.mode = config.mode;
     if (config.defaultAgent !== undefined) hapConfig.channels.wechat.default_agent = config.defaultAgent;
+
+    if (config.puppet !== undefined) {
+      if (!hapConfig.channels.wechat.personal) hapConfig.channels.wechat.personal = {};
+      hapConfig.channels.wechat.personal.puppet = config.puppet;
+      if (config.puppet === 'desktop_vision') {
+        hapConfig.channels.wechat.mode = 'personal';
+      } else if (config.puppet === 'ilink') {
+        hapConfig.channels.wechat.mode = 'ilink_bot';
+      }
+    }
+    if (config.visionPollIntervalMs !== undefined) {
+      if (!hapConfig.channels.wechat.personal) hapConfig.channels.wechat.personal = {};
+      hapConfig.channels.wechat.personal.vision_poll_interval_ms = config.visionPollIntervalMs;
+    }
+    if (config.visionModel !== undefined) {
+      if (!hapConfig.channels.wechat.personal) hapConfig.channels.wechat.personal = {};
+      hapConfig.channels.wechat.personal.vision_model = config.visionModel;
+    }
 
     if (config.mode === 'ilink_bot') {
       if (!hapConfig.channels.wechat.personal) hapConfig.channels.wechat.personal = {};
@@ -3729,6 +3754,12 @@ export class GuiService {
 
   async refreshWeChatQr(): Promise<{ ok: boolean; qrCodeText?: string | undefined }> {
     await this.stopWeChatService();
+    try {
+      const wx = this.resolver().resolveChannels().wechat;
+      if (['personal', 'ilink_bot'].includes(wx.mode) && wx.personal.puppet === 'ilink') {
+        new IlinkAccountStore(wx.authDir, wx.personal.ilinkAccountId).clearSession();
+      }
+    } catch {}
     await this.startWeChatService();
     return { ok: true, qrCodeText: (await this.getWeChatConfig()).qrCodeText };
   }
@@ -4145,8 +4176,17 @@ export class GuiService {
     return ChannelContactStore.getInstance().listContacts(channel);
   }
 
-  getChannelMessages(contactId?: string, channel?: ChannelName): ChannelChatMessage[] {
-    return ChannelContactStore.getInstance().getMessages(contactId, channel);
+  getChannelMessages(contactIdOrPayload?: string | { contactId?: string; channel?: ChannelName }, channel?: ChannelName): ChannelChatMessage[] {
+    let cid: string | undefined;
+    let ch: ChannelName | undefined;
+    if (typeof contactIdOrPayload === 'object' && contactIdOrPayload !== null) {
+      cid = contactIdOrPayload.contactId;
+      ch = contactIdOrPayload.channel;
+    } else {
+      cid = contactIdOrPayload;
+      ch = channel;
+    }
+    return ChannelContactStore.getInstance().getMessages(cid, ch);
   }
 
   upsertChannelContact(input: Partial<ChannelContact> & { id: string; channel: ChannelName; name: string }): ChannelContact {
@@ -4155,11 +4195,29 @@ export class GuiService {
     return res;
   }
 
-  removeChannelContact(id: string, channel?: ChannelName): boolean {
-    const res = ChannelContactStore.getInstance().removeContact(id, channel);
-    this.info(`已移除通道 [${channel || 'all'}] 联系人/会话 [${id}]`);
+  removeChannelContact(idOrPayload: string | { id: string; channel?: ChannelName }, channel?: ChannelName): boolean {
+    let cid: string;
+    let ch: ChannelName | undefined;
+    if (typeof idOrPayload === 'object' && idOrPayload !== null) {
+      cid = idOrPayload.id;
+      ch = idOrPayload.channel;
+    } else {
+      cid = idOrPayload;
+      ch = channel;
+    }
+    const res = ChannelContactStore.getInstance().removeContact(cid, ch);
+    this.info(`已移除通道 [${ch || 'all'}] 联系人/会话 [${cid}]`);
     return res;
   }
+
+  clearAllChannelContacts(channel?: ChannelName): { ok: boolean; clearedCount: number } {
+    const store = ChannelContactStore.getInstance();
+    const beforeCount = store.listContacts(channel).length;
+    store.clearAllContacts(channel);
+    this.info(`已清空通道 [${channel || 'all'}] 的所有托管联系人及消息历史（共 ${beforeCount} 个会话）`);
+    return { ok: true, clearedCount: beforeCount };
+  }
+
 
   async sendChannelMessage(payload: {
     channel: ChannelName;
@@ -4215,6 +4273,207 @@ export class GuiService {
       });
       return { ok: false, error: errorMsg };
     }
+  }
+
+  // ==========================================
+  // 聊天托管与数字分身代管中心 (Chat Hosting & Delegation Hub)
+  // ==========================================
+
+  getHostingOverview(): {
+    wechat: {
+      running: boolean;
+      status: string;
+      puppet: 'ilink' | 'service' | 'desktop_vision';
+      user?: string | undefined;
+      qrCode?: string | undefined;
+      error?: string | undefined;
+    };
+    qq: {
+      running: boolean;
+      status: string;
+    };
+    stats: {
+      totalContacts: number;
+      autoReplyCount: number;
+      pendingDrafts: number;
+      activeCooldowned: number;
+    };
+  } {
+    const store = ChannelContactStore.getInstance();
+    const stats = store.getHostingStats();
+    let currentPuppet: 'ilink' | 'service' | 'desktop_vision' = 'ilink';
+    try {
+      currentPuppet = this.resolver().resolveChannels().wechat.personal.puppet;
+    } catch {}
+    return {
+      wechat: {
+        running: this.wechatRunning,
+        status: this.wechatStatus,
+        puppet: currentPuppet,
+        user: this.wechatLoginUser,
+        qrCode: this.wechatQrCode,
+        error: this.wechatError,
+      },
+      qq: {
+        running: this.qqRunning,
+        status: this.qqRunning ? 'connected' : 'idle',
+      },
+      stats,
+    };
+  }
+
+  async testVisionCapture(): Promise<{
+    ok: boolean;
+    isWeChatRunning: boolean;
+    sourceType?: string | undefined;
+    windowName?: string | undefined;
+    dataUrl?: string | undefined;
+    parsed?: WeChatVisionParseResult | undefined;
+    error?: string | undefined;
+  }> {
+    const isRunning = await isWeChatRunning();
+    const cap = await captureWeChatWindow();
+    if (!cap.ok || (!cap.buffer && !cap.base64)) {
+      return {
+        ok: false,
+        isWeChatRunning: isRunning,
+        error: cap.error || '未捕获到有效屏幕图像，请检查系统设置中的屏幕录制权限',
+      };
+    }
+    const input = cap.buffer || cap.base64!;
+    const parsed = await parseWeChatScreen(input);
+    return {
+      ok: true,
+      isWeChatRunning: isRunning,
+      sourceType: cap.sourceType,
+      windowName: cap.windowName,
+      dataUrl: cap.dataUrl,
+      parsed,
+    };
+  }
+
+  async switchWeChatHostingPuppet(puppet: 'ilink' | 'desktop_vision'): Promise<{ ok: boolean; puppet: string }> {
+    await this.saveWeChatConfig({ puppet });
+    if (this.wechatRunning) {
+      await this.stopWeChatService();
+      await this.startWeChatService();
+    }
+    return { ok: true, puppet };
+  }
+
+  async sendHumanMessage(payload: {
+    channel: ChannelName;
+    targetId: string;
+    text: string;
+    cooldownMinutes?: number | undefined;
+  }): Promise<{ ok: boolean; messageRecord?: ChannelChatMessage; error?: string }> {
+    const store = ChannelContactStore.getInstance();
+    const cooldownMins = payload.cooldownMinutes ?? 10;
+
+    // 1. 触发防撞车冷却与人工接管锁定
+    store.triggerHumanTakeover(payload.targetId, payload.channel, cooldownMins);
+
+    // 2. 记录人工发出的出站消息
+    const messageRecord = store.recordOutgoingMessage({
+      channel: payload.channel,
+      contactId: payload.targetId,
+      sender: 'human',
+      text: payload.text,
+    });
+
+    // 3. 真正尝试向下游驱动下发消息
+    try {
+      if (payload.channel === 'wechat' && this.wechatRunning && this.wechatManager) {
+        await this.wechatManager.sendMessage(payload.targetId, payload.text);
+      } else if (payload.channel === 'qq' && this.qqRunning && this.qqChannel) {
+        const rawTarget = payload.targetId.replace(/^qq_group_|^qq_user_/, '');
+        const isGroup = payload.targetId.startsWith('qq_group_');
+        await this.qqChannel.sendQQMessage(rawTarget, payload.text, isGroup);
+      }
+      this.info(`[Hosting] 人工已向 [${payload.channel}:${payload.targetId}] 发送消息，开启 ${cooldownMins} 分钟防撞车冷却`);
+      return { ok: true, messageRecord };
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      this.error(`[Hosting] 实际消息投递下游失败（已记录到本地会话流）：${errorMsg}`);
+      return { ok: true, messageRecord, error: errorMsg };
+    }
+  }
+
+  async approveDraft(messageId: string): Promise<{ ok: boolean; messageRecord?: ChannelChatMessage; error?: string }> {
+    const store = ChannelContactStore.getInstance();
+    const approved = store.approveDraft(messageId);
+    if (!approved) {
+      return { ok: false, error: '未找到对应待审核草稿' };
+    }
+
+    try {
+      if (approved.channel === 'wechat' && this.wechatRunning && this.wechatManager) {
+        await this.wechatManager.sendMessage(approved.contactId, approved.text);
+      } else if (approved.channel === 'qq' && this.qqRunning && this.qqChannel) {
+        const rawTarget = approved.contactId.replace(/^qq_group_|^qq_user_/, '');
+        const isGroup = approved.contactId.startsWith('qq_group_');
+        await this.qqChannel.sendQQMessage(rawTarget, approved.text, isGroup);
+      }
+      this.info(`[Hosting] 草稿 [${messageId}] 已通过审核并成功发送`);
+      return { ok: true, messageRecord: approved };
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      return { ok: true, messageRecord: approved, error: errorMsg };
+    }
+  }
+
+  discardDraft(messageId: string): { ok: boolean } {
+    const res = ChannelContactStore.getInstance().discardDraft(messageId);
+    return { ok: res };
+  }
+
+  triggerContactTakeover(payload: { channel: ChannelName; targetId: string; cooldownMinutes?: number }): ChannelContact | undefined {
+    return ChannelContactStore.getInstance().triggerHumanTakeover(payload.targetId, payload.channel, payload.cooldownMinutes ?? 10);
+  }
+
+  releaseContactTakeover(payload: { channel: ChannelName; targetId: string }): ChannelContact | undefined {
+    return ChannelContactStore.getInstance().releaseHumanTakeover(payload.targetId, payload.channel);
+  }
+
+  async generateQuickReplies(payload: { channel: ChannelName; targetId: string }): Promise<{ ok: boolean; suggestions: string[]; error?: string }> {
+    const store = ChannelContactStore.getInstance();
+    const msgs = store.getMessages(payload.targetId, payload.channel, 6);
+    const contact = store.getContact(payload.targetId, payload.channel);
+
+    if (msgs.length === 0) {
+      return {
+        ok: true,
+        suggestions: ['你好！有什么我可以帮你的吗？', '收到，稍后回复你~', '现在有点忙，稍后电话联系！'],
+      };
+    }
+
+    const conversationHistory = msgs.map((m) => `${m.sender === 'user' ? '对方' : '我'}: ${m.text}`).join('\n');
+    const prompt = `你是一个聊天回复助手。请根据以下我与【${contact?.name || '好友'}】的最近对话历史，生成 3 条简短自然、像真人日常微信打字的备选回复，每条不超过 20 个字。\n请严格以 JSON 数组格式输出，不要有任何多余文字。\n例如: ["好的，我这就看下", "没问题，明天碰头聊", "收到！谢谢提醒"]\n\n对话历史:\n${conversationHistory}`;
+
+    try {
+      const orchestrator = new AgentOrchestrator(this.configPath ? { configPath: this.configPath } : {});
+      const res = await orchestrator.runTask({
+        agentId: contact?.agentId || 'coder',
+        input: prompt,
+        sessionKey: `quick_reply:${payload.channel}:${payload.targetId}`,
+      });
+
+      const text = res.text || '';
+      const match = text.match(/\[[\s\S]*\]/);
+      if (match) {
+        const parsed = JSON.parse(match[0]) as string[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return { ok: true, suggestions: parsed.slice(0, 3) };
+        }
+      }
+    } catch {
+      // 容错降级
+    }
+
+    return {
+      ok: true,
+      suggestions: ['收到，我稍后处理！', '好的，没问题！', '现在有点忙，稍后细聊~'],
+    };
   }
 
   // 保持与现有微信 API 兼容
@@ -4736,6 +4995,10 @@ export class GuiService {
 
   private info(message: string): void {
     this.logs.push({ at: new Date().toISOString(), level: 'info', message });
+  }
+
+  private warn(message: string): void {
+    this.logs.push({ at: new Date().toISOString(), level: 'warn', message });
   }
 
   error(error: unknown): void {

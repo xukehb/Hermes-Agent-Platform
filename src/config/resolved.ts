@@ -189,10 +189,12 @@ export interface ResolvedWeChatOfficialAccount {
 }
 
 export interface ResolvedWeChatPersonal {
-  puppet: 'ilink' | 'service';
+  puppet: 'ilink' | 'service' | 'desktop_vision';
   ilinkAccountId: string;
   puppetServiceTokenEnv: string;
   puppetServiceEndpoint: string | undefined;
+  visionPollIntervalMs: number;
+  visionModel: string | undefined;
 }
 
 /** 解析后的微信通道配置。 */

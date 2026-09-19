@@ -58,7 +58,7 @@ export interface GuiChatInput {
 
 export interface GuiLogEntry {
   at: string;
-  level: 'info' | 'error';
+  level: 'info' | 'warn' | 'error';
   message: string;
 }
 
@@ -238,6 +238,9 @@ export interface GuiTelegramConfig {
 export interface GuiWeChatConfig {
   enabled: boolean;
   mode: 'personal' | 'ilink_bot' | 'wecom' | 'official_account';
+  puppet?: 'ilink' | 'service' | 'desktop_vision' | undefined;
+  visionPollIntervalMs?: number | undefined;
+  visionModel?: string | undefined;
   defaultAgent: string;
   workspace?: string | undefined;
   running: boolean;

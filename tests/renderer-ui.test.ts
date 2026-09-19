@@ -295,6 +295,24 @@ describe('Electron renderer UI contracts', () => {
     expect(i18n).toContain("'wallpaper.cyber'");
     expect(i18n).toContain("'wallpaper.aurora'");
   });
+
+  it('implements macOS frameless titlebar with traffic light avoidance and unified drag header', () => {
+    // 1. Electron BrowserWindow config
+    expect(main).toContain("titleBarStyle: 'hidden'");
+    expect(main).toContain('trafficLightPosition: { x: 16, y: 15 }');
+
+    // 2. Preload API
+    expect(preload).toContain("isMac: process.platform === 'darwin'");
+
+    // 3. HTML structure
+    expect(html).toContain('rail-mac-spacer');
+    expect(html).toContain('platform-mac');
+
+    // 4. CSS drag regions and macOS traffic lights spacer
+    expect(css).toContain('.rail-mac-spacer');
+    expect(css).toContain('-webkit-app-region: drag');
+  });
 });
+
 
 

@@ -27,6 +27,8 @@
       'rail.filterPlaceholder': '过滤项目或会话...',
       'rail.settings': '系统设置',
       'rail.settingsTooltip': '系统设置中心 (Settings)',
+      'rail.chatHosting': '聊天托管',
+      'rail.chatHostingTooltip': '聊天托管与数字分身 (Chat Hosting)',
 
       // 顶部工具栏 (Header)
       'header.sidebarToggle': '折叠/展开侧边栏 (Ctrl/Cmd+B)',
@@ -179,6 +181,7 @@
       'settings.tabServers': '远程服务器集群',
       'settings.tabProjects': '工作区项目库',
       'settings.tabPermissions': '权限与安全策略',
+      'settings.tabGateway': 'API 分发网关',
       'settings.tabSystem': '版本更新与系统日志',
 
       // 任务与历史弹窗 (Modals)
@@ -234,6 +237,8 @@
       'rail.filterPlaceholder': 'Filter projects or conversations...',
       'rail.settings': 'Settings',
       'rail.settingsTooltip': 'System Settings Center',
+      'rail.chatHosting': 'Chat Hosting',
+      'rail.chatHostingTooltip': 'Chat Delegation & Digital Twin (Chat Hosting)',
 
       // 顶部工具栏 (Header)
       'header.sidebarToggle': 'Toggle Sidebar (Ctrl/Cmd+B)',
@@ -386,6 +391,7 @@
       'settings.tabServers': 'Remote Clusters',
       'settings.tabProjects': 'Workspace Projects',
       'settings.tabPermissions': 'Security & Permissions',
+      'settings.tabGateway': 'API Gateway',
       'settings.tabSystem': 'Version Updates & Logs',
 
       // 任务与历史弹窗 (Modals)

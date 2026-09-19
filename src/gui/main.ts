@@ -185,7 +185,19 @@ function registerIpc(): void {
   ipcMain.handle('gui:getChannelMessages', (_event, contactId, channel) => invoke(() => service.getChannelMessages(contactId, channel)));
   ipcMain.handle('gui:upsertChannelContact', (_event, input) => invoke(() => service.upsertChannelContact(input)));
   ipcMain.handle('gui:removeChannelContact', (_event, id, channel) => invoke(() => service.removeChannelContact(id, channel)));
+  ipcMain.handle('gui:clearAllChannelContacts', (_event, channel) => invoke(() => service.clearAllChannelContacts(channel)));
   ipcMain.handle('gui:sendChannelMessage', (_event, payload) => invoke(() => service.sendChannelMessage(payload)));
+
+  // 聊天托管与数字分身代管 IPC 接口
+  ipcMain.handle('gui:hosting:getOverview', () => invoke(() => service.getHostingOverview()));
+  ipcMain.handle('gui:hosting:sendHumanMessage', (_event, payload) => invoke(() => service.sendHumanMessage(payload)));
+  ipcMain.handle('gui:hosting:approveDraft', (_event, messageId) => invoke(() => service.approveDraft(messageId)));
+  ipcMain.handle('gui:hosting:discardDraft', (_event, messageId) => invoke(() => service.discardDraft(messageId)));
+  ipcMain.handle('gui:hosting:generateQuickReplies', (_event, payload) => invoke(() => service.generateQuickReplies(payload)));
+  ipcMain.handle('gui:hosting:triggerTakeover', (_event, payload) => invoke(() => service.triggerContactTakeover(payload)));
+  ipcMain.handle('gui:hosting:releaseTakeover', (_event, payload) => invoke(() => service.releaseContactTakeover(payload)));
+  ipcMain.handle('gui:hosting:testVisionCapture', () => invoke(() => service.testVisionCapture()));
+  ipcMain.handle('gui:hosting:switchPuppet', (_event, puppet) => invoke(() => service.switchWeChatHostingPuppet(puppet)));
   ipcMain.handle('gui:listBots', () => invoke(() => service.listBots()));
   ipcMain.handle('gui:upsertBot', (_event, bot) => invoke(() => service.upsertBot(bot)));
   ipcMain.handle('gui:deleteBot', (_event, id) => invoke(() => service.deleteBot(id)));
@@ -317,6 +329,8 @@ async function createWindow(): Promise<void> {
   // 隐藏老旧的系统原生菜单栏 (File Edit View Window Help)，由桌面端内置导航统一管理
   Menu.setApplicationMenu(null);
 
+  const isMac = process.platform === 'darwin';
+
   const window = new BrowserWindow({
     width: 1320,
     height: 860,
@@ -326,6 +340,12 @@ async function createWindow(): Promise<void> {
     icon: rendererPath('app-icon.png'),
     backgroundColor: '#0b0f19',
     autoHideMenuBar: true,
+    ...(isMac
+      ? {
+          titleBarStyle: 'hidden' as const,
+          trafficLightPosition: { x: 16, y: 15 },
+        }
+      : {}),
     webPreferences: {
       preload: rendererPath('preload.cjs'),
       contextIsolation: true,

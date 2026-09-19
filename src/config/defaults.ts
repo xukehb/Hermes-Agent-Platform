@@ -110,6 +110,8 @@ export const BUILTIN_CHANNELS: ResolvedChannels = {
       ilinkAccountId: 'bot-local',
       puppetServiceTokenEnv: 'WECHATY_PUPPET_SERVICE_TOKEN',
       puppetServiceEndpoint: undefined,
+      visionPollIntervalMs: 3000,
+      visionModel: undefined,
     },
     wecom: undefined,
     officialAccount: undefined,

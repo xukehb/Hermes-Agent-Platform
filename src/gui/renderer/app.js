@@ -8,6 +8,11 @@
 
 const $ = (id) => document.getElementById(id);
 
+if (window.hap?.isMac || (typeof navigator !== 'undefined' && (navigator.userAgent.includes('Mac') || navigator.platform?.includes('Mac')))) {
+  document.documentElement.classList.add('platform-mac');
+  if (document.body) document.body.classList.add('platform-mac');
+}
+
 function esc(val) {
   if (val === undefined || val === null) return '';
   return String(val)
@@ -111,9 +116,9 @@ async function showConfirm({ title = '确认操作', message = '确定要继续�
   } else {
     okBtn.className = 'btn primary';
     if (iconWrap) {
-      iconWrap.style.background = '#eff6ff';
-      iconWrap.style.color = '#0284c7';
-      iconWrap.style.boxShadow = '0 4px 12px rgba(14,165,233,0.15)';
+      iconWrap.style.background = 'var(--primary-subtle)';
+      iconWrap.style.color = 'var(--primary)';
+      iconWrap.style.boxShadow = '0 4px 12px var(--accent-glow)';
     }
   }
 
@@ -6478,7 +6483,13 @@ async function renderWeChatView() {
     const wxConfig = await window.hap.getWeChatConfig();
     if (!wxConfig) return;
 
-    if ($('wxModeSelect')) $('wxModeSelect').value = wxConfig.mode || 'ilink_bot';
+    if ($('wxModeSelect')) {
+      if (wxConfig.puppet === 'desktop_vision') {
+        $('wxModeSelect').value = 'desktop_vision';
+      } else {
+        $('wxModeSelect').value = wxConfig.mode || 'ilink_bot';
+      }
+    }
     if ($('wxAgentSelect')) {
       const agents = state.agents || [];
       if (agents.length > 0) {
@@ -6806,7 +6817,10 @@ $('wxModeSelect')?.addEventListener('change', (e) => {
 
 $('wxConfigForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const mode = $('wxModeSelect')?.value || 'ilink_bot';
+  const selectedMode = $('wxModeSelect')?.value || 'ilink_bot';
+  const isDesktopVision = selectedMode === 'desktop_vision';
+  const mode = isDesktopVision ? 'personal' : selectedMode;
+  const puppet = isDesktopVision ? 'desktop_vision' : (selectedMode === 'ilink_bot' ? 'ilink' : 'service');
   const defaultAgent = $('wxAgentSelect')?.value || 'coder';
   const workspace = $('wxWorkspaceInput')?.value.trim();
   const wecomCorpId = $('wxCorpIdInput')?.value.trim();
@@ -6818,6 +6832,7 @@ $('wxConfigForm')?.addEventListener('submit', async (e) => {
   try {
     await window.hap.saveWeChatConfig({
       mode,
+      puppet,
       defaultAgent,
       workspace,
       wecomCorpId,
@@ -6856,8 +6871,14 @@ $('toggleWxServiceBtn')?.addEventListener('click', async () => {
   } else {
     showToast('正在启动微信服务...', 'info');
     try {
+      const selectedMode = $('wxModeSelect')?.value || 'ilink_bot';
+      const isDesktopVision = selectedMode === 'desktop_vision';
+      const mode = isDesktopVision ? 'personal' : selectedMode;
+      const puppet = isDesktopVision ? 'desktop_vision' : (selectedMode === 'ilink_bot' ? 'ilink' : 'service');
+
       await window.hap.saveWeChatConfig({
-        mode: $('wxModeSelect')?.value || 'ilink_bot',
+        mode,
+        puppet,
         defaultAgent: $('wxAgentSelect')?.value || 'coder',
         workspace: $('wxWorkspaceInput')?.value.trim(),
         wecomCorpId: $('wxCorpIdInput')?.value.trim(),
@@ -6986,6 +7007,7 @@ window.openWeChatScanModal = async () => {
     }
   }
 };
+window.openWeChatQrModal = window.openWeChatScanModal;
 
 $('openWechatModalBtn')?.addEventListener('click', () => {
   window.openWeChatScanModal();
@@ -7417,7 +7439,7 @@ window.testProvider = async (targetId, clickBtn) => {
       }
 
       if (statusChip) {
-        statusChip.innerHTML = '<span style="color:#0284c7;">... 正在与服务商建立握手连接...</span>';
+        statusChip.innerHTML = '<span style="color:var(--primary);">... 正在与服务商建立握手连接...</span>';
       }
       showToast(`正在测试连通性：${id || baseUrl}...`, 'info');
 
@@ -8132,6 +8154,14 @@ function show(view) {
     }
   }
 
+  if (view === 'chatHosting') {
+    const currentActiveView = document.querySelector('.view.active')?.id;
+    if (currentActiveView === 'chatHosting') {
+      show('chat');
+      return;
+    }
+  }
+
   const targetTab = SETTINGS_VIEW_TAB_MAP[view];
   if (targetTab) {
     document.querySelectorAll('.view').forEach((item) => item.classList.toggle('active', item.id === 'settings'));
@@ -8146,6 +8176,10 @@ function show(view) {
 
   document.querySelectorAll('.view').forEach((item) => item.classList.toggle('active', item.id === view));
   document.querySelectorAll('.nav').forEach((item) => item.classList.toggle('active', item.dataset.view === view));
+
+  if (view === 'chatHosting' && typeof window.initChatHostingView === 'function') {
+    window.initChatHostingView();
+  }
 }
 
 document.querySelectorAll('.nav').forEach((btn) => {
@@ -10529,7 +10563,7 @@ $('sendQQTestMsgBtn')?.addEventListener('click', () => {
   const feed = $('qqMsgFeed');
   if (feed) {
     const timeStr = new Date().toLocaleTimeString();
-    feed.innerHTML += `<div style="padding:4px 0;border-bottom:1px dashed #e2e8f0;"><span style="color:#0284c7;font-weight:600;">[测试发送 ${timeStr}]</span> ${esc(msg)}</div>`;
+    feed.innerHTML += `<div style="padding:4px 0;border-bottom:1px dashed var(--border-default);"><span style="color:var(--primary);font-weight:600;">[测试发送 ${timeStr}]</span> ${esc(msg)}</div>`;
     feed.scrollTop = feed.scrollHeight;
   }
   if (input) input.value = '';
@@ -12663,7 +12697,7 @@ function renderMcpSchemaTable(schema) {
     return `
       <tr>
         <td style="font-family:var(--font-mono);font-weight:600;color:var(--text-main);">${esc(key)}</td>
-        <td style="font-family:var(--font-mono);color:#0284c7;">${esc(typeStr)}</td>
+        <td style="font-family:var(--font-mono);color:var(--primary);">${esc(typeStr)}</td>
         <td>
           <span class="badge ${isReq ? 'danger' : 'neutral'}" style="font-size:10.5px;">${isReq ? '必填' : '可选'}</span>
         </td>
@@ -16074,6 +16108,1069 @@ function initGatewayEvents() {
   });
 }
 
+// ==========================================================================
+// 聊天托管与数字分身工作台 (Chat Hosting Hub Controller)
+// ==========================================================================
+
+const HOSTING_PERSONA_TEMPLATES = {
+  business: '我是本人的商务分身助手。请始终保持礼貌、专业、严谨的态度。遇到商业合作或项目咨询，请先询问对方具体需求、预算范围与期望周期，并表示会记录后第一时间转达本人安排正式对接。禁止擅自代表本人承诺未确认的技术指标或价格。',
+  humor: '我是本人的日常数字分身。说话风格轻松诙谐、亲切接地气。遇到朋友打招呼、日常闲聊或问候，正常轻松回应；遇到借钱或借号等敏感事项，请幽默回应“囊中羞涩，流动资金已全部上交系统”并礼貌转达本人；遇到正经工作咨询，记录要点并承诺提醒本人跟进。',
+  tech: '我是本人的技术分身架构师。解答技术与架构问题时追求清晰、准确、有条理，多使用分点说明和核心代码/逻辑示意。对于复杂方案，先梳理业务边界再给出最优解。不确定的需求先向对方确认上下文，不妄下定论。',
+  polite: '你好！本人当前正在进行闭门深度研发/正在开会，稍后会亲自查看并回复你的消息。如果是十万火急的紧急事务，请直接拨打本人手机电话！非常感谢你的理解与支持~',
+};
+
+let hostingContactsList = [];
+let activeHostingContact = null;
+let currentHostingFilter = 'all';
+let hostingCooldownTimer = null;
+
+async function initChatHostingView() {
+  await Promise.all([
+    renderHostingOverview(),
+    renderHostingContacts(),
+  ]);
+  populateHostingAgentSelects();
+}
+window.initChatHostingView = initChatHostingView;
+
+async function renderHostingOverview() {
+  try {
+    const overview = await window.hap.getHostingOverview?.();
+    if (!overview) return;
+
+    // 统计数据
+    const statAutoCount = $('hostingStatAutoCount');
+    if (statAutoCount) statAutoCount.textContent = overview.stats?.autoReplyCount ?? 0;
+
+    const draftPill = $('hostingStatDraftPill');
+    const draftCount = $('hostingStatDraftCount');
+    const pendingDrafts = overview.stats?.pendingDrafts ?? 0;
+    if (draftPill && draftCount) {
+      draftCount.textContent = pendingDrafts;
+      draftPill.style.display = pendingDrafts > 0 ? 'inline-flex' : 'none';
+    }
+
+    const cooldownPill = $('hostingStatCooldownPill');
+    const cooldownCount = $('hostingStatCooldownCount');
+    const cooldowned = overview.stats?.activeCooldowned ?? 0;
+    if (cooldownPill && cooldownCount) {
+      cooldownCount.textContent = cooldowned;
+      cooldownPill.style.display = cooldowned > 0 ? 'inline-flex' : 'none';
+    }
+
+    const pendingBadge = $('hostingPendingBadge');
+    if (pendingBadge) {
+      pendingBadge.textContent = pendingDrafts;
+      pendingBadge.style.display = pendingDrafts > 0 ? 'inline-block' : 'none';
+    }
+
+    // 微信账号状态与托管模式
+    const wxBadge = $('hostingWxBadge');
+    const wxUser = $('hostingWxUser');
+    const wxActionBtn = $('hostingWxActionBtn');
+    const wxModeBadge = $('hostingWxModeBadge');
+    const wxModeDesc = $('hostingWxModeDesc');
+    const wxTestVisionBtn = $('hostingWxTestVisionBtn');
+    const wxSwitchModeBtn = $('hostingWxSwitchModeBtn');
+
+    const currentPuppet = overview.wechat?.puppet || 'desktop_vision';
+    const isVision = currentPuppet === 'desktop_vision';
+
+    if (wxModeBadge) {
+      wxModeBadge.className = isVision ? 'badge info' : 'badge neutral';
+      wxModeBadge.textContent = isVision ? '💻 桌面免扫码代管' : '📱 手机扫码登录';
+    }
+
+    if (wxModeDesc) {
+      wxModeDesc.textContent = isVision ? '接管电脑已登录微信 (免封号)' : '手机扫码授权登录后台 Bot';
+      wxModeDesc.title = isVision ? '无需扫码，直接接管本地已运行的微信客户端，大模型多模态识屏，零封号风险' : '使用手机微信扫描二维码，一键绑定并开启智能体微信双向交互';
+    }
+
+    if (wxTestVisionBtn) {
+      wxTestVisionBtn.style.display = isVision ? 'inline-block' : 'none';
+      wxTestVisionBtn.onclick = () => window.openVisionTestModal?.();
+    }
+
+    if (wxSwitchModeBtn) {
+      wxSwitchModeBtn.textContent = isVision ? '🔄 切换扫码登录' : '🔄 切换桌面免扫码';
+      wxSwitchModeBtn.title = isVision ? '点击切换为手机微信扫码登录模式' : '点击切换为桌面微信免扫码视觉代管模式（防封号）';
+      wxSwitchModeBtn.onclick = async () => {
+        const nextPuppet = isVision ? 'ilink' : 'desktop_vision';
+        const nextName = nextPuppet === 'desktop_vision' ? 'SightFlow 桌面免扫码代管' : 'iLink 手机扫码登录 Bot';
+        if (!confirm(`确定切换微信模式为【${nextName}】吗？`)) return;
+        try {
+          const api = window.hap || window.electronAPI;
+          await api.switchHostingPuppet(nextPuppet);
+          showToast(`已切换至：${nextName}`, 'success');
+          await renderHostingOverview();
+        } catch (e) {
+          showToast('切换失败: ' + e.message, 'error');
+        }
+      };
+    }
+
+    if (wxBadge && wxUser && wxActionBtn) {
+      if (overview.wechat?.running) {
+        if (overview.wechat.status === 'connected') {
+          wxBadge.className = 'badge success';
+          wxBadge.textContent = isVision ? '代管中' : '已连接';
+          wxUser.textContent = isVision
+            ? (overview.wechat.user || '桌面微信代管中 (免封号监听好友消息)')
+            : (overview.wechat.user ? `登录用户：${overview.wechat.user}` : '已完成连接');
+          wxActionBtn.textContent = '停止代管';
+          wxActionBtn.className = 'btn secondary action-main-btn';
+          wxActionBtn.onclick = async () => {
+            if (!confirm('确定停止当前微信代管服务吗？')) return;
+            try {
+              await window.hap.stopWeChatService();
+              showToast('微信代管已停止', 'info');
+              await renderHostingOverview();
+            } catch (e) {
+              showToast('停止微信失败: ' + e.message, 'error');
+            }
+          };
+        } else if (overview.wechat.status === 'waiting_qr') {
+          wxBadge.className = 'badge warning';
+          wxBadge.textContent = '等待扫码';
+          wxUser.textContent = '请扫码完成微信验证';
+          wxActionBtn.textContent = '弹出二维码';
+          wxActionBtn.className = 'btn primary action-main-btn';
+          wxActionBtn.onclick = () => window.openWeChatScanModal?.();
+        } else {
+          wxBadge.className = 'badge neutral';
+          wxBadge.textContent = '启动中';
+          wxUser.textContent = isVision ? '正在连接桌面微信...' : '连接握手中...';
+          wxActionBtn.textContent = '连接详情';
+          wxActionBtn.className = 'btn secondary action-main-btn';
+          wxActionBtn.onclick = () => show('wechat');
+        }
+      } else {
+        wxBadge.className = 'badge neutral';
+        wxBadge.textContent = '未启动';
+        wxUser.textContent = isVision ? '就绪，点击启动代管' : '点击启动微信扫码';
+        wxActionBtn.textContent = isVision ? '启动代管' : '📲 扫码登录';
+        wxActionBtn.className = 'btn primary action-main-btn';
+        wxActionBtn.onclick = async () => {
+          try {
+            if (isVision) {
+              showToast('正在启动微信桌面视觉代管 (SightFlow)...', 'info');
+              await window.hap.startWeChatService();
+              await renderHostingOverview();
+              showToast('桌面微信视觉代管已就绪！', 'success');
+            } else {
+              await window.openWeChatScanModal?.();
+              await renderHostingOverview();
+            }
+          } catch (e) {
+            showToast('启动微信失败: ' + e.message, 'error');
+          }
+        };
+      }
+    }
+
+    // QQ 账号状态
+    const qqBadge = $('hostingQqBadge');
+    const qqUser = $('hostingQqUser');
+    const qqActionBtn = $('hostingQqActionBtn');
+    if (qqBadge && qqUser && qqActionBtn) {
+      if (overview.qq?.running) {
+        qqBadge.className = 'badge success';
+        qqBadge.textContent = '已连接';
+        qqUser.textContent = 'OneBot 实时监听中';
+      } else {
+        qqBadge.className = 'badge neutral';
+        qqBadge.textContent = '未连接';
+        qqUser.textContent = 'NapCat/OneBot 待配置';
+      }
+      qqActionBtn.onclick = () => show('qq');
+    }
+  } catch (err) {
+    console.error('获取聊天托管概览失败:', err);
+  }
+}
+
+window.openVisionTestModal = async () => {
+  const modal = $('visionTestModal');
+  const container = $('visionTestContent');
+  if (!modal || !container) return;
+
+  if (modal.open) modal.close();
+  modal.showModal();
+
+  const runTest = async () => {
+    container.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:30px 20px;text-align:center;">
+        <div class="thinking-pulse-dot" style="width:28px;height:28px;background:var(--primary, #2563eb);"></div>
+        <div style="font-weight:600;font-size:14px;color:var(--text-main);">正在捕获桌面微信窗口并调用多模态 VLM 分析...</div>
+        <div style="font-size:12px;color:var(--text-muted);">正在检查微信客户端状态、截取对话画面并由视觉大模型提取消息...</div>
+      </div>
+    `;
+
+    try {
+      const api = window.hap || window.electronAPI;
+      const res = await api.testVisionCapture();
+      if (!res.ok) {
+        container.innerHTML = `
+          <div style="padding:16px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;color:#991b1b;display:flex;flex-direction:column;gap:8px;">
+            <div style="font-weight:700;display:flex;align-items:center;gap:6px;">
+              <span>⚠️ 识屏失败</span>
+            </div>
+            <div style="font-size:12.5px;line-height:1.5;">${esc(res.error || '未知错误')}</div>
+            <div style="font-size:11.5px;color:#b91c1c;margin-top:4px;">
+              提示：${res.isWeChatRunning ? '检测到微信客户端已在运行，请确保微信窗口未被完全最小化，并检查 macOS 系统设置 -> 隐私与安全性 -> 屏幕录制权限。' : '未检测到正在运行的微信客户端，请先打开桌面端微信并登录。'}
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const p = res.parsed;
+      const cap = res.captured;
+      const lastMsg = p?.lastMessage;
+
+      let resultBadge = p?.hasWeChatWindow
+        ? '<span class="badge success">已检测到微信界面</span>'
+        : '<span class="badge warning">未定位到微信聊天框</span>';
+
+      let replyBadge = p?.needsReply
+        ? '<span class="badge success" style="background:#22c55e;color:#fff;">需智能体回复 (对方发来)</span>'
+        : '<span class="badge neutral">无需回复 (我方已发或未有新内容)</span>';
+
+      let imgHtml = '';
+      if (res.dataUrl) {
+        imgHtml = `
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
+            <div style="font-size:11.5px;font-weight:600;color:var(--text-muted);">截获画面预览 (Source: ${esc(res.sourceType || 'screencapture')})：</div>
+            <div style="border:1px solid var(--border-default);border-radius:8px;overflow:hidden;max-height:220px;background:#000;">
+              <img src="${res.dataUrl}" style="width:100%;height:auto;object-fit:contain;display:block;" />
+            </div>
+          </div>
+        `;
+      }
+
+      container.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg-subtle);padding:10px 14px;border-radius:10px;border:1px solid var(--border-default);">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-weight:600;font-size:13px;">微信客户端状态：</span>
+              <span class="badge ${res.isWeChatRunning ? 'success' : 'danger'}">${res.isWeChatRunning ? '客户端运行中' : '客户端未运行'}</span>
+            </div>
+            <div>${resultBadge}</div>
+          </div>
+
+          <div style="padding:14px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div style="font-size:12.5px;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:6px;">
+                <span>💬 活跃聊天对象：</span>
+                <span style="color:var(--primary, #2563eb);">${esc(p?.chatTarget || '（未锁定具体会话）')}</span>
+                ${p?.isGroup ? '<span class="badge info" style="font-size:10px;">群聊</span>' : ''}
+              </div>
+              <div>${replyBadge}</div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:4px;background:var(--bg-subtle);padding:10px 12px;border-radius:8px;">
+              <div style="font-size:11.5px;color:var(--text-muted);display:flex;justify-content:space-between;">
+                <span>最新消息发送者：<strong style="color:var(--text-main);">${esc(lastMsg?.sender || '未知')}</strong></span>
+                <span>方向：<strong style="color:${lastMsg?.isFromMe ? '#16a34a' : '#2563eb'};">${lastMsg?.isFromMe ? '我方发送 (右侧绿色)' : '对方发送 (左侧白色)'}</strong></span>
+              </div>
+              <div style="font-size:13px;color:var(--text-main);margin-top:4px;line-height:1.5;background:var(--bg-surface);padding:8px 10px;border-radius:6px;border:1px solid var(--border-default);">
+                ${esc(lastMsg?.text || '（未识别到文本消息）')}
+              </div>
+            </div>
+
+            ${p?.summary ? `<div style="font-size:12px;color:var(--text-muted);">💡 <strong>AI 场景分析：</strong>${esc(p.summary)}</div>` : ''}
+          </div>
+
+          ${imgHtml}
+        </div>
+      `;
+    } catch (err) {
+      container.innerHTML = `
+        <div style="padding:16px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;color:#991b1b;">
+          测试识屏异常: ${esc(err.message)}
+        </div>
+      `;
+    }
+  };
+
+  const recheckBtn = $('visionTestRecheckBtn');
+  if (recheckBtn) recheckBtn.onclick = runTest;
+  await runTest();
+};
+
+async function renderHostingContacts() {
+  const container = $('hostingContactsContainer');
+  if (!container) return;
+
+  try {
+    const list = (await window.hap.listChannelContacts?.()) || [];
+    hostingContactsList = list;
+
+    let filtered = list;
+    const now = Date.now();
+
+    if (currentHostingFilter === 'auto') {
+      filtered = filtered.filter((c) => c.hostingMode === 'auto' || (c.autoReply && !c.hostingMode));
+    } else if (currentHostingFilter === 'draft') {
+      filtered = filtered.filter((c) => c.hostingMode === 'draft');
+    } else if (currentHostingFilter === 'cooldown') {
+      filtered = filtered.filter((c) => (c.cooldownUntil && c.cooldownUntil > now) || c.humanTakenOver);
+    }
+
+    const query = ($('hostingContactSearchInput')?.value || '').trim().toLowerCase();
+    if (query) {
+      filtered = filtered.filter((c) => c.name.toLowerCase().includes(query) || c.id.toLowerCase().includes(query));
+    }
+
+    if (filtered.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center;padding:30px 10px;color:var(--text-muted);font-size:11.5px;">
+          暂无匹配的托管会话规则<br/>
+          <button type="button" class="btn text-btn" id="hostingListEmptyAddBtn" style="font-size:11.5px;color:var(--primary);margin-top:6px;">+ 新建托管规则</button>
+        </div>
+      `;
+      $('hostingListEmptyAddBtn')?.addEventListener('click', () => openHostingAddRuleModal());
+      if (activeHostingContact) {
+        resetHostingDetailPanes();
+      }
+      return;
+    }
+
+    container.innerHTML = filtered.map((c) => {
+      const isActive = activeHostingContact && activeHostingContact.id === c.id && activeHostingContact.channel === c.channel;
+      const isRoom = c.isRoom || c.type === 'room';
+      const avatarIcon = isRoom ? '👥' : '👤';
+      const channelLabel = c.channel === 'wechat' ? 'WX' : (c.channel === 'qq' ? 'QQ' : c.channel);
+      const channelBadgeClass = c.channel === 'wechat' ? 'success' : (c.channel === 'qq' ? 'warning' : 'neutral');
+
+      const inCooldown = (c.cooldownUntil && c.cooldownUntil > now) || c.humanTakenOver;
+      let statusBadge = '';
+      if (inCooldown) {
+        statusBadge = `<span class="badge warning" style="font-size:9.5px;padding:1px 4px;">人工中</span>`;
+      } else if (c.hostingMode === 'draft') {
+        statusBadge = `<span class="badge" style="font-size:9.5px;padding:1px 4px;background:#e0f2fe;color:#0284c7;">草稿</span>`;
+      } else if (c.hostingMode === 'off' || c.autoReply === false) {
+        statusBadge = `<span class="badge neutral" style="font-size:9.5px;padding:1px 4px;">关闭</span>`;
+      } else {
+        statusBadge = `<span class="badge success" style="font-size:9.5px;padding:1px 4px;">全自动</span>`;
+      }
+
+      const lastMsgText = c.lastMessage ? esc(c.lastMessage) : '暂无消息记录';
+      const timeStr = c.lastTime ? esc(c.lastTime) : '';
+
+      return `
+        <div class="hosting-contact-card ${isActive ? 'active' : ''}" data-id="${esc(c.id)}" data-channel="${esc(c.channel)}">
+          <div class="hcc-avatar">${avatarIcon}</div>
+          <div class="hcc-body">
+            <div class="hcc-top">
+              <span class="hcc-name" title="${esc(c.name)}">${esc(c.name)}</span>
+              <span class="hcc-time">${timeStr}</span>
+            </div>
+            <div class="hcc-bottom">
+              <span class="hcc-preview">${lastMsgText}</span>
+              <div class="hcc-badge-row">
+                <span class="badge ${channelBadgeClass}" style="font-size:9px;padding:0 3px;">${channelLabel}</span>
+                ${statusBadge}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.querySelectorAll('.hosting-contact-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        const id = card.getAttribute('data-id');
+        const channel = card.getAttribute('data-channel');
+        const contact = hostingContactsList.find((item) => item.id === id && item.channel === channel);
+        if (contact) selectHostingContact(contact);
+      });
+    });
+
+    if (activeHostingContact) {
+      const refreshed = list.find((c) => c.id === activeHostingContact.id && c.channel === activeHostingContact.channel);
+      if (refreshed) activeHostingContact = refreshed;
+    }
+  } catch (err) {
+    console.error('加载托管联系人失败:', err);
+  }
+}
+
+function renderHostingGuideMarkup() {
+  return `
+    <div class="hosting-empty-guide-wrap">
+      <div class="hosting-guide-header">
+        <div style="font-size:36px;margin-bottom:6px;">🤖💬</div>
+        <h3 style="font-size:16px;font-weight:700;margin:0 0 4px 0;color:var(--text-main);">数字分身智能托管工作台</h3>
+        <p style="font-size:12.5px;color:var(--text-muted);margin:0;max-width:440px;line-height:1.5;">
+          统一托管微信与 QQ 对话，由专属智能体根据个性化人设自动代答，人工回复时自动静默避让
+        </p>
+      </div>
+      <div class="hosting-guide-steps">
+        <div class="hosting-guide-step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <div class="step-title">连接聊天通道（双模式可选）</div>
+            <div class="step-desc">
+              <strong>桌面视觉免扫码（推荐）</strong>：电脑打开微信即可直接代管，零封号风险；<br/>
+              <strong>手机扫码登录</strong>：随时在左侧切换为扫码登录，弹出二维码手机授权。
+            </div>
+          </div>
+        </div>
+        <div class="hosting-guide-step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <div class="step-title">添加托管好友或群聊</div>
+            <div class="step-desc">
+              点击「+ 新建托管规则」输入好友微信号/备注，指定负责代答的智能体。
+            </div>
+          </div>
+        </div>
+        <div class="hosting-guide-step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <div class="step-title">定制分身个性人设与防撞车保护</div>
+            <div class="step-desc">
+              可一键套用「商务严谨」、「幽默风趣」、「技术顾问」预设 Prompt，开启拟人化交互。
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="hosting-guide-actions">
+        <button type="button" class="btn primary" id="hostingGuideAddBtn" style="font-size:12.5px;padding:7px 18px;">
+          + 新建托管规则
+        </button>
+        <button type="button" class="btn secondary" id="hostingGuideVisionBtn" style="font-size:12.5px;padding:7px 16px;">
+          👁️ 测试桌面微信识屏
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function resetHostingDetailPanes() {
+  activeHostingContact = null;
+  if (hostingCooldownTimer) {
+    clearInterval(hostingCooldownTimer);
+    hostingCooldownTimer = null;
+  }
+  const avatar = $('hostingHeaderAvatar');
+  const name = $('hostingHeaderName');
+  const sub = $('hostingHeaderSub');
+  if (avatar) avatar.textContent = '👤';
+  if (name) name.textContent = '请选择左侧托管会话';
+  if (sub) sub.textContent = '暂无选中会话';
+  $('hostingHeaderChannelBadge')?.setAttribute('style', 'display:none;');
+  $('hostingHeaderModeBadge')?.setAttribute('style', 'display:none;');
+  $('hostingHeaderActions')?.setAttribute('style', 'display:none;');
+  $('hostingInputArea')?.setAttribute('style', 'display:none;');
+  $('hostingCooldownBanner')?.setAttribute('style', 'display:none;');
+  const stream = $('hostingMessagesStream');
+  if (stream) {
+    stream.innerHTML = renderHostingGuideMarkup();
+  }
+  $('hostingPolicyBody')?.setAttribute('style', 'display:none;');
+  $('hostingPolicyEmpty')?.setAttribute('style', 'display:block;');
+}
+
+async function selectHostingContact(contact) {
+  activeHostingContact = contact;
+
+  document.querySelectorAll('.hosting-contact-card').forEach((c) => {
+    const isThis = c.getAttribute('data-id') === contact.id && c.getAttribute('data-channel') === contact.channel;
+    c.classList.toggle('active', isThis);
+  });
+
+  const avatar = $('hostingHeaderAvatar');
+  const name = $('hostingHeaderName');
+  const sub = $('hostingHeaderSub');
+  const chanBadge = $('hostingHeaderChannelBadge');
+  const modeBadge = $('hostingHeaderModeBadge');
+  const actions = $('hostingHeaderActions');
+  const inputArea = $('hostingInputArea');
+
+  if (avatar) avatar.textContent = contact.isRoom ? '👥' : '👤';
+  if (name) name.textContent = contact.name;
+  if (sub) sub.textContent = `ID: ${contact.id} · 响应智能体: ${contact.agentId || '默认'}`;
+
+  if (chanBadge) {
+    chanBadge.style.display = 'inline-block';
+    chanBadge.className = `badge ${contact.channel === 'wechat' ? 'success' : 'warning'}`;
+    chanBadge.textContent = contact.channel === 'wechat' ? '微信' : 'QQ';
+  }
+
+  const now = Date.now();
+  const inCooldown = (contact.cooldownUntil && contact.cooldownUntil > now) || contact.humanTakenOver;
+
+  if (modeBadge) {
+    modeBadge.style.display = 'inline-block';
+    if (inCooldown) {
+      modeBadge.className = 'badge warning';
+      modeBadge.textContent = '人工接管中';
+    } else if (contact.hostingMode === 'draft') {
+      modeBadge.className = 'badge';
+      modeBadge.style.background = '#e0f2fe';
+      modeBadge.style.color = '#0284c7';
+      modeBadge.textContent = '半托管草稿';
+    } else if (contact.hostingMode === 'off') {
+      modeBadge.className = 'badge neutral';
+      modeBadge.textContent = '已停用';
+    } else {
+      modeBadge.className = 'badge success';
+      modeBadge.textContent = '全自动托管';
+    }
+  }
+
+  if (actions) actions.style.display = 'flex';
+  if (inputArea) inputArea.style.display = 'flex';
+
+  updateHostingTakeoverButton(inCooldown);
+  updateHostingCooldownBanner(contact);
+
+  await renderHostingMessages(contact);
+  loadHostingSuggestions(contact);
+  populateHostingPolicyForm(contact);
+}
+
+function updateHostingTakeoverButton(inCooldown) {
+  const btn = $('hostingToggleTakeoverBtn');
+  if (!btn) return;
+  if (inCooldown) {
+    btn.innerHTML = '⚡ 恢复 AI 托管';
+    btn.className = 'btn primary';
+  } else {
+    btn.innerHTML = '🙋 人工接管';
+    btn.className = 'btn secondary';
+  }
+}
+
+function updateHostingCooldownBanner(contact) {
+  const banner = $('hostingCooldownBanner');
+  const text = $('hostingCooldownText');
+  if (!banner || !text) return;
+
+  if (hostingCooldownTimer) {
+    clearInterval(hostingCooldownTimer);
+    hostingCooldownTimer = null;
+  }
+
+  const now = Date.now();
+  if ((contact.cooldownUntil && contact.cooldownUntil > now) || contact.humanTakenOver) {
+    banner.style.display = 'flex';
+    const updateCountdown = () => {
+      const currentNow = Date.now();
+      if (contact.cooldownUntil && contact.cooldownUntil > currentNow) {
+        const remainingSec = Math.ceil((contact.cooldownUntil - currentNow) / 1000);
+        const mins = Math.floor(remainingSec / 60);
+        const secs = remainingSec % 60;
+        text.textContent = `当前处于人工防撞车保护期（剩余 ${mins}分${secs}秒），AI 暂不插话。`;
+      } else {
+        text.textContent = '当前处于人工接管锁定状态，AI 暂不插话。';
+      }
+    };
+    updateCountdown();
+    hostingCooldownTimer = setInterval(updateCountdown, 1000);
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+async function renderHostingMessages(contact) {
+  const stream = $('hostingMessagesStream');
+  if (!stream) return;
+
+  try {
+    const messages = (await window.hap.getChannelMessages?.(contact.id, contact.channel)) || [];
+    if (messages.length === 0) {
+      stream.innerHTML = `
+        <div style="margin:auto;text-align:center;color:var(--text-muted);font-size:12px;padding:40px 10px;">
+          暂无本地历史消息记录<br/>
+          对方发送新消息或您在下方人工输入发送后将在此实时呈现
+        </div>
+      `;
+      return;
+    }
+
+    stream.innerHTML = messages.map((m) => {
+      const isInbound = m.sender === 'user';
+      const isAgent = m.sender === 'agent';
+      const isHuman = m.sender === 'human';
+
+      if (m.isDraft) {
+        return `
+          <div class="hmsg-row outbound" style="max-width:90%;">
+            <div class="hmsg-meta">
+              <span>🤖 AI 智能体 (${esc(m.agentId || 'coder')})</span>
+              <span>· 待确认草稿</span>
+              <span>${esc(m.time)}</span>
+            </div>
+            <div class="hmsg-draft-card">
+              <div class="draft-card-header">
+                <span>📝 半托管自动生成回复草稿 (未下发)</span>
+                <span>耗时 ${((m.elapsedMs || 1000) / 1000).toFixed(1)}s</span>
+              </div>
+              <div class="draft-card-body">${esc(m.text)}</div>
+              <div class="draft-card-actions">
+                <button type="button" class="btn text-btn discard-draft-btn" data-id="${esc(m.id)}" style="font-size:11.5px;color:var(--danger, #ef4444);">
+                  舍弃草稿
+                </button>
+                <button type="button" class="btn primary approve-draft-btn" data-id="${esc(m.id)}" style="font-size:11.5px;padding:4px 12px;">
+                  🚀 确认并立即发送
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      let metaText = '';
+      if (isInbound) {
+        metaText = `${esc(m.fromName || contact.name)} · ${esc(m.time)}`;
+      } else if (isHuman) {
+        metaText = `我 (人工发送) · ${esc(m.time)}`;
+      } else {
+        const elapsedText = m.elapsedMs ? ` · 耗时 ${(m.elapsedMs / 1000).toFixed(1)}s` : '';
+        metaText = `🤖 AI 代答 · ${esc(m.agentId || 'coder')}${elapsedText} · ${esc(m.time)}`;
+      }
+
+      return `
+        <div class="hmsg-row ${isInbound ? 'inbound' : 'outbound'} ${isAgent ? 'agent' : ''} ${isHuman ? 'human' : ''}">
+          <div class="hmsg-meta">${metaText}</div>
+          <div class="hmsg-bubble">${esc(m.text)}</div>
+        </div>
+      `;
+    }).join('');
+
+    stream.querySelectorAll('.approve-draft-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        try {
+          btn.disabled = true;
+          btn.textContent = '发送中...';
+          const res = await window.hap.approveDraft?.(id);
+          if (res?.ok) {
+            showToast('草稿已通过并成功发送！', 'success');
+            await renderHostingMessages(activeHostingContact);
+            await renderHostingOverview();
+          } else {
+            showToast('发送草稿失败: ' + (res?.error || '未知错误'), 'error');
+          }
+        } catch (e) {
+          showToast('发送失败: ' + e.message, 'error');
+        }
+      });
+    });
+
+    stream.querySelectorAll('.discard-draft-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        if (!confirm('确定要舍弃该回复草稿吗？')) return;
+        try {
+          await window.hap.discardDraft?.(id);
+          showToast('已舍弃草稿', 'info');
+          await renderHostingMessages(activeHostingContact);
+          await renderHostingOverview();
+        } catch (e) {
+          showToast('舍弃失败: ' + e.message, 'error');
+        }
+      });
+    });
+
+    stream.scrollTop = stream.scrollHeight;
+  } catch (err) {
+    console.error('加载托管消息历史失败:', err);
+  }
+}
+
+async function loadHostingSuggestions(contact) {
+  const row = $('hostingSuggestionsRow');
+  if (!row) return;
+
+  row.innerHTML = '<span class="suggestion-loading">正在结合上下文构思回复建议...</span>';
+
+  try {
+    const res = await window.hap.generateQuickReplies?.({ channel: contact.channel, targetId: contact.id });
+    const suggestions = res?.suggestions || ['收到，稍后回复你~', '好的，这就处理！', '现在有点忙，稍后电话细聊！'];
+
+    row.innerHTML = suggestions.map((s) => `
+      <button type="button" class="suggestion-chip-btn" data-text="${esc(s)}">
+        ${esc(s)}
+      </button>
+    `).join('');
+
+    row.querySelectorAll('.suggestion-chip-btn').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const text = chip.getAttribute('data-text');
+        const input = $('hostingMessageInput');
+        if (input) {
+          input.value = text;
+          input.focus();
+        }
+      });
+    });
+  } catch {
+    row.innerHTML = `
+      <button type="button" class="suggestion-chip-btn" data-text="收到，稍后回复你~">收到，稍后回复你~</button>
+      <button type="button" class="suggestion-chip-btn" data-text="好的，这就处理！">好的，这就处理！</button>
+    `;
+  }
+}
+
+function populateHostingPolicyForm(contact) {
+  const body = $('hostingPolicyBody');
+  const empty = $('hostingPolicyEmpty');
+  const targetName = $('hostingPolicyTargetName');
+  if (!body || !empty) return;
+
+  body.style.display = 'block';
+  empty.style.display = 'none';
+  if (targetName) targetName.textContent = `${contact.name} (${contact.id})`;
+
+  const modeSelect = $('hpModeSelect');
+  if (modeSelect) modeSelect.value = contact.hostingMode || (contact.autoReply === false ? 'off' : 'auto');
+
+  const agentSelect = $('hpAgentSelect');
+  if (agentSelect) {
+    const agents = state.agents || [];
+    agentSelect.innerHTML = agents.map((a) => `<option value="${esc(a.id)}">${esc(a.id)} (${esc(a.name || a.role || '智能体')})</option>`).join('');
+    if (contact.agentId && agents.some((a) => a.id === contact.agentId)) {
+      agentSelect.value = contact.agentId;
+    } else if (agents.length > 0) {
+      agentSelect.value = agents[0].id;
+    }
+  }
+
+  const promptInput = $('hpSystemPromptInput');
+  if (promptInput) promptInput.value = contact.systemPrompt || '';
+
+  const cooldownInput = $('hpCooldownInput');
+  if (cooldownInput) cooldownInput.value = contact.cooldownMinutes ?? 10;
+
+  const delayInput = $('hpDelayInput');
+  if (delayInput) delayInput.value = ((contact.delayMs ?? 2500) / 1000).toFixed(1);
+
+  const workspaceInput = $('hpWorkspaceInput');
+  if (workspaceInput) workspaceInput.value = contact.workspace || '';
+}
+
+function populateHostingAgentSelects() {
+  const agents = state.agents || [];
+  const optionsHtml = agents.map((a) => `<option value="${esc(a.id)}">${esc(a.id)} (${esc(a.name || a.role || '智能体')})</option>`).join('');
+
+  const hpAgent = $('hpAgentSelect');
+  if (hpAgent && hpAgent.children.length === 0) hpAgent.innerHTML = optionsHtml;
+
+  const harAgent = $('harAgentSelect');
+  if (harAgent) harAgent.innerHTML = optionsHtml;
+}
+
+function openHostingAddRuleModal() {
+  const modal = $('hostingAddRuleModal');
+  if (!modal) return;
+  populateHostingAgentSelects();
+  modal.showModal();
+}
+
+function initChatHostingEvents() {
+  // 刷新按钮
+  $('hostingRefreshBtn')?.addEventListener('click', async () => {
+    await Promise.all([renderHostingOverview(), renderHostingContacts()]);
+    if (activeHostingContact) await renderHostingMessages(activeHostingContact);
+    showToast('托管数据与状态已刷新', 'info');
+  });
+
+  // 一键清空全部托管会话与消息历史
+  $('hostingClearAllBtn')?.addEventListener('click', async () => {
+    const ok = confirm('确定要清空全部托管会话与历史消息记录吗？\n此操作将清空所有会话数据且无法撤回。');
+    if (!ok) return;
+
+    try {
+      await window.hap.clearAllChannelContacts?.();
+      showToast('已清空全部托管会话与历史记录', 'info');
+      resetHostingDetailPanes();
+      await Promise.all([renderHostingOverview(), renderHostingContacts()]);
+    } catch (err) {
+      showToast('清空失败: ' + (err.message || String(err)), 'error');
+    }
+  });
+
+  // 待确认草稿指标卡片点击：快速筛选待审草稿
+  $('hostingStatDraftPill')?.addEventListener('click', () => {
+    document.querySelectorAll('.hosting-chip-btn').forEach((b) => {
+      b.classList.toggle('active', b.getAttribute('data-filter') === 'draft');
+    });
+    currentHostingFilter = 'draft';
+    renderHostingContacts();
+  });
+
+  // 右侧分身策略抽屉折叠 / 展开控制
+  const toggleRightPane = (forceState) => {
+    const layout = $('hostingWorkbenchLayout');
+    if (!layout) return;
+    if (forceState !== undefined) {
+      layout.classList.toggle('right-collapsed', !forceState);
+    } else {
+      layout.classList.toggle('right-collapsed');
+    }
+    const isCollapsed = layout.classList.contains('right-collapsed');
+    const toggleBtn = $('hostingTogglePolicyBtn');
+    if (toggleBtn) {
+      toggleBtn.innerHTML = isCollapsed ? '⚙️ 展开策略' : '⚙️ 分身策略';
+      toggleBtn.className = isCollapsed ? 'btn primary' : 'btn secondary';
+    }
+  };
+
+  $('hostingTogglePolicyBtn')?.addEventListener('click', () => toggleRightPane());
+  $('hostingClosePolicyBtn')?.addEventListener('click', () => toggleRightPane(false));
+
+  // 新建规则按钮
+  $('hostingQuickAddBtn')?.addEventListener('click', () => openHostingAddRuleModal());
+  $('closeHostingAddRuleBtn')?.addEventListener('click', () => $('hostingAddRuleModal')?.close());
+  $('cancelHostingAddRuleBtn')?.addEventListener('click', () => $('hostingAddRuleModal')?.close());
+
+  // 绑定预设人设模板一键套用
+  const bindPersonaTemplates = (containerId, targetTextareaId) => {
+    const container = $(containerId);
+    const textarea = $(targetTextareaId);
+    if (!container || !textarea) return;
+    container.querySelectorAll('.persona-template-chip').forEach((chip) => {
+      chip.addEventListener('click', (e) => {
+        e.preventDefault();
+        const key = chip.getAttribute('data-template');
+        const template = HOSTING_PERSONA_TEMPLATES[key];
+        if (template) {
+          textarea.value = template;
+          textarea.focus();
+          showToast(`已套用【${chip.textContent.trim()}】人设模板`, 'info');
+        }
+      });
+    });
+  };
+  bindPersonaTemplates('hpPersonaTemplates', 'hpSystemPromptInput');
+  bindPersonaTemplates('harPersonaTemplates', 'harSystemPromptInput');
+
+  // 空状态引导按钮全局委托
+  document.addEventListener('click', (e) => {
+    const target = e.target.closest('#hostingGuideAddBtn, #hostingGuideVisionBtn');
+    if (!target) return;
+    if (target.id === 'hostingGuideAddBtn') {
+      openHostingAddRuleModal();
+    } else if (target.id === 'hostingGuideVisionBtn') {
+      window.openVisionTestModal?.();
+    }
+  });
+
+  // 保存新建规则
+  $('saveHostingAddRuleBtn')?.addEventListener('click', async () => {
+    const channel = $('harChannelSelect')?.value || 'wechat';
+    const type = $('harTypeSelect')?.value || 'user';
+    const id = ($('harIdInput')?.value || '').trim();
+    const name = ($('harNameInput')?.value || '').trim();
+    if (!id || !name) {
+      showToast('请填写联系人唯一 ID 与备注名称', 'warning');
+      return;
+    }
+
+    const hostingMode = $('harModeSelect')?.value || 'auto';
+    const agentId = $('harAgentSelect')?.value || 'coder';
+    const systemPrompt = ($('harSystemPromptInput')?.value || '').trim();
+
+    try {
+      const newContact = await window.hap.upsertChannelContact?.({
+        id,
+        channel,
+        name,
+        type,
+        isRoom: type === 'room',
+        hostingMode,
+        agentId,
+        systemPrompt: systemPrompt || undefined,
+        autoReply: hostingMode !== 'off' && hostingMode !== 'manual',
+      });
+      $('hostingAddRuleModal')?.close();
+      showToast(`已创建 [${name}] 的托管规则`, 'success');
+      await renderHostingContacts();
+      await renderHostingOverview();
+      if (newContact) selectHostingContact(newContact);
+    } catch (err) {
+      showToast('创建托管规则失败: ' + err.message, 'error');
+    }
+  });
+
+  // 过滤 Chip 点击
+  document.querySelectorAll('.hosting-chip-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.hosting-chip-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentHostingFilter = btn.getAttribute('data-filter') || 'all';
+      renderHostingContacts();
+    });
+  });
+
+  // 搜索框过滤
+  $('hostingContactSearchInput')?.addEventListener('input', () => {
+    renderHostingContacts();
+  });
+
+  // 人工接管切换按钮
+  $('hostingToggleTakeoverBtn')?.addEventListener('click', async () => {
+    if (!activeHostingContact) return;
+    const now = Date.now();
+    const inCooldown = (activeHostingContact.cooldownUntil && activeHostingContact.cooldownUntil > now) || activeHostingContact.humanTakenOver;
+
+    try {
+      if (inCooldown) {
+        await window.hap.releaseContactTakeover?.({
+          channel: activeHostingContact.channel,
+          targetId: activeHostingContact.id,
+        });
+        activeHostingContact.humanTakenOver = false;
+        activeHostingContact.cooldownUntil = undefined;
+        showToast('已解除人工接管保护，恢复 AI 自动托管！', 'success');
+      } else {
+        const cooldownMins = Number($('hpCooldownInput')?.value) || 10;
+        await window.hap.triggerContactTakeover?.({
+          channel: activeHostingContact.channel,
+          targetId: activeHostingContact.id,
+          cooldownMinutes: cooldownMins,
+        });
+        activeHostingContact.humanTakenOver = true;
+        activeHostingContact.cooldownUntil = Date.now() + cooldownMins * 60 * 1000;
+        showToast(`已开启人工接管，AI 暂不抢话（冷却 ${cooldownMins} 分钟）`, 'info');
+      }
+      selectHostingContact(activeHostingContact);
+      await renderHostingContacts();
+      await renderHostingOverview();
+    } catch (e) {
+      showToast('切换人工接管状态失败: ' + e.message, 'error');
+    }
+  });
+
+  // 冷却横幅中提前解除按钮
+  $('hostingEndCooldownBtn')?.addEventListener('click', async () => {
+    if (!activeHostingContact) return;
+    try {
+      await window.hap.releaseContactTakeover?.({
+        channel: activeHostingContact.channel,
+        targetId: activeHostingContact.id,
+      });
+      activeHostingContact.humanTakenOver = false;
+      activeHostingContact.cooldownUntil = undefined;
+      showToast('防撞车冷却已提前解除，恢复 AI 自动托管！', 'success');
+      selectHostingContact(activeHostingContact);
+      await renderHostingContacts();
+      await renderHostingOverview();
+    } catch (e) {
+      showToast('解除冷却失败: ' + e.message, 'error');
+    }
+  });
+
+  // 人工发送消息
+  const doSendHumanMessage = async () => {
+    if (!activeHostingContact) {
+      showToast('请先选择接收消息的联系人或群聊', 'warning');
+      return;
+    }
+    const input = $('hostingMessageInput');
+    const text = (input?.value || '').trim();
+    if (!text) {
+      showToast('请输入要发送的消息内容', 'warning');
+      return;
+    }
+
+    const sendBtn = $('hostingSendBtn');
+    if (sendBtn) {
+      sendBtn.disabled = true;
+      sendBtn.textContent = '发送中...';
+    }
+
+    try {
+      const cooldownMins = Number($('hpCooldownInput')?.value) || 10;
+      const res = await window.hap.sendHumanMessage?.({
+        channel: activeHostingContact.channel,
+        targetId: activeHostingContact.id,
+        text,
+        cooldownMinutes: cooldownMins,
+      });
+
+      if (input) input.value = '';
+      showToast(`已发送消息并开启 ${cooldownMins} 分钟防撞车冷却保护`, 'success');
+      activeHostingContact.humanTakenOver = true;
+      activeHostingContact.cooldownUntil = Date.now() + cooldownMins * 60 * 1000;
+      selectHostingContact(activeHostingContact);
+      await renderHostingContacts();
+      await renderHostingOverview();
+    } catch (err) {
+      showToast('发送消息失败: ' + err.message, 'error');
+    } finally {
+      if (sendBtn) {
+        sendBtn.disabled = false;
+        sendBtn.textContent = '人工发送';
+      }
+    }
+  };
+
+  $('hostingSendBtn')?.addEventListener('click', doSendHumanMessage);
+
+  $('hostingMessageInput')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      doSendHumanMessage();
+    }
+  });
+
+  // 策略表单提交
+  $('hostingPolicyForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!activeHostingContact) return;
+
+    const hostingMode = $('hpModeSelect')?.value || 'auto';
+    const agentId = $('hpAgentSelect')?.value || 'coder';
+    const systemPrompt = ($('hpSystemPromptInput')?.value || '').trim();
+    const cooldownMinutes = Number($('hpCooldownInput')?.value) || 10;
+    const delayMs = Math.round((Number($('hpDelayInput')?.value) || 2.5) * 1000);
+    const workspace = ($('hpWorkspaceInput')?.value || '').trim();
+
+    try {
+      const updated = await window.hap.upsertChannelContact?.({
+        ...activeHostingContact,
+        hostingMode,
+        agentId,
+        systemPrompt: systemPrompt || undefined,
+        cooldownMinutes,
+        delayMs,
+        workspace: workspace || undefined,
+        autoReply: hostingMode !== 'off' && hostingMode !== 'manual',
+      });
+      activeHostingContact = updated;
+      showToast('托管策略与人设 Prompt 已更新', 'success');
+      selectHostingContact(updated);
+      await renderHostingContacts();
+      await renderHostingOverview();
+    } catch (err) {
+      showToast('保存策略失败: ' + err.message, 'error');
+    }
+  });
+
+  // 删除规则
+  $('hpDeleteBtn')?.addEventListener('click', async () => {
+    if (!activeHostingContact) return;
+    if (!confirm(`确定要删除 [${activeHostingContact.name}] 的托管会话规则及所有消息记录吗？`)) return;
+
+    try {
+      await window.hap.removeChannelContact?.(activeHostingContact.id, activeHostingContact.channel);
+      showToast('已移除该托管会话规则', 'success');
+      resetHostingDetailPanes();
+      await renderHostingContacts();
+      await renderHostingOverview();
+    } catch (err) {
+      showToast('删除失败: ' + err.message, 'error');
+    }
+  });
+}
+
 initDesktopUpdater();
 initGatewayEvents();
+initChatHostingEvents();
+
 

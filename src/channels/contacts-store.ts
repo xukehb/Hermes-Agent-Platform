@@ -14,6 +14,12 @@ export interface ChannelContact {
   agentId?: string | undefined; // 绑定的专属自动回复智能体 (coder, reviewer, ops, researcher 等)
   autoReply: boolean; // 是否开启自动回复
   replyMode?: 'all' | 'mention' | 'manual' | undefined; // 全量自动回复 / 仅@时回复 / 仅手动监控
+  hostingMode?: 'auto' | 'draft' | 'mention' | 'manual' | 'off' | undefined; // 聊天托管模式：全自动 / 半托管草稿 / 仅@ / 仅监控 / 关闭
+  systemPrompt?: string | undefined; // 该好友或群聊专属的人设 Prompt
+  cooldownUntil?: number | undefined; // 人工回复后的防撞车冷却截止时间戳 (ms)
+  cooldownMinutes?: number | undefined; // 默认人工冷却分钟数 (默认 10 分钟)
+  humanTakenOver?: boolean | undefined; // 是否处于人工接管锁定状态
+  delayMs?: number | undefined; // 拟人化打字与思考延迟时间 (ms)
   workspace?: string | undefined; // 绑定的专属工程工作区
   lastMessage?: string | undefined;
   lastSender?: string | undefined; // 最后发送人姓名
@@ -29,11 +35,14 @@ export interface ChannelChatMessage {
   fromName: string;
   isRoom: boolean;
   roomName?: string | undefined;
-  sender: 'user' | 'agent' | 'system';
+  sender: 'user' | 'agent' | 'human' | 'system'; // human = 用户在托管界面或手机端真实发出的消息
   agentId?: string | undefined;
   text: string;
   time: string;
   timestamp: number;
+  isDraft?: boolean | undefined; // 是否为半托管待确认草稿
+  draftStatus?: 'pending' | 'sent' | 'discarded' | undefined; // 草稿状态
+  elapsedMs?: number | undefined; // AI 代答耗时毫秒
 }
 
 interface ChannelContactStoreData {
@@ -128,6 +137,12 @@ export class ChannelContactStore {
       agentId: input.agentId !== undefined ? input.agentId : (existing?.agentId || 'coder'),
       autoReply: input.autoReply !== undefined ? input.autoReply : (existing?.autoReply ?? true),
       replyMode: input.replyMode !== undefined ? input.replyMode : (existing?.replyMode || 'all'),
+      hostingMode: input.hostingMode !== undefined ? input.hostingMode : (existing?.hostingMode || (input.isRoom ? 'mention' : 'auto')),
+      systemPrompt: input.systemPrompt !== undefined ? input.systemPrompt : existing?.systemPrompt,
+      cooldownUntil: input.cooldownUntil !== undefined ? input.cooldownUntil : existing?.cooldownUntil,
+      cooldownMinutes: input.cooldownMinutes !== undefined ? input.cooldownMinutes : (existing?.cooldownMinutes || 10),
+      humanTakenOver: input.humanTakenOver !== undefined ? input.humanTakenOver : existing?.humanTakenOver,
+      delayMs: input.delayMs !== undefined ? input.delayMs : (existing?.delayMs || 2500),
       workspace: input.workspace !== undefined ? input.workspace : existing?.workspace,
       lastMessage: input.lastMessage !== undefined ? input.lastMessage : existing?.lastMessage,
       lastSender: input.lastSender !== undefined ? input.lastSender : existing?.lastSender,
@@ -170,6 +185,9 @@ export class ChannelContactStore {
         agentId: undefined,
         autoReply: true,
         replyMode: msg.isRoom ? 'mention' : 'all',
+        hostingMode: msg.isRoom ? 'mention' : 'auto',
+        cooldownMinutes: 10,
+        delayMs: 2500,
         lastMessage: msg.text,
         lastSender: msg.fromName,
         lastTime: time,
@@ -211,14 +229,21 @@ export class ChannelContactStore {
     channel: ChannelName;
     contactId: string;
     agentId?: string | undefined;
+    sender?: 'agent' | 'human' | 'system';
     text: string;
+    isDraft?: boolean | undefined;
+    draftStatus?: 'pending' | 'sent' | 'discarded' | undefined;
+    elapsedMs?: number | undefined;
   }): ChannelChatMessage {
     const data = this.load();
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const contact = data.contacts.find((c) => c.id === msg.contactId && c.channel === msg.channel);
+    const sender = msg.sender || 'agent';
+    const isHuman = sender === 'human';
+
     if (contact) {
       contact.lastMessage = msg.text.slice(0, 80);
-      contact.lastSender = `AI (${msg.agentId || 'coder'})`;
+      contact.lastSender = isHuman ? '我 (人工回复)' : `AI (${msg.agentId || 'coder'})`;
       contact.lastTime = time;
       contact.unreadCount = 0;
     }
@@ -227,14 +252,17 @@ export class ChannelContactStore {
       id: `${msg.channel}_msg_${Date.now()}_${randomUUID().slice(0, 4)}`,
       channel: msg.channel,
       contactId: msg.contactId,
-      fromId: 'hap_agent',
-      fromName: `AI (${msg.agentId || 'coder'})`,
+      fromId: isHuman ? 'user_human' : 'hap_agent',
+      fromName: isHuman ? '我 (人工回复)' : `AI (${msg.agentId || 'coder'})`,
       isRoom: contact ? contact.isRoom : false,
-      sender: 'agent',
-      agentId: msg.agentId || 'coder',
+      sender,
+      agentId: isHuman ? undefined : (msg.agentId || 'coder'),
       text: msg.text,
       time,
       timestamp: Date.now(),
+      isDraft: msg.isDraft,
+      draftStatus: msg.draftStatus,
+      elapsedMs: msg.elapsedMs,
     };
 
     data.messages.push(messageRecord);
@@ -244,6 +272,68 @@ export class ChannelContactStore {
 
     this.save(data);
     return messageRecord;
+  }
+
+  triggerHumanTakeover(id: string, channel: ChannelName, cooldownMinutes: number = 10): ChannelContact | undefined {
+    const data = this.load();
+    const contact = data.contacts.find((c) => c.id === id && c.channel === channel);
+    if (!contact) return undefined;
+    contact.humanTakenOver = true;
+    contact.cooldownMinutes = cooldownMinutes;
+    contact.cooldownUntil = Date.now() + cooldownMinutes * 60 * 1000;
+    this.save(data);
+    return contact;
+  }
+
+  releaseHumanTakeover(id: string, channel: ChannelName): ChannelContact | undefined {
+    const data = this.load();
+    const contact = data.contacts.find((c) => c.id === id && c.channel === channel);
+    if (!contact) return undefined;
+    contact.humanTakenOver = false;
+    contact.cooldownUntil = undefined;
+    this.save(data);
+    return contact;
+  }
+
+  approveDraft(messageId: string): ChannelChatMessage | undefined {
+    const data = this.load();
+    const msg = data.messages.find((m) => m.id === messageId && m.isDraft);
+    if (!msg) return undefined;
+    msg.isDraft = false;
+    msg.draftStatus = 'sent';
+    this.save(data);
+    return msg;
+  }
+
+  discardDraft(messageId: string): boolean {
+    const data = this.load();
+    const msg = data.messages.find((m) => m.id === messageId && m.isDraft);
+    if (!msg) return false;
+    msg.isDraft = false;
+    msg.draftStatus = 'discarded';
+    data.messages = data.messages.filter((m) => m.id !== messageId);
+    this.save(data);
+    return true;
+  }
+
+  getHostingStats(): {
+    totalContacts: number;
+    autoReplyCount: number;
+    pendingDrafts: number;
+    activeCooldowned: number;
+  } {
+    const data = this.load();
+    const now = Date.now();
+    const totalContacts = data.contacts.length;
+    const autoReplyCount = data.messages.filter((m) => m.sender === 'agent' && !m.isDraft).length;
+    const pendingDrafts = data.messages.filter((m) => m.isDraft && m.draftStatus === 'pending').length;
+    const activeCooldowned = data.contacts.filter((c) => (c.cooldownUntil && c.cooldownUntil > now) || c.humanTakenOver).length;
+    return {
+      totalContacts,
+      autoReplyCount,
+      pendingDrafts,
+      activeCooldowned,
+    };
   }
 
   getMessages(contactId?: string, channel?: ChannelName, limit: number = 100): ChannelChatMessage[] {
@@ -269,4 +359,17 @@ export class ChannelContactStore {
     }
     return false;
   }
+
+  clearAllContacts(channel?: ChannelName): void {
+    const data = this.load();
+    if (channel) {
+      data.contacts = data.contacts.filter((c) => c.channel !== channel);
+      data.messages = data.messages.filter((m) => m.channel !== channel);
+    } else {
+      data.contacts = [];
+      data.messages = [];
+    }
+    this.save(data);
+  }
 }
+

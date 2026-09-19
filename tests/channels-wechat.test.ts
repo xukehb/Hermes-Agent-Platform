@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -8,8 +8,23 @@ import type { ChannelHost, InboundMessage } from '../src/channels/types.js';
 import type { ResolvedChannels, ResolvedLimits, ResolvedPaths } from '../src/config/index.js';
 import { BUILTIN_CHANNELS, BUILTIN_LIMITS } from '../src/config/index.js';
 import type { RunTaskRequest, TaskOutcome, SessionStatus, TraceSummary, UsageAggregate } from '../src/agent/index.js';
+import { ChannelContactStore } from '../src/channels/contacts-store.js';
+import { WeChatContactStore } from '../src/channels/wechat-contacts.js';
 
 const root = mkdtempSync(join(tmpdir(), 'hap-wx-'));
+const testContactsPath = join(root, 'universal_contacts.json');
+
+beforeEach(() => {
+  ChannelContactStore.resetInstance();
+  WeChatContactStore.resetInstance();
+  ChannelContactStore.getInstance(testContactsPath);
+  WeChatContactStore.getInstance(testContactsPath);
+});
+
+afterEach(() => {
+  ChannelContactStore.resetInstance();
+  WeChatContactStore.resetInstance();
+});
 
 function channelsOf(patch: Partial<ResolvedChannels['wechat']> = {}): ResolvedChannels {
   return {
@@ -328,7 +343,7 @@ describe('WeChatChannel 基础测试', () => {
 
     // 3) 若联系人配置了特定专属智能体，则以其 agentId 优先分派
     const { WeChatContactStore } = await import('../src/channels/wechat-contacts.js');
-    const store = WeChatContactStore.getInstance();
+    const store = WeChatContactStore.getInstance(testContactsPath);
     store.upsertContact({
       id: 'wx_user_custom',
       name: '定制用户',

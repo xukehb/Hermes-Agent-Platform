@@ -28,6 +28,7 @@ import { ConfigError } from '../domain/index.js';
 import { parseBind } from './bind.js';
 import { WechatyPersonalDriver } from './wechat/wechaty-personal-driver.js';
 import { NativeIlinkPersonalDriver } from './wechat/ilink/index.js';
+import { DesktopVisionPersonalDriver } from './wechat/desktop-vision/index.js';
 
 /** 微信个人号驱动状态与事件回调。 */
 export interface WeChatPersonalDriver {
@@ -62,6 +63,7 @@ export interface WeChatChannelOptions {
   log?: (line: string) => void;
   /** 测试或自定义驱动注入 */
   personalDriverFactory?: PersonalDriverFactory;
+  contactStore?: WeChatContactStore;
 }
 
 /** 微信通道实现。 */
@@ -75,6 +77,7 @@ export class WeChatChannel implements Channel {
   private readonly charLimit: number;
   private readonly env: Record<string, string | undefined>;
   private readonly log: (line: string) => void;
+  private readonly contactStore: WeChatContactStore;
 
   private personalDriver: WeChatPersonalDriver | undefined;
   private webhookServer: { close: () => void } | undefined;
@@ -87,6 +90,7 @@ export class WeChatChannel implements Channel {
     this.config = options.channels.wechat;
     this.env = options.env ?? process.env;
     this.log = options.log ?? (() => undefined);
+    this.contactStore = options.contactStore ?? WeChatContactStore.getInstance();
     this.charLimit = this.config.messageCharLimit;
     this.sender = new OutboundSender(options.paths.spoolDir);
     this.dispatcher = new ChannelDispatcher({
@@ -105,6 +109,14 @@ export class WeChatChannel implements Channel {
 
   get qrCodeText(): string | undefined {
     return this.latestQrText;
+  }
+
+  async sendMessage(targetId: string, text: string): Promise<string | undefined> {
+    if (!this.personalDriver) {
+      throw new Error('微信驱动未运行或未完成扫码登录');
+    }
+    const formatted = formatWeChatText(text);
+    return await this.personalDriver.sendMessage(targetId, formatted);
   }
 
   /** 热重载微信通道配置（FR-CFG-005） */
@@ -157,6 +169,13 @@ export class WeChatChannel implements Channel {
           log,
         });
       }
+      if (this.config.personal.puppet === 'desktop_vision') {
+        return new DesktopVisionPersonalDriver({
+          pollIntervalMs: this.config.personal.visionPollIntervalMs,
+          visionModel: this.config.personal.visionModel,
+          log,
+        });
+      }
       const opts: { tokenEnv: string; endpoint?: string; env?: Record<string, string | undefined>; log: (line: string) => void } = {
         tokenEnv: this.config.personal.puppetServiceTokenEnv,
         env: this.env,
@@ -189,7 +208,7 @@ export class WeChatChannel implements Channel {
       this.log(`[WeChat] 微信已登出：${reason ?? 'unknown'}`);
     };
 
-    driver.onMessage = async (msg) => {
+    driver.onMessage = async (msg: Parameters<NonNullable<WeChatPersonalDriver['onMessage']>>[0]) => {
       if (!this.started || this.personalDriver !== driver) return;
       await this.handlePersonalMessage(msg);
     };
@@ -216,7 +235,7 @@ export class WeChatChannel implements Channel {
     let cleanText = msg.text.trim();
     let agentId: string | undefined;
 
-    const contactStore = WeChatContactStore.getInstance();
+    const contactStore = this.contactStore;
     const { contact } = contactStore.recordIncomingMessage({
       fromId: msg.fromId,
       fromName: msg.fromName,
@@ -261,23 +280,56 @@ export class WeChatChannel implements Channel {
       ? contact.agentId
       : undefined;
 
-    // 若联系人关闭了自动回复
-    if (!contact.autoReply || contact.replyMode === 'manual') {
+    // 人工防撞车冷却检测
+    const now = Date.now();
+    const inCooldown = (contact.cooldownUntil && contact.cooldownUntil > now) || contact.humanTakenOver;
+    if (inCooldown) {
+      const remainingSec = contact.cooldownUntil ? Math.max(0, Math.ceil((contact.cooldownUntil - now) / 1000)) : 0;
+      this.log(`[WeChat] 联系人 [${contact.name}] 处于人工接管冷却期（剩余 ${remainingSec} 秒），AI 暂不抢话。`);
+      return;
+    }
+
+    // 若联系人关闭了自动回复或处于仅手动监听
+    if (contact.hostingMode === 'off' || contact.hostingMode === 'manual' || !contact.autoReply || contact.replyMode === 'manual') {
       this.log(`[WeChat] 联系人 [${contact.name}] 已暂停自动回复，仅记录消息。`);
       return;
     }
 
     const assignedAgent = agentId || validContactAgentId || this.config.defaultAgent || fallbackAgent;
+    const startTime = Date.now();
 
     const target: OutboundTarget = {
       channel: 'wechat',
       targetId,
       send: async (text: string) => {
         const formatted = formatWeChatText(text);
+
+        // 半托管草稿模式：生成回复草稿，不直接对外发送，等待人工审批
+        if (contact.hostingMode === 'draft') {
+          contactStore.recordOutgoingMessage({
+            contactId: targetId,
+            agentId: assignedAgent,
+            text: formatted,
+            isDraft: true,
+            draftStatus: 'pending',
+            elapsedMs: Date.now() - startTime,
+          });
+          this.log(`[WeChat] 联系人 [${contact.name}] 处于草稿待审模式，回复草稿已记录，待确认后再发。`);
+          return 'draft_pending';
+        }
+
+        // 拟人化打字思考延迟模拟
+        const delay = contact.delayMs ?? 2000;
+        if (delay > 0) {
+          await new Promise((resolve) => setTimeout(resolve, Math.min(delay, 8000)));
+        }
+
         contactStore.recordOutgoingMessage({
           contactId: targetId,
           agentId: assignedAgent,
           text: formatted,
+          isDraft: false,
+          elapsedMs: Date.now() - startTime,
         });
         if (!this.personalDriver) return undefined;
         try {
@@ -289,6 +341,10 @@ export class WeChatChannel implements Channel {
       },
     };
 
+    // 若联系人配置了专属人设 Prompt，将其作为前缀注入
+    const contextPrefix = contact.systemPrompt?.trim() ? `[当前联系人专属托管人设与指令：${contact.systemPrompt.trim()}]\n\n` : '';
+    const finalText = contextPrefix ? `${contextPrefix}${cleanText}` : cleanText;
+
     const effectiveDefaultAgent = validContactAgentId || this.config.defaultAgent || fallbackAgent;
 
     const effectiveAgentId = agentId || validContactAgentId;
@@ -296,7 +352,7 @@ export class WeChatChannel implements Channel {
     const inbound: InboundMessage = {
       channel: 'wechat',
       sessionKey,
-      text: cleanText,
+      text: finalText,
       receivedAt: new Date().toISOString(),
       target,
       ...(msg.attachments !== undefined ? { attachments: msg.attachments } : {}),

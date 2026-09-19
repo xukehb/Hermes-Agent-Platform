@@ -195,10 +195,12 @@ export const wechatOfficialAccountSchema = z.strictObject({
 });
 
 export const wechatPersonalSchema = z.strictObject({
-  puppet: z.enum(['ilink', 'service']).optional(),
+  puppet: z.enum(['ilink', 'service', 'desktop_vision']).optional(),
   ilink_account_id: z.string().min(3).optional(),
   puppet_service_token_env: z.string().min(1).optional(),
   puppet_service_endpoint: z.string().url().optional(),
+  vision_poll_interval_ms: z.number().int().positive().optional(),
+  vision_model: z.string().optional(),
 });
 
 /** 微信通道（支持个人微信扫码登录、企业微信 WeCom 机器人/应用、微信公众号多模式） */

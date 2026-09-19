@@ -1114,6 +1114,8 @@ export class ConfigResolver {
           ilinkAccountId: ctx.root.channels?.wechat?.personal?.ilink_account_id ?? BUILTIN_CHANNELS.wechat.personal.ilinkAccountId,
           puppetServiceTokenEnv: ctx.root.channels?.wechat?.personal?.puppet_service_token_env ?? BUILTIN_CHANNELS.wechat.personal.puppetServiceTokenEnv,
           puppetServiceEndpoint: ctx.root.channels?.wechat?.personal?.puppet_service_endpoint,
+          visionPollIntervalMs: ctx.root.channels?.wechat?.personal?.vision_poll_interval_ms ?? BUILTIN_CHANNELS.wechat.personal.visionPollIntervalMs,
+          visionModel: ctx.root.channels?.wechat?.personal?.vision_model,
         },
         wecom: ctx.root.channels?.wechat?.wecom
           ? {

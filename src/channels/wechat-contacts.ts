@@ -18,6 +18,10 @@ export class WeChatContactStore {
     return WeChatContactStore.instance;
   }
 
+  static resetInstance(): void {
+    WeChatContactStore.instance = undefined as unknown as WeChatContactStore;
+  }
+
   listContacts(): WeChatContact[] {
     return this.store.listContacts('wechat');
   }
@@ -55,7 +59,11 @@ export class WeChatContactStore {
   recordOutgoingMessage(msg: {
     contactId: string;
     agentId?: string | undefined;
+    sender?: 'agent' | 'human' | 'system';
     text: string;
+    isDraft?: boolean | undefined;
+    draftStatus?: 'pending' | 'sent' | 'discarded' | undefined;
+    elapsedMs?: number | undefined;
   }): WeChatChatMessage {
     return this.store.recordOutgoingMessage({
       channel: 'wechat',
@@ -70,4 +78,9 @@ export class WeChatContactStore {
   removeContact(id: string): boolean {
     return this.store.removeContact(id, 'wechat');
   }
+
+  clearAllContacts(): void {
+    this.store.clearAllContacts('wechat');
+  }
 }
+

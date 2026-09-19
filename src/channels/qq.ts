@@ -251,33 +251,71 @@ export class QQChannel implements Channel {
       agentId = contact.agentId;
     }
 
-    if (!contact.autoReply || contact.replyMode === 'manual') {
+    // 人工防撞车冷却检测
+    const now = Date.now();
+    const inCooldown = (contact.cooldownUntil && contact.cooldownUntil > now) || contact.humanTakenOver;
+    if (inCooldown) {
+      const remainingSec = contact.cooldownUntil ? Math.max(0, Math.ceil((contact.cooldownUntil - now) / 1000)) : 0;
+      this.log(`联系人 [${contact.name}] 处于人工接管防撞车冷却期（剩余 ${remainingSec} 秒），AI 暂不抢话。`);
+      return { status: 'ok', retcode: 0 };
+    }
+
+    if (contact.hostingMode === 'off' || contact.hostingMode === 'manual' || !contact.autoReply || contact.replyMode === 'manual') {
       this.log(`联系人 [${contact.name}] 已暂停自动回复，仅记录消息。`);
       return { status: 'ok', retcode: 0 };
     }
 
     const assignedAgent = agentId || this.config.defaultAgent || 'coder';
     const sessionKey = isRoom ? `qq:group:${groupId}` : `qq:user:${userId}`;
+    const startTime = Date.now();
 
     const target: OutboundTarget = {
       channel: 'qq',
       targetId: contactId,
       send: async (replyText: string) => {
         const formatted = formatQQText(replyText);
+
+        // 半托管草稿模式：生成草稿等待人工审核
+        if (contact.hostingMode === 'draft') {
+          contactStore.recordOutgoingMessage({
+            channel: 'qq',
+            contactId,
+            agentId: assignedAgent,
+            text: formatted,
+            isDraft: true,
+            draftStatus: 'pending',
+            elapsedMs: Date.now() - startTime,
+          });
+          this.log(`联系人 [${contact.name}] 处于半托管草稿模式，回复草稿已记录，等待人工确认。`);
+          return 'draft_pending';
+        }
+
+        // 拟人化打字与思考延迟模拟
+        const delay = contact.delayMs ?? 2500;
+        if (delay > 0) {
+          await new Promise((resolve) => setTimeout(resolve, Math.min(delay, 8000)));
+        }
+
         contactStore.recordOutgoingMessage({
           channel: 'qq',
           contactId,
           agentId: assignedAgent,
           text: formatted,
+          isDraft: false,
+          elapsedMs: Date.now() - startTime,
         });
         return this.sendQQMessage(isRoom ? groupId! : userId, formatted, isRoom);
       },
     };
 
+    // 若联系人配置了专属人设 Prompt，将其作为前缀注入
+    const contextPrefix = contact.systemPrompt?.trim() ? `[当前联系人专属托管人设与指令：${contact.systemPrompt.trim()}]\n\n` : '';
+    const finalText = contextPrefix ? `${contextPrefix}${cleanText}` : cleanText;
+
     const inbound: InboundMessage = {
       channel: 'qq',
       sessionKey,
-      text: cleanText,
+      text: finalText,
       receivedAt: new Date().toISOString(),
       target,
       ...(agentId !== undefined ? { agentId } : {}),

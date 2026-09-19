@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -98,7 +98,10 @@ export class GatewayStore {
       if (!existsSync(dir)) {
         mkdirSync(dir, { recursive: true });
       }
-      writeFileSync(this.filePath, JSON.stringify(this.data, null, 2), 'utf-8');
+      const temporary = join(dir, `.${randomUUID()}.tmp`);
+      writeFileSync(temporary, JSON.stringify(this.data, null, 2) + '\n', { encoding: 'utf8', mode: 0o600 });
+      renameSync(temporary, this.filePath);
+      if (process.platform !== 'win32') chmodSync(this.filePath, 0o600);
     } catch (e) {
       console.error('[GatewayStore] 保存持久化配置异常:', e);
     }

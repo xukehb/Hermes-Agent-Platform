@@ -191,7 +191,7 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
   // OpenAI 兼容网关端点允许跨域调用
   app.use('/v1/*', cors({
     origin: '*',
-    allowHeaders: ['Authorization', 'Content-Type', 'Accept'],
+    allowHeaders: ['Authorization', 'X-API-Key', 'Content-Type', 'Accept'],
     allowMethods: ['GET', 'POST', 'OPTIONS'],
   }));
 
@@ -796,7 +796,7 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
     try {
       const body = await c.req.json();
       const clientIp = c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || '127.0.0.1';
-      const auth = c.req.header('authorization');
+      const auth = c.req.header('authorization') || c.req.header('x-api-key');
       return await gatewayService.dispatchChatCompletion(body, clientIp, auth, c.req.raw.signal);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
