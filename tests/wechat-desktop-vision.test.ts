@@ -346,5 +346,58 @@ describe('WeChat Desktop Vision Agent (SightFlow 模式视觉代管)', () => {
 
     await driver.stop();
   });
+
+  it('DesktopVisionPersonalDriver 实时上报来信识别、动作模拟与成功发送等 Live Feed 动态', async () => {
+    const activities: any[] = [];
+    const onActivity = vi.fn((act) => activities.push(act));
+
+    const driver = new DesktopVisionPersonalDriver({
+      onActivity,
+      isWeChatRunningFn: vi.fn().mockResolvedValue(true),
+      captureFn: vi.fn().mockResolvedValue({
+        ok: true,
+        buffer: Buffer.from('fake'),
+        sourceType: 'electron_capturer',
+      }),
+      parseFn: vi.fn().mockResolvedValue({
+        ok: true,
+        hasWeChatWindow: true,
+        chatTarget: '产品经理小王',
+        isGroup: false,
+        lastMessage: {
+          sender: '产品经理小王',
+          isFromMe: false,
+          text: '帮我查一下这周排期',
+        },
+        needsReply: true,
+      }),
+      sendFn: vi.fn().mockResolvedValue({ ok: true }),
+    });
+
+    await driver.start();
+    expect(activities.some((a) => a.stage === 'system' && a.tag === '静默巡检')).toBe(true);
+
+    // 触发单次扫描
+    await driver.tick();
+    const detected = activities.find((a) => a.stage === 'detected');
+    expect(detected).toBeDefined();
+    expect(detected.tag).toBe('微信来信');
+    expect(detected.title).toContain('产品经理小王');
+    expect(detected.title).toContain('帮我查一下这周排期');
+
+    // 模拟回复发送
+    await driver.sendMessage('产品经理小王', '排期已整理完毕，请看文档。');
+    const executing = activities.find((a) => a.stage === 'executing');
+    expect(executing).toBeDefined();
+    expect(executing.tag).toBe('动作模拟');
+    expect(executing.title).toContain('产品经理小王');
+
+    const sent = activities.find((a) => a.stage === 'sent');
+    expect(sent).toBeDefined();
+    expect(sent.tag).toBe('发送成功');
+    expect(sent.detail).toContain('排期已整理完毕');
+
+    await driver.stop();
+  });
 });
 
