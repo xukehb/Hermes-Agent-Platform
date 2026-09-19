@@ -86,7 +86,7 @@
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
           <span class="nav-text" data-i18n="rail.settings">系统设置</span>
-          <span class="sidebar-version-tag" id="sidebarVersionTag" style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-left:auto;padding:2px 6px;border-radius:4px;opacity:0.85;cursor:pointer;transition:all 150ms ease;" title="点击直达软件版本与检查更新" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--primary)';" onmouseout="this.style.background='transparent';this.style.color='var(--text-muted)';">v0.1.12</span>
+          <span class="sidebar-version-tag" id="sidebarVersionTag" style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-left:auto;padding:2px 6px;border-radius:4px;opacity:0.85;cursor:pointer;transition:all 150ms ease;" title="点击直达软件版本与检查更新" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--primary)';" onmouseout="this.style.background='transparent';this.style.color='var(--text-muted)';">v0.1.15</span>
         </div>
       </div>
     </aside>
@@ -189,7 +189,7 @@
                 <button id="aboutVersionMoreBtn" class="more-menu-item-btn" title="查看软件版本、运行环境与检查更新" data-i18n-title="more.aboutVersionTooltip">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                   <span data-i18n="more.aboutVersion">关于与版本更新</span>
-                  <span class="badge" id="moreMenuVersionBadge" style="margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:#10b981;background:rgba(16,185,129,0.12);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.12</span>
+                  <span class="badge" id="moreMenuVersionBadge" style="margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:#10b981;background:rgba(16,185,129,0.12);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.15</span>
                 </button>
 
                 <!-- 切换语言 -->
@@ -764,13 +764,13 @@
                 </div>
                 <div>
                   <div style="display:flex;align-items:center;gap:8px;">
-                    <h2 class="page-title" style="margin:0;font-size:18px;font-weight:700;">聊天托管与数字分身工作台</h2>
-                    <span class="hosting-safety-tag" title="当您在微信或 QQ 亲自回复好友时，系统将自动进入静默防撞车保护期，AI 不会插话抢话">
+                    <h2 class="page-title" style="margin:0;font-size:18px;font-weight:700;">微信智能体托管与记忆中心</h2>
+                    <span class="hosting-safety-tag" title="当您在微信亲自回复好友时，系统将自动进入静默防撞车保护期，AI 不会插话抢话">
                       <span class="pulse-dot-mini"></span> 人工回复防撞车保护已就绪
                     </span>
                   </div>
                   <p class="page-subtitle" style="margin:2px 0 0 0;font-size:11.5px;color:var(--text-muted);">
-                    微信与 QQ 双通道代管 · 数字分身人设定制 · 半托管草稿人工审批 · 防撞车人机协同
+                    桌面微信后台静默代管 · 数字分身人设定制 · 跨会话长期记忆沉淀 · 本地原生零Token消耗
                   </p>
                 </div>
               </div>
@@ -797,27 +797,29 @@
               </div>
 
               <div class="hosting-btn-group">
-                <button type="button" class="btn secondary" id="hostingRefreshBtn" title="刷新状态与消息" style="font-size:12px;padding:6px 11px;display:inline-flex;align-items:center;gap:4px;">
+                <button type="button" class="btn secondary" id="hostingRefreshBtn" title="刷新状态与记忆" style="font-size:12px;padding:6px 11px;display:inline-flex;align-items:center;gap:4px;">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                   <span>刷新</span>
                 </button>
-                <button type="button" class="btn secondary" id="hostingClearAllBtn" style="font-size:12px;padding:6px 11px;color:var(--danger, #ef4444);display:inline-flex;align-items:center;gap:4px;" title="清空全部托管会话与消息历史记录">
+                <button type="button" class="btn secondary" id="hostingClearAllBtn" style="font-size:12px;padding:6px 11px;color:var(--danger, #ef4444);display:inline-flex;align-items:center;gap:4px;" title="清空历史缓存">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                  <span>清空</span>
+                  <span>清空缓存</span>
                 </button>
-                <button type="button" class="btn primary" id="hostingQuickAddBtn" style="font-size:12px;padding:6px 14px;display:inline-flex;align-items:center;gap:5px;" title="全量好友来信默认自动接管；仅需为特定好友定制独立人设或不同智能体时在此添加">
-                  <span>+ 特殊好友定制 (可选)</span>
+                <button type="button" class="btn secondary" id="hostingQuickAddBtn" style="font-size:12px;padding:6px 14px;display:inline-flex;align-items:center;gap:5px;" title="为特定特殊好友定制专属规则 (可选)">
+                  <span>+ 特殊好友定制</span>
                 </button>
               </div>
             </div>
           </div>
 
-          <!-- 核心三栏/两栏工作台布局 -->
-          <div class="hosting-workbench-layout" id="hostingWorkbenchLayout">
-            <!-- 左栏：通道账号状态与会话过滤列表 -->
-            <div class="hosting-left-pane">
-              <!-- 通道网关卡片组合 -->
-              <div class="hosting-accounts-box">
+          <!-- 核心两栏中枢：左栏智能体角色与分身人设，右栏长期记忆与偏好沉淀库 -->
+          <div class="hosting-workbench-grid" id="hostingWorkbenchGrid">
+            <!-- 左栏：通道状态与分身人设策略 -->
+            <div class="hosting-card-pane">
+              <div class="hosting-pane-header">
+                <span class="pane-title">⚙️ 智能体角色与分身人设 (Agent & Persona)</span>
+              </div>
+              <div class="hosting-pane-body">
                 <!-- 微信通道卡片 -->
                 <div class="hosting-account-item wx-card" id="hostingWxAccountCard">
                   <div class="account-item-header">
@@ -835,7 +837,7 @@
                     </div>
                   </div>
 
-                  <!-- 登录/代管模式标识与说明条 -->
+                  <!-- 模式标识 -->
                   <div class="account-mode-bar">
                     <span class="badge info" id="hostingWxModeBadge" style="font-size:10px;padding:1px 6px;">💻 桌面免扫码代管</span>
                     <span class="account-mode-desc" id="hostingWxModeDesc" title="直接接管已登录的桌面微信，零封号风险">
@@ -843,7 +845,7 @@
                     </span>
                   </div>
 
-                  <!-- 微信操作按钮组 -->
+                  <!-- 微信操作组 -->
                   <div class="account-actions-row">
                     <button type="button" class="btn text-btn switch-mode-btn" id="hostingWxSwitchModeBtn" title="切换模式：桌面免扫码视觉代管 / 手机扫码登录协议">
                       🔄 切换扫码登录
@@ -859,237 +861,191 @@
                   </div>
                 </div>
 
-                <!-- QQ 通道卡片 -->
-                <div class="hosting-account-item qq-card" id="hostingQqAccountCard">
+                <!-- QQ 通道微卡片 (紧凑预留) -->
+                <div class="hosting-account-item qq-card" id="hostingQqAccountCard" style="display:none;">
                   <div class="account-item-header">
                     <div class="account-item-title-group">
                       <div class="account-icon qq">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                       </div>
                       <div class="account-info">
                         <div class="account-title-row">
-                          <span class="account-name">QQ / OneBot</span>
+                          <span class="account-name" style="font-size:11.5px;">QQ / OneBot</span>
                           <span class="badge neutral" id="hostingQqBadge">未连接</span>
                         </div>
-                        <span class="account-sub" id="hostingQqUser">NapCat / OneBot 协议</span>
+                        <span class="account-sub" id="hostingQqUser" style="font-size:10.5px;">NapCat / OneBot</span>
                       </div>
                     </div>
                     <button type="button" class="btn text-btn" id="hostingQqActionBtn" style="font-size:11px;color:var(--primary);">
-                      服务配置
+                      配置
                     </button>
                   </div>
                 </div>
-              </div>
 
-              <!-- 过滤器与搜索栏 -->
-              <div class="hosting-filter-bar">
-                <div class="hosting-filter-chips">
-                  <button type="button" class="hosting-chip-btn active" data-filter="all">全部</button>
-                  <button type="button" class="hosting-chip-btn" data-filter="auto">全自动</button>
-                  <button type="button" class="hosting-chip-btn" data-filter="draft">待审草稿</button>
-                  <button type="button" class="hosting-chip-btn" data-filter="cooldown">人工中</button>
-                </div>
-                <input type="text" id="hostingContactSearchInput" class="hosting-search-input" placeholder="搜索好友备注或群名称..." />
-              </div>
-
-              <!-- 会话列表容器 -->
-              <div class="hosting-contacts-scroll" id="hostingContactsContainer">
-                <!-- 动态渲染联系人列表 -->
-              </div>
-            </div>
-
-            <!-- 中栏：实时会话消息流与人机协同交互 -->
-            <div class="hosting-mid-pane">
-              <!-- 会话标题栏 -->
-              <div class="hosting-chat-header" id="hostingChatHeader">
-                <div class="chat-header-info">
-                  <span class="chat-target-avatar" id="hostingHeaderAvatar">👤</span>
-                  <div>
-                    <div style="display:flex;align-items:center;gap:6px;">
-                      <span class="chat-target-name" id="hostingHeaderName">请选择左侧托管会话</span>
-                      <span class="badge" id="hostingHeaderChannelBadge" style="display:none;">WX</span>
-                      <span class="badge neutral" id="hostingHeaderModeBadge" style="display:none;">全自动</span>
-                    </div>
-                    <span class="chat-target-sub" id="hostingHeaderSub">暂无选中会话</span>
-                  </div>
-                </div>
-                <div class="chat-header-actions" id="hostingHeaderActions" style="display:none;">
-                  <button type="button" class="btn secondary" id="hostingToggleTakeoverBtn" style="font-size:11.5px;padding:4px 10px;">
-                    🙋 人工接管
-                  </button>
-                  <button type="button" class="btn secondary" id="hostingTogglePolicyBtn" style="font-size:11.5px;padding:4px 10px;" title="展开或收起分身人设策略面板">
-                    ⚙️ 分身策略
-                  </button>
-                </div>
-              </div>
-
-              <!-- 消息瀑布流容器 -->
-              <div class="hosting-messages-stream" id="hostingMessagesStream">
-                <!-- 默认空状态：数字分身 3 步新手向导 -->
-                <div class="hosting-empty-guide-wrap">
-                  <div class="hosting-guide-header">
-                    <div style="font-size:36px;margin-bottom:6px;">🤖💬</div>
-                    <h3 style="font-size:16px;font-weight:700;margin:0 0 4px 0;color:var(--text-main);">微信与 QQ 全量自动托管就绪</h3>
-                    <p style="font-size:12.5px;color:var(--text-muted);margin:0;max-width:480px;line-height:1.5;">
-                      已支持全量好友自动接管，统一由默认智能体代答。当您在手机上亲自回复时，分身将自动静默避让
-                    </p>
-                  </div>
-                  <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:9px 14px;margin-bottom:14px;max-width:520px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-main);line-height:1.4;">
-                    <span style="font-size:16px;">💡</span>
-                    <div><strong>无需手动录入好友：</strong>启动代管后，任何好友发来消息，智能体都会<strong>自动接管回复</strong>并在此自动归档。</div>
-                  </div>
-                  <div class="hosting-guide-steps">
-                    <div class="hosting-guide-step">
-                      <div class="step-num">1</div>
-                      <div class="step-content">
-                        <div class="step-title">启动代管通道（左侧卡片）</div>
-                        <div class="step-desc">
-                          <strong>桌面视觉免扫码（推荐）</strong>：电脑打开微信，点击左侧「启动代管」即可接管，零封号风险；<br/>
-                          <strong>手机扫码登录</strong>：也可随时切换为扫码登录，弹出二维码使用微信扫码授权。
-                        </div>
-                      </div>
-                    </div>
-                    <div class="hosting-guide-step">
-                      <div class="step-num">2</div>
-                      <div class="step-content">
-                        <div class="step-title">来信自动接管与归档（零配置）</div>
-                        <div class="step-desc">
-                          启动代管后，任何微信好友或群发来消息，默认分身智能体都会自动代答并在此归档；仅在需要给特殊重要客户定制专属人设或智能体时才需添加规则。
-                        </div>
-                      </div>
-                    </div>
-                    <div class="hosting-guide-step">
-                      <div class="step-num">3</div>
-                      <div class="step-content">
-                        <div class="step-title">右侧分身人设与防撞车保护</div>
-                        <div class="step-desc">
-                          可在右侧策略栏随时调整默认分身人设、记忆库关联，或套用预设 Prompt；人工回复时自动触发静默冷却。
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="hosting-guide-actions">
-                    <button type="button" class="btn primary" id="hostingGuideAddBtn" style="font-size:12.5px;padding:7px 18px;">
-                      + 特殊好友定制 (可选)
-                    </button>
-                    <button type="button" class="btn secondary" id="hostingGuideVisionBtn" style="font-size:12.5px;padding:7px 16px;">
-                      👁️ 测试桌面微信识屏
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 冷却与人工接管状态浮条 (当处于冷却期时显示) -->
-              <div class="hosting-cooldown-banner" id="hostingCooldownBanner" style="display:none;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                <span id="hostingCooldownText">当前会话处于人工接管防撞车冷却期，AI 智能体已静默。</span>
-                <button type="button" class="btn text-btn" id="hostingEndCooldownBtn" style="margin-left:auto;font-size:11px;color:var(--primary);font-weight:600;">
-                  提前解除冷却并恢复托管
-                </button>
-              </div>
-
-              <!-- 底部协同与输入控制台 -->
-              <div class="hosting-chat-input-area" id="hostingInputArea" style="display:none;">
-                <!-- 智能回复备选 Chip 建议条 -->
-                <div class="hosting-suggestions-bar" id="hostingSuggestionsBar">
-                  <div class="suggestions-label">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                    <span>智能建议回复：</span>
-                  </div>
-                  <div class="suggestions-chips-row" id="hostingSuggestionsRow">
-                    <span class="suggestion-loading">正在构思回复建议...</span>
-                  </div>
-                </div>
-
-                <!-- 消息输入与发送区 -->
-                <div class="hosting-input-box">
-                  <textarea id="hostingMessageInput" class="hosting-textarea" placeholder="以本人身份向对方发送消息 (Enter 发送，发送后自动激活防撞车冷却保护)..." rows="2"></textarea>
-                  <div class="hosting-input-bottom">
-                    <span class="hosting-input-hint">💡 手动发送将自动激活 10 分钟防撞车冷却保护，AI 暂不抢话</span>
-                    <button type="button" class="btn primary" id="hostingSendBtn" style="font-size:12px;padding:6px 14px;">
-                      人工发送
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 右栏：专属托管策略与人设抽屉 -->
-            <div class="hosting-right-pane" id="hostingRightPane">
-              <div class="hosting-policy-header">
-                <div style="display:flex;align-items:center;gap:6px;">
-                  <span style="font-weight:700;font-size:13px;color:var(--text-main);">专属分身人设与策略</span>
-                </div>
-                <div style="display:flex;align-items:center;gap:6px;">
-                  <span id="hostingPolicyTargetName" style="font-size:11px;color:var(--text-muted);">未选择</span>
-                  <button type="button" class="btn text-btn" id="hostingClosePolicyBtn" style="font-size:14px;padding:2px 6px;color:var(--text-muted);" title="收起面板">✕</button>
-                </div>
-              </div>
-
-              <div class="hosting-policy-body" id="hostingPolicyBody" style="display:none;">
-                <form id="hostingPolicyForm" style="display:flex;flex-direction:column;gap:12px;">
+                <!-- 分身策略表单 -->
+                <form id="hostingDefaultPolicyForm" style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
                   <div class="form-group">
-                    <label style="font-size:11.5px;font-weight:600;">托管代答模式 (Hosting Mode)</label>
-                    <select id="hpModeSelect">
-                      <option value="auto">🟢 全自动托管代答 (Auto Reply)</option>
-                      <option value="draft">🔵 半托管草稿确认 (Draft Confirmation)</option>
-                      <option value="mention">🟡 仅在 @ 或唤醒词时回复 (Mention Only)</option>
-                      <option value="manual">⚪ 仅记录不代答 (Manual / Monitor)</option>
-                      <option value="off">🔴 彻底关闭此会话托管 (Disabled)</option>
-                    </select>
+                    <label style="font-size:11.5px;font-weight:600;">1. 响应智能体角色 (Agent)</label>
+                    <select id="hpDefaultAgentSelect"></select>
                   </div>
 
                   <div class="form-group">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                      <label style="font-size:11.5px;font-weight:600;margin:0;">响应智能体角色 (Agent)</label>
-                      <button type="button" class="btn text-btn" id="hpOpenMemoryBtn" style="font-size:11px;color:var(--primary);padding:0;" title="打开该智能体绑定的长期向量记忆库">
-                        🧠 打开记忆库 ↗
-                      </button>
+                      <label style="font-size:11.5px;font-weight:600;margin:0;">2. 分身人设与口吻 (Persona Prompt)</label>
+                      <span style="font-size:10.5px;color:var(--text-muted);">点击套用风格：</span>
                     </div>
-                    <select id="hpAgentSelect"></select>
-                  </div>
-
-                  <div class="form-group">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                      <label style="font-size:11.5px;font-weight:600;margin:0;">专属分身人设与 Prompt (Persona)</label>
-                      <span style="font-size:10px;color:var(--text-muted);">点击套用模板：</span>
-                    </div>
-                    <!-- 快捷人设模板选择器 -->
                     <div class="persona-templates-row" id="hpPersonaTemplates">
-                      <button type="button" class="persona-template-chip" data-template="business">💼 商务严谨</button>
-                      <button type="button" class="persona-template-chip" data-template="humor">😄 幽默风趣</button>
-                      <button type="button" class="persona-template-chip" data-template="tech">💻 技术顾问</button>
-                      <button type="button" class="persona-template-chip" data-template="polite">⏳ 客套延后</button>
+                      <button type="button" class="persona-template-chip" data-template="natural">💬 自然口语</button>
+                      <button type="button" class="persona-template-chip" data-template="business">💼 商务得体</button>
+                      <button type="button" class="persona-template-chip" data-template="tech">💻 技术专家</button>
+                      <button type="button" class="persona-template-chip" data-template="polite">⏳ 稍后联系</button>
                     </div>
-                    <textarea id="hpSystemPromptInput" rows="5" placeholder="例如：我是徐克的 AI 助理，说话幽默严谨。遇到需求请先询问预算和周期；遇到借钱请礼貌表示暂无流动资金并通知本人。"></textarea>
+                    <textarea id="hpDefaultSystemPromptInput" rows="4" placeholder="例如：以本人的口吻友好简明地回复，像真人发微信一样，1~2句话内说清楚。切忌说教和长篇大论。"></textarea>
                   </div>
 
                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                     <div class="form-group">
-                      <label style="font-size:11px;font-weight:600;">人工冷却时长 (分)</label>
-                      <input type="number" id="hpCooldownInput" min="1" max="120" value="10" />
+                      <label style="font-size:11px;font-weight:600;">托管代答模式</label>
+                      <select id="hpDefaultModeSelect">
+                        <option value="auto">🟢 全自动托管代答</option>
+                        <option value="draft">🔵 半托管草稿确认</option>
+                        <option value="off">🔴 暂停自动回复</option>
+                      </select>
                     </div>
                     <div class="form-group">
-                      <label style="font-size:11px;font-weight:600;">拟人打字延迟 (秒)</label>
-                      <input type="number" id="hpDelayInput" min="0" max="30" step="0.5" value="2.5" />
+                      <label style="font-size:11px;font-weight:600;">人工防撞车静默 (分)</label>
+                      <input type="number" id="hpDefaultCooldownInput" min="1" max="120" value="10" />
                     </div>
                   </div>
 
                   <div class="form-group">
-                    <label style="font-size:11px;font-weight:600;">绑定工程或知识工作区 (可选)</label>
-                    <input type="text" id="hpWorkspaceInput" placeholder="例如工作区本地目录路径..." />
+                    <label style="font-size:11px;font-weight:600;">拟人思考与打字延迟 (秒)</label>
+                    <input type="number" id="hpDefaultDelayInput" min="0" max="10" step="0.5" value="2.0" />
                   </div>
 
-                  <button type="submit" class="btn primary" id="hpSaveBtn" style="margin-top:6px;font-size:12px;font-weight:600;">
-                    保存会话策略
-                  </button>
-                  <button type="button" class="btn text-btn" id="hpDeleteBtn" style="font-size:11px;color:var(--danger, #ef4444);margin-top:2px;">
-                    删除此会话规则
+                  <button type="button" class="btn primary" id="hpSaveDefaultPolicyBtn" style="font-size:12px;font-weight:600;padding:8px 14px;margin-top:2px;">
+                    💾 保存分身人设与托管配置
                   </button>
                 </form>
               </div>
-              <div id="hostingPolicyEmpty" class="hosting-policy-empty" style="text-align:center;color:var(--text-muted);padding:40px 12px;font-size:12px;">
-                从左侧选择一个联系人或群聊，即可定制专属托管模式与个性化人设 Prompt
+            </div>
+
+            <!-- 右栏：智能体专属基因库与长期记忆沉淀 -->
+            <div class="hosting-card-pane">
+              <div class="hosting-pane-header">
+                <div>
+                  <span class="pane-title">🧬 智能体专属基因库与长期记忆 (Gene Pool)</span>
+                  <div style="font-size:11px;color:var(--text-muted);margin-top:1px;" id="hostingGenePoolSubtext">
+                    智能体拥有独立的专属基因库，互不污染。代答时仅调取当前分身的专属基因与通用知识。
+                  </div>
+                </div>
+                <button type="button" class="btn primary-subtle" id="hostingAddMemoryBtn" style="font-size:11.5px;padding:4px 10px;margin-left:auto;">
+                  + 添加专属基因
+                </button>
+              </div>
+
+              <div class="hosting-pane-body" style="display:flex;flex-direction:column;gap:8px;">
+                <!-- 基因库作用域隔离切换 Chip -->
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                  <button type="button" class="hosting-chip-btn active" id="hostingScopeActiveBtn" data-scope="active">
+                    👧 当前分身专属基因
+                  </button>
+                  <button type="button" class="hosting-chip-btn" id="hostingScopeUniversalBtn" data-scope="universal">
+                    🌐 全局通用知识
+                  </button>
+                  <button type="button" class="hosting-chip-btn" id="hostingScopeAllBtn" data-scope="all">
+                    📁 全部智能体 (含 coder 等)
+                  </button>
+                </div>
+
+                <!-- 记忆搜索与筛选条 -->
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <input type="text" id="hostingMemorySearchInput" class="filter-input" style="flex:1;font-size:12px;" placeholder="搜索专属基因、偏好或约定..." />
+                  <select id="hostingMemoryCategoryFilter" style="width:105px;font-size:11.5px;padding:4px 6px;">
+                    <option value="">全部分类</option>
+                    <option value="preference">用户习惯</option>
+                    <option value="fact">领域事实</option>
+                    <option value="convention">约定规则</option>
+                    <option value="domain">业务背景</option>
+                    <option value="custom">自定义</option>
+                  </select>
+                </div>
+
+                <!-- 记忆卡片列表容器 -->
+                <div class="hosting-memories-container" id="hostingMemoriesContainer">
+                  <!-- 动态加载记忆条目 -->
+                </div>
+
+                <!-- 桌面免扫码原生微信操作指南卡片 -->
+                <div class="hosting-info-banner">
+                  <div style="font-size:16px;">💡</div>
+                  <div style="font-size:11.5px;line-height:1.5;color:var(--text-main);">
+                    <strong>真实微信就在右侧</strong>：本系统已直接接管您的原生桌面微信。<br/>
+                    日常聊天您直接在屏幕右侧的微信中进行即可，<strong>无需在此查看重复的聊天记录</strong>；AI 会在后台静默监听、自动调用上面的记忆库并拟人化代答。
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 底部：SightFlow 风格后台静默运行动态与动作日志 -->
+          <div class="hosting-live-feed-panel">
+            <div class="feed-header">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span class="live-dot"></span>
+                <span style="font-weight:700;font-size:12px;color:var(--text-main);">桌面微信静默监听状态与实时动作动态 (Live Feed)</span>
+              </div>
+              <button type="button" class="btn text-btn" id="hostingClearFeedBtn" style="font-size:11px;color:var(--text-muted);padding:0 4px;">清空动态</button>
+            </div>
+            <div class="feed-content" id="hostingLiveFeedContainer">
+              <div class="feed-item neutral">[系统初始化] 桌面微信代管驱动就绪，正在后台静默巡检微信来信...</div>
+            </div>
+          </div>
+
+          <!-- 隐藏兼容层：保留用于向后兼容特殊好友规则模态窗与历史代码调用 -->
+          <div style="display:none;" aria-hidden="true">
+            <div id="hostingWorkbenchLayout">
+              <div class="hosting-left-pane">
+                <input type="text" id="hostingContactSearchInput" />
+                <div id="hostingContactsContainer"></div>
+              </div>
+              <div class="hosting-mid-pane">
+                <div id="hostingChatHeader">
+                  <span id="hostingHeaderAvatar"></span>
+                  <span id="hostingHeaderName"></span>
+                  <span id="hostingHeaderSub"></span>
+                  <span id="hostingHeaderChannelBadge"></span>
+                  <span id="hostingHeaderModeBadge"></span>
+                  <div id="hostingHeaderActions">
+                    <button id="hostingToggleTakeoverBtn"></button>
+                    <button id="hostingTogglePolicyBtn"></button>
+                  </div>
+                </div>
+                <div id="hostingMessagesStream"></div>
+                <div id="hostingCooldownBanner"><span id="hostingCooldownText"></span><button id="hostingEndCooldownBtn"></button></div>
+                <div id="hostingInputArea">
+                  <div id="hostingSuggestionsBar"><div id="hostingSuggestionsRow"></div></div>
+                  <textarea id="hostingMessageInput"></textarea>
+                  <button id="hostingSendBtn"></button>
+                </div>
+              </div>
+              <div class="hosting-right-pane" id="hostingRightPane">
+                <span id="hostingPolicyTargetName"></span>
+                <button id="hostingClosePolicyBtn"></button>
+                <div id="hostingPolicyBody">
+                  <form id="hostingPolicyForm">
+                    <select id="hpModeSelect"></select>
+                    <button id="hpOpenMemoryBtn"></button>
+                    <select id="hpAgentSelect"></select>
+                    <textarea id="hpSystemPromptInput"></textarea>
+                    <input id="hpCooldownInput" />
+                    <input id="hpDelayInput" />
+                    <input id="hpWorkspaceInput" />
+                    <button id="hpSaveBtn"></button>
+                    <button id="hpDeleteBtn"></button>
+                  </form>
+                </div>
+                <div id="hostingPolicyEmpty"></div>
               </div>
             </div>
           </div>
@@ -1106,7 +1062,7 @@
             </div>
             <div style="display:flex;align-items:center;gap:10px;">
               <button type="button" class="btn secondary" id="headerCheckUpdateBtn" style="font-size:12px;padding:5px 12px;display:inline-flex;align-items:center;gap:6px;border-radius:6px;cursor:pointer;" title="查看软件版本并检查 GitHub 更新">
-                <span class="badge" id="headerVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;color:#10b981;background:rgba(16,185,129,0.12);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.12</span>
+                <span class="badge" id="headerVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;color:#10b981;background:rgba(16,185,129,0.12);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.15</span>
                 <span id="headerCheckUpdateBtnText" style="font-size:12px;">检查更新</span>
               </button>
               <button type="button" class="btn secondary" id="backToChatBtn" onclick="show('chat')" style="font-size:12.5px;padding:6px 14px;display:inline-flex;align-items:center;gap:6px;">
@@ -2493,7 +2449,7 @@
                     <div>
                       <div style="font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;">
                         <span>关于与软件版本 (About Hermes)</span>
-                        <span class="badge" id="appCurrentVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;padding:2px 8px;background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.3);border-radius:6px;font-weight:600;">v0.1.12</span>
+                        <span class="badge" id="appCurrentVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;padding:2px 8px;background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.3);border-radius:6px;font-weight:600;">v0.1.15</span>
                       </div>
                       <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">Hermes Agent Platform · 赫尔墨斯多智能体协同开发平台</div>
                     </div>
@@ -2509,7 +2465,7 @@
                   <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
                     <div style="padding:12px 14px;background:var(--bg-main);border:1px solid var(--border-default);border-radius:8px;">
                       <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:600;">当前安装版本</div>
-                      <div style="font-size:16px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin-top:4px;" id="aboutSoftwareVersionText">v0.1.12</div>
+                      <div style="font-size:16px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin-top:4px;" id="aboutSoftwareVersionText">v0.1.15</div>
                       <div style="font-size:11px;color:#10b981;margin-top:2px;">已内置自动重试与全协议适配</div>
                     </div>
                     <div style="padding:12px 14px;background:var(--bg-main);border:1px solid var(--border-default);border-radius:8px;">

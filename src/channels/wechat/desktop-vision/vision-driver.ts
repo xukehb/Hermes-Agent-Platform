@@ -4,16 +4,33 @@ import type { WeChatPersonalDriver } from '../../wechat.js';
 import { type CapturedWindow, captureWeChatWindow, isWeChatRunning } from './capture.js';
 import { type SendReplyOptions, type ActionDriverResult, sendWeChatReply } from './action-driver.js';
 import { type WeChatVisionParseResult, type VisionParserOptions, parseWeChatScreen } from './vision-parser.js';
+import { checkImagesDiff, isTextSentByMe, type ImageDiffResult } from './ocr-parser.js';
+
+export interface DesktopVisionActivityEvent {
+  stage: 'detected' | 'thinking' | 'generated' | 'executing' | 'sent' | 'cooldown' | 'draft' | 'system' | 'scan';
+  level: 'info' | 'success' | 'warning' | 'error';
+  tag: string;
+  title: string;
+  detail?: string | undefined;
+  target?: string | undefined;
+  sender?: string | undefined;
+  agentId?: string | undefined;
+  agentName?: string | undefined;
+  model?: string | undefined;
+  elapsedMs?: number | undefined;
+}
 
 export interface DesktopVisionDriverOptions {
   pollIntervalMs?: number | undefined;
   visionModel?: string | undefined;
   log?: ((line: string) => void) | undefined;
+  onActivity?: ((activity: DesktopVisionActivityEvent) => void) | undefined;
   /** 测试注入函数 */
   captureFn?: (() => Promise<CapturedWindow>) | undefined;
   parseFn?: ((image: Buffer | string, options?: VisionParserOptions | undefined) => Promise<WeChatVisionParseResult>) | undefined;
   sendFn?: ((options: SendReplyOptions) => Promise<ActionDriverResult>) | undefined;
   isWeChatRunningFn?: (() => Promise<boolean>) | undefined;
+  checkDiffFn?: ((img1: Buffer | string, img2: Buffer | string) => Promise<ImageDiffResult>) | undefined;
 }
 
 /**
@@ -40,17 +57,23 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
   private readonly pollIntervalMs: number;
   private readonly visionModel: string | undefined;
   private readonly log: (line: string) => void;
+  private readonly onActivity?: ((activity: DesktopVisionActivityEvent) => void) | undefined;
 
   private readonly captureFn: () => Promise<CapturedWindow>;
   private readonly parseFn: (image: Buffer | string, options?: VisionParserOptions | undefined) => Promise<WeChatVisionParseResult>;
   private readonly sendFn: (options: SendReplyOptions) => Promise<ActionDriverResult>;
   private readonly isWeChatRunningFn: () => Promise<boolean>;
+  private readonly checkDiffFn: (img1: Buffer | string, img2: Buffer | string) => Promise<ImageDiffResult>;
 
   private started = false;
   private timer: NodeJS.Timeout | undefined;
   private scanning = false;
   private readonly processedFingerprints = new Set<string>();
   private readonly fingerprintHistory: string[] = [];
+  private readonly recentSentTexts = new Set<string>();
+  private readonly recentSentList: string[] = [];
+  private chatBaselineBuffer: Buffer | undefined;
+  private lastSentTimestamp = 0;
   private lastActiveTarget: string | undefined;
   private readonly targetCoordsMap = new Map<string, [number, number]>();
 
@@ -58,11 +81,13 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
     this.pollIntervalMs = Math.max(1000, options.pollIntervalMs ?? 3000);
     this.visionModel = options.visionModel;
     this.log = options.log ?? (() => undefined);
+    this.onActivity = options.onActivity;
 
     this.captureFn = options.captureFn ?? captureWeChatWindow;
     this.parseFn = options.parseFn ?? parseWeChatScreen;
     this.sendFn = options.sendFn ?? sendWeChatReply;
     this.isWeChatRunningFn = options.isWeChatRunningFn ?? isWeChatRunning;
+    this.checkDiffFn = options.checkDiffFn ?? checkImagesDiff;
   }
 
   async start(): Promise<void> {
@@ -70,6 +95,12 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
     this.started = true;
 
     this.log('[DesktopVision] 桌面微信视觉代管驱动启动中...');
+    this.onActivity?.({
+      stage: 'system',
+      level: 'info',
+      tag: '静默巡检',
+      title: '桌面微信视觉代管驱动已就绪，正在后台静默巡检微信来信...',
+    });
 
     // 检查微信客户端进程
     const isRunning = await this.isWeChatRunningFn().catch(() => false);
@@ -104,6 +135,10 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
     this.scanning = false;
     this.processedFingerprints.clear();
     this.fingerprintHistory.length = 0;
+    this.recentSentTexts.clear();
+    this.recentSentList.length = 0;
+    this.chatBaselineBuffer = undefined;
+    this.lastSentTimestamp = 0;
     this.onLogout?.('桌面视觉代管驱动已停止');
     this.log('[DesktopVision] 桌面微信视觉代管驱动已安全停止');
   }
@@ -111,6 +146,12 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
   /** 单次视觉扫描与决策处理 (See & Think) */
   async tick(): Promise<void> {
     if (!this.started || this.scanning) return;
+
+    // 刚刚发送过消息且未建立基线时，微信 UI 正在执行动画，暂停扫描避免竞争
+    if (!this.chatBaselineBuffer && this.lastSentTimestamp > 0 && Date.now() - this.lastSentTimestamp < 2000) {
+      return;
+    }
+
     this.scanning = true;
 
     try {
@@ -120,9 +161,23 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
         return;
       }
 
-      // 2. Think: 调用视觉多模态 VLM 分析界面
+      // 1.1 像素基线比对 (SightFlow 模式核心防护)：
+      // 若聊天视窗像素与回复后建立的基线高度一致 (无新气泡出现)，直接跳过耗费资源的 OCR / VLM
+      if (this.chatBaselineBuffer && captured.buffer) {
+        const diff = await this.checkDiffFn(this.chatBaselineBuffer, captured.buffer);
+        if (!diff.hasDiff) {
+          // 聊天视窗无新气泡出现，跳过本轮分析，彻底杜绝误读自己绿色气泡
+          return;
+        }
+        // 检测到有真实变化 (新消息到来或切换了窗口)，清除基线以触发后续解析
+        this.chatBaselineBuffer = undefined;
+      }
+
+      // 2. Think: 调用视觉多模态 / macOS 原生 OCR 分析界面
       const input = captured.buffer || captured.base64!;
-      const parseOpts: VisionParserOptions = {};
+      const parseOpts: VisionParserOptions = {
+        knownSentTexts: this.recentSentTexts,
+      };
       if (this.visionModel) {
         parseOpts.model = this.visionModel;
       }
@@ -147,7 +202,7 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
       }
 
       const msg = parsed.lastMessage;
-      // 我方发送的消息不触发自动回复
+      // 我方发送的消息绝对不触发自动回复
       if (msg.isFromMe) {
         return;
       }
@@ -157,21 +212,45 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
         return;
       }
 
-      // 消息去重指纹计算（目标:发送者:消息内容）
-      const chatTarget = parsed.chatTarget || msg.sender;
-      const fingerprint = `${chatTarget}:${msg.sender}:${cleanText}`;
+      // 严格检查是否为最近由我方 AI 或用户发送过的文本，防止回音与死循环
+      const isEchoOfSent =
+        isTextSentByMe(cleanText, this.recentSentTexts) ||
+        this.recentSentTexts.has(cleanText) ||
+        this.recentSentTexts.has(msg.text);
+      if (isEchoOfSent) {
+        this.log(`[DesktopVision] 忽略我方刚刚发送的回复文本片段回音: "${cleanText}"`);
+        return;
+      }
 
-      if (this.processedFingerprints.has(fingerprint)) {
+      // 消息去重指纹计算（目标:发送者:消息内容，以及纯内容指纹）
+      const chatTarget = parsed.chatTarget || msg.sender;
+      const fingerprints = [
+        `${chatTarget}:${msg.sender}:${cleanText}`,
+        `${chatTarget}:${cleanText}`,
+        `${cleanText}`,
+      ];
+
+      if (fingerprints.some((fp) => this.processedFingerprints.has(fp))) {
         // 该条消息此前已经处理过，直接跳过防重复轰炸
         return;
       }
 
       // 记录去重缓存
-      this.addFingerprint(fingerprint);
+      for (const fp of fingerprints) {
+        this.addFingerprint(fp);
+      }
 
       this.log(`[DesktopVision] 识别到来自 [${chatTarget}] 的好友新消息: "${cleanText}"`);
-
       const isRoom = Boolean(parsed.isGroup);
+      this.onActivity?.({
+        stage: 'detected',
+        level: 'info',
+        tag: '微信来信',
+        title: `识别到来自【${chatTarget}】的新消息：“${cleanText}”`,
+        detail: `判定: 需要智能体代答 | 发送者: ${msg.sender || chatTarget} | 目标类型: ${isRoom ? `群聊 (${chatTarget})` : '好友私聊'}`,
+        target: chatTarget,
+        sender: msg.sender || chatTarget,
+      });
       const msgId = `dv_${Date.now()}_${randomUUID().slice(0, 8)}`;
 
       // 派发入站消息给平台上层（触发智能体思考与决策流）
@@ -210,11 +289,48 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
       return undefined;
     }
 
+    const cleanSent = text.trim();
     this.log(`[DesktopVision] 准备向 [${targetId}] 执行桌面模拟回复...`);
+    this.onActivity?.({
+      stage: 'executing',
+      level: 'warning',
+      tag: '动作模拟',
+      title: `准备模拟键鼠操作聚焦微信窗口，向【${targetId}】键入回复...`,
+      detail: `待发送文本 (${cleanSent.length} 字): “${cleanSent.slice(0, 80)}${cleanSent.length > 80 ? '...' : ''}”`,
+      target: targetId,
+    });
 
-    // 记录自己的回复到指纹库，防止下一帧巡检误判为对方发来的新消息
-    const myReplyFp = `${targetId}:me:${text.trim()}`;
-    this.addFingerprint(myReplyFp);
+    // 记录自己的回复到文本指纹库，防止下一帧巡检误判为对方发来的新消息
+    this.recentSentTexts.add(cleanSent);
+    this.recentSentList.push(cleanSent);
+    const sentLines = cleanSent.split('\n').map((l) => l.trim()).filter(Boolean);
+    for (const line of sentLines) {
+      if (line.length >= 2) {
+        this.recentSentTexts.add(line);
+        this.recentSentList.push(line);
+      }
+      if (line.length > 8) {
+        const tail = line.slice(-8).trim();
+        if (tail) {
+          this.recentSentTexts.add(tail);
+          this.recentSentList.push(tail);
+        }
+      }
+    }
+    while (this.recentSentList.length > 200) {
+      const oldest = this.recentSentList.shift();
+      if (oldest) this.recentSentTexts.delete(oldest);
+    }
+    this.lastSentTimestamp = Date.now();
+
+    const myReplyFp1 = `${targetId}:me:${cleanSent}`;
+    const myReplyFp2 = `${targetId}:${targetId}:${cleanSent}`;
+    const myReplyFp3 = `${targetId}:${cleanSent}`;
+    const myReplyFp4 = `${cleanSent}`;
+    this.addFingerprint(myReplyFp1);
+    this.addFingerprint(myReplyFp2);
+    this.addFingerprint(myReplyFp3);
+    this.addFingerprint(myReplyFp4);
 
     const targetCoords = this.targetCoordsMap.get(targetId);
     const switchToTarget = Boolean(targetCoords || (this.lastActiveTarget && this.lastActiveTarget !== targetId));
@@ -230,11 +346,41 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
 
     if (!result.ok) {
       this.log(`[DesktopVision] 消息发送失败: ${result.error}`);
+      this.onActivity?.({
+        stage: 'system',
+        level: 'error',
+        tag: '动作异常',
+        title: `桌面模拟发送给【${targetId}】失败: ${result.error || '执行异常'}`,
+        target: targetId,
+      });
       throw new Error(result.error || '桌面自动化发送微信消息失败');
     }
 
     this.lastActiveTarget = targetId;
+    this.lastSentTimestamp = Date.now();
     this.log(`[DesktopVision] 消息已成功模拟输入并发送给 [${targetId}]`);
+    this.onActivity?.({
+      stage: 'sent',
+      level: 'success',
+      tag: '发送成功',
+      title: `消息已成功模拟键入并发送至微信会话【${targetId}】！`,
+      detail: `完整内容: “${cleanSent}”`,
+      target: targetId,
+    });
+
+    // 记录刚刚发送后的屏幕基线快照 (SightFlow 模式)
+    // 等待 450ms 让微信 UI 渲染绿色气泡完成
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    try {
+      const baselineCapture = await this.captureFn();
+      if (baselineCapture?.buffer) {
+        this.chatBaselineBuffer = baselineCapture.buffer;
+        this.log(`[DesktopVision] 已更新聊天视窗像素基线快照 (SightFlow 模式)`);
+      }
+    } catch {
+      // 忽略基线快照捕获异常
+    }
+
     return `out_${Date.now()}_${randomUUID().slice(0, 6)}`;
   }
 

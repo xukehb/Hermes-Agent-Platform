@@ -120,4 +120,69 @@ describe('ChannelContactStore (多通道通用联系人与智能体路由中枢)
     expect(removed).toBe(true);
     expect(store.listContacts('qq')).toHaveLength(0);
   });
+
+  it('支持保存与持久化通道默认分身人设与托管策略，且在消息流转与联系人更新时不丢失', () => {
+    const store = ChannelContactStore.getInstance(testStorePath);
+
+    // 1. 保存微信通道的默认策略与分身人设 (Persona Prompt)
+    const customPersona = '你现在是小莹，性格温柔可爱，说话亲切活泼，每次回复一两句话。';
+    const saved = store.saveDefaultPolicy('wechat', {
+      agentId: 'xx',
+      systemPrompt: customPersona,
+      hostingMode: 'auto',
+      cooldownMinutes: 15,
+      delayMs: 3000,
+    });
+
+    expect(saved.agentId).toBe('xx');
+    expect(saved.systemPrompt).toBe(customPersona);
+    expect(saved.cooldownMinutes).toBe(15);
+
+    // 2. 验证立即读取
+    const policy = store.getDefaultPolicy('wechat');
+    expect(policy.agentId).toBe('xx');
+    expect(policy.systemPrompt).toBe(customPersona);
+    expect(policy.cooldownMinutes).toBe(15);
+    expect(policy.delayMs).toBe(3000);
+
+    // 3. 产生入站消息与联系人自动创建，验证新联系人自动继承默认配置，且 defaults 不被洗白
+    store.recordIncomingMessage({
+      channel: 'wechat',
+      fromId: 'wx_user_friend_1',
+      fromName: '微信好友A',
+      isRoom: false,
+      text: '你好呀！',
+    });
+
+    const contact = store.getContact('wx_user_friend_1', 'wechat');
+    expect(contact).toBeDefined();
+    expect(contact?.agentId).toBe('xx');
+    expect(contact?.systemPrompt).toBe(customPersona);
+
+    // 4. 产生回写出站消息
+    store.recordOutgoingMessage({
+      channel: 'wechat',
+      contactId: 'wx_user_friend_1',
+      agentId: 'xx',
+      text: '你好呀～收到啦！',
+    });
+
+    // 5. 模拟实例销毁并重新从持久化文件加载，验证 defaults 与分身人设完整持久化
+    ChannelContactStore.resetInstance();
+    const freshStore = ChannelContactStore.getInstance(testStorePath);
+    const reloadedPolicy = freshStore.getDefaultPolicy('wechat');
+
+    expect(reloadedPolicy.agentId).toBe('xx');
+    expect(reloadedPolicy.systemPrompt).toBe(customPersona);
+    expect(reloadedPolicy.hostingMode).toBe('auto');
+    expect(reloadedPolicy.cooldownMinutes).toBe(15);
+    expect(reloadedPolicy.delayMs).toBe(3000);
+
+    // 6. 清空联系人后，默认策略与分身人设仍然保留
+    freshStore.clearAllContacts('wechat');
+    expect(freshStore.listContacts('wechat')).toHaveLength(0);
+    const retainedPolicy = freshStore.getDefaultPolicy('wechat');
+    expect(retainedPolicy.agentId).toBe('xx');
+    expect(retainedPolicy.systemPrompt).toBe(customPersona);
+  });
 });

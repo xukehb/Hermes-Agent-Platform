@@ -96,6 +96,87 @@ int main(int argc, const char * argv[]) {
             return 0;
         }
 
+        // 模式 4：图片像素差异比对 (SightFlow 基线比对模式)
+        if (strcmp(argv[1], "--diff") == 0 && argc >= 4) {
+            NSString *p1 = [NSString stringWithUTF8String:argv[2]];
+            NSString *p2 = [NSString stringWithUTF8String:argv[3]];
+            NSURL *u1 = [NSURL fileURLWithPath:p1];
+            NSURL *u2 = [NSURL fileURLWithPath:p2];
+            CGImageSourceRef s1 = CGImageSourceCreateWithURL((__bridge CFURLRef)u1, NULL);
+            CGImageSourceRef s2 = CGImageSourceCreateWithURL((__bridge CFURLRef)u2, NULL);
+            if (!s1 || !s2) {
+                if (s1) CFRelease(s1);
+                if (s2) CFRelease(s2);
+                printf("{\"hasDiff\":true,\"diffRatio\":1.0}\n");
+                return 0;
+            }
+            CGImageRef img1 = CGImageSourceCreateImageAtIndex(s1, 0, NULL);
+            CGImageRef img2 = CGImageSourceCreateImageAtIndex(s2, 0, NULL);
+            CFRelease(s1);
+            CFRelease(s2);
+            if (!img1 || !img2) {
+                if (img1) CGImageRelease(img1);
+                if (img2) CGImageRelease(img2);
+                printf("{\"hasDiff\":true,\"diffRatio\":1.0}\n");
+                return 0;
+            }
+            size_t w1 = CGImageGetWidth(img1);
+            size_t h1 = CGImageGetHeight(img1);
+            size_t w2 = CGImageGetWidth(img2);
+            size_t h2 = CGImageGetHeight(img2);
+            if (w1 != w2 || h1 != h2 || w1 == 0 || h1 == 0) {
+                CGImageRelease(img1);
+                CGImageRelease(img2);
+                printf("{\"hasDiff\":true,\"diffRatio\":1.0}\n");
+                return 0;
+            }
+            CFDataRef d1 = CGDataProviderCopyData(CGImageGetDataProvider(img1));
+            CFDataRef d2 = CGDataProviderCopyData(CGImageGetDataProvider(img2));
+            const UInt8 *b1 = CFDataGetBytePtr(d1);
+            const UInt8 *b2 = CFDataGetBytePtr(d2);
+            size_t bpr1 = CGImageGetBytesPerRow(img1);
+            size_t bpr2 = CGImageGetBytesPerRow(img2);
+            size_t bpp = CGImageGetBitsPerPixel(img1) / 8;
+            if (bpp < 3) bpp = 4;
+
+            // 对比聊天视窗与消息列表主区域 (x: 12% - 98%, y: 10% - 90%)
+            size_t startY = (size_t)(h1 * 0.10);
+            size_t endY = (size_t)(h1 * 0.90);
+            size_t startX = (size_t)(w1 * 0.12);
+            size_t endX = (size_t)(w1 * 0.98);
+
+            size_t diffPixels = 0;
+            size_t checkedPixels = 0;
+
+            for (size_t y = startY; y < endY; y += 2) {
+                const UInt8 *r1 = b1 + y * bpr1;
+                const UInt8 *r2 = b2 + y * bpr2;
+                for (size_t x = startX; x < endX; x += 2) {
+                    size_t o = x * bpp;
+                    if (o + 2 < bpr1 && o + 2 < bpr2) {
+                        int dr = abs((int)r1[o] - (int)r2[o]);
+                        int dg = abs((int)r1[o + 1] - (int)r2[o + 1]);
+                        int db = abs((int)r1[o + 2] - (int)r2[o + 2]);
+                        if (dr > 18 || dg > 18 || db > 18) {
+                            diffPixels++;
+                        }
+                        checkedPixels++;
+                    }
+                }
+            }
+
+            CFRelease(d1);
+            CFRelease(d2);
+            CGImageRelease(img1);
+            CGImageRelease(img2);
+
+            double ratio = checkedPixels > 0 ? ((double)diffPixels / (double)checkedPixels) : 0.0;
+            BOOL hasDiff = ratio >= 0.005; // 差异大于 0.5% 视作有新变化
+            printf("{\"hasDiff\":%s,\"diffRatio\":%.5f,\"diffPixels\":%zu,\"checkedPixels\":%zu}\n",
+                   hasDiff ? "true" : "false", ratio, diffPixels, checkedPixels);
+            return 0;
+        }
+
         // 模式 2：对指定图像路径执行高精度本地原生 OCR
         NSString *path = [NSString stringWithUTF8String:argv[1]];
         NSURL *url = [NSURL fileURLWithPath:path];

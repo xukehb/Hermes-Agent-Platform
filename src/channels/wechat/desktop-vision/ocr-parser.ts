@@ -57,8 +57,119 @@ export function ensureMacOcrBinary(): string | undefined {
   return undefined;
 }
 
+export interface ChatBubble {
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  isFromMe: boolean;
+  lines: OcrRecognizedItem[];
+}
+
+/** 智能归一化与子串/模糊回音匹配：严格判断某段识别文本是否属于我方最近发送的回复 */
+export function isTextSentByMe(text: string, knownSentTexts?: Set<string>): boolean {
+  if (!knownSentTexts || knownSentTexts.size === 0 || !text) return false;
+  const rawClean = text.trim();
+  if (knownSentTexts.has(rawClean)) return true;
+
+  // 消除标点、表情、空白符号后的纯字面比对
+  const normTarget = rawClean.replace(/[\s\p{P}\p{S}]/gu, '');
+  if (!normTarget) return false;
+
+  for (const sent of knownSentTexts) {
+    const s = sent.trim();
+    if (s === rawClean) return true;
+    const normSent = s.replace(/[\s\p{P}\p{S}]/gu, '');
+    if (!normSent) continue;
+    if (normSent === normTarget) return true;
+
+    // 核心防护：我方长文本回复的尾行短句（如“定～”、“至更直接，我也能顶住～”、“我随时准备执行～”）
+    if (normTarget.length >= 2 && normSent.includes(normTarget)) return true;
+    if (normSent.length >= 3 && normTarget.includes(normSent)) return true;
+  }
+
+  return false;
+}
+
+/**
+ * 气泡聚类算法 (Bubble Clustering)：
+ * 微信多行气泡内部各行垂直间距极小 (deltaY <= 0.045)，但气泡内各行常呈左对齐排列。
+ * 单独看气泡末尾的短行（如“定～”、“出题～”）时，其右边缘常 < 0.70，导致被误判为对方来信！
+ * 聚类算法将相邻行聚合成完整气泡：只要该气泡中有任意一行靠右 (rightEdge >= 0.70 或 x >= 0.65)，
+ * 或者匹配了我方发送记录，整个气泡及其所有行均判定为我方发出 (isFromMe = true)！
+ */
+export function clusterChatBubbles(
+  items: OcrRecognizedItem[],
+  knownSentTexts?: Set<string>
+): ChatBubble[] {
+  if (items.length === 0) return [];
+
+  // 按 Apple Vision 坐标系降序排列 (y 越大越靠视窗上方，从上往下聚类)
+  const sorted = [...items].sort((a, b) => b.y - a.y);
+  const first = sorted[0];
+  if (!first) return [];
+  const bubbles: ChatBubble[] = [];
+  let currentCluster: OcrRecognizedItem[] = [first];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1];
+    const curr = sorted[i];
+    if (!prev || !curr) continue;
+    const deltaY = prev.y - curr.y;
+
+    const prevRightEdge = prev.x + prev.width;
+    const currRightEdge = curr.x + curr.width;
+    const isSameSenderSide =
+      Math.abs(prev.x - curr.x) < 0.08 ||
+      (prevRightEdge >= 0.70 && currRightEdge >= 0.70) ||
+      (prevRightEdge >= 0.70 && curr.x >= 0.40) ||
+      (prev.x < 0.55 && curr.x < 0.55);
+
+    if (deltaY >= 0 && deltaY <= 0.048 && isSameSenderSide) {
+      currentCluster.push(curr);
+    } else {
+      bubbles.push(finalizeBubble(currentCluster, knownSentTexts));
+      currentCluster = [curr];
+    }
+  }
+
+  if (currentCluster.length > 0) {
+    bubbles.push(finalizeBubble(currentCluster, knownSentTexts));
+  }
+
+  return bubbles;
+}
+
+function finalizeBubble(lines: OcrRecognizedItem[], knownSentTexts?: Set<string>): ChatBubble {
+  const combinedText = lines.map((l) => l.text.trim()).filter(Boolean).join('');
+  const minX = Math.min(...lines.map((l) => l.x));
+  const maxX = Math.max(...lines.map((l) => l.x + l.width));
+  const minY = Math.min(...lines.map((l) => l.y));
+  const maxY = Math.max(...lines.map((l) => l.y + l.height));
+
+  const hasRightEdge = lines.some((l) => (l.x + l.width) >= 0.70 || l.x >= 0.65);
+  const matchesSent = isTextSentByMe(combinedText, knownSentTexts) ||
+    lines.some((l) => isTextSentByMe(l.text, knownSentTexts));
+
+  const isFromMe = hasRightEdge || matchesSent;
+
+  return {
+    text: combinedText,
+    lines,
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY,
+    isFromMe,
+  };
+}
+
 /** 解析本地 OCR 识别出来的 WeChat 窗口文本序列，提取活跃会话与待回复消息 */
-export function parseWeChatOcrItems(items: OcrRecognizedItem[]): WeChatVisionParseResult {
+export function parseWeChatOcrItems(
+  items: OcrRecognizedItem[],
+  knownSentTexts?: Set<string>
+): WeChatVisionParseResult {
   if (!items || items.length === 0) {
     return {
       ok: true,
@@ -81,13 +192,8 @@ export function parseWeChatOcrItems(items: OcrRecognizedItem[]): WeChatVisionPar
   );
   let chatTarget = titleCandidate?.text?.trim() || '';
 
-  // 3. 收集聊天视窗内部的消息气泡 (x >= 0.38, y < 0.88, y > 0.12)
-  const chatMessages: Array<{
-    text: string;
-    x: number;
-    y: number;
-    isFromMe: boolean;
-  }> = [];
+  // 3. 收集聊天视窗内部的消息气泡候选行 (x >= 0.38, y < 0.88, y > 0.12)
+  const rawChatItems: OcrRecognizedItem[] = [];
 
   for (const item of items) {
     if (item.isTitle) continue;
@@ -101,20 +207,14 @@ export function parseWeChatOcrItems(items: OcrRecognizedItem[]): WeChatVisionPar
     // 过滤调试标记与统计行（模型、用量、任务ID等）
     if (/^(?:[—\-_]{3,}|🤖|📊|🆔|任务[：:]|[0-9a-f]{8}$|tokens)/i.test(text)) continue;
 
-    // 聊天消息气泡区域
+    // 聊天消息视窗区域
     if (item.x >= 0.38 && item.y < 0.88 && item.y > 0.12) {
-      // 在微信聊天视窗中：
-      // 左侧对方/来信气泡通常位于 x: 0.40 - 0.65
-      // 右侧我方发出绿色气泡通常位于 x: 0.70 - 0.95
-      const isFromMe = item.x >= 0.70;
-      chatMessages.push({
-        text,
-        x: item.x,
-        y: item.y,
-        isFromMe,
-      });
+      rawChatItems.push(item);
     }
   }
+
+  // 执行气泡聚类，合并属于同一消息的多行文字
+  const chatBubbles = clusterChatBubbles(rawChatItems, knownSentTexts);
 
   // 4. 从左侧会话列表 (x: 0.12 - 0.35) 提取未读会话与最新来信
   let listTarget = '';
@@ -143,16 +243,20 @@ export function parseWeChatOcrItems(items: OcrRecognizedItem[]): WeChatVisionPar
     }
   }
 
-  // 如果聊天视窗有消息，按 Apple Vision 坐标系排序：
+  // 按 Apple Vision 坐标系排序气泡：
   // y 越大代表越靠上 (较早发出的消息)，y 越小代表越靠下 (最新收发的消息)
-  chatMessages.sort((a, b) => b.y - a.y);
-  const latestMessage = chatMessages[chatMessages.length - 1];
+  chatBubbles.sort((a, b) => b.y - a.y);
+  const latestBubble = chatBubbles[chatBubbles.length - 1];
 
   const target = chatTarget || listTarget || '微信对话';
 
-  if (latestMessage) {
-    const isFromMe = latestMessage.isFromMe;
-    const cleanText = latestMessage.text;
+  if (latestBubble) {
+    let isFromMe = latestBubble.isFromMe;
+    const cleanText = latestBubble.text;
+
+    if (isTextSentByMe(cleanText, knownSentTexts) || latestBubble.lines.some((l) => isTextSentByMe(l.text, knownSentTexts))) {
+      isFromMe = true;
+    }
 
     // 智能回复触发判定：
     // 1. 当前聊天视窗内最新消息是对方发来的 (!isFromMe)
@@ -243,7 +347,8 @@ export function parseWeChatOcrItems(items: OcrRecognizedItem[]): WeChatVisionPar
  * 使用 macOS 苹果原生高精度 Vision OCR（零 Token 消耗、~50ms 极速、纯本地隐私无泄漏）
  */
 export async function parseWeChatScreenViaOcr(
-  imageInput: Buffer | string
+  imageInput: Buffer | string,
+  knownSentTexts?: Set<string>
 ): Promise<WeChatVisionParseResult> {
   const ocrBin = ensureMacOcrBinary();
   if (!ocrBin) {
@@ -271,7 +376,7 @@ export async function parseWeChatScreenViaOcr(
 
     const { stdout } = await runCmd(ocrBin, [filePath]);
     const items = JSON.parse(stdout.trim() || '[]') as OcrRecognizedItem[];
-    return parseWeChatOcrItems(items);
+    return parseWeChatOcrItems(items, knownSentTexts);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return {
@@ -286,3 +391,85 @@ export async function parseWeChatScreenViaOcr(
     }
   }
 }
+
+export interface ImageDiffResult {
+  hasDiff: boolean;
+  diffRatio: number;
+}
+
+/**
+ * 屏幕/聊天区域像素基线差异对比 (SightFlow 模式核心)：
+ * 借助本地 macOS CoreGraphics 底层显存比对两帧图像。
+ * 若无新气泡出现 (diffRatio < 0.005)，则直接跳过耗费资源的 OCR / VLM，杜绝自问自答死循环。
+ */
+export async function checkImagesDiff(
+  img1: Buffer | string,
+  img2: Buffer | string
+): Promise<ImageDiffResult> {
+  const ocrBin = ensureMacOcrBinary();
+  if (ocrBin && process.platform === 'darwin') {
+    let temp1: string | undefined;
+    let temp2: string | undefined;
+    try {
+      let p1: string;
+      if (typeof img1 === 'string' && existsSync(img1)) {
+        p1 = img1;
+      } else {
+        temp1 = join(tmpdir(), `hap_diff1_${Date.now()}_${randomUUID().slice(0, 6)}.png`);
+        const b1 = typeof img1 === 'string' ? Buffer.from(img1.replace(/^data:image\/\w+;base64,/, ''), 'base64') : img1;
+        writeFileSync(temp1, b1);
+        p1 = temp1;
+      }
+
+      let p2: string;
+      if (typeof img2 === 'string' && existsSync(img2)) {
+        p2 = img2;
+      } else {
+        temp2 = join(tmpdir(), `hap_diff2_${Date.now()}_${randomUUID().slice(0, 6)}.png`);
+        const b2 = typeof img2 === 'string' ? Buffer.from(img2.replace(/^data:image\/\w+;base64,/, ''), 'base64') : img2;
+        writeFileSync(temp2, b2);
+        p2 = temp2;
+      }
+
+      const { stdout } = await runCmd(ocrBin, ['--diff', p1, p2]);
+      const res = JSON.parse(stdout.trim() || '{}') as { hasDiff?: boolean; diffRatio?: number };
+      return {
+        hasDiff: Boolean(res.hasDiff),
+        diffRatio: Number(res.diffRatio || 0),
+      };
+    } catch {
+      // 降级使用 Buffer 比对
+    } finally {
+      if (temp1 && existsSync(temp1)) { try { unlinkSync(temp1); } catch {} }
+      if (temp2 && existsSync(temp2)) { try { unlinkSync(temp2); } catch {} }
+    }
+  }
+
+  // 通用/降级快速比对
+  try {
+    const b1 = typeof img1 === 'string' ? Buffer.from(img1, 'base64') : img1;
+    const b2 = typeof img2 === 'string' ? Buffer.from(img2, 'base64') : img2;
+    if (b1.equals(b2)) {
+      return { hasDiff: false, diffRatio: 0 };
+    }
+    const len = Math.min(b1.length, b2.length);
+    if (Math.abs(b1.length - b2.length) / Math.max(b1.length, b2.length) > 0.05) {
+      return { hasDiff: true, diffRatio: 1.0 };
+    }
+    let diffBytes = 0;
+    const sampleStep = 16;
+    let sampled = 0;
+    for (let i = 0; i < len; i += sampleStep) {
+      if (b1[i] !== b2[i]) diffBytes++;
+      sampled++;
+    }
+    const diffRatio = sampled > 0 ? diffBytes / sampled : 0;
+    return {
+      hasDiff: diffRatio > 0.02,
+      diffRatio,
+    };
+  } catch {
+    return { hasDiff: true, diffRatio: 1.0 };
+  }
+}
+

@@ -149,6 +149,15 @@ const hapApi = {
   releaseContactTakeover: (payload) => call('gui:hosting:releaseTakeover', payload),
   testVisionCapture: () => call('gui:hosting:testVisionCapture'),
   switchHostingPuppet: (puppet) => call('gui:hosting:switchPuppet', puppet),
+  getDefaultHostingPolicy: (channel) => call('gui:hosting:getDefaultPolicy', channel),
+  saveDefaultHostingPolicy: (channel, policy) => call('gui:hosting:saveDefaultPolicy', { channel, policy }),
+  getHostingActivities: (limit) => call('gui:hosting:getActivities', limit),
+  clearHostingActivities: () => call('gui:hosting:clearActivities'),
+  onHostingActivity: (callback) => {
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('gui:hosting:activity', listener);
+    return () => ipcRenderer.removeListener('gui:hosting:activity', listener);
+  },
   listBots: () => call('gui:listBots'),
   upsertBot: (bot) => call('gui:upsertBot', bot),
   deleteBot: (id) => call('gui:deleteBot', id),

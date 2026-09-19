@@ -30,6 +30,7 @@ export interface VisionParserOptions {
   apiKey?: string | undefined;
   baseUrl?: string | undefined;
   client?: OpenAI | undefined;
+  knownSentTexts?: Set<string> | undefined;
 }
 
 /** 从本地存储读取已保存的 API Key 凭据 */
@@ -296,7 +297,7 @@ export async function parseWeChatScreen(
   // 1. 在 macOS 桌面环境下，若未显式指定自定义测试客户端，优先使用毫秒级本地原生 OCR
   if (process.platform === 'darwin' && !options.client) {
     try {
-      const ocrResult = await parseWeChatScreenViaOcr(imageInput);
+      const ocrResult = await parseWeChatScreenViaOcr(imageInput, options.knownSentTexts);
       if (ocrResult.ok && ocrResult.hasWeChatWindow) {
         return ocrResult;
       }

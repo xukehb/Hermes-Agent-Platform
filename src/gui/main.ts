@@ -198,6 +198,10 @@ function registerIpc(): void {
   ipcMain.handle('gui:hosting:releaseTakeover', (_event, payload) => invoke(() => service.releaseContactTakeover(payload)));
   ipcMain.handle('gui:hosting:testVisionCapture', () => invoke(() => service.testVisionCapture()));
   ipcMain.handle('gui:hosting:switchPuppet', (_event, puppet) => invoke(() => service.switchWeChatHostingPuppet(puppet)));
+  ipcMain.handle('gui:hosting:getDefaultPolicy', (_event, channel) => invoke(() => service.getChannelDefaultPolicy(channel)));
+  ipcMain.handle('gui:hosting:saveDefaultPolicy', (_event, payload) => invoke(() => service.saveChannelDefaultPolicy(payload.channel, payload.policy)));
+  ipcMain.handle('gui:hosting:getActivities', (_event, limit) => invoke(() => service.getHostingActivities(limit)));
+  ipcMain.handle('gui:hosting:clearActivities', () => invoke(() => service.clearHostingActivities()));
   ipcMain.handle('gui:listBots', () => invoke(() => service.listBots()));
   ipcMain.handle('gui:upsertBot', (_event, bot) => invoke(() => service.upsertBot(bot)));
   ipcMain.handle('gui:deleteBot', (_event, id) => invoke(() => service.deleteBot(id)));
@@ -357,8 +361,12 @@ async function createWindow(): Promise<void> {
   const unsubscribeUpdater = desktopUpdater.subscribe((state) => {
     if (!window.isDestroyed()) window.webContents.send('gui:update:state', state);
   });
+  const unsubscribeHosting = service.onHostingActivity((activity) => {
+    if (!window.isDestroyed()) window.webContents.send('gui:hosting:activity', activity);
+  });
   mainWindow.on('closed', () => {
     unsubscribeUpdater();
+    unsubscribeHosting();
     mainWindow = null;
   });
 

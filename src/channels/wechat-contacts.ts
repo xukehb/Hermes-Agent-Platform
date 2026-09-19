@@ -1,7 +1,8 @@
-import { ChannelContactStore, type ChannelContact, type ChannelChatMessage } from './contacts-store.js';
+import { ChannelContactStore, type ChannelContact, type ChannelChatMessage, type ChannelDefaultPolicy } from './contacts-store.js';
 
 export type WeChatContact = ChannelContact;
 export type WeChatChatMessage = ChannelChatMessage;
+export type WeChatDefaultPolicy = ChannelDefaultPolicy;
 
 export class WeChatContactStore {
   private static instance: WeChatContactStore;
@@ -81,6 +82,14 @@ export class WeChatContactStore {
 
   clearAllContacts(): void {
     this.store.clearAllContacts('wechat');
+  }
+
+  getDefaultPolicy(_channel?: string): WeChatDefaultPolicy {
+    return this.store.getDefaultPolicy('wechat');
+  }
+
+  saveDefaultPolicy(policy: Partial<WeChatDefaultPolicy>): WeChatDefaultPolicy {
+    return this.store.saveDefaultPolicy('wechat', policy);
   }
 }
 

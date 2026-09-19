@@ -242,5 +242,109 @@ describe('WeChat Desktop Vision Agent (SightFlow 模式视觉代管)', () => {
     expect(res.lastMessage?.isFromMe).toBe(false);
     expect(res.needsReply).toBe(true);
   });
+
+  it('parseWeChatOcrItems 准确识别长文本我方绿色气泡 (向左延展至 x=0.52)，绝不误判为对方来信导致死循环', async () => {
+    const { parseWeChatOcrItems } = await import('../src/channels/wechat/desktop-vision/ocr-parser.js');
+    const mockItems = [
+      { text: '好友小王', x: 0.36, y: 0.91, width: 0.04, height: 0.02 }, // 标题栏
+      { text: '啥也不做', x: 0.43, y: 0.65, width: 0.05, height: 0.02 }, // 对方气泡
+      // 我方回复的 35 字长文本：气泡靠右贴齐头像 (x+width=0.92)，但起始 x 延伸到了 0.52
+      {
+        text: '哈哈你这也是复读机附体了吧别光陪我的话呀有活儿你倒是说一个',
+        x: 0.52,
+        y: 0.30,
+        width: 0.40,
+        height: 0.02,
+      },
+    ];
+
+    const res = parseWeChatOcrItems(mockItems);
+    expect(res.ok).toBe(true);
+    expect(res.chatTarget).toBe('好友小王');
+    expect(res.lastMessage?.isFromMe).toBe(true); // 必须精准识别为我方发出
+    expect(res.needsReply).toBe(false); // 必须判定为无需回复，彻底杜绝自言自语死循环
+  });
+
+  it('parseWeChatOcrItems 能够对多行绿色气泡进行聚类，尾行极短字符（如“至更直接，我也能顶住～”、“定～”）绝不误判为对方来信', async () => {
+    const { parseWeChatOcrItems } = await import('../src/channels/wechat/desktop-vision/ocr-parser.js');
+    // 真实复现用户截图中的场景：
+    // 我方发出多行绿色气泡，前两行很长靠右贴齐头像 (rightEdge=0.92)，尾行仅有 10 个字，居左偏中间 (x=0.44, width=0.18, rightEdge=0.62)
+    const mockItems = [
+      { text: '我', x: 0.36, y: 0.91, width: 0.02, height: 0.02, isTitle: true },
+      { text: '定个锤子——出题都我来定嘛', x: 0.44, y: 0.38, width: 0.48, height: 0.02 },
+      { text: '快选一个，开始考试 或者你直接甩给我一个具体任务', x: 0.44, y: 0.34, width: 0.48, height: 0.02 },
+      { text: '至更直接，我也能顶住～', x: 0.44, y: 0.30, width: 0.18, height: 0.02 },
+    ];
+
+    const res = parseWeChatOcrItems(mockItems);
+    expect(res.ok).toBe(true);
+    expect(res.chatTarget).toBe('我');
+    // 必须通过聚类判定为我方发出
+    expect(res.lastMessage?.isFromMe).toBe(true);
+    expect(res.needsReply).toBe(false);
+  });
+
+  it('isTextSentByMe 能够准确通过模糊与归一化子串拦截回复尾行片段', async () => {
+    const { isTextSentByMe } = await import('../src/channels/wechat/desktop-vision/ocr-parser.js');
+    const sentHistory = new Set([
+      '要是做不到，算我输！😎 来，请出题～',
+      '快选一个，开始考试👉 或者你直接甩给我一个具体任务甚至更直接，我也能顶住～',
+      '我随时准备执行～ 😎',
+      '我 6 的，随时准备接锅～😎',
+    ]);
+
+    expect(isTextSentByMe('出题～', sentHistory)).toBe(true);
+    expect(isTextSentByMe('至更直接，我也能顶住～', sentHistory)).toBe(true);
+    expect(isTextSentByMe('我随时准备执行～', sentHistory)).toBe(true);
+    expect(isTextSentByMe('我6的，随时准备接锅～', sentHistory)).toBe(true);
+    expect(isTextSentByMe('你好，请问这个功能怎么用？', sentHistory)).toBe(false);
+  });
+
+  it('DesktopVisionPersonalDriver 启用基线像素比对 (SightFlow 模式) 时，若聊天区域无变化则完全跳过 OCR 分析', async () => {
+    const parseFn = vi.fn().mockResolvedValue({
+      ok: true,
+      hasWeChatWindow: true,
+      chatTarget: '好友小李',
+      lastMessage: { sender: '好友小李', text: '在吗？', isFromMe: false },
+      needsReply: true,
+    });
+
+    const mockBuffer = Buffer.from('screenshot-data');
+    let diffCalls = 0;
+    const checkDiffFn = vi.fn().mockImplementation(async () => {
+      diffCalls++;
+      // 模拟图像对比：无变化
+      return { hasDiff: false, diffRatio: 0 };
+    });
+
+    const driver = new DesktopVisionPersonalDriver({
+      pollIntervalMs: 5000,
+      captureFn: vi.fn().mockResolvedValue({
+        ok: true,
+        buffer: mockBuffer,
+        sourceType: 'electron_capturer',
+      }),
+      parseFn,
+      sendFn: vi.fn().mockResolvedValue({ ok: true }),
+      isWeChatRunningFn: vi.fn().mockResolvedValue(true),
+      checkDiffFn,
+    });
+
+    await driver.start();
+
+    // 模拟发送消息建立基线
+    await driver.sendMessage('好友小李', '在的，请讲！');
+    parseFn.mockClear();
+
+    // 执行下一次轮询扫描
+    await driver.tick();
+
+    // 应该调用 checkDiffFn 进行基线比对
+    expect(checkDiffFn).toHaveBeenCalled();
+    // 由于 hasDiff 为 false，parseFn 应该完全被跳过，不消耗算力与 Token
+    expect(parseFn).not.toHaveBeenCalled();
+
+    await driver.stop();
+  });
 });
 

@@ -8,7 +8,7 @@ import { execa } from 'execa';
 import { AgentOrchestrator } from '../agent/index.js';
 import { WeChatChannel } from '../channels/wechat.js';
 import { isWeChatRunning, captureWeChatWindow, parseWeChatScreen, type WeChatVisionParseResult } from '../channels/wechat/desktop-vision/index.js';
-import { ChannelManager, TelegramChannel, createChannelHost, parseCommand, HELP_TEXT, ChannelContactStore, WeChatContactStore, FeishuChannel, QQChannel, type ChannelContact, type ChannelChatMessage, type ChannelName, type WeChatContact, type WeChatChatMessage } from '../channels/index.js';
+import { ChannelManager, TelegramChannel, createChannelHost, parseCommand, HELP_TEXT, ChannelContactStore, WeChatContactStore, FeishuChannel, QQChannel, type ChannelContact, type ChannelChatMessage, type ChannelDefaultPolicy, type ChannelName, type WeChatContact, type WeChatChatMessage } from '../channels/index.js';
 import { BUILTIN_MODELS, BUILTIN_PROVIDERS, ConfigResolver, ConfigWriter, loadConfig, resolveConfigPath, sanitizeModelRef, type ModelPatch, type ProviderPatch, type ResolvedAgent, type ResolvedProvider } from '../config/index.js';
 import { describeError, type Attachment, type ProtocolName, type WireApi } from '../domain/index.js';
 import { planInjection, writeInjection, type InjectionTarget } from '../inject/index.js';
@@ -85,6 +85,23 @@ import type {
   GuiBotInstance,
   GuiBotPlatform,
 } from './shared.js';
+
+export interface GuiHostingActivity {
+  id: string;
+  timestamp: number;
+  timeStr: string;
+  stage: 'detected' | 'thinking' | 'generated' | 'executing' | 'sent' | 'cooldown' | 'draft' | 'system' | 'scan';
+  level: 'info' | 'success' | 'warning' | 'error';
+  tag: string;
+  title: string;
+  detail?: string | undefined;
+  target?: string | undefined;
+  sender?: string | undefined;
+  agentId?: string | undefined;
+  agentName?: string | undefined;
+  model?: string | undefined;
+  elapsedMs?: number | undefined;
+}
 
 interface GuiState {
   projects: GuiProject[];
@@ -629,6 +646,8 @@ export class GuiService {
   private mcpPlaygroundManager?: McpManager;
   private mcpPlaygroundModules?: Map<string, ToolModule>;
   private readonly activeOllamaPulls = new Map<string, AbortController>();
+  private readonly hostingActivities: GuiHostingActivity[] = [];
+  private readonly hostingActivityListeners = new Set<(activity: GuiHostingActivity) => void>();
 
   constructor(
     private readonly configPath = resolveConfigPath(undefined, process.env),
@@ -3796,6 +3815,9 @@ export class GuiService {
       limits: orchestrator.config.resolveLimits(),
       paths: orchestrator.resolvedPaths,
       env: process.env,
+      onActivity: (act) => {
+        this.addHostingActivity(act);
+      },
       log: (line) => {
         this.info(`[WeChat] ${line}`);
         if (this.wechatManager !== manager) return;
@@ -3805,18 +3827,36 @@ export class GuiService {
           this.wechatError = line.split('[WeChat] 微信已登出：')[1]?.trim();
           this.wechatLoginUser = undefined;
           this.wechatQrCode = undefined;
+          this.addHostingActivity({
+            stage: 'system',
+            level: 'error',
+            tag: '微信登出',
+            title: `微信账号已登出: ${this.wechatError || '连接终止'}`,
+          });
         }
         if (line.includes('[WeChat] 请使用手机微信扫码登录：') || line.includes('[WeChat QR] 扫码地址:')) {
           const qr = line.split('：')[1]?.trim() || line.split('扫码地址:')[1]?.trim();
           if (qr && qr.startsWith('http')) {
             this.wechatQrCode = qr;
             this.wechatStatus = 'waiting_qr';
+            this.addHostingActivity({
+              stage: 'system',
+              level: 'info',
+              tag: '等待扫码',
+              title: '微信驱动等待手机扫码授权登录',
+            });
           }
         }
         if (line.includes('登录成功')) {
           this.wechatStatus = 'connected';
           const userName = line.split('登录成功：')[1]?.split('(')[0]?.trim() || 'WeChat User';
           this.wechatLoginUser = userName;
+          this.addHostingActivity({
+            stage: 'system',
+            level: 'success',
+            tag: '微信就绪',
+            title: `桌面微信接入成功 (${userName})，进入静默巡检与代答模式`,
+          });
         }
       },
     });
@@ -4218,6 +4258,88 @@ export class GuiService {
     return { ok: true, clearedCount: beforeCount };
   }
 
+  getChannelDefaultPolicy(channel: ChannelName): ChannelDefaultPolicy {
+    return ChannelContactStore.getInstance().getDefaultPolicy(channel);
+  }
+
+  saveChannelDefaultPolicy(channel: ChannelName, policy: Partial<ChannelDefaultPolicy>): ChannelDefaultPolicy {
+    const res = ChannelContactStore.getInstance().saveDefaultPolicy(channel, policy);
+    if (channel === 'wechat' && policy.agentId) {
+      try {
+        const writer = new ConfigWriter(this.configPath);
+        const { config: hapConfig, exists, raw } = writer.read();
+        if (!hapConfig.channels) hapConfig.channels = {};
+        if (!hapConfig.channels.wechat) hapConfig.channels.wechat = {};
+        hapConfig.channels.wechat.default_agent = policy.agentId;
+        // @ts-expect-error private commit
+        writer.commit(hapConfig, exists, raw, '更新微信默认分身智能体配置');
+        if (this.wechatOrchestrator) {
+          this.wechatOrchestrator.reload();
+          this.wechatManager?.reload({
+            channels: this.wechatOrchestrator.config.resolveChannels(),
+            limits: this.wechatOrchestrator.config.resolveLimits(),
+          });
+        }
+      } catch (err) {
+        this.warn(`同步保存微信默认智能体至主配置文件失败: ${err}`);
+      }
+    }
+    this.info(`已更新通道 [${channel}] 默认分身智能体与托管策略配置: agentId=${policy.agentId || 'default'}`);
+    this.addHostingActivity({
+      stage: 'system',
+      level: 'success',
+      tag: '配置同步',
+      title: `微信分身智能体已绑定至 [${policy.agentId || 'default'}]，人设口吻与防撞车配置已生效`,
+      agentId: policy.agentId,
+    });
+    return res;
+  }
+
+  getHostingActivities(limit = 60): GuiHostingActivity[] {
+    return this.hostingActivities.slice(0, limit);
+  }
+
+  clearHostingActivities(): { ok: true } {
+    this.hostingActivities.length = 0;
+    return { ok: true };
+  }
+
+  onHostingActivity(listener: (activity: GuiHostingActivity) => void): () => void {
+    this.hostingActivityListeners.add(listener);
+    return () => this.hostingActivityListeners.delete(listener);
+  }
+
+  addHostingActivity(activity: Omit<GuiHostingActivity, 'id' | 'timestamp' | 'timeStr'> & { id?: string; timestamp?: number; timeStr?: string }): GuiHostingActivity {
+    const full: GuiHostingActivity = {
+      id: activity.id || `act_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      timestamp: activity.timestamp || Date.now(),
+      timeStr: activity.timeStr || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      stage: activity.stage,
+      level: activity.level,
+      tag: activity.tag,
+      title: activity.title,
+      detail: activity.detail,
+      target: activity.target,
+      sender: activity.sender,
+      agentId: activity.agentId,
+      agentName: activity.agentName,
+      model: activity.model,
+      elapsedMs: activity.elapsedMs,
+    };
+    this.hostingActivities.unshift(full);
+    if (this.hostingActivities.length > 100) {
+      this.hostingActivities.length = 100;
+    }
+    for (const listener of this.hostingActivityListeners) {
+      try {
+        listener(full);
+      } catch {
+        // ignore
+      }
+    }
+    return full;
+  }
+
 
   async sendChannelMessage(payload: {
     channel: ChannelName;
@@ -4242,17 +4364,29 @@ export class GuiService {
       text: payload.text,
     });
 
+    this.addHostingActivity({
+      stage: 'thinking',
+      level: 'info',
+      tag: '大模型调用',
+      title: `触发分身 [${assignedAgent}] 生成代答 | 目标: 【${contact ? contact.name : payload.targetId}】`,
+      detail: `输入文本: “${payload.text}”`,
+      target: contact ? contact.name : payload.targetId,
+      agentId: assignedAgent,
+    });
+
     try {
       // 触发智能体响应执行
       const orchestrator = new AgentOrchestrator(this.configPath ? { configPath: this.configPath } : {});
       await orchestrator.loadMcpTools();
 
+      const startTime = Date.now();
       const res = await orchestrator.runTask({
         agentId: assignedAgent,
         input: payload.text,
         workspace: contactWorkspace || undefined,
         sessionKey: `${payload.channel}:manual:${payload.targetId}`,
       });
+      const elapsedMs = Date.now() - startTime;
 
       const replyContent = res.text || '（任务执行完成，无输出文本）';
       store.recordOutgoingMessage({
@@ -4260,6 +4394,18 @@ export class GuiService {
         contactId: payload.targetId,
         agentId: assignedAgent,
         text: replyContent,
+        elapsedMs,
+      });
+
+      this.addHostingActivity({
+        stage: 'generated',
+        level: 'success',
+        tag: '大模型生成',
+        title: `代答回复生成成功 (耗时 ${(elapsedMs / 1000).toFixed(1)}s) | 目标: 【${contact ? contact.name : payload.targetId}】`,
+        detail: `回复内容: “${replyContent}”`,
+        target: contact ? contact.name : payload.targetId,
+        agentId: assignedAgent,
+        elapsedMs,
       });
 
       return { ok: true, replyText: replyContent };

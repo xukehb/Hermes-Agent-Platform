@@ -45,9 +45,18 @@ export interface ChannelChatMessage {
   elapsedMs?: number | undefined; // AI 代答耗时毫秒
 }
 
+export interface ChannelDefaultPolicy {
+  agentId?: string | undefined;
+  systemPrompt?: string | undefined;
+  hostingMode?: 'auto' | 'draft' | 'mention' | 'manual' | 'off' | undefined;
+  cooldownMinutes?: number | undefined;
+  delayMs?: number | undefined;
+}
+
 interface ChannelContactStoreData {
   contacts: ChannelContact[];
   messages: ChannelChatMessage[];
+  defaults?: Partial<Record<ChannelName, ChannelDefaultPolicy>> | undefined;
 }
 
 const DATA_PATH = join(homedir(), '.hap', 'universal_contacts.json');
@@ -84,7 +93,7 @@ export class ChannelContactStore {
   load(): ChannelContactStoreData {
     ensureDir(this.filePath);
     if (!existsSync(this.filePath)) {
-      const initial: ChannelContactStoreData = { contacts: [], messages: [] };
+      const initial: ChannelContactStoreData = { contacts: [], messages: [], defaults: {} };
       this.save(initial);
       return initial;
     }
@@ -96,18 +105,40 @@ export class ChannelContactStore {
       const messages = Array.isArray(data.messages) ? data.messages : [];
       // 自动清理历史遗留的假 Mock 数据
       const realContacts = contacts.filter((c) => !c.id.startsWith('wx_user_zhangsan') && !c.id.startsWith('wx_room_tech_arch'));
+      const defaults = (data.defaults && typeof data.defaults === 'object') ? data.defaults : {};
       return {
         contacts: realContacts,
         messages: messages.filter((m) => realContacts.some((c) => c.id === m.contactId)),
+        defaults,
       };
     } catch {
-      return { contacts: [], messages: [] };
+      return { contacts: [], messages: [], defaults: {} };
     }
   }
 
   save(data: ChannelContactStoreData): void {
     ensureDir(this.filePath);
     writeFileSync(this.filePath, JSON.stringify(data, null, 2) + '\n', 'utf8');
+  }
+
+  getDefaultPolicy(channel: ChannelName = 'wechat'): ChannelDefaultPolicy {
+    const data = this.load();
+    return data.defaults?.[channel] || {};
+  }
+
+  saveDefaultPolicy(channel: ChannelName = 'wechat', policy: Partial<ChannelDefaultPolicy>): ChannelDefaultPolicy {
+    const data = this.load();
+    if (!data.defaults) {
+      data.defaults = {};
+    }
+    const current = data.defaults[channel] || {};
+    const updated: ChannelDefaultPolicy = {
+      ...current,
+      ...policy,
+    };
+    data.defaults[channel] = updated;
+    this.save(data);
+    return updated;
   }
 
   listContacts(channel?: ChannelName): ChannelContact[] {
@@ -176,18 +207,20 @@ export class ChannelContactStore {
 
     let contact = data.contacts.find((c) => c.id === contactId && c.channel === msg.channel);
     if (!contact) {
+      const def = this.getDefaultPolicy(msg.channel);
       contact = {
         id: contactId,
         channel: msg.channel,
         name: contactName,
         type: msg.isRoom ? 'room' : 'user',
         isRoom: msg.isRoom,
-        agentId: undefined,
-        autoReply: true,
+        agentId: def.agentId,
+        systemPrompt: def.systemPrompt,
+        autoReply: def.hostingMode ? def.hostingMode !== 'off' : true,
         replyMode: msg.isRoom ? 'mention' : 'all',
-        hostingMode: msg.isRoom ? 'mention' : 'auto',
-        cooldownMinutes: 10,
-        delayMs: 2500,
+        hostingMode: def.hostingMode ?? (msg.isRoom ? 'mention' : 'auto'),
+        cooldownMinutes: def.cooldownMinutes ?? 10,
+        delayMs: def.delayMs ?? 2500,
         lastMessage: msg.text,
         lastSender: msg.fromName,
         lastTime: time,

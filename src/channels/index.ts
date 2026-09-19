@@ -65,6 +65,7 @@ export {
   ChannelContactStore,
   type ChannelContact,
   type ChannelChatMessage,
+  type ChannelDefaultPolicy,
 } from './contacts-store.js';
 export {
   WeChatContactStore,

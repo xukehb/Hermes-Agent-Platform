@@ -15079,14 +15079,17 @@ async function renderMemories(searchQuery = '') {
   }
 }
 
-window.openAddMemoryDialog = () => {
+window.openAddMemoryDialog = (preselectAgentId) => {
   const dialog = $('memoryDialog');
   const form = $('memoryForm');
   if (!dialog || !form) return;
   form.reset();
   const agentSelect = $('memoryAgentSelect');
   if (agentSelect) {
-    agentSelect.innerHTML = '<option value="">全部智能体通用</option>' + (state.agents || []).map(a => `<option value="${esc(a.id)}">${esc(formatAgentLabel(a))}</option>`).join('');
+    agentSelect.innerHTML = '<option value="">全部智能体通用 (全局知识)</option>' + (state.agents || []).map(a => `<option value="${esc(a.id)}">${esc(formatAgentLabel(a))}</option>`).join('');
+    if (preselectAgentId) {
+      agentSelect.value = preselectAgentId;
+    }
   }
   dialog.showModal();
 };
@@ -15105,6 +15108,8 @@ $('memoryForm')?.addEventListener('submit', async (e) => {
     $('memoryDialog')?.close();
     showToast('记忆条目已成功添加', 'success');
     await renderMemories();
+    renderHostingMemories();
+    addHostingActivityLog(`[长期记忆] 新增记忆条目: 【${title}】`, 'success');
   } catch (err) {
     showToast('添加记忆失败：' + err.message, 'error');
   }
@@ -15139,6 +15144,7 @@ window.deleteMemoryItem = async (id) => {
     await window.hap.removeMemory(id);
     showToast('记忆条目已删除', 'success');
     await renderMemories();
+    renderHostingMemories();
   } catch (err) {
     showToast('删除失败：' + err.message, 'error');
   }
@@ -15469,7 +15475,7 @@ function initDesktopUpdater() {
   if (!window.hap?.onUpdateState || !window.hap?.getUpdateState) return;
 
   const updateVersionUI = (version) => {
-    const ver = version ? `v${version}` : 'v0.1.12';
+    const ver = version ? `v${version}` : 'v0.1.15';
     const badge = $('appCurrentVersionBadge');
     if (badge) badge.textContent = ver;
     const sideTag = $('sidebarVersionTag');
@@ -15510,7 +15516,7 @@ function initDesktopUpdater() {
       if (state && (state.status === 'available' || state.status === 'downloading' || state.status === 'downloaded')) {
         renderDesktopUpdateState(state);
       } else {
-        showToast(`当前已是最新版本 (${state?.currentVersion ? 'v' + state.currentVersion : 'v0.1.12'})`, 'success');
+        showToast(`当前已是最新版本 (${state?.currentVersion ? 'v' + state.currentVersion : 'v0.1.15'})`, 'success');
         if (statusEl) {
           statusEl.innerHTML = `<div>当前状态: <strong style="color:#10b981;">已是最新版</strong></div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">刚刚已检查</div>`;
         }
@@ -16135,6 +16141,7 @@ function initGatewayEvents() {
 // ==========================================================================
 
 const HOSTING_PERSONA_TEMPLATES = {
+  natural: '以本人的口吻友好简明地回复，像真人发微信一样，通常1~2句话内说清楚，直接解答对方要点。切忌长篇大论、罗列列表或撰写提纲。',
   business: '我是本人的商务分身助手。请始终保持礼貌、专业、严谨的态度。遇到商业合作或项目咨询，请先询问对方具体需求、预算范围与期望周期，并表示会记录后第一时间转达本人安排正式对接。禁止擅自代表本人承诺未确认的技术指标或价格。',
   humor: '我是本人的日常数字分身。说话风格轻松诙谐、亲切接地气。遇到朋友打招呼、日常闲聊或问候，正常轻松回应；遇到借钱或借号等敏感事项，请幽默回应“囊中羞涩，流动资金已全部上交系统”并礼貌转达本人；遇到正经工作咨询，记录要点并承诺提醒本人跟进。',
   tech: '我是本人的技术分身架构师。解答技术与架构问题时追求清晰、准确、有条理，多使用分点说明和核心代码/逻辑示意。对于复杂方案，先梳理业务边界再给出最优解。不确定的需求先向对方确认上下文，不妄下定论。',
@@ -16145,6 +16152,314 @@ let hostingContactsList = [];
 let activeHostingContact = null;
 let currentHostingFilter = 'all';
 let hostingCooldownTimer = null;
+let currentHostingGeneScope = 'active'; // 'active' | 'universal' | 'all'
+
+function updateHostingActiveScopeButton(agentId) {
+  const btn = $('hostingScopeActiveBtn');
+  if (!btn) return;
+  const agents = state.agents || [];
+  const found = agents.find((a) => a.id === agentId);
+  const name = found?.identity?.displayName || found?.name || agentId || '当前分身';
+  const emoji = found?.emoji || found?.identity?.emoji || '👧';
+  btn.innerHTML = `${emoji} [${esc(name)}] 专属基因`;
+}
+
+async function loadDefaultHostingPolicy() {
+  try {
+    const policy = (await window.hap.getDefaultHostingPolicy?.('wechat')) || {};
+    const agentSelect = $('hpDefaultAgentSelect');
+    if (agentSelect) {
+      const agents = state.agents || [];
+      const opts = agents.map((a) => {
+        const emoji = a.emoji || a.identity?.emoji ? `${a.emoji || a.identity?.emoji} ` : '';
+        return `<option value="${esc(a.id)}">${emoji}${esc(formatAgentLabel(a))}</option>`;
+      }).join('');
+      agentSelect.innerHTML = opts || '<option value="xx">👧 小莹 (微信托管助手)</option><option value="coder">默认分身 (coder)</option>';
+      if (policy.agentId && agents.some((a) => a.id === policy.agentId)) {
+        agentSelect.value = policy.agentId;
+      } else if (agents.some((a) => a.id === 'xx')) {
+        agentSelect.value = 'xx';
+      } else if (agents.length > 0) {
+        agentSelect.value = agents[0].id;
+      }
+    }
+
+    const currentAgentId = agentSelect?.value || policy.agentId || 'xx';
+    updateHostingActiveScopeButton(currentAgentId);
+
+    const promptInput = $('hpDefaultSystemPromptInput');
+    if (promptInput) {
+      if (typeof policy.systemPrompt === 'string' && policy.systemPrompt.trim().length > 0) {
+        promptInput.value = policy.systemPrompt;
+      } else if (policy.systemPrompt === undefined) {
+        promptInput.value = HOSTING_PERSONA_TEMPLATES.natural;
+      } else {
+        promptInput.value = policy.systemPrompt;
+      }
+    }
+
+    const modeSelect = $('hpDefaultModeSelect');
+    if (modeSelect && policy.hostingMode) {
+      modeSelect.value = policy.hostingMode;
+    }
+
+    const cooldownInput = $('hpDefaultCooldownInput');
+    if (cooldownInput && policy.cooldownMinutes !== undefined) {
+      cooldownInput.value = policy.cooldownMinutes;
+    }
+
+    const delayInput = $('hpDefaultDelayInput');
+    if (delayInput && policy.delayMs !== undefined) {
+      delayInput.value = (policy.delayMs / 1000).toFixed(1);
+    }
+  } catch (err) {
+    console.warn('加载默认托管策略失败:', err);
+  }
+}
+
+async function saveDefaultHostingPolicy() {
+  const agentId = $('hpDefaultAgentSelect')?.value || 'xx';
+  const promptInput = $('hpDefaultSystemPromptInput');
+  const systemPrompt = promptInput ? promptInput.value.trim() : '';
+  const hostingMode = $('hpDefaultModeSelect')?.value || 'auto';
+  const cooldownMinutes = parseInt($('hpDefaultCooldownInput')?.value || '10', 10);
+  const delaySec = parseFloat($('hpDefaultDelayInput')?.value || '2.0');
+  const delayMs = Math.round(delaySec * 1000);
+
+  updateHostingActiveScopeButton(agentId);
+
+  try {
+    await window.hap.saveDefaultHostingPolicy?.('wechat', {
+      agentId,
+      systemPrompt,
+      hostingMode,
+      cooldownMinutes,
+      delayMs,
+    });
+    showToast('已成功保存微信分身人设与托管配置！', 'success');
+    addHostingActivityLog(`[配置更新] 微信托管智能体已绑定至 [${agentId}]，分身人设与防撞车规则已即时生效`, 'success');
+  } catch (err) {
+    showToast('保存配置失败: ' + (err.message || String(err)), 'error');
+  }
+}
+
+window.deleteHostingMemory = async (id) => {
+  if (!confirm('确定要从长期记忆库中删除该条目吗？')) return;
+  try {
+    await window.hap.removeMemory?.(id);
+    showToast('已从长期记忆库删除', 'info');
+    await renderHostingMemories();
+    addHostingActivityLog('[记忆库变更] 已删除一条长期记忆', 'info');
+  } catch (err) {
+    showToast('删除失败: ' + (err.message || String(err)), 'error');
+  }
+};
+
+async function renderHostingMemories() {
+  const container = $('hostingMemoriesContainer');
+  if (!container) return;
+
+  const currentAgentId = $('hpDefaultAgentSelect')?.value || 'xx';
+  updateHostingActiveScopeButton(currentAgentId);
+
+  const agents = state.agents || [];
+  const curAgentObj = agents.find((a) => a.id === currentAgentId);
+  const curAgentName = curAgentObj?.identity?.displayName || curAgentObj?.name || currentAgentId;
+  const curAgentEmoji = curAgentObj?.emoji || curAgentObj?.identity?.emoji || '👧';
+
+  const query = ($('hostingMemorySearchInput')?.value || '').trim().toLowerCase();
+  const categoryFilter = $('hostingMemoryCategoryFilter')?.value || '';
+
+  try {
+    const list = (await window.hap.listMemories?.()) || [];
+    let filtered = list;
+
+    // 智能体基因库作用域隔离：
+    // active: 当前分身专属基因 + 全局通用知识 (严格隔离并隐藏其它智能体如 coder 的开发记忆)
+    // universal: 仅全局通用知识
+    // all: 全部智能体基因条目 (含 coder 等)
+    if (currentHostingGeneScope === 'active') {
+      filtered = filtered.filter((m) => !m.agentId || m.agentId === currentAgentId);
+    } else if (currentHostingGeneScope === 'universal') {
+      filtered = filtered.filter((m) => !m.agentId);
+    } // else 'all': no agent filter
+
+    if (categoryFilter) {
+      filtered = filtered.filter((m) => m.category === categoryFilter);
+    }
+    if (query) {
+      filtered = filtered.filter((m) =>
+        (m.title || '').toLowerCase().includes(query) ||
+        (m.content || '').toLowerCase().includes(query) ||
+        (m.category || '').toLowerCase().includes(query)
+      );
+    }
+
+    if (filtered.length === 0) {
+      const scopeDesc = currentHostingGeneScope === 'active'
+        ? `智能体 [${curAgentName}] 的专属基因库暂无条目。<br/>点击上方「+ 添加专属基因」为 ${curAgentName} 注入独特的聊天语气、偏好习惯与人际备忘；`
+        : currentHostingGeneScope === 'universal'
+        ? '暂无全局通用知识条目。<br/>点击上方「+ 添加专属基因」，在生效智能体中选择“全部智能体通用”；'
+        : '暂无符合条件的基因条目。';
+      container.innerHTML = `
+        <div style="padding:28px 14px;text-align:center;background:var(--bg-subtle);border:1px dashed var(--border-default);border-radius:8px;color:var(--text-muted);font-size:12px;line-height:1.6;">
+          ${scopeDesc}<br/>
+          <span style="font-size:11px;opacity:0.85;">智能体之间的基因库完全隔离独立，微信代答时绝对不会串用其他智能体的记忆。</span>
+        </div>
+      `;
+      return;
+    }
+
+    const catLabels = {
+      preference: { label: '用户习惯', color: '#2563eb', bg: 'rgba(37,99,235,0.1)' },
+      fact: { label: '领域事实', color: '#059669', bg: 'rgba(5,150,105,0.1)' },
+      convention: { label: '约定规则', color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
+      architecture: { label: '架构约束', color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' },
+      domain: { label: '业务背景', color: '#0891b2', bg: 'rgba(8,145,178,0.1)' },
+      custom: { label: '自定义', color: 'var(--text-muted)', bg: 'var(--bg-subtle)' },
+    };
+
+    container.innerHTML = filtered.map((m) => {
+      const cat = catLabels[m.category] || catLabels.custom;
+      const title = m.title ? esc(m.title) : '未命名条目';
+      const content = m.content ? esc(m.content) : '';
+
+      let geneBadge = '';
+      if (m.agentId === currentAgentId) {
+        geneBadge = `<span class="badge" style="background:#fdf2f8;color:#be185d;border:1px solid #fbcfe8;font-size:9.5px;font-weight:600;">${curAgentEmoji} ${esc(curAgentName)}专属</span>`;
+      } else if (!m.agentId) {
+        geneBadge = '<span class="badge neutral" style="font-size:9.5px;">🌐 全局通用</span>';
+      } else {
+        geneBadge = `<span class="badge" style="background:#f1f5f9;color:#475569;font-size:9.5px;">💻 ${esc(m.agentId)}</span>`;
+      }
+
+      return `
+        <div class="hosting-memory-card">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+              <span class="badge" style="background:${cat.bg};color:${cat.color};font-weight:600;font-size:10px;padding:1px 5px;">${cat.label}</span>
+              ${geneBadge}
+              <strong style="font-size:12px;color:var(--text-main);">${title}</strong>
+            </div>
+            <div style="font-size:11.5px;color:var(--text-muted);line-height:1.45;word-break:break-word;">
+              ${content}
+            </div>
+          </div>
+          <button type="button" class="btn text-btn" style="color:var(--danger,#ef4444);font-size:11px;padding:2px 4px;" onclick="window.deleteHostingMemory('${escJs(m.id)}')">
+            删除
+          </button>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    console.warn('加载智能体基因库失败:', err);
+  }
+}
+
+function renderFeedItemHtml(item) {
+  if (typeof item === 'string') {
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return `
+      <div class="feed-item info">
+        <div class="feed-item-header">
+          <span class="feed-time">${time}</span>
+          <span class="feed-tag tag-system">[系统通知]</span>
+          <span class="feed-title">${esc(item)}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  const stageTagMap = {
+    detected: { cls: 'tag-detected', label: '微信来信' },
+    thinking: { cls: 'tag-thinking', label: '大模型调用' },
+    generated: { cls: 'tag-generated', label: '大模型生成' },
+    executing: { cls: 'tag-executing', label: '动作模拟' },
+    sent: { cls: 'tag-sent', label: '发送成功' },
+    cooldown: { cls: 'tag-cooldown', label: '人工接管' },
+    draft: { cls: 'tag-draft', label: '半托管草稿' },
+    system: { cls: 'tag-system', label: '系统通知' },
+    scan: { cls: 'tag-system', label: '静默巡检' },
+  };
+
+  const conf = stageTagMap[item.stage] || { cls: 'tag-system', label: item.tag || '实时动作' };
+  const tagClass = conf.cls;
+  const tagLabel = item.tag || conf.label;
+
+  const metaBadges = [];
+  if (item.model) metaBadges.push(`<span class="feed-meta-badge">🧠 ${esc(item.model)}</span>`);
+  if (item.agentName || item.agentId) metaBadges.push(`<span class="feed-meta-badge">👧 ${esc(item.agentName || item.agentId)}</span>`);
+  if (item.elapsedMs) metaBadges.push(`<span class="feed-meta-badge">⚡ ${(item.elapsedMs / 1000).toFixed(1)}s</span>`);
+
+  const detailHtml = item.detail ? `<div class="feed-detail">${esc(item.detail)}</div>` : '';
+
+  return `
+    <div class="feed-item ${esc(item.level || 'info')}">
+      <div class="feed-item-header">
+        <span class="feed-time">${esc(item.timeStr || '')}</span>
+        <span class="feed-tag ${tagClass}">[${esc(tagLabel)}]</span>
+        <span class="feed-title">${esc(item.title || '')}</span>
+        ${metaBadges.join(' ')}
+      </div>
+      ${detailHtml}
+    </div>
+  `;
+}
+
+function addHostingActivityLog(textOrObj, type = 'info') {
+  const container = $('hostingLiveFeedContainer');
+  if (!container) return;
+  const itemObj = typeof textOrObj === 'string'
+    ? {
+        stage: 'system',
+        level: type,
+        tag: '系统通知',
+        title: textOrObj,
+        timeStr: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      }
+    : textOrObj;
+
+  const temp = document.createElement('div');
+  temp.innerHTML = renderFeedItemHtml(itemObj);
+  const el = temp.firstElementChild;
+  if (el) {
+    container.prepend(el);
+    while (container.children.length > 80) {
+      container.lastChild?.remove();
+    }
+  }
+}
+window.addHostingActivityLog = addHostingActivityLog;
+
+// 监听主进程下发的实时微信与大模型动作动态
+if (window.hap?.onHostingActivity) {
+  window.hap.onHostingActivity((activity) => {
+    addHostingActivityLog(activity);
+  });
+}
+
+async function loadHostingLiveActivities() {
+  const container = $('hostingLiveFeedContainer');
+  if (!container) return;
+  try {
+    const list = (await window.hap.getHostingActivities?.(40)) || [];
+    if (list && list.length > 0) {
+      container.innerHTML = list.map((item) => renderFeedItemHtml(item)).join('');
+    } else {
+      container.innerHTML = `
+        <div class="feed-item info">
+          <div class="feed-item-header">
+            <span class="feed-time">${new Date().toLocaleTimeString()}</span>
+            <span class="feed-tag tag-system">[系统就绪]</span>
+            <span class="feed-title">桌面微信代管驱动就绪，正在后台静默巡检微信来信并联动大模型自动代答...</span>
+          </div>
+        </div>
+      `;
+    }
+  } catch (err) {
+    console.warn('加载托管动态失败:', err);
+  }
+}
 
 async function initChatHostingView() {
   try {
@@ -16154,6 +16469,9 @@ async function initChatHostingView() {
   await Promise.all([
     renderHostingOverview(),
     renderHostingContacts(),
+    loadDefaultHostingPolicy(),
+    renderHostingMemories(),
+    loadHostingLiveActivities(),
   ]);
   populateHostingAgentSelects();
   if (activeHostingContact) {
@@ -16994,6 +17312,19 @@ function populateHostingAgentSelects() {
     }
   }
 
+  const hpDefaultAgent = $('hpDefaultAgentSelect');
+  if (hpDefaultAgent) {
+    const currentVal = hpDefaultAgent.value;
+    hpDefaultAgent.innerHTML = optionsHtml;
+    if (currentVal && agents.some((a) => a.id === currentVal)) {
+      hpDefaultAgent.value = currentVal;
+    } else if (agents.some((a) => a.id === 'xx')) {
+      hpDefaultAgent.value = 'xx';
+    } else if (agents.length > 0) {
+      hpDefaultAgent.value = agents[0].id;
+    }
+  }
+
   const harAgent = $('harAgentSelect');
   if (harAgent) {
     const currentVal = harAgent.value;
@@ -17107,12 +17438,78 @@ function initChatHostingEvents() {
           textarea.value = template;
           textarea.focus();
           showToast(`已套用【${chip.textContent.trim()}】人设模板`, 'info');
+          if (targetId === 'hpDefaultSystemPromptInput') {
+            saveDefaultHostingPolicy();
+          }
         }
       });
     });
   };
-  bindPersonaTemplates('hpPersonaTemplates', 'hpSystemPromptInput');
+  bindPersonaTemplates('hpPersonaTemplates', 'hpDefaultSystemPromptInput');
   bindPersonaTemplates('harPersonaTemplates', 'harSystemPromptInput');
+
+  // 人设输入框失焦时自动保存，防止用户忘记点击保存按钮
+  $('hpDefaultSystemPromptInput')?.addEventListener('blur', () => {
+    saveDefaultHostingPolicy();
+  });
+
+  // 切换响应智能体下拉选择：即时联动基因库与自动持久化
+  $('hpDefaultAgentSelect')?.addEventListener('change', async (e) => {
+    const selectedAgentId = e.target.value;
+    updateHostingActiveScopeButton(selectedAgentId);
+    await saveDefaultHostingPolicy();
+    await renderHostingMemories();
+  });
+
+  // 保存全局分身人设与托管配置
+  $('hpSaveDefaultPolicyBtn')?.addEventListener('click', saveDefaultHostingPolicy);
+  $('hostingDefaultPolicyForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    saveDefaultHostingPolicy();
+  });
+
+  // 智能体专属基因库作用域切换
+  const handleScopeBtn = (scope, activeBtnId) => {
+    currentHostingGeneScope = scope;
+    ['hostingScopeActiveBtn', 'hostingScopeUniversalBtn', 'hostingScopeAllBtn'].forEach((id) => {
+      $(id)?.classList.toggle('active', id === activeBtnId);
+    });
+    renderHostingMemories();
+  };
+
+  $('hostingScopeActiveBtn')?.addEventListener('click', () => handleScopeBtn('active', 'hostingScopeActiveBtn'));
+  $('hostingScopeUniversalBtn')?.addEventListener('click', () => handleScopeBtn('universal', 'hostingScopeUniversalBtn'));
+  $('hostingScopeAllBtn')?.addEventListener('click', () => handleScopeBtn('all', 'hostingScopeAllBtn'));
+
+  // 跨会话长期记忆操作与实时过滤
+  $('hostingAddMemoryBtn')?.addEventListener('click', () => {
+    const activeAgentId = $('hpDefaultAgentSelect')?.value || 'xx';
+    window.openAddMemoryDialog?.(activeAgentId);
+  });
+  $('hostingMemorySearchInput')?.addEventListener('input', () => {
+    renderHostingMemories();
+  });
+  $('hostingMemoryCategoryFilter')?.addEventListener('change', () => {
+    renderHostingMemories();
+  });
+
+  // 清空动作动态流
+  $('hostingClearFeedBtn')?.addEventListener('click', async () => {
+    await window.hap.clearHostingActivities?.();
+    const container = $('hostingLiveFeedContainer');
+    if (container) {
+      container.innerHTML = `
+        <div class="feed-item info">
+          <div class="feed-item-header">
+            <span class="feed-time">${new Date().toLocaleTimeString()}</span>
+            <span class="feed-tag tag-system">[动态清空]</span>
+            <span class="feed-title">实时动作动态已清空，正在持续后台静默巡检微信来信...</span>
+          </div>
+        </div>
+      `;
+    }
+    showToast('已清空实时动作动态', 'info');
+  });
 
   // 空状态引导按钮全局委托
   document.addEventListener('click', (e) => {
