@@ -781,7 +781,7 @@ input[type="number"]:focus,
 select:focus,
 textarea:focus {
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.16);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--border-focus) 20%, transparent);
 }
 
 [data-theme="dark"] input[type="text"]:focus,
@@ -2307,7 +2307,7 @@ body.has-wallpaper .rail-mac-spacer {
 .pill-cancel-btn {
   background: transparent;
   border: none;
-  color: #0284c7;
+  color: var(--primary);
   font-size: 11px;
   cursor: pointer;
   padding: 1px 5px;
@@ -2343,7 +2343,7 @@ body.has-wallpaper .rail-mac-spacer {
   50% {
     transform: scale(1.3);
     opacity: 1;
-    box-shadow: 0 0 12px rgba(2, 132, 199, 0.8);
+    box-shadow: 0 0 12px var(--accent-glow);
   }
 }
 
@@ -2604,7 +2604,7 @@ body.has-wallpaper .rail-mac-spacer {
   background: var(--primary-subtle);
   color: var(--primary);
   transform: translateY(-1.5px);
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.14);
+  box-shadow: 0 4px 12px var(--accent-glow);
 }
 
 .suggested-reply-chip:hover svg {
@@ -2944,9 +2944,9 @@ body.has-wallpaper .rail-mac-spacer {
 }
 
 @keyframes pulseDot {
-  0% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.6); }
-  70% { box-shadow: 0 0 0 8px rgba(2, 132, 199, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0); }
+  0% { box-shadow: 0 0 0 0 var(--accent-glow); }
+  70% { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
 }
 
 .plugin-executing-desc {
@@ -4076,7 +4076,7 @@ select:not(.agent-switch-select):not(.model-switch-select):hover,
 .modal-form-wrap select:hover {
   border-color: var(--border-hover) !important;
   background-color: var(--bg-hover) !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230284c7' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
   box-shadow: 0 2px 6px rgba(14, 165, 233, 0.08) !important;
 }
 
@@ -4090,8 +4090,8 @@ select:not(.agent-switch-select):not(.model-switch-select):focus,
 .modal-form-wrap select:focus {
   border-color: var(--accent) !important;
   background-color: var(--bg-surface) !important;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.16), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230284c7' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--border-focus) 22%, transparent), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
 }
 
 select:disabled,
@@ -4115,8 +4115,8 @@ select:not(.agent-switch-select):not(.model-switch-select).custom-select-open,
 .modal-form-wrap select.custom-select-open {
   border-color: var(--accent) !important;
   background-color: var(--bg-surface) !important;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.16), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230284c7' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='18 15 12 9 6 15'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--border-focus) 22%, transparent), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='18 15 12 9 6 15'%3E%3C/polyline%3E%3C/svg%3E") !important;
 }
 
 /* 确保顶部 Header 胶囊选择器自身保持无边框、无白底与无双层阴影/双重箭头 */
@@ -4138,7 +4138,7 @@ select:not(.agent-switch-select):not(.model-switch-select).custom-select-open,
 .tool-capsule.custom-select-open {
   background: var(--bg-sidebar-pill);
   border-color: var(--accent);
-  box-shadow: 0 0 0 2.5px rgba(2, 132, 199, 0.18);
+  box-shadow: 0 0 0 2.5px color-mix(in srgb, var(--border-focus) 22%, transparent);
 }
 
 .model-switch-pill.custom-select-open .pill-chevron,
@@ -4482,7 +4482,7 @@ dialog .toast-container.in-dialog {
 .toast.toast-info {
   background: var(--text-main);
   border-color: transparent;
-  border-left-color: #3b82f6;
+  border-left-color: var(--blue-badge);
   box-shadow: 0 8px 24px -6px rgba(9, 9, 11, 0.35);
 }
 
@@ -4811,7 +4811,7 @@ dialog .toast-container.in-dialog {
 }
 
 .step-icon.running {
-  background: #3b82f6;
+  background: var(--blue-badge);
   color: #ffffff;
   animation: pulse 1.2s infinite ease-in-out;
 }
@@ -6807,7 +6807,7 @@ body:not(.is-chat-generating) .streaming-cursor,
 
 .git-commit-history-item.active {
   border-color: var(--accent);
-  background: rgba(2, 132, 199, 0.07);
+  background: var(--primary-subtle);
 }
 
 .git-commit-history-item.is-stash {
@@ -7310,7 +7310,7 @@ body:not(.is-chat-generating) .streaming-cursor,
   background: var(--primary);
   color: #ffffff;
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.35);
+  box-shadow: 0 1px 3px var(--accent-glow);
 }
 
 /* 项目文件联动状态栏 */
@@ -7382,7 +7382,7 @@ body:not(.is-chat-generating) .streaming-cursor,
 }
 
 .commit-rule-sync-btn:hover {
-  background: rgba(2, 132, 199, 0.12);
+  background: var(--primary-subtle);
   border-color: var(--primary-border);
 }
 
@@ -11428,4 +11428,65 @@ body.platform-mac .mini-drag-titlebar {
   background: var(--bg-surface);
   color: var(--text-secondary);
   text-overflow: ellipsis;
+}
+
+/* ==========================================================================
+   全局可访问性 (Accessibility) 与动效降级 (Motion Preferences)
+   - 键盘可见焦点环：仅键盘导航触发，不影响鼠标点击的极简观感
+   - 尊重系统「减弱动态效果」设置
+   ========================================================================== */
+
+/* 键盘焦点环。使用元素选择器（element + :focus-visible）保证能压过
+   组件上的 `outline: none` 声明，同时不涉及文本输入框——它们的焦点
+   反馈由外层容器（.composer-island-card 等）的 :focus-within 承担。 */
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible,
+[role="tab"]:focus-visible,
+[role="menuitem"]:focus-visible,
+[role="option"]:focus-visible,
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible,
+input[type="range"]:focus-visible,
+input[type="file"]:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* 顶部胶囊选择器本体透明，焦点环画在胶囊外框上更清晰 */
+.model-switch-pill:focus-within,
+.tool-capsule:focus-within {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* 危险操作保留红色焦点环，避免与语义冲突 */
+.btn.btn-danger:focus-visible,
+.btn.btn-quiet-danger:focus-visible {
+  outline-color: var(--danger);
+}
+
+/* 减弱动态效果：关闭装饰性动画与过渡，仅保留必要的状态切换 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .app-wallpaper-layer {
+    transition: none !important;
+  }
+
+  .modal,
+  dialog.modal,
+  dialog.modal[open] {
+    animation: none !important;
+  }
 }

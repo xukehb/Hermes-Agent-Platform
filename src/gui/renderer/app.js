@@ -42,6 +42,20 @@ if (window.hap?.isMac || (typeof navigator !== 'undefined' && (navigator.userAge
   if (document.body) document.body.classList.add('platform-mac');
 }
 
+// 用户若开启系统「减弱动态效果」，滚动等动效应直接跳到终点
+function prefersReducedMotion() {
+  return typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function scrollToElementSmooth(el, options) {
+  if (!el || typeof el.scrollIntoView !== 'function') return;
+  const opts = Object.assign({}, options || {});
+  opts.behavior = prefersReducedMotion() ? 'auto' : 'smooth';
+  el.scrollIntoView(opts);
+}
+
 function esc(val) {
   if (val === undefined || val === null) return '';
   return String(val)
@@ -2033,7 +2047,7 @@ function initOpacityAndGlass() {
       if (typeof modal.showModal === 'function') modal.showModal();
       else modal.style.display = 'block';
       setTimeout(() => {
-        document.querySelector('.theme-wallpaper-section')?.scrollIntoView({ behavior: 'smooth'});
+        scrollToElementSmooth(document.querySelector('.theme-wallpaper-section'));
       }, 50);
     }
   });
@@ -2211,7 +2225,7 @@ function initWallpaperSystem() {
           if (typeof modal.showModal === 'function') modal.showModal();
           else modal.style.display = 'block';
           setTimeout(() => {
-            document.querySelector('.theme-wallpaper-section')?.scrollIntoView({ behavior: 'smooth'});
+            scrollToElementSmooth(document.querySelector('.theme-wallpaper-section'));
           }, 50);
         }
       } else {
@@ -15978,13 +15992,13 @@ function initDesktopUpdater() {
   $('sidebarVersionTag')?.addEventListener('click', (e) => {
     e.stopPropagation();
     show('system');
-    $('aboutSoftwareCard')?.scrollIntoView({ behavior: 'smooth' });
+    scrollToElementSmooth($('aboutSoftwareCard'));
   });
   $('aboutVersionMoreBtn')?.addEventListener('click', () => {
     const headerMoreMenu = $('headerMoreMenu');
     if (headerMoreMenu) headerMoreMenu.style.display = 'none';
     show('system');
-    $('aboutSoftwareCard')?.scrollIntoView({ behavior: 'smooth' });
+    scrollToElementSmooth($('aboutSoftwareCard'));
   });
 
   $('desktopUpdateLaterBtn')?.addEventListener('click', () => $('desktopUpdateDialog')?.close());

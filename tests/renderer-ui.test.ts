@@ -405,6 +405,29 @@ describe('Electron renderer UI contracts', () => {
     expect(i18n).toContain("'wallpaper.adaptiveOffToast'");
   });
 
+  it('keeps keyboard focus rings, motion preferences and theme tokens consistent', () => {
+    // 1. 键盘可见焦点环：元素选择器需能压过组件里的 outline: none
+    expect(css).toMatch(/button:focus-visible[\s\S]{0,400}outline: 2px solid var\(--border-focus\)/);
+    expect(css).toContain('[tabindex]:not([tabindex="-1"]):focus-visible');
+    expect(css).toContain('.btn.btn-danger:focus-visible');
+
+    // 2. 尊重系统「减弱动态效果」
+    expect(css).toContain('@media (prefers-reduced-motion: reduce)');
+    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]{0,400}animation-duration: 0\.001ms !important/);
+    expect(app).toContain('function prefersReducedMotion()');
+    expect(app).toContain('function scrollToElementSmooth(');
+    expect(app).not.toContain("scrollIntoView({ behavior: 'smooth'");
+
+    // 3. 异步提示需要 aria-live，屏幕阅读器才会播报
+    expect(html).toMatch(/id="toastContainer"[^>]*role="status"/);
+    expect(html).toMatch(/id="toastContainer"[^>]*aria-live="polite"/);
+
+    // 4. 残留的硬编码蓝色强调色已全部收敛到主题令牌
+    expect(css).not.toContain('rgba(2, 132, 199');
+    expect(css).not.toContain('%230284c7');
+    expect(css).toContain('color-mix(in srgb, var(--border-focus) 20%, transparent)');
+  });
+
   it('implements macOS frameless titlebar with traffic light avoidance and unified drag header', () => {
     // 1. Electron BrowserWindow config
     expect(main).toContain("titleBarStyle: 'hidden'");
