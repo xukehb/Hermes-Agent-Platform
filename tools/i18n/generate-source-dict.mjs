@@ -114,7 +114,9 @@ function buildPatterns(appSource) {
         // 尾随空白位于下一个插值之前
         if (!isLast && /\s$/.test(rawPart)) {
           src += ' ';
-          addSpace(trans[i + 1]);
+          // 源码里该片段后紧跟一个插值，空格属于「插值之前」，必须在译文里保留。
+          // 之前按 trans[i + 1] 判断，遇到紧邻的收尾标点（如 PID: 1)）会误删这个空格。
+          if (!/\s$/.test(repl)) repl += ' ';
         }
       });
       // normalizeSourceText 已对文本节点做过去空白处理，因此正则首尾不应带空格
@@ -131,6 +133,10 @@ function buildPatterns(appSource) {
   }
   // 按字面量长度倒序排列：更具体的规则先匹配，避免
   // `^(.+?)核心$` 抢先命中本应由 `^(.+?)逻辑核心$` 处理的文案。
+  // 手工规则在最后应用，允许修正自动推导出的不理想结果
+  for (const [src, repl] of EXTRA_PATTERNS) {
+    patterns.set(src.source, repl);
+  }
   const literalWeight = (src) => src.replace(/^\^|\$$/g, '').replace(/\(\?\.\+\?\)/g, '').length;
   return [...patterns.entries()].sort((a, b) => literalWeight(b[0]) - literalWeight(a[0]));
 }
@@ -188,6 +194,22 @@ function buildNormalizedEntries(source) {
   }
   return new Map([...merged].map(([k, v]) => [k, v.value]));
 }
+
+/**
+ * 手工维护的补充规则。
+ *
+ * 有些文案由主进程拼接后传入渲染层（例如 ip-lookup 返回的「局域网内网 (IP)」），
+ * app.js 里没有对应的模板字符串，生成器推导不出规则。这类文案数量很少且格式稳定，
+ * 直接在此登记，避免把「规则推导」扩展成不可维护的启发式。
+ */
+// 注意：这里必须写字面 emoji，RegExp#source 不能保留 \u{..} 转义，
+// 而生成器输出的正则不带 u 标志，转义会退化成字面量 "u{1F3E0}" 导致规则永不命中。
+const EXTRA_PATTERNS = [
+  [/^🏠 局域网内网 \((.+?)\)$/, '🏠 LAN address ($1)'],
+  [/^🏠 局域网内网地址 \((.+?)\)$/, '🏠 LAN address ($1)'],
+  [/^🌐 公网 IP \((.+?)\)$/, '🌐 Public IP ($1)'],
+  [/^一键强制结束此进程 \(PID: (.+?)\)$/, 'Force-kill this process (PID: $1)'],
+];
 
 const appSource = readFileSync(join(SRC_DIR, 'app.js'), 'utf8');
 const patterns = buildPatterns(appSource);

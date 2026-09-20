@@ -11439,9 +11439,11 @@ function renderLocalHostView(info) {
             : 'color:var(--text-muted); background:var(--bg-subtle); border-color:var(--border-default); font-weight:600;';
           const rankBadge = `<span style="font-size:11px; ${rankTone} border:1px solid; border-radius:var(--radius-sm); min-width:24px; height:20px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">#${idx + 1}</span>`;
 
+          // 标题单独成串，源文案词典才能为「一键强制结束此进程 (PID: N)」生成插值规则
+          const killTitle = `一键强制结束此进程 (PID: ${p.pid})`;
           const actionBtn = isSelf
             ? '<span class="badge neutral" style="font-size:10.5px;padding:2px 8px;flex-shrink:0;" title="当前平台控制台运行主进程">当前平台</span>'
-            : `<button type="button" class="btn danger local-process-kill-btn" onclick="window.requestLocalProcessKill(${p.pid}, '${escJs(parsed.title)}', '${escJs(p.memoryFormatted)}')" style="font-size:11px;padding:3px 9px;font-weight:600;display:inline-flex;align-items:center;gap:3px;flex-shrink:0;cursor:pointer;" title="一键强制结束此进程 (PID: ${p.pid})">结束进程</button>`;
+            : `<button type="button" class="btn danger local-process-kill-btn" onclick="window.requestLocalProcessKill(${p.pid}, '${escJs(parsed.title)}', '${escJs(p.memoryFormatted)}')" style="font-size:11px;padding:3px 9px;font-weight:600;display:inline-flex;align-items:center;gap:3px;flex-shrink:0;cursor:pointer;" title="${esc(killTitle)}">结束进程</button>`;
 
           return `
             <div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg-surface);padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-default);gap:12px;box-shadow:var(--shadow-sm);">

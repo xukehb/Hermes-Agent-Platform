@@ -578,6 +578,13 @@
   function lookupSourceTranslation(source) {
     const exact = SOURCE_TEXT_EN[source];
     if (exact !== undefined) return exact;
+    // 渲染层常把标签拼成「标签:」，词典里存的是不带冒号的标签。
+    // 这里补一次「去掉尾随冒号再查」的回退，避免为每个标签维护两份词条。
+    const trimmedColon = /[:：]$/.test(source) ? source.slice(0, -1).trim() : '';
+    if (trimmedColon) {
+      const withoutColon = SOURCE_TEXT_EN[trimmedColon];
+      if (withoutColon !== undefined) return withoutColon + source.slice(-1);
+    }
     for (let i = 0; i < SOURCE_TEXT_PATTERNS.length; i++) {
       const rule = SOURCE_TEXT_PATTERNS[i];
       if (!rule[0].test(source)) continue;

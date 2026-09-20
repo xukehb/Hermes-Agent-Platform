@@ -113,6 +113,11 @@ describe('GUI 源文案英文字典 (source text dictionary)', () => {
     expect(lookup(commitMsg)).toContain('Enter a commit message');
   });
 
+  it('resolves labels that the renderer suffixed with a colon', () => {
+    // 网关预设面板把字段名渲染成「标签:」，词典键不带冒号。
+    expect(lookup('推荐模型 (Model ID):')).toBe('Recommended model (Model ID):');
+    expect(lookup('API 域名 / Host:')).toBe('API domain / Host:');
+  });
   it('resolves exact source text', () => {
     expect(lookup('新建会话')).toBe('New Conversation');
     expect(lookup('系统设置')).toBe('Settings');
@@ -129,6 +134,16 @@ describe('GUI 源文案英文字典 (source text dictionary)', () => {
     expect(lookup('模型：deepseek-chat')).toBe('Model: deepseek-chat');
   });
 
+  it('keeps the literal space that precedes a trailing punctuation in templates', () => {
+    // 回归：插值前的空格曾被丢掉，渲染成 "Force-kill this process (PID:123)"。
+    expect(lookup('一键强制结束此进程 (PID: 123)')).toBe('Force-kill this process (PID: 123)');
+  });
+
+  it('translates labels assembled by the main process', () => {
+    // ip-lookup 返回的主进程文案在 app.js 里没有模板字面量，改用 EXTRA_PATTERNS 覆盖。
+    expect(lookup('🏠 局域网内网 (127.0.0.1)') ?? lookup('🏠 局域网内网地址 (127.0.0.1)')).toBe('🏠 LAN address (127.0.0.1)');
+    expect(lookup('🌐 公网 IP (1.2.3.4)')).toBe('🌐 Public IP (1.2.3.4)');
+  });
   it('translates dictionary-matching capture groups inside templates', () => {
     const out = lookup('绑定智能体: ops (全栈运智能运维专家) | 告警通道: feishu | 异常自愈: 已开启');
     // 「已开启」是内置文案而不是用户数据，应一并翻译
