@@ -10683,16 +10683,48 @@ body.platform-mac .mini-drag-titlebar {
 }
 
 /* ==========================================================================
-   设置中心 · 纵向导航布局
-   - 12 个分组在横向标签栏下会被裁切 (仅靠 4px 滚动条露出)，改为左侧纵向
-     导航，保证每个分组的文字完整可读
+  设置中心 · 纵向导航布局
+  - 12 个分组在横向标签栏下会被裁切 (仅靠 4px 滚动条露出)，改为左侧纵向
+    导航，保证每个分组的文字完整可读
+   - 整页滚动会让「系统设置中心」标题栏一起被推走，且长内容与侧边导航互相
+     牵制。这里改为视口固定的三段式：标题栏固定，左侧导航与右侧内容各自独立
+     滚动，顶部标题栏始终可见。
    ========================================================================== */
+#settings.view.active {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#settings > .page-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding-bottom: 0;
+}
+
+/* 顶部「系统设置中心」标题栏：固定不参与滚动 */
+#settings > .page-container > .page-header-row {
+  flex: 0 0 auto;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
 .settings-layout {
   display: grid;
   grid-template-columns: 208px minmax(0, 1fr);
   gap: 28px;
   align-items: start;
   margin-top: 4px;
+}
+
+#settings .settings-layout {
+  flex: 1 1 auto;
+  min-height: 0;
+  align-items: stretch;
+  margin-top: 0;
 }
 
 /* 仅作用于设置中心的顶层分组导航：网关等子面板内部也有 .settings-nav-tabs，
@@ -10741,11 +10773,42 @@ body.platform-mac .mini-drag-titlebar {
   min-width: 0;
 }
 
+/* 菜单列与内容列各自滚动：滚动内容区不会带走标题栏，也不会拖动另一列 */
+#settings .settings-layout > .settings-nav-tabs {
+  position: static;
+  height: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 6px;
+}
+
+#settings .settings-panes {
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 6px;
+  padding-bottom: 40px;
+}
+
 /* 窄屏回落为横向换行标签，避免纵向导航挤压内容 */
 @media (max-width: 900px) {
   .settings-layout {
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
+  }
+  /* 窄屏下导航换行后会变高，不能再用 100% 高度，改由内容区单独滚动 */
+  #settings .settings-layout {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  #settings .settings-layout > .settings-nav-tabs {
+    height: auto;
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
   }
   .settings-layout > .settings-nav-tabs {
     flex-direction: row;

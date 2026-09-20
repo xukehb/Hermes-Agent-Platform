@@ -52,6 +52,22 @@ describe('Electron renderer UI contracts', () => {
     expect(css).toMatch(/\.btn-close::before\s*{/);
   });
 
+  it('pins the settings title bar and scrolls only the settings content', () => {
+    // 回归：设置页此前整页滚动，标题栏会被内容推走。现在标题栏固定，
+    // 左侧菜单与右侧面板各自独立滚动。
+    expect(css).toMatch(/#settings\.view\.active\s*\{[^}]*display:\s*flex/);
+    expect(css).toMatch(/#settings\.view\.active\s*\{[^}]*overflow:\s*hidden/);
+    const header = section(css, '#settings > .page-container > .page-header-row {', '.settings-layout {');
+    expect(header).toContain('flex: 0 0 auto');
+    expect(header).toContain('border-bottom');
+    const panes = section(css, '#settings .settings-panes {', '/* 窄屏回落为横向换行标签');
+    expect(panes).toContain('overflow-y: auto');
+    expect(panes).toContain('min-height: 0');
+    const nav = section(css, '#settings .settings-layout > .settings-nav-tabs {', '#settings .settings-panes {');
+    expect(nav).toContain('overflow-y: auto');
+    expect(nav).toContain('position: static');
+  });
+
   it('keeps the header capsule group from shrinking below its content', () => {
     // 回归：顶栏空间紧张时胶囊群组被压缩，「小 i」按钮只剩 17px 文字宽度，
     // 右侧半个字被圆角边框切掉。群组与按钮都必须保持内容宽度且不换行。
