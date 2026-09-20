@@ -563,7 +563,7 @@ function renderMarkdownContent(rawText) {
   safe = safe.replace(/^[\*\-] \[x\] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:center;gap:6px;margin:3px 0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--success);"><polyline points="20 6 9 17 4 12"/></svg><span style="text-decoration:line-through;color:var(--text-muted);">$1</span></div>');
 
   // 无序列表与有序列表
-  safe = safe.replace(/^[*-] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:baseline;gap:6px;margin:3px 0;"><span class="md-bullet" style="color:var(--primary);font-weight:bold;">•</span><span>$1</span></div>');
+  safe = safe.replace(/^[*-] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:baseline;gap:6px;margin:3px 0;"><span class="md-bullet" style="color:var(--text-main);font-weight:bold;">•</span><span>$1</span></div>');
   safe = safe.replace(/^(\d+)\. (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:baseline;gap:6px;margin:3px 0;"><span class="md-number" style="color:var(--text-muted);font-weight:600;font-family:var(--font-mono);font-size:12px;">$1.</span><span>$2</span></div>');
 
   // 行内元素解析 (图片、加粗、代码)
@@ -1156,11 +1156,6 @@ function renderCurrentSessionMessages() {
     container.innerHTML = `
 
       <div class="hero-welcome" id="heroWelcome">
-        <div class="hero-logo">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-          </svg>
-        </div>
         <h1 class="hero-title">${heroTitle}</h1>
         <p class="hero-subtitle">${heroSubtitle}</p>
         <div class="hero-grid">
@@ -1309,7 +1304,7 @@ function renderCurrentSessionMessages() {
       messagesHtml += `
         <div class="msg-row assistant waiting-row" id="activeStreamingRow">
           <div class="assistant-container">
-            <div class="assistant-avatar" style="background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;"></div>
+            <div class="assistant-avatar" style="background:var(--bg-active);color:var(--text-main);display:flex;align-items:center;justify-content:center;font-size:16px;"></div>
             <div class="assistant-content" style="max-width:85%;">
               <div class="plugin-executing-card" id="pluginExecCard_${esc(session.id)}">
                 <div class="plugin-executing-header">
@@ -2962,7 +2957,7 @@ function renderGitModalContent() {
           <div class="git-group-header-title">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
             <span>已暂存的更改 (Staged Changes)</span>
-            <span class="prop-chip" style="font-size:10px;padding:0 5px;background:rgba(46,160,67,0.15);color:#2ea043;font-weight:700;">${staged.length}</span>
+            <span class="prop-chip" style="font-size:10px;padding:0 5px;background:var(--bg-subtle);color:var(--text-secondary);font-weight:700;">${staged.length}</span>
           </div>
           <div class="git-group-header-actions" onclick="event.stopPropagation()">
             <button type="button" class="git-icon-btn" onclick="handleUnstageAll()" title="全部取消暂存 (Unstage All)">
@@ -2983,7 +2978,7 @@ function renderGitModalContent() {
           <div class="git-group-header-title">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
             <span>更改 (Changes)</span>
-            <span class="prop-chip" style="font-size:10px;padding:0 5px;background:rgba(2,132,199,0.15);color:var(--accent);font-weight:700;">${unstaged.length}</span>
+            <span class="prop-chip" style="font-size:10px;padding:0 5px;background:var(--bg-subtle);color:var(--text-secondary);font-weight:700;">${unstaged.length}</span>
           </div>
           <div class="git-group-header-actions" onclick="event.stopPropagation()">
             <button type="button" class="git-icon-btn danger" onclick="handleRevertAll()" title="放弃所有更改 (Discard All Changes)">
@@ -4231,13 +4226,13 @@ function renderBranchListItems(filterText) {
             <div class="git-branch-item-name">
               <span>${isCurrent ? '●' : '○'}</span>
               <span>${esc(b.name)}</span>
-              ${isCurrent ? '<span class="prop-chip" style="font-size:10px;padding:1px 5px;color:var(--primary);">当前</span>' : ''}
+              ${isCurrent ? '<span class="prop-chip" style="font-size:10px;padding:1px 5px;color:var(--text-main);">当前</span>' : ''}
               ${b.upstream ? `<span style="font-size:10.5px;color:var(--text-muted);font-weight:normal;">&rarr; ${esc(b.upstream)}</span>` : ''}
             </div>
             ${b.lastCommit ? `<div class="git-branch-item-meta" title="${esc(b.lastCommit)}">${esc(b.lastCommit)}</div>` : ''}
           </div>
           <div>
-            ${!isCurrent ? `<button type="button" class="btn small secondary" onclick="handleCheckoutBranch('${esc(b.name)}')" style="padding:2px 10px;font-size:11.5px;">切换</button>` : '<span style="font-size:11px;color:var(--primary);font-weight:600;">正在使用</span>'}
+            ${!isCurrent ? `<button type="button" class="btn small secondary" onclick="handleCheckoutBranch('${esc(b.name)}')" style="padding:2px 10px;font-size:11.5px;">切换</button>` : '<span style="font-size:11px;color:var(--text-main);font-weight:600;">正在使用</span>'}
           </div>
         </div>
       `;
@@ -5384,7 +5379,7 @@ function renderProviders() {
         <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-subtle);">
           <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
             <span>包含的模型 (${provModels.length})：</span>
-            ${provModels.length > 0 ? `<button type="button" class="btn text-btn" style="font-size:11px;color:#ef4444;padding:0;cursor:pointer;background:none;border:none;display:inline-flex;align-items:center;gap:3px;" onclick="window.clearModelsForProvider('${escJs(p.id)}')">清空本服务商模型</button>` : ''}
+            ${provModels.length > 0 ? `<button type="button" class="btn text-btn" style="font-size:11px;color:#ef4444;padding:0;cursor:pointer;background:none;display:inline-flex;align-items:center;gap:3px;" onclick="window.clearModelsForProvider('${escJs(p.id)}')">清空本服务商模型</button>` : ''}
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
             ${modelChipsHtml}
@@ -5564,7 +5559,7 @@ function renderAgents() {
       <div class="card-header">
         <div style="display:flex;align-items:center;gap:10px;">
           <div style="width:38px;height:38px;border-radius:8px;background:var(--bg-subtle);border:1px solid var(--border-subtle);display:grid;place-items:center;font-size:20px;flex-shrink:0;box-shadow:var(--shadow-sm);">
-            ${esc(agent.emoji || '')}
+            ${esc(agent.emoji || (agent.displayName || agent.name || agent.id || '?').trim().charAt(0).toUpperCase())}
           </div>
           <div class="card-title-wrap">
             <span class="card-title">${esc(agent.displayName || agent.name || agent.id)}</span>
@@ -5581,7 +5576,7 @@ function renderAgents() {
           ${esc(agent.description || '全功能多任务执行与代码分析智能体')}
         </div>
         <div class="card-props">
-          <span class="prop-chip" style="background:#eff6ff;color:#2563eb;font-weight:600;">
+          <span class="prop-chip" style="background:var(--bg-subtle);color:var(--text-main);font-weight:600;">
             模型：${esc(agent.resolvedModel || agent.model || '全局默认')}
           </span>
           <span class="prop-chip" title="${esc(agent.resolvedWorkspace || agent.workspace || '继承全局')}">
@@ -6419,13 +6414,13 @@ async function renderWeChatView() {
 
         if (wxConfig.status === 'connected') {
           qrBox.innerHTML = `
-            <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:24px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;text-align:center;width:100%;max-width:280px;box-shadow:0 4px 12px rgba(34,197,94,0.08);">
-              <div style="width:44px;height:44px;border-radius:50%;background:#22c55e;color:#fff;display:grid;place-items:center;box-shadow:0 2px 8px rgba(34,197,94,0.3);">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:24px 16px;background:var(--bg-subtle);border:1px solid var(--border-default);border-radius:12px;text-align:center;width:100%;max-width:280px;">
+              <div style="width:40px;height:40px;border-radius:50%;background:var(--bg-active);color:var(--success);display:grid;place-items:center;">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><polyline points="20 6 9 17 4 12"/></svg>
               </div>
-              <div style="font-weight:700;color:#15803d;font-size:15px;">微信已成功连接就绪</div>
-              <div style="font-size:12.5px;color:#166534;font-weight:500;">当前账号：${esc(wxConfig.loginUser || 'WeChat User')}</div>
-              <div style="font-size:11.5px;color:#15803d;line-height:1.4;">现在拿起手机在微信中发送需求，AI 将实时自动响应并处理任务！</div>
+              <div style="font-weight:600;color:var(--text-main);font-size:15px;">微信已成功连接就绪</div>
+              <div style="font-size:12.5px;color:var(--text-secondary);">当前账号：${esc(wxConfig.loginUser || 'WeChat User')}</div>
+              <div style="font-size:11.5px;color:var(--text-muted);line-height:1.4;">现在拿起手机在微信中发送需求，AI 将实时自动响应并处理任务！</div>
             </div>
           `;
         } else if (wxConfig.qrCodeText) {
@@ -6514,7 +6509,7 @@ async function renderWeChatContactsList() {
           const isRoom = c.isRoom || c.type === 'room';
           const typeIcon = '';
           const agentBadge = c.agentId
-            ? `<span class="badge" style="background:var(--primary-subtle);color:var(--primary);font-size:10px;padding:1px 5px;">${esc(c.agentId)}</span>`
+            ? `<span class="badge" style="background:var(--bg-subtle);color:var(--text-main);font-size:10px;padding:1px 5px;">${esc(c.agentId)}</span>`
             : `<span class="badge neutral" style="font-size:10px;padding:1px 5px;">默认智能体</span>`;
           const replyBadge = c.autoReply !== false
             ? `<span class="badge success" style="font-size:10px;padding:1px 5px;">自动回复</span>`
@@ -6532,7 +6527,7 @@ async function renderWeChatContactsList() {
                 <span style="font-size:10px;color:var(--text-muted);">${replyModeText}</span>
               </div>
               <div style="display:flex;align-items:center;gap:3px;">
-                <button type="button" class="btn text-btn edit-wx-contact-btn" data-id="${esc(c.id)}" style="padding:1px 4px;font-size:10.5px;color:var(--primary);" title="编辑">编辑</button>
+                <button type="button" class="btn text-btn edit-wx-contact-btn" data-id="${esc(c.id)}" style="padding:1px 4px;font-size:10.5px;color:var(--text-main);" title="编辑">编辑</button>
                 <button type="button" class="btn text-btn del-wx-contact-btn" data-id="${esc(c.id)}" style="padding:1px 4px;font-size:10.5px;color:var(--danger, #ef4444);" title="删除">删除</button>
               </div>
             </div>
@@ -6801,13 +6796,13 @@ function updateWechatQrModal(wxConfig) {
 
   if (wxConfig.status === 'connected') {
     body.innerHTML = `
-      <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px 20px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;text-align:center;width:100%;box-shadow:0 4px 16px rgba(34,197,94,0.1);">
-        <div style="width:52px;height:52px;border-radius:50%;background:#22c55e;color:#fff;display:grid;place-items:center;box-shadow:0 4px 12px rgba(34,197,94,0.3);">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px 20px;background:var(--bg-subtle);border:1px solid var(--border-default);border-radius:12px;text-align:center;width:100%;">
+        <div style="width:44px;height:44px;border-radius:50%;background:var(--bg-active);color:var(--success);display:grid;place-items:center;">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
-        <div style="font-weight:700;color:#15803d;font-size:16px;">微信已成功连接就绪</div>
-        <div style="font-size:13px;color:#166534;font-weight:500;">当前绑定账号：${esc(wxConfig.loginUser || 'WeChat User')}</div>
-        <div style="font-size:12px;color:#15803d;line-height:1.5;">现在拿起手机在微信中向智能体发送任何需求，AI 将实时自动响应！</div>
+        <div style="font-weight:600;color:var(--text-main);font-size:16px;">微信已成功连接就绪</div>
+        <div style="font-size:13px;color:var(--text-secondary);">当前绑定账号：${esc(wxConfig.loginUser || 'WeChat User')}</div>
+        <div style="font-size:12px;color:var(--text-muted);line-height:1.5;">现在拿起手机在微信中向智能体发送任何需求，AI 将实时自动响应！</div>
       </div>
     `;
     if (tip) tip.textContent = '[已就绪] 已连接就绪';
@@ -6964,7 +6959,7 @@ function renderWeChatFeed() {
         <div style="display:flex;flex-direction:column;align-items:flex-end;margin-left:auto;max-width:85%;">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
             <span style="font-size:11px;color:var(--text-muted);">${esc(timeStr)}</span>
-            <span class="badge" style="background:var(--primary-subtle);color:var(--primary);font-size:11px;font-weight:600;">AI 智能体 (${esc(item.agent || 'coder')}) 回复</span>
+            <span class="badge" style="background:var(--bg-subtle);color:var(--text-main);font-size:11px;font-weight:600;">AI 智能体 (${esc(item.agent || 'coder')}) 回复</span>
           </div>
           <div style="background:var(--bg-subtle);border:1px solid var(--border-default);padding:12px 16px;border-radius:12px 12px 2px 12px;font-size:13.5px;color:var(--text-main);line-height:1.65;box-shadow:var(--shadow-sm);word-break:break-word;">
             ${renderMarkdownContent(item.text)}
@@ -7304,7 +7299,7 @@ window.testProvider = async (targetId, clickBtn) => {
       }
 
       if (statusChip) {
-        statusChip.innerHTML = '<span style="color:var(--primary);">... 正在与服务商建立握手连接...</span>';
+        statusChip.innerHTML = '<span style="color:var(--text-main);">... 正在与服务商建立握手连接...</span>';
       }
       showToast(`正在测试连通性：${id || baseUrl}...`, 'info');
 
@@ -7641,7 +7636,7 @@ window.refreshModelHub = async () => {
       if (sub) sub.textContent = '点击右侧按钮可一键在后台拉起服务';
       if (actions) {
         actions.innerHTML = `
-          <button type="button" class="btn primary" onclick="window.startOllamaFromHub()" style="font-size:11.5px;padding:4px 12px;background:var(--success);">一键启动服务</button>
+          <button type="button" class="btn primary" onclick="window.startOllamaFromHub()" style="font-size:11.5px;padding:4px 12px;">一键启动服务</button>
           <button type="button" class="btn secondary" onclick="window.refreshModelHub()" style="font-size:11.5px;padding:4px 10px;">刷新</button>
         `;
       }
@@ -7703,7 +7698,7 @@ function renderModelHubCards() {
 
   if (list.length === 0) {
     container.innerHTML = `
-      <div style="grid-column: 1 / -1; padding: 40px; text-align: center; color: var(--text-muted);">
+      <div style="grid-column:1 / -1;padding:40px;text-align:center;color:var(--text-muted);">
         未找到符合筛选条件的开源模型
       </div>
     `;
@@ -7742,7 +7737,7 @@ function renderModelHubCards() {
         `;
       } else if (e.tier === 'best') {
         actionButtonHtml = `
-          <button type="button" class="btn primary" style="font-size:12px;padding:5px 14px;background:var(--warning);color:#fff;border:none;box-shadow:0 2px 6px rgba(245,158,11,0.3);" onclick="window.pullHubModel('${escJs(m.id)}')">一键极速部署</button>
+          <button type="button" class="btn primary" style="font-size:12px;padding:5px 14px;background:var(--warning);" onclick="window.pullHubModel('${escJs(m.id)}')">一键极速部署</button>
         `;
       } else {
         actionButtonHtml = `
@@ -9501,9 +9496,9 @@ async function renderServers() {
   if (cachedServers.length === 0) {
     grid.innerHTML = `
       <div class="card server-empty-card">
-        <div style="margin-bottom: 12px; display:flex; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></div>
-        <div style="font-weight: 700; font-size: 15px; color: var(--text-main); margin-bottom: 6px;">尚未添加任何远程服务器</div>
-        <div style="font-size: 13px; max-width: 440px; margin: 0 auto 18px auto; line-height: 1.5; color: var(--text-muted);">
+        <div style="margin-bottom:12px;display:flex;justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></div>
+        <div style="font-weight:700;font-size:15px;color:var(--text-main);margin-bottom:6px;">尚未添加任何远程服务器</div>
+        <div style="font-size:13px;max-width:440px;margin:0 auto 18px auto;line-height:1.5;color:var(--text-muted);">
           输入服务器 IP 与 SSH 凭据，即可一键自动化部署 HAP 守护进程，实现跨机器算力协同与实时操控。
         </div>
         <button type="button" class="btn primary" onclick="window.openServerDialog()" style="margin:0 auto;padding:7px 18px;font-size:13px;">
@@ -9535,7 +9530,7 @@ async function renderServers() {
           <div class="card-title-wrap" style="cursor:pointer;" onclick="window.openServerDetailsModal('${esc(s.id)}')" title="点击查看服务器系统完整详情">
             <div class="card-title" style="font-size:14.5px;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:6px;">
               <span>${esc(s.name)}</span>
-              <span style="font-size:11px;color:var(--primary);font-weight:normal;">[详情 ]</span>
+              <span style="font-size:11px;color:var(--text-main);font-weight:normal;">[详情 ]</span>
             </div>
             <div class="card-subtitle" style="font-size:12px;color:var(--text-muted);font-family:var(--font-mono);">${esc(s.username)}@${esc(s.host)}:${esc(s.port)}</div>
           </div>
@@ -9586,7 +9581,7 @@ async function renderServers() {
               ${(() => {
                 const boundBot = (cachedBots || []).find(b => b.id === s.boundBotId || b.boundServerId === s.id);
                 if (boundBot) {
-                  return `<strong style="color:var(--primary);">${esc(boundBot.name)}</strong> <span style="font-size:10px;color:var(--text-muted);">(${esc(boundBot.platform)})</span>`;
+                  return `<strong style="color:var(--text-main);">${esc(boundBot.name)}</strong> <span style="font-size:10px;color:var(--text-muted);">(${esc(boundBot.platform)})</span>`;
                 }
                 return '<span style="color:var(--text-muted);">未绑定</span>';
               })()}
@@ -9596,7 +9591,7 @@ async function renderServers() {
               if (boundBot) {
                 return `<span class="badge ${boundBot.enabled ? 'success' : 'neutral'}" style="font-size:10.5px;">${boundBot.enabled ? '在线' : '停止'}</span>`;
               }
-              return `<button type="button" class="btn text-btn" style="font-size:11px;color:var(--primary);padding:0;" onclick="window.openBotDialog('', '${escJs(s.id)}')">+ 绑定机器人</button>`;
+              return `<button type="button" class="btn text-btn" style="font-size:11px;color:var(--text-main);padding:0;" onclick="window.openBotDialog('', '${escJs(s.id)}')">+ 绑定机器人</button>`;
             })()}
           </div>
         </div>
@@ -10026,7 +10021,7 @@ window.renderBotInstancesGrid = () => {
   if (cachedBots.length === 0) {
     container.innerHTML = `
       <div style="grid-column:1/-1;text-align:center;padding:36px 20px;background:var(--bg-surface);border:1px dashed var(--border-default);border-radius:var(--radius-lg);">
-        <div style="margin-bottom:8px; display:flex; justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);margin-bottom:8px;"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg></div>
+        <div style="margin-bottom:8px;display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);margin-bottom:8px;"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg></div>
         <div style="font-size:14px;font-weight:600;color:var(--text-main);margin-bottom:4px;">暂无配置任何机器人实例</div>
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">您可以为不同的服务器或业务场景创建多个专属机器人，直接在群内遥控目标服务器。</div>
         <button type="button" class="btn primary" onclick="window.openBotDialog()" style="font-size:12.5px;padding:6px 16px;">
@@ -10067,7 +10062,7 @@ window.renderBotInstancesGrid = () => {
         <div style="background:var(--bg-subtle);padding:8px 10px;border-radius:var(--radius-sm);font-size:11.5px;display:flex;flex-direction:column;gap:4px;border:1px solid var(--border-default);">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <span style="color:var(--text-muted);">绑定服务器：</span>
-            <strong style="color:var(--primary);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(serverLabel)}">${esc(serverLabel)}</strong>
+            <strong style="color:var(--text-main);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(serverLabel)}">${esc(serverLabel)}</strong>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <span style="color:var(--text-muted);">调度智能体：</span>
@@ -10428,7 +10423,7 @@ $('sendQQTestMsgBtn')?.addEventListener('click', () => {
   const feed = $('qqMsgFeed');
   if (feed) {
     const timeStr = new Date().toLocaleTimeString();
-    feed.innerHTML += `<div style="padding:4px 0;border-bottom:1px dashed var(--border-default);"><span style="color:var(--primary);font-weight:600;">[测试发送 ${timeStr}]</span> ${esc(msg)}</div>`;
+    feed.innerHTML += `<div style="padding:4px 0;border-bottom:1px dashed var(--border-default);"><span style="color:var(--text-main);font-weight:600;">[测试发送 ${timeStr}]</span> ${esc(msg)}</div>`;
     feed.scrollTop = feed.scrollHeight;
   }
   if (input) input.value = '';
@@ -10545,7 +10540,7 @@ function renderRemoteProcessList(processList, serverId) {
 
   const processes = Array.isArray(processList?.processes) ? processList.processes : [];
   if (processes.length === 0) {
-    procList.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:8px 0; text-align:center;">远程节点暂无可展示的进程</div>';
+    procList.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;text-align:center;">远程节点暂无可展示的进程</div>';
     return;
   }
 
@@ -10562,22 +10557,22 @@ function renderRemoteProcessList(processList, serverId) {
     const startTime = proc?.startTime || '';
 
     return `
-      <div data-remote-process-row="${safePid}" style="display:flex; flex-direction:column; gap:7px; background:var(--bg-subtle); padding:9px 10px; border-radius:var(--radius-sm); border:1px solid var(--border-default); font-size:12px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
-          <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
-            <strong style="color:var(--text-main); font-size:12.5px;">PID ${safePid || '--'}</strong>
+      <div data-remote-process-row="${safePid}" style="display:flex;flex-direction:column;gap:7px;background:var(--bg-subtle);padding:9px 10px;border-radius:var(--radius-sm);border:1px solid var(--border-default);font-size:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;">
+            <strong style="color:var(--text-main);font-size:12.5px;">PID ${safePid || '--'}</strong>
             <span style="color:var(--text-muted);">用户 ${esc(user)}</span>
-            <span style="color:var(--text-muted); font-family:var(--font-mono);">PPID ${safePpid || '--'}</span>
-            <span style="color:var(--text-muted); font-family:var(--font-mono);">CPU ${cpu}% · MEM ${mem}%</span>
+            <span style="color:var(--text-muted);font-family:var(--font-mono);">PPID ${safePpid || '--'}</span>
+            <span style="color:var(--text-muted);font-family:var(--font-mono);">CPU ${cpu}% · MEM ${mem}%</span>
             <span style="color:var(--text-muted);">运行 ${fmtHostUptime(elapsed)}</span>
           </div>
-          <div style="display:flex; align-items:center; gap:5px; flex-shrink:0;">
-            <button type="button" class="btn secondary remote-process-signal-btn" data-process-pid="${safePid}" data-process-start-time="${esc(startTime)}" data-process-signal="TERM" ${safePid ? '' : 'disabled'} style="font-size:10.5px; padding:3px 7px;">TERM</button>
-            <button type="button" class="btn danger remote-process-signal-btn" data-process-pid="${safePid}" data-process-start-time="${esc(startTime)}" data-process-signal="KILL" ${safePid ? '' : 'disabled'} style="font-size:10.5px; padding:3px 7px;">KILL</button>
+          <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">
+            <button type="button" class="btn secondary remote-process-signal-btn" data-process-pid="${safePid}" data-process-start-time="${esc(startTime)}" data-process-signal="TERM" ${safePid ? '' : 'disabled'} style="font-size:10.5px;padding:3px 7px;">TERM</button>
+            <button type="button" class="btn danger remote-process-signal-btn" data-process-pid="${safePid}" data-process-start-time="${esc(startTime)}" data-process-signal="KILL" ${safePid ? '' : 'disabled'} style="font-size:10.5px;padding:3px 7px;">KILL</button>
           </div>
         </div>
-        <code title="${esc(command)}" style="display:block; color:var(--text-main); background:var(--bg-card); border-radius:var(--radius-xs); border:1px solid var(--border-default); padding:4px 6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(command)}</code>
-        <div style="display:flex; justify-content:space-between; gap:8px; color:#94a3b8; font-size:10.5px; flex-wrap:wrap;">
+        <code title="${esc(command)}" style="display:block;color:var(--text-main);background:var(--bg-card);border-radius:var(--radius-xs);border:1px solid var(--border-default);padding:4px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(command)}</code>
+        <div style="display:flex;justify-content:space-between;gap:8px;color:#94a3b8;font-size:10.5px;flex-wrap:wrap;">
           <span>启动: ${esc(formatRemoteProcessStartTime(startTime))}</span>
           <span>目标: ${esc(serverId || '--')}</span>
         </div>
@@ -10601,7 +10596,7 @@ async function refreshRemoteProcessList(serverId) {
   const procList = $('hostTopProcessList');
   const refreshBtn = $('hostProcessRefreshBtn');
   if (refreshBtn) refreshBtn.disabled = true;
-  if (procList) procList.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:8px 0; text-align:center;">正在获取远程进程列表...</div>';
+  if (procList) procList.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:8px 0;text-align:center;">正在获取远程进程列表...</div>';
 
   try {
     const result = await window.hap.getServerProcesses(serverId, { limit: 100 });
@@ -10609,7 +10604,7 @@ async function refreshRemoteProcessList(serverId) {
     renderRemoteProcessList(result, serverId);
   } catch (error) {
     if (serverId !== (activePanoramaTarget || 'local')) return;
-    if (procList) procList.innerHTML = `<div style="color:#dc2626; font-size:12px; padding:8px 0; text-align:center;">远程进程获取失败：${esc(error?.message || error)}</div>`;
+    if (procList) procList.innerHTML = `<div style="color:#dc2626;font-size:12px;padding:8px 0;text-align:center;">远程进程获取失败：${esc(error?.message || error)}</div>`;
   } finally {
     if (refreshBtn && serverId === (activePanoramaTarget || 'local')) refreshBtn.disabled = false;
   }
@@ -10725,12 +10720,12 @@ function renderLocalHostView(info) {
     const coreGrid = $('hostCoreGrid');
     if (coreGrid && info.cpu.perCore) {
       coreGrid.innerHTML = info.cpu.perCore.map(c => `
-        <div style="background:var(--bg-subtle); border:1px solid var(--border-default); border-radius:var(--radius-sm); padding:6px 8px; display:flex; flex-direction:column; gap:2px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; font-weight:600; color:var(--text-main);">
+        <div style="background:var(--bg-subtle);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:6px 8px;display:flex;flex-direction:column;gap:2px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:600;color:var(--text-main);">
             <span>Core #${c.coreIndex}</span>
-            <span style="color:var(--primary); font-family:var(--font-mono);">${c.speedMHz}MHz</span>
+            <span style="color:var(--text-main);font-family:var(--font-mono);">${c.speedMHz}MHz</span>
           </div>
-          <div style="font-size:10px; color:var(--text-muted); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+          <div style="font-size:10px;color:var(--text-muted);text-overflow:ellipsis;overflow:hidden;white-space:nowrap;">
             ${esc(c.model.replace(/CPU @.*$/, '').trim())}
           </div>
         </div>
@@ -10778,15 +10773,15 @@ function renderLocalHostView(info) {
     if (partList && info.disk.partitions) {
       if ($('hostDiskPartCountBadge')) $('hostDiskPartCountBadge').textContent = `${info.disk.partitions.length} 个驱动器`;
       partList.innerHTML = info.disk.partitions.map(p => `
-        <div style="background:var(--bg-subtle); border:1px solid var(--border-default); border-radius:var(--radius-sm); padding:8px 10px; display:flex; flex-direction:column; gap:4px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:600; color:var(--text-main);">
+        <div style="background:var(--bg-subtle);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:8px 10px;display:flex;flex-direction:column;gap:4px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:600;color:var(--text-main);">
             <span>驱动卷 <code>${esc(p.mount)}</code></span>
-            <span style="color:var(--primary); font-family:var(--font-mono);">${p.usedPercent}% (${fmtHostBytes(p.usedBytes)} / ${fmtHostBytes(p.totalBytes)})</span>
+            <span style="color:var(--text-main);font-family:var(--font-mono);">${p.usedPercent}% (${fmtHostBytes(p.usedBytes)} / ${fmtHostBytes(p.totalBytes)})</span>
           </div>
-          <div class="progress-track" style="height: 5px;">
+          <div class="progress-track" style="height:5px;">
             <div style="width: ${p.usedPercent}%; height: 100%; background: ${p.usedPercent > 85 ? 'var(--danger)' : p.usedPercent > 70 ? 'var(--warning)' : 'var(--primary)'};"></div>
           </div>
-          <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
+          <div style="font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between;">
             <span>可用空间: ${fmtHostBytes(p.freeBytes)}</span>
             <span>总容量: ${fmtHostBytes(p.totalBytes)}</span>
           </div>
@@ -10798,7 +10793,7 @@ function renderLocalHostView(info) {
     const procList = $('hostTopProcessList');
     if (procList) {
       if (!info.topProcesses || info.topProcesses.length === 0) {
-        procList.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:16px 0; text-align:center;">暂无活跃高消耗进程</div>';
+        procList.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:16px 0;text-align:center;">暂无活跃高消耗进程</div>';
       } else {
         const selfPid = info.os?.pid;
         procList.innerHTML = info.topProcesses.map((p, idx) => {
@@ -10812,23 +10807,23 @@ function renderLocalHostView(info) {
           const rankBadge = `<span style="font-size:11px; ${rankTone} border:1px solid; border-radius:var(--radius-sm); min-width:24px; height:20px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">#${idx + 1}</span>`;
 
           const actionBtn = isSelf
-            ? '<span class="badge neutral" style="font-size:10.5px; padding:2px 8px; flex-shrink:0;" title="当前平台控制台运行主进程">当前平台</span>'
-            : `<button type="button" class="btn danger local-process-kill-btn" onclick="window.requestLocalProcessKill(${p.pid}, '${escJs(parsed.title)}', '${escJs(p.memoryFormatted)}')" style="font-size:11px; padding:3px 9px; font-weight:600; display:inline-flex; align-items:center; gap:3px; flex-shrink:0; cursor:pointer;" title="一键强制结束此进程 (PID: ${p.pid})">结束进程</button>`;
+            ? '<span class="badge neutral" style="font-size:10.5px;padding:2px 8px;flex-shrink:0;" title="当前平台控制台运行主进程">当前平台</span>'
+            : `<button type="button" class="btn danger local-process-kill-btn" onclick="window.requestLocalProcessKill(${p.pid}, '${escJs(parsed.title)}', '${escJs(p.memoryFormatted)}')" style="font-size:11px;padding:3px 9px;font-weight:600;display:inline-flex;align-items:center;gap:3px;flex-shrink:0;cursor:pointer;" title="一键强制结束此进程 (PID: ${p.pid})">结束进程</button>`;
 
           return `
-            <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-surface); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-default); gap:12px; box-shadow:var(--shadow-sm);">
-              <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
+            <div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg-surface);padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-default);gap:12px;box-shadow:var(--shadow-sm);">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
                 ${rankBadge}
-                <div style="display:flex; flex-direction:column; min-width:0; flex:1;">
-                  <div style="display:flex; align-items:center; gap:6px; min-width:0;">
-                    <strong style="color:var(--text-main); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${esc(parsed.fullPath)}">${esc(parsed.title)}</strong>
-                    <span style="color:var(--text-secondary); font-size:10.5px; font-family:var(--font-mono); background:var(--bg-subtle); padding:1px 5px; border-radius:3px; flex-shrink:0; border:1px solid var(--border-default);">PID ${p.pid}</span>
+                <div style="display:flex;flex-direction:column;min-width:0;flex:1;">
+                  <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+                    <strong style="color:var(--text-main);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(parsed.fullPath)}">${esc(parsed.title)}</strong>
+                    <span style="color:var(--text-secondary);font-size:10.5px;font-family:var(--font-mono);background:var(--bg-subtle);padding:1px 5px;border-radius:3px;flex-shrink:0;border:1px solid var(--border-default);">PID ${p.pid}</span>
                   </div>
                   <div class="process-path" title="${esc(parsed.fullPath)}">${esc(parsed.fullPath)}</div>
                 </div>
               </div>
-              <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-                <span style="font-weight:600; font-family:var(--font-mono); color:var(--text-main); background:var(--bg-subtle); border:1px solid var(--border-default); padding:2px 8px; border-radius:var(--radius-sm); font-size:11.5px; white-space:nowrap; font-variant-numeric:tabular-nums;">
+              <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                <span style="font-weight:600;font-family:var(--font-mono);color:var(--text-main);background:var(--bg-subtle);border:1px solid var(--border-default);padding:2px 8px;border-radius:var(--radius-sm);font-size:11.5px;white-space:nowrap;font-variant-numeric:tabular-nums;">
                   ${esc(p.memoryFormatted)}
                 </span>
                 ${actionBtn}
@@ -10854,12 +10849,12 @@ function renderLocalHostView(info) {
     const netList = $('hostNetworkList');
     if (netList) {
       if (!info.network.ips || info.network.ips.length === 0) {
-        netList.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding:4px 0;">无活跃网络接口</div>';
+        netList.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:4px 0;">无活跃网络接口</div>';
       } else {
         netList.innerHTML = info.network.ips.map(n => `
-          <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-subtle); padding:6px 10px; border-radius:var(--radius-sm); border:1px solid var(--border-default); font-size:12px;">
-            <span style="font-weight:600; color:var(--text-main); font-size:12px;">${esc(n.interface)}</span>
-            <span style="font-family:var(--font-mono); background:var(--primary-subtle); color:var(--primary); padding:2px 6px; border-radius:var(--radius-xs); font-weight:600; font-size:11.5px; border:1px solid var(--primary-border);">${esc(n.address)}</span>
+          <div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg-subtle);padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border-default);font-size:12px;">
+            <span style="font-weight:600;color:var(--text-main);font-size:12px;">${esc(n.interface)}</span>
+            <span style="font-family:var(--font-mono);background:var(--bg-subtle);color:var(--text-main);padding:2px 6px;border-radius:var(--radius-xs);font-weight:600;font-size:11.5px;border:1px solid var(--primary-border);">${esc(n.address)}</span>
           </div>
         `).join('');
       }
@@ -11057,7 +11052,7 @@ function filterDiskItemsByCategory(category) {
     : currentDiskScanReport.items.filter(i => i.category === currentDiskCategory);
 
   if (items.length === 0) {
-    listEl.innerHTML = '<div style="color:var(--text-muted); font-size:13px; text-align:center; padding:18px; background:var(--bg-surface); border-radius:var(--radius-md); border:1px dashed var(--border-default);">该分类下暂无可清理项目</div>';
+    listEl.innerHTML = '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:18px;background:var(--bg-surface);border-radius:var(--radius-md);border:1px dashed var(--border-default);">该分类下暂无可清理项目</div>';
     updateDiskSelectedSummary();
     return;
   }
@@ -11073,28 +11068,28 @@ function filterDiskItemsByCategory(category) {
   };
 
   listEl.innerHTML = items.map((item) => `
-    <div class="disk-clean-card" style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-surface); border:1px solid var(--border-default); border-radius:var(--radius-md); padding:10px 14px; transition:all var(--ease-snappy); gap:12px;">
-      <div style="display:flex; align-items:center; gap:12px; min-width:0; flex:1;">
-        <input type="checkbox" class="disk-item-chk" data-id="${esc(item.id)}" data-size="${item.sizeBytes}" data-safety="${item.safety}" ${item.safety === 'safe' ? 'checked' : ''} style="width:16px; height:16px; cursor:pointer;" onchange="window.updateDiskSelectedSummary()" />
-        <span style="display:inline-flex; align-items:center; flex-shrink:0; color:var(--text-secondary);">${categoryIcons[item.category] || categoryIcons.custom}</span>
-        <div style="min-width:0; overflow:hidden; flex:1;">
-          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+    <div class="disk-clean-card" style="display:flex;justify-content:space-between;align-items:center;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:10px 14px;transition:all var(--ease-snappy);gap:12px;">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
+        <input type="checkbox" class="disk-item-chk" data-id="${esc(item.id)}" data-size="${item.sizeBytes}" data-safety="${item.safety}" ${item.safety === 'safe' ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;" onchange="window.updateDiskSelectedSummary()" />
+        <span style="display:inline-flex;align-items:center;flex-shrink:0;color:var(--text-secondary);">${categoryIcons[item.category] || categoryIcons.custom}</span>
+        <div style="min-width:0;overflow:hidden;flex:1;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <span class="badge ${item.safety === 'safe' ? 'success' : 'warn'}" style="font-size:11px;">${item.safety === 'safe' ? '安全清理' : '建议确认'}</span>
-            ${item.rootPrefix ? `<span class="badge neutral" style="font-size:10.5px; font-family:var(--font-mono);">${esc(item.rootPrefix)}</span>` : ''}
-            <strong style="font-size:13px; color:var(--text-main); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${esc(item.name)}</strong>
+            ${item.rootPrefix ? `<span class="badge neutral" style="font-size:10.5px;font-family:var(--font-mono);">${esc(item.rootPrefix)}</span>` : ''}
+            <strong style="font-size:13px;color:var(--text-main);text-overflow:ellipsis;overflow:hidden;white-space:nowrap;">${esc(item.name)}</strong>
           </div>
-          <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
             <span>${esc(item.description)}</span>
-            <code style="font-size:11px; color:var(--text-secondary); background:var(--bg-card); border:1px solid var(--border-default); padding:1px 4px; border-radius:4px; max-width:320px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${esc(item.path)}">${esc(item.path)}</code>
-            <button type="button" class="btn text-btn" style="font-size:11px; padding:0 4px; color:var(--primary);" onclick="copyText('${esc(item.path)}', '路径')">复制</button>
+            <code style="font-size:11px;color:var(--text-secondary);background:var(--bg-card);border:1px solid var(--border-default);padding:1px 4px;border-radius:4px;max-width:320px;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;" title="${esc(item.path)}">${esc(item.path)}</code>
+            <button type="button" class="btn text-btn" style="font-size:11px;padding:0 4px;color:var(--text-main);" onclick="copyText('${esc(item.path)}', '路径')">复制</button>
           </div>
         </div>
       </div>
-      <div style="display:flex; align-items:center; gap:12px; flex-shrink:0;">
-        <div style="font-size:14px; font-weight:700; color:var(--text-main); font-family:var(--font-mono);">
+      <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">
+        <div style="font-size:14px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);">
           ${fmtHostBytes(item.sizeBytes)}
         </div>
-        <button type="button" class="btn secondary" style="font-size:11px; padding:3px 8px;" onclick="window.cleanSingleDiskItem('${esc(item.id)}')">
+        <button type="button" class="btn secondary" style="font-size:11px;padding:3px 8px;" onclick="window.cleanSingleDiskItem('${esc(item.id)}')">
           清理
         </button>
       </div>
@@ -11790,7 +11785,7 @@ window.fetchAndSyncModelsForProvider = async (providerId, clickBtn) => {
           <input type="checkbox" class="quick-model-cb" data-model="${esc(name)}" checked style="width:15px;height:15px;" />
           <strong style="color:var(--text-main);">${esc(name)}</strong>
         </div>
-        <span class="prop-chip" style="font-size:11px;color:var(--primary);background:var(--primary-subtle);">${esc(name.split('/').pop())}</span>
+        <span class="prop-chip" style="font-size:11px;color:var(--text-main);background:var(--bg-subtle);">${esc(name.split('/').pop())}</span>
       </label>
     `).join('');
 
@@ -12337,7 +12332,7 @@ function renderMarket(query = '', tab = activeMarketTab) {
   if (filtered.length === 0) {
     container.innerHTML = `
       <div class="empty-card" style="grid-column:1/-1;padding:48px 20px;text-align:center;color:var(--text-muted);background:var(--bg-surface);border-radius:12px;border:1px dashed var(--border-strong);">
-        <div style="margin-bottom:10px; display:flex; justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);margin-bottom:8px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></div>
+        <div style="margin-bottom:10px;display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);margin-bottom:8px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></div>
         <div style="font-size:15px;font-weight:700;color:var(--text-main);margin-bottom:6px;">未检索到匹配的插件或技能</div>
         <div style="font-size:12.5px;max-width:400px;margin:0 auto 16px auto;">您可以清空搜索条件，或者点击上方按钮安装热门 MCP 或导入 GitHub Skill</div>
         <button type="button" class="btn primary" onclick="$('openPresetMcpModalBtn').click()" style="margin:0 auto;">
@@ -12554,7 +12549,7 @@ function renderMcpSchemaTable(schema) {
     return `
       <tr>
         <td style="font-family:var(--font-mono);font-weight:600;color:var(--text-main);">${esc(key)}</td>
-        <td style="font-family:var(--font-mono);color:var(--primary);">${esc(typeStr)}</td>
+        <td style="font-family:var(--font-mono);color:var(--text-main);">${esc(typeStr)}</td>
         <td>
           <span class="badge ${isReq ? 'danger' : 'neutral'}" style="font-size:10.5px;">${isReq ? '必填' : '可选'}</span>
         </td>
@@ -12644,7 +12639,7 @@ $('executeMcpToolBtn')?.addEventListener('click', async () => {
   if (statusTag) {
     statusTag.innerHTML = `
       <span class="thinking-pulse-dot"></span>
-      <span style="color:var(--primary);font-weight:600;">正在执行 MCP 进程通信...</span>
+      <span style="color:var(--text-main);font-weight:600;">正在执行 MCP 进程通信...</span>
     `;
   }
   if (outputPre) {
@@ -12798,7 +12793,7 @@ async function renderSchedules() {
             <div>
               <strong style="font-size:14px;color:var(--text-main);">${esc(job.name)}</strong>
               <div style="margin-top:4px;display:flex;align-items:center;gap:6px;">
-                <span class="prop-chip" style="font-family:var(--font-mono);font-size:11.5px;color:var(--primary);background:var(--primary-subtle);"> ${esc(job.cron)}</span>
+                <span class="prop-chip" style="font-family:var(--font-mono);font-size:11.5px;color:var(--text-main);background:var(--bg-subtle);"> ${esc(job.cron)}</span>
                 <span class="prop-chip" style="font-size:11.5px;">${esc(job.agent || 'coder')}</span>
               </div>
             </div>
@@ -13012,17 +13007,17 @@ function renderEnvVarsList(list) {
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
           <div style="display:flex;align-items:center;gap:8px;">
             <strong style="font-size:13.5px;color:var(--text-main);">${esc(item.label || item.key)}</strong>
-            <code style="font-size:11.5px;background:var(--bg-subtle);border:1px solid var(--border-subtle);padding:2px 6px;border-radius:4px;color:var(--primary);">${esc(item.key)}</code>
+            <code style="font-size:11.5px;background:var(--bg-subtle);border:1px solid var(--border-subtle);padding:2px 6px;border-radius:4px;color:var(--text-main);">${esc(item.key)}</code>
             <span class="badge ${item.isSet ? 'success' : 'warn'}" style="font-size:11px;">
               ${item.isSet ? '已配置' : '未配置'}
             </span>
           </div>
           <div style="font-size:11.5px;color:var(--text-secondary);">${esc(item.desc || '')}</div>
         </div>
-        <div style="display:grid;grid-template-columns: 1fr auto;gap:8px;align-items:center;">
+        <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;">
           <div style="display:flex;position:relative;align-items:center;">
             <input type="password" class="env-val-input" id="envVal_${esc(item.key)}" data-raw="${esc(item.value)}" value="${esc(item.value)}" placeholder="${item.isSet ? '已配置: ' + esc(masked) : '在此粘贴 API Key / 凭据密钥...'}" style="width:100%;box-sizing:border-box;font-size:12.5px;padding:5px 65px 5px 10px;border-radius:6px;border:1px solid var(--border-default);background:var(--bg-surface);color:var(--text-main);" />
-            <button type="button" class="btn text-btn toggle-env-eye" style="position:absolute;right:6px;font-size:11px;padding:2px 6px;color:var(--primary);" onclick="window.toggleEnvInputEye('${escJs(item.key)}')">显示</button>
+            <button type="button" class="btn text-btn toggle-env-eye" style="position:absolute;right:6px;font-size:11px;padding:2px 6px;color:var(--text-main);" onclick="window.toggleEnvInputEye('${escJs(item.key)}')">显示</button>
           </div>
           <div style="display:flex;gap:6px;">
             <button type="button" class="btn primary" style="font-size:11.5px;padding:4px 10px;" onclick="window.saveSingleEnvVar('${escJs(item.key)}')">保存</button>
@@ -13772,7 +13767,7 @@ window.refreshHostView = async () => {
       if (!info) return;
 
       if (processList) renderRemoteProcessList(processList, targetId);
-      else if ($('hostTopProcessList')) $('hostTopProcessList').innerHTML = '<div style="color:#dc2626; font-size:12px; padding:8px 0; text-align:center;">远程进程接口暂不可用</div>';
+      else if ($('hostTopProcessList')) $('hostTopProcessList').innerHTML = '<div style="color:#dc2626;font-size:12px;padding:8px 0;text-align:center;">远程进程接口暂不可用</div>';
 
       const cpuPct = info.cpuUsagePercent ?? info.cpu?.usagePercent ?? 0;
       const cpuCores = info.cpuCount ?? info.cpu?.cores ?? '--';
@@ -13821,15 +13816,15 @@ window.refreshHostView = async () => {
         const diskUsed = diskTotal - diskFree;
         const diskPct = diskTotal > 0 ? Math.round((diskUsed / diskTotal) * 100) : 0;
         partList.innerHTML = `
-          <div style="background:var(--bg-subtle); border:1px solid var(--border-default); border-radius:var(--radius-sm); padding:8px 10px; font-size:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <div style="background:var(--bg-subtle);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:8px 10px;font-size:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
               <strong>/ (主文件系统根挂载)</strong>
-              <span style="font-family:var(--font-mono); font-weight:600; color:var(--primary);">${diskTotal > 0 ? `${diskPct}%` : '未知'}</span>
+              <span style="font-family:var(--font-mono);font-weight:600;color:var(--text-main);">${diskTotal > 0 ? `${diskPct}%` : '未知'}</span>
             </div>
-            <div class="progress-track" style="height:4px; margin-bottom:4px;">
+            <div class="progress-track" style="height:4px;margin-bottom:4px;">
               <div style="width:${diskPct}%; height:100%; background:var(--primary);"></div>
             </div>
-            <div style="font-size:11px; color:#64748b; display:flex; justify-content:space-between;">
+            <div style="font-size:11px;color:#64748b;display:flex;justify-content:space-between;">
               <span>已用: ${diskTotal > 0 ? fmtHostBytes(diskUsed) : '不可用'}</span>
               <span>总计: ${diskTotal > 0 ? fmtHostBytes(diskTotal) : '不可用'}</span>
             </div>
@@ -15503,13 +15498,14 @@ window.renderGatewayOverview = async () => {
 
     if (overview.enabled) {
       if (dot) {
-        dot.style.background = '#10b981';
-        dot.style.boxShadow = '0 0 8px rgba(16,185,129,0.5)';
+        dot.style.background = '#22c55e';
+        dot.style.boxShadow = 'none';
       }
       if (badge) {
         badge.textContent = '运行中 (Active)';
-        badge.style.color = '#10b981';
-        badge.style.background = 'rgba(16,185,129,0.12)';
+        badge.style.color = 'var(--text-secondary)';
+        badge.style.background = 'var(--bg-subtle)';
+        badge.style.border = '1px solid var(--border-default)';
       }
       if (toggleBtn) {
         toggleBtn.textContent = '暂停网关服务';
@@ -15518,12 +15514,13 @@ window.renderGatewayOverview = async () => {
     } else {
       if (dot) {
         dot.style.background = '#ef4444';
-        dot.style.boxShadow = '0 0 8px rgba(239,68,68,0.5)';
+        dot.style.boxShadow = 'none';
       }
       if (badge) {
         badge.textContent = '已暂停 (Stopped)';
-        badge.style.color = '#ef4444';
-        badge.style.background = 'rgba(239,68,68,0.12)';
+        badge.style.color = 'var(--text-secondary)';
+        badge.style.background = 'var(--bg-subtle)';
+        badge.style.border = '1px solid var(--border-default)';
       }
       if (toggleBtn) {
         toggleBtn.textContent = '开启网关服务';
@@ -15604,7 +15601,7 @@ window.renderGatewayKeys = async () => {
     for (const k of keys) {
       const masked = k.key.slice(0, 7) + '...' + k.key.slice(-4);
       const modelsDisplay = (!k.allowedModels || k.allowedModels.length === 0)
-        ? '<span class="badge" style="font-size:11px;background:rgba(59,130,246,0.12);color:#3b82f6;">全部模型</span>'
+        ? '<span class="badge" style="font-size:11px;background:var(--bg-subtle);color:var(--text-secondary);border:1px solid var(--border-default);">全部模型</span>'
         : k.allowedModels.map(m => `<span class="badge" style="font-size:11px;margin-right:4px;">${escapeHtml(m)}</span>`).join('');
 
       const rpmDisplay = k.rateLimitRpm > 0 ? `${k.rateLimitRpm} 次/分` : '无限制';
@@ -16541,7 +16538,7 @@ window.openVisionTestModal = async () => {
       if (!p?.chatTarget || !hasText) {
         replyBadge = '<span class="badge neutral" style="font-size:11px;">待机中 (无待处理消息)</span>';
       } else if (p?.needsReply) {
-        replyBadge = '<span class="badge success" style="background:#22c55e;color:#fff;font-size:11px;">需智能体回复 (对方发来新消息)</span>';
+        replyBadge = '<span class="badge danger" style="font-size:11px;">需智能体回复 (对方发来新消息)</span>';
       } else if (isFromMe) {
         replyBadge = '<span class="badge neutral" style="font-size:11px;">无需回复 (我方刚已发送)</span>';
       } else {
@@ -16697,7 +16694,7 @@ async function renderHostingContacts() {
         <div style="text-align:center;padding:26px 10px;color:var(--text-muted);font-size:11.5px;line-height:1.6;">
           暂无历史托管记录<br/>
           <span style="font-size:11px;color:var(--text-muted);opacity:0.85;">无需手动添加：启动代管后，好友来信将全量自动代答并自动归档</span><br/>
-          <button type="button" class="btn text-btn" id="hostingListEmptyAddBtn" style="font-size:11.5px;color:var(--primary);margin-top:6px;">+ 特殊好友定制 (可选)</button>
+          <button type="button" class="btn text-btn" id="hostingListEmptyAddBtn" style="font-size:11.5px;color:var(--text-main);margin-top:6px;">+ 特殊好友定制 (可选)</button>
         </div>
       `;
       $('hostingListEmptyAddBtn')?.addEventListener('click', () => openHostingAddRuleModal());
