@@ -1,8 +1,9 @@
 import { execFile, execFileSync } from 'node:child_process';
-import { existsSync, writeFileSync, unlinkSync } from 'node:fs';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
+import { existsSync, writeFileSync, unlinkSync, copyFileSync, chmodSync, mkdirSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { tmpdir, homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import type { WeChatVisionParseResult } from './vision-parser.js';
 
 function runCmd(file: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
@@ -27,30 +28,67 @@ export interface OcrRecognizedItem {
 export function ensureMacOcrBinary(): string | undefined {
   if (process.platform !== 'darwin') return undefined;
 
-  const binPath = join(process.cwd(), 'bin', 'macos_ocr');
-  if (existsSync(binPath)) {
-    return binPath;
+  let currentDir = '';
+  try {
+    currentDir = typeof __dirname !== 'undefined'
+      ? __dirname
+      : dirname(fileURLToPath(import.meta.url));
+  } catch {}
+
+  const persistentHomeBin = join(homedir(), '.hap', 'bin', 'macos_ocr');
+
+  // 1. 优先多路径查找现有编译好的可执行文件
+  const candidates = [
+    process.env.HAP_MACOS_OCR_BIN,
+    persistentHomeBin,
+    (process as any).resourcesPath ? join((process as any).resourcesPath, 'bin', 'macos_ocr') : undefined,
+    currentDir ? join(currentDir, '..', '..', '..', '..', 'bin', 'macos_ocr') : undefined,
+    currentDir ? join(currentDir, '..', '..', 'bin', 'macos_ocr') : undefined,
+    join(process.cwd(), 'bin', 'macos_ocr'),
+    '/Applications/Hermes Agent Platform.app/Contents/Resources/bin/macos_ocr',
+  ].filter((p): p is string => Boolean(p));
+
+  for (const binPath of candidates) {
+    if (existsSync(binPath)) {
+      // 自动镜像一份至 ~/.hap/bin/macos_ocr，保证在各工作目录、Electron 及子进程下均能绝对路径稳定调用
+      if (binPath !== persistentHomeBin) {
+        try {
+          mkdirSync(join(homedir(), '.hap', 'bin'), { recursive: true });
+          copyFileSync(binPath, persistentHomeBin);
+          chmodSync(persistentHomeBin, 0o755);
+        } catch {}
+      }
+      return binPath;
+    }
   }
 
-  const srcPath = join(process.cwd(), 'src', 'channels', 'wechat', 'desktop-vision', 'macos_ocr.m');
-  if (existsSync(srcPath)) {
-    try {
-      execFileSync('mkdir', ['-p', join(process.cwd(), 'bin')]);
-      execFileSync('clang', [
-        '-O2',
-        '-fmodules',
-        '-framework', 'Foundation',
-        '-framework', 'Vision',
-        '-framework', 'CoreGraphics',
-        '-framework', 'ImageIO',
-        srcPath,
-        '-o', binPath,
-      ]);
-      if (existsSync(binPath)) {
-        return binPath;
+  // 2. 若未找到预编译二进制，尝试从源码自动编译至 ~/.hap/bin/macos_ocr
+  const srcCandidates = [
+    currentDir ? join(currentDir, 'macos_ocr.m') : undefined,
+    join(process.cwd(), 'src', 'channels', 'wechat', 'desktop-vision', 'macos_ocr.m'),
+  ].filter((p): p is string => Boolean(p));
+
+  for (const srcPath of srcCandidates) {
+    if (existsSync(srcPath)) {
+      try {
+        mkdirSync(join(homedir(), '.hap', 'bin'), { recursive: true });
+        execFileSync('clang', [
+          '-O2',
+          '-fmodules',
+          '-framework', 'Foundation',
+          '-framework', 'Vision',
+          '-framework', 'CoreGraphics',
+          '-framework', 'ImageIO',
+          srcPath,
+          '-o', persistentHomeBin,
+        ]);
+        if (existsSync(persistentHomeBin)) {
+          chmodSync(persistentHomeBin, 0o755);
+          return persistentHomeBin;
+        }
+      } catch {
+        // ignore compile failure
       }
-    } catch {
-      return undefined;
     }
   }
 

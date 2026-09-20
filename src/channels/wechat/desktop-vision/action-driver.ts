@@ -34,11 +34,13 @@ export interface SendReplyOptions {
   restoreFocus?: boolean | undefined;
 }
 
+import { ensureMacOcrBinary } from './ocr-parser.js';
+
 /** 获取微信主窗口屏幕边界坐标 (macOS) */
 export async function getWeChatWindowBounds(): Promise<WeChatWindowBounds | undefined> {
   if (process.platform !== 'darwin') return undefined;
-  const binPath = join(process.cwd(), 'bin', 'macos_ocr');
-  if (existsSync(binPath)) {
+  const binPath = ensureMacOcrBinary();
+  if (binPath && existsSync(binPath)) {
     try {
       const { stdout } = await runCmd(binPath, ['--wechat-bounds']);
       const parsed = JSON.parse(stdout.trim());
@@ -55,8 +57,8 @@ export async function getWeChatWindowBounds(): Promise<WeChatWindowBounds | unde
 /** 模拟鼠标移动并点击指定屏幕物理像素 (macOS CoreGraphics 原生驱动) */
 export async function clickScreenCoords(x: number, y: number): Promise<boolean> {
   if (process.platform !== 'darwin') return false;
-  const binPath = join(process.cwd(), 'bin', 'macos_ocr');
-  if (existsSync(binPath)) {
+  const binPath = ensureMacOcrBinary();
+  if (binPath && existsSync(binPath)) {
     try {
       await runCmd(binPath, ['--click', String(Math.round(x)), String(Math.round(y))]);
       return true;

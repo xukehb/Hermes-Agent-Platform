@@ -17215,12 +17215,23 @@ window.openVisionTestModal = async () => {
       const messageText = hasText ? esc(lastMsg.text) : '（当前未进入具体会话，或聊天区域未识别到新气泡）';
 
       let hintCallout = '';
-      if (!p?.chatTarget || !hasText) {
+      if (!p?.hasWeChatWindow) {
+        hintCallout = `
+          <div style="background:var(--bg-subtle);border:1px solid var(--border-default);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--text-main);line-height:1.45;">
+            <strong>未能从截图中定位到微信聊天视窗</strong><br/>
+            系统未能在当前截图中识别到微信主界面元素（如搜索框、会话列表或聊天气泡）。<br/>
+            <strong>排查建议：</strong><br/>
+            1. 请确保桌面微信已启动且主窗口未被最小化（可以置于桌面后台，但不要点击最小化黄色按钮）；<br/>
+            2. 检查 macOS 系统设置 ->【隐私与安全性】->【屏幕录制】，确保已为本软件开启屏幕录制权限；<br/>
+            3. 点击下方【重新识屏检测】再次尝试。
+          </div>
+        `;
+      } else if (!p?.chatTarget || !hasText) {
         hintCallout = `
           <div style="background:var(--bg-subtle);border:1px solid var(--border-default);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--text-main);line-height:1.45;">
             <strong>为什么显示待机无需回复？</strong><br/>
-            检测到当前微信处于<strong>主界面空白状态</strong>（右侧大灰标，尚未点击选中任何好友或群聊对话）。<br/>
-            <strong>操作建议：</strong>请在桌面微信中点击选中任意一个好友会话，然后点击下方【重新识屏检测】即可看到实时消息抓取与代答判断。
+            ${p?.chatTarget ? `已锁定当前会话【<strong>${esc(p.chatTarget)}</strong>】，但当前未发现需要 AI 处理的新消息（最新消息可能为我方已发送完毕，无需重复作答）。` : '检测到当前微信处于<strong>主界面空白状态</strong>（右侧大灰标，尚未点击选中任何好友或群聊对话）。'}<br/>
+            <strong>操作建议：</strong>在桌面微信中点击选中需要代答的好友会话，点击下方【重新识屏检测】即可看到实时消息抓取与代答判断。
           </div>
         `;
       }

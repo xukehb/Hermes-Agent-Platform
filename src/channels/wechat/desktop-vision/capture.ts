@@ -89,11 +89,13 @@ async function captureViaElectron(): Promise<CapturedWindow | undefined> {
   return undefined;
 }
 
+import { ensureMacOcrBinary } from './ocr-parser.js';
+
 /** 获取 macOS 上微信窗口的 Window ID */
 export async function getMacWeChatWindowId(): Promise<number | undefined> {
   if (process.platform !== 'darwin') return undefined;
-  const binPath = join(process.cwd(), 'bin', 'macos_ocr');
-  if (existsSync(binPath)) {
+  const binPath = ensureMacOcrBinary();
+  if (binPath && existsSync(binPath)) {
     try {
       const { stdout } = await runCmd(binPath, ['--wechat-wid']);
       const wid = parseInt(stdout.trim(), 10);
@@ -120,7 +122,7 @@ async function captureViaMacScreencapture(): Promise<CapturedWindow> {
   const tempPath = join(tmpdir(), `hap_wechat_cap_${Date.now()}_${randomUUID().slice(0, 6)}.png`);
 
   try {
-    // 优先通过 CoreGraphics 锁定的 WeChat 窗口 ID 精准截取，避免背景干扰
+    // 优先通过 CoreGraphics 锁定的 WeChat 窗口 ID 精准截取，避免背景干扰与压缩失真
     const wid = await getMacWeChatWindowId();
     if (wid) {
       await runCmd('/usr/sbin/screencapture', ['-l', String(wid), '-x', tempPath]);
@@ -156,12 +158,20 @@ async function captureViaMacScreencapture(): Promise<CapturedWindow> {
   }
 }
 
-/** 抓取微信客户端窗口（优先 Electron desktopCapturer，降级 macOS screencapture） */
+/** 抓取微信客户端窗口（macOS 优先系统级原生高精度截屏，其他平台/降级使用 Electron desktopCapturer） */
 export async function captureWeChatWindow(): Promise<CapturedWindow> {
+  if (process.platform === 'darwin') {
+    const macRes = await captureViaMacScreencapture();
+    if (macRes && macRes.ok) {
+      return macRes;
+    }
+  }
+
   const electronRes = await captureViaElectron();
   if (electronRes && electronRes.ok) {
     return electronRes;
   }
+
   return await captureViaMacScreencapture();
 }
 
