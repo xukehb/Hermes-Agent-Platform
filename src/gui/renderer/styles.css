@@ -8108,11 +8108,6 @@ body.has-wallpaper .user-bubble {
   line-height: 1;
 }
 
-@keyframes mini-i-pulse-anim {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.85); }
-}
-
 .theme-picker-trigger-btn,
 .opacity-trigger-btn,
 .mini-mode-btn {
