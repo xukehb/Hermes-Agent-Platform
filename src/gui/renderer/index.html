@@ -578,7 +578,7 @@
                 <button type="button" class="btn secondary" onclick="window.sdClearTerminal()" style="font-size:11.5px;padding:3px 8px;">清屏</button>
               </div>
               <div class="card-body" style="padding:14px;">
-                <div id="sdTerminalOutput" style="background:#18181b;color:#38bdf8;padding:12px;border-radius:8px;font-family:var(--font-mono);font-size:12px;height:350px;overflow-y:auto;white-space:pre-wrap;">终端就绪，正在连接服务器...</div>
+                <div id="sdTerminalOutput" style="background:var(--code-bg);color:var(--code-text);padding:12px;border-radius:8px;font-family:var(--font-mono);font-size:12px;height:350px;overflow-y:auto;white-space:pre-wrap;">终端就绪，正在连接服务器...</div>
                 <div style="display:flex;gap:8px;margin-top:10px;">
                   <span style="display:grid;place-items:center;font-family:var(--font-mono);font-size:13px;color:var(--text-main);font-weight:700;">$</span>
                   <input id="sdTerminalInput" placeholder="输入远程命令并回车..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border-default);background:var(--bg-main);color:var(--text-main);font-size:13px;font-family:var(--font-mono);" />
@@ -1009,7 +1009,7 @@
 
                   <!-- 右侧全局操作按钮组 -->
                   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                    <button type="button" class="btn primary" id="openModelHubBtn" onclick="window.openModelHubModal()" style="font-size:12px;padding:6px 14px;display:inline-flex;align-items:center;gap:6px;">
+                    <button type="button" class="btn secondary" id="openModelHubBtn" onclick="window.openModelHubModal()" style="font-size:12px;padding:6px 14px;display:inline-flex;align-items:center;gap:6px;">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                       <span>开源模型中心 (硬件推荐一键部署)</span>
                     </button>
@@ -1330,7 +1330,7 @@
               <!-- 微信状态 Hero 顶部横幅 -->
               <div class="channel-status-hero">
                 <div class="channel-hero-left">
-                  <div class="channel-hero-icon" style="background:var(--success);color:#fff;display:grid;place-items:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg></div>
+                  <div class="channel-hero-icon" style="background:var(--bg-active);color:var(--text-main);display:grid;place-items:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg></div>
                   <div>
                     <div style="display:flex;align-items:center;gap:8px;">
                       <h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text-main);" id="wxDisplayName">微信智能体网关</h3>
@@ -1657,7 +1657,7 @@
             <div id="channelSubPane_qq" class="channel-subpane" style="display:none;">
               <div class="channel-status-hero">
                 <div class="channel-hero-left">
-                  <div class="channel-hero-icon" style="background:var(--warning);color:#fff;display:grid;place-items:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>
+                  <div class="channel-hero-icon" style="background:var(--bg-active);color:var(--text-main);display:grid;place-items:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>
                   <div>
                     <h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text-main);">QQ / OneBot (NapCat / LLOneBot) 协议网关</h3>
                     <p style="margin:4px 0 0 0;font-size:12px;color:var(--text-muted);">
@@ -1878,7 +1878,7 @@
             <div class="card panorama-bot-card" id="panoramaBotCard">
               <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
                 <div style="display:flex;align-items:center;gap:12px;">
-                  <div style="width:40px;height:40px;border-radius:10px;background:var(--success);color:#fff;display:grid;place-items:center;box-shadow:0 2px 6px rgba(16,185,129,0.3);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg></div>
+                  <div style="width:40px;height:40px;border-radius:10px;background:var(--bg-active);color:var(--text-main);display:grid;place-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg></div>
                   <div>
                     <div style="display:flex;align-items:center;gap:8px;">
                       <strong style="font-size:14.5px;color:var(--text-main);" id="panoramaBotTitle">节点专属智能体与告警机器人</strong>
@@ -2018,7 +2018,7 @@
                   <div class="dashboard-card-title">
                     <span>公网出口与 IP 地理位置</span>
                   </div>
-                  <span id="hostIpGeoBadge" class="badge success">探测中...</span>
+                  <span id="hostIpGeoBadge" class="badge neutral">探测中...</span>
                 </div>
                 <div id="hostIpGeoDetails" class="geo-details-box">
                   正在探测公网出口与运营商归属...
@@ -3106,7 +3106,7 @@
           <select name="provider" id="modelProviderSelect" required></select>
         </div>
 
-        <div class="form-group" style="background:#f9f9f9;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-default);">
+        <div class="form-group" style="background:var(--bg-subtle);padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-default);">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <label style="font-size:12px;font-weight:600;">在线获取服务商可用模型</label>
             <button type="button" class="btn secondary" id="fetchRemoteModelsBtn" style="font-size:11.5px;padding:4px 8px;">
@@ -3964,7 +3964,7 @@
       <div class="modal-form-wrap" style="max-height:88vh;display:flex;flex-direction:column;padding:20px 24px;">
         <div class="modal-header-row" style="margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:12px;">
-            <div style="width:36px;height:36px;border-radius:8px;background:var(--success);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></div>
+            <div style="width:36px;height:36px;border-radius:8px;background:var(--bg-active);color:var(--text-main);display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></div>
             <div>
               <div style="display:flex;align-items:center;gap:8px;">
                 <h2 id="serverDetailsTitle" style="font-size:16px;margin:0;font-weight:700;">服务器节点详情</h2>
@@ -4221,7 +4221,7 @@
         </div>
 
         <!-- 部署控制台日志 -->
-        <div style="flex:1;min-height:160px;background:#111;border:1px solid #333;border-radius:6px;padding:10px 12px;font-family:monospace;font-size:12px;color:#a3e635;overflow:auto;line-height:1.5;max-height:220px;" id="installLogsConsole">
+        <div style="flex:1;min-height:160px;background:var(--code-bg);border:1px solid var(--border-default);border-radius:6px;padding:10px 12px;font-family:var(--font-mono);font-size:12px;color:var(--code-text);overflow:auto;line-height:1.5;max-height:220px;" id="installLogsConsole">
           [System] 准备就绪，正在通过 SSH 登录远端服务器...
         </div>
 
@@ -4353,7 +4353,7 @@
 
             <!-- 手动输入生图模型名称输入框 -->
             <div id="manualImageModelInlineBox" style="display:none;margin-top:2px;">
-              <input type="text" id="manualImageModelInput" placeholder="手动输入模型名称 (如 dall-e-3, black-forest-labs/FLUX.1-schnell, cogview-3)" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--primary);background:#f0f9ff;" />
+              <input type="text" id="manualImageModelInput" placeholder="手动输入模型名称 (如 dall-e-3, black-forest-labs/FLUX.1-schnell, cogview-3)" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border-strong);background:var(--bg-surface);" />
             </div>
 
 
@@ -4489,7 +4489,7 @@
       <div class="modal-form-wrap" style="padding:22px 26px;">
         <div class="modal-header-row" style="margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;border-radius:10px;background:var(--success);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></div>
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--bg-active);color:var(--text-main);display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></div>
             <div>
               <h2 style="font-size:16.5px;margin:0;font-weight:700;">一键申请 Let's Encrypt SSL 安全证书</h2>
               <p style="font-size:12px;color:var(--text-muted);margin:2px 0 0 0;">通过官方 Certbot 协议全自动申请 HTTPS 证书，并可直接绑定至 Nginx 与开启自动续期</p>
@@ -4665,7 +4665,7 @@
               <button type="button" class="btn secondary" id="clearExecOutputBtn" style="padding:2px 8px;font-size:11px;background:#27272a;color:#e4e4e7;">清屏</button>
             </div>
           </div>
-          <pre id="execModalOutput" style="flex:1;margin:0;padding:12px 14px;color:#34d399;background:transparent;font-family:'JetBrains Mono', Consolas, Monaco, monospace;font-size:12px;line-height:1.55;overflow-y:auto;white-space:pre-wrap;word-break:break-all;"></pre>
+          <pre id="execModalOutput" style="flex:1;margin:0;padding:12px 14px;color:var(--code-text);background:transparent;font-family:'JetBrains Mono', Consolas, Monaco, monospace;font-size:12px;line-height:1.55;overflow-y:auto;white-space:pre-wrap;word-break:break-all;"></pre>
         </div>
 
         <div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px;border-top:1px solid var(--border-default);margin-top:12px;">
@@ -4834,7 +4834,7 @@
       <div class="modal-form-wrap" style="padding:22px 26px;">
         <div class="modal-header-row" style="margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;border-radius:10px;background:var(--success);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg></div>
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--bg-active);color:var(--text-main);display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg></div>
             <div>
               <h2 style="font-size:16.5px;margin:0;font-weight:700;">设置节点专属智能体与告警机器人</h2>
               <p style="font-size:12px;color:var(--text-muted);margin:2px 0 0 0;">为该计算节点绑定负责运维的专属 Agent，并配置飞书、微信、Telegram 告警通道与自动自愈策略</p>
@@ -4937,7 +4937,7 @@
       <div class="modal-form-wrap" style="padding:24px 28px;">
         <div class="modal-header-row" style="margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;border-radius:10px;background:var(--success);color:#fff;display:grid;place-items:center;">
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--bg-active);color:var(--text-main);display:grid;place-items:center;">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
             </div>
             <div>

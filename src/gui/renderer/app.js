@@ -28,6 +28,15 @@ function esc(val) {
 // 整个面板无法显示。这里统一为同一实现，保留历史调用点。
 const escapeHtml = esc;
 
+// 指标条（CPU / 内存 / 磁盘）填充色：常态使用中性前景色，
+// 仅在真的出现压力时才用琥珀 / 红色的语义色告警。
+function metricFillColor(percent) {
+  const pct = Number(percent) || 0;
+  if (pct > 85) return 'var(--danger)';
+  if (pct > 60) return 'var(--warning)';
+  return 'var(--text-main)';
+}
+
 function escJs(val) {
   if (val === undefined || val === null) return '';
   return String(val)
@@ -114,14 +123,14 @@ async function showConfirm({ title = '确认操作', message = '确定要继续�
   if (isDanger) {
     okBtn.className = 'btn danger';
     if (iconWrap) {
-      iconWrap.style.background = '#fef2f2';
-      iconWrap.style.color = '#ef4444';
-      iconWrap.style.boxShadow = '0 4px 12px rgba(239,68,68,0.15)';
+      iconWrap.style.background = 'var(--danger-subtle)';
+      iconWrap.style.color = 'var(--danger)';
+      iconWrap.style.boxShadow = 'none';
     }
   } else {
     okBtn.className = 'btn primary';
     if (iconWrap) {
-      iconWrap.style.background = 'var(--primary-subtle)';
+      iconWrap.style.background = 'var(--bg-active)';
       iconWrap.style.color = 'var(--primary)';
       iconWrap.style.boxShadow = '0 4px 12px var(--accent-glow)';
     }
@@ -1114,7 +1123,7 @@ function renderCurrentSessionMessages() {
 
   // 更新顶部工作区指示器
   const proj = state.projects.find((p) => normPath(p.path) === normPath(currentActiveProject));
-  const projName = proj?.name || (currentActiveProject ? currentActiveProject.split(/[\\/]/).pop() : '默认工程');
+  const projName = proj?.name || (currentActiveProject ? currentActiveProject.split(/[\\/]/).pop() : updateText('hero.defaultProject', '默认工程'));
   const wsTextEl = $('currentWorkspaceNameText');
   if (wsTextEl) {
     wsTextEl.textContent = projName;
@@ -1491,7 +1500,7 @@ function renderGlobalHistoryList(query = '') {
 
   container.innerHTML = filtered.map((s) => {
     const proj = state.projects.find((p) => normPath(p.path) === normPath(s.projectPath));
-    const projName = proj?.name || (s.projectPath ? s.projectPath.split(/[\\/]/).pop() : '默认工程');
+    const projName = proj?.name || (s.projectPath ? s.projectPath.split(/[\\/]/).pop() : updateText('hero.defaultProject', '默认工程'));
     const msgCount = (s.messages || []).length;
     const timeStr = getRelativeTimeStr(s.updatedAt || s.createdAt);
     const lastMsg = s.messages && s.messages.length > 0 ? (s.messages[s.messages.length - 1].content || '') : '';
@@ -1557,7 +1566,7 @@ function exportCurrentSessionToMarkdown() {
   }
 
   const proj = state.projects.find((p) => normPath(p.path) === normPath(session.projectPath));
-  const projName = proj?.name || (session.projectPath ? session.projectPath.split(/[\\/]/).pop() : '默认工程');
+  const projName = proj?.name || (session.projectPath ? session.projectPath.split(/[\\/]/).pop() : updateText('hero.defaultProject', '默认工程'));
 
   let md = `# ${session.title || '会话记录'}\n\n`;
   md += `- **导出时间**: ${new Date().toLocaleString()}\n`;
@@ -1825,6 +1834,16 @@ function initOpacityAndGlass() {
     if (displayLabel) {
       const baseText = window.I18N ? window.I18N.t('header.appearance', '外观') : '外观';
       displayLabel.textContent = clamped < 100 ? `${baseText} (${clamped}%)` : baseText;
+    }
+
+    // 空会话欢迎页位于 i18n 跳过区（会话正文区）内，无法被源文案词典就地替换，
+    // 因此语言切换后需要重新渲染一次；仅在欢迎页可见时执行，避免打断正在生成的会话。
+    if ($('heroWelcome')) {
+      try {
+        renderCurrentSessionMessages();
+      } catch (err) {
+        console.warn('[i18n] 重新渲染欢迎页失败:', err);
+      }
     }
   });
 }
@@ -4827,20 +4846,20 @@ function renderPermissions() {
     container.innerHTML = `
       <div style="display:flex;flex-direction:column;gap:16px;">
         <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:12px;">
-          <div id="setModeFullAccess" class="card ${perm.mode === 'full-access' ? 'active' : ''}" style="cursor:pointer;padding:14px;border:1.5px solid ${perm.mode === 'full-access' ? 'var(--primary)' : 'var(--border-default)'};border-radius:var(--radius-md);background:${perm.mode === 'full-access' ? 'var(--primary-subtle)' : 'var(--bg-surface)'};transition:all var(--ease-snappy);" onclick="window.selectPermissionModeInSettings('full-access')">
-            <div style="font-weight:700;font-size:13.5px;color:${perm.mode === 'full-access' ? 'var(--primary)' : 'var(--text-main)'};display:flex;align-items:center;gap:6px;">
+          <div id="setModeFullAccess" class="card ${perm.mode === 'full-access' ? 'active' : ''}" style="cursor:pointer;padding:14px;border:1.5px solid ${perm.mode === 'full-access' ? 'var(--text-main)' : 'var(--border-default)'};border-radius:var(--radius-md);background:${perm.mode === 'full-access' ? 'var(--bg-active)' : 'var(--bg-surface)'};transition:all var(--ease-snappy);" onclick="window.selectPermissionModeInSettings('full-access')">
+            <div style="font-weight:700;font-size:13.5px;color:var(--text-main);display:flex;align-items:center;gap:6px;">
               <span>完全信任模式 (全权限)</span>
             </div>
             <div style="font-size:12px;color:var(--text-secondary);margin-top:6px;line-height:1.4;">完完全全放开全部权限，智能体全自动执行终端命令、本地代码写入与网络请求，无需手动弹窗确认。</div>
           </div>
-          <div id="setModeConfirm" class="card ${perm.mode === 'confirm-writes' ? 'active' : ''}" style="cursor:pointer;padding:14px;border:1.5px solid ${perm.mode === 'confirm-writes' ? 'var(--primary)' : 'var(--border-default)'};border-radius:var(--radius-md);background:${perm.mode === 'confirm-writes' ? 'var(--primary-subtle)' : 'var(--bg-surface)'};transition:all var(--ease-snappy);" onclick="window.selectPermissionModeInSettings('confirm-writes')">
-            <div style="font-weight:700;font-size:13.5px;color:${perm.mode === 'confirm-writes' ? 'var(--primary)' : 'var(--text-main)'};display:flex;align-items:center;gap:6px;">
+          <div id="setModeConfirm" class="card ${perm.mode === 'confirm-writes' ? 'active' : ''}" style="cursor:pointer;padding:14px;border:1.5px solid ${perm.mode === 'confirm-writes' ? 'var(--text-main)' : 'var(--border-default)'};border-radius:var(--radius-md);background:${perm.mode === 'confirm-writes' ? 'var(--bg-active)' : 'var(--bg-surface)'};transition:all var(--ease-snappy);" onclick="window.selectPermissionModeInSettings('confirm-writes')">
+            <div style="font-weight:700;font-size:13.5px;color:var(--text-main);display:flex;align-items:center;gap:6px;">
               <span>写入需确认模式</span>
             </div>
             <div style="font-size:12px;color:var(--text-secondary);margin-top:6px;line-height:1.4;">允许自动读取与检索，遇到终端执行或文件修改时弹出确认框二次审批。</div>
           </div>
-          <div id="setModeStrict" class="card ${perm.mode === 'strict' ? 'active' : ''}" style="cursor:pointer;padding:14px;border:1.5px solid ${perm.mode === 'strict' ? 'var(--primary)' : 'var(--border-default)'};border-radius:var(--radius-md);background:${perm.mode === 'strict' ? 'var(--primary-subtle)' : 'var(--bg-surface)'};transition:all var(--ease-snappy);" onclick="window.selectPermissionModeInSettings('strict')">
-            <div style="font-weight:700;font-size:13.5px;color:${perm.mode === 'strict' ? 'var(--primary)' : 'var(--text-main)'};display:flex;align-items:center;gap:6px;">
+          <div id="setModeStrict" class="card ${perm.mode === 'strict' ? 'active' : ''}" style="cursor:pointer;padding:14px;border:1.5px solid ${perm.mode === 'strict' ? 'var(--text-main)' : 'var(--border-default)'};border-radius:var(--radius-md);background:${perm.mode === 'strict' ? 'var(--bg-active)' : 'var(--bg-surface)'};transition:all var(--ease-snappy);" onclick="window.selectPermissionModeInSettings('strict')">
+            <div style="font-weight:700;font-size:13.5px;color:var(--text-main);display:flex;align-items:center;gap:6px;">
               <span>严格只读模式</span>
             </div>
             <div style="font-size:12px;color:var(--text-secondary);margin-top:6px;line-height:1.4;">禁止一切写入、终端命令与外部网络访问，仅支持静态代码检索。</div>
@@ -4860,7 +4879,7 @@ function renderPermissions() {
             <input type="checkbox" id="setPermNetwork" ${perm.allowNetwork ? 'checked' : ''} style="width:16px;height:16px;" />
             <span>允许智能体发起外部网络请求 (HTTP/HTTPS)</span>
           </label>
-          <label style="display:flex;align-items:center;gap:10px;font-size:13px;color:#334155;cursor:pointer;">
+          <label style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-secondary);cursor:pointer;">
             <input type="checkbox" id="setPermSubagent" ${perm.allowSpawnSubagent ? 'checked' : ''} style="width:16px;height:16px;" />
             <span>允许智能体并发派发 Subagent 子智能体协作</span>
           </label>
@@ -5354,7 +5373,7 @@ function renderProviders() {
                 <strong style="font-size:15.5px;color:var(--text-main);">${esc(p.name || p.id)}</strong>
                 <span class="prop-chip" style="font-size:11.5px;font-weight:600;font-family:var(--font-mono);">${esc(p.id)}</span>
                 <span class="badge ${p.healthStatus === 'ok' ? 'success' : p.healthStatus === 'missing_credentials' ? 'warn' : 'neutral'}" style="font-size:11px;">
-                  ${p.healthStatus === 'ok' ? '[就绪] 连通就绪' : p.healthStatus === 'missing_credentials' ? '[注意] 缺凭据' : '... 待测试'}
+                  ${p.healthStatus === 'ok' ? '连通就绪' : p.healthStatus === 'missing_credentials' ? '缺凭据' : '待测试'}
                 </span>
                 ${pLatency ? (pLatency.ok ? `<span class="badge success" style="font-size:11px;">${pLatency.latencyMs}ms</span>` : `<span class="badge danger" style="font-size:11px;">连通失败</span>`) : ''}
               </div>
@@ -5379,7 +5398,7 @@ function renderProviders() {
         <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-subtle);">
           <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
             <span>包含的模型 (${provModels.length})：</span>
-            ${provModels.length > 0 ? `<button type="button" class="btn text-btn" style="font-size:11px;color:var(--danger);padding:0;cursor:pointer;background:none;display:inline-flex;align-items:center;gap:3px;" onclick="window.clearModelsForProvider('${escJs(p.id)}')">清空本服务商模型</button>` : ''}
+            ${provModels.length > 0 ? `<button type="button" class="btn text-btn btn-quiet-danger" style="font-size:11px;padding:0;cursor:pointer;background:none;display:inline-flex;align-items:center;gap:3px;" onclick="window.clearModelsForProvider('${escJs(p.id)}')">清空本服务商模型</button>` : ''}
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
             ${modelChipsHtml}
@@ -7623,7 +7642,7 @@ window.refreshModelHub = async () => {
     const actions = $('engineActionBtns');
 
     if (ollamaStatus.isRunning) {
-      if (dot) dot.style.background = '#10b981';
+      if (dot) dot.style.background = 'var(--success)';
       if (text) text.textContent = 'Ollama 本地推理引擎正常运行中 (127.0.0.1:11434)';
       if (sub) sub.textContent = `已收录 ${ollamaStatus.installedModels.length} 个已部署模型`;
       if (actions) {
@@ -7632,7 +7651,7 @@ window.refreshModelHub = async () => {
         `;
       }
     } else if (ollamaStatus.isInstalled) {
-      if (dot) dot.style.background = '#f59e0b';
+      if (dot) dot.style.background = 'var(--warning)';
       if (text) text.textContent = 'Ollama 客户端已安装，但后台服务尚未启动';
       if (sub) sub.textContent = '点击右侧按钮可一键在后台拉起服务';
       if (actions) {
@@ -7642,7 +7661,7 @@ window.refreshModelHub = async () => {
         `;
       }
     } else {
-      if (dot) dot.style.background = '#ef4444';
+      if (dot) dot.style.background = 'var(--danger)';
       if (text) text.textContent = '未检测到本地 Ollama 引擎';
       if (sub) sub.textContent = '安装后即可解锁所有开源大模型一键流式拉取与本地部署';
       if (actions) {
@@ -9572,7 +9591,7 @@ async function renderServers() {
               <strong style="color:var(--text-main);">${info ? `${cpuPercent}%` : '—'}</strong>
             </div>
             <div class="server-meter-bar">
-              <div class="server-meter-fill ${cpuPercent > 80 ? 'danger' : cpuPercent > 50 ? 'warn' : ''}" style="width:${info ? cpuPercent : 0}%;height:100%;background:${cpuPercent > 80 ? '#ef4444' : cpuPercent > 50 ? '#f59e0b' : '#3b82f6'};transition:width 0.3s;"></div>
+              <div class="server-meter-fill ${cpuPercent > 80 ? 'danger' : cpuPercent > 50 ? 'warn' : ''}" style="width:${info ? cpuPercent : 0}%;height:100%;background:${metricFillColor(cpuPercent)};transition:width 0.3s;"></div>
             </div>
           </div>
 
@@ -9583,7 +9602,7 @@ async function renderServers() {
               <strong style="color:var(--text-main);">${info && totalMem > 0 ? `${memPercent}% (${memUsedGb}/${memTotalGb}G)` : '—'}</strong>
             </div>
             <div class="server-meter-bar">
-              <div class="server-meter-fill ${memPercent > 85 ? 'danger' : memPercent > 60 ? 'warn' : ''}" style="width:${info ? memPercent : 0}%;height:100%;background:${memPercent > 85 ? '#ef4444' : memPercent > 60 ? '#f59e0b' : '#10b981'};transition:width 0.3s;"></div>
+              <div class="server-meter-fill ${memPercent > 85 ? 'danger' : memPercent > 60 ? 'warn' : ''}" style="width:${info ? memPercent : 0}%;height:100%;background:${metricFillColor(memPercent)};transition:width 0.3s;"></div>
             </div>
           </div>
 
@@ -9906,7 +9925,7 @@ window.openInstallServerModal = async (id) => {
       await renderServers();
     } else {
       $('installProgressBar').style.width = '100%';
-      $('installProgressBar').style.background = '#ef4444';
+      $('installProgressBar').style.background = 'var(--danger)';
       $('installPercentText').textContent = '失败';
       $('installStepText').textContent = `部署终止：${res.error || '未知异常'}`;
       appendLog(`\n[Error] 部署失败：${res.error}`);
@@ -10334,9 +10353,9 @@ window.switchChannelTab = (tab) => {
     if (btn) {
       if (t.toLowerCase() === tab.toLowerCase()) {
         btn.classList.add('active');
-        btn.style.background = 'var(--primary)';
-        btn.style.color = '#ffffff';
-        btn.style.borderColor = 'var(--primary)';
+        btn.style.background = 'var(--primary-black)';
+        btn.style.color = 'var(--bg-app)';
+        btn.style.borderColor = 'var(--primary-black)';
       } else {
         btn.classList.remove('active');
         btn.style.background = 'var(--bg-surface)';
@@ -10727,7 +10746,7 @@ function renderLocalHostView(info) {
     if ($('hostCpuModel')) $('hostCpuModel').textContent = info.cpu.model || 'CPU';
     if ($('hostCpuBar')) {
       $('hostCpuBar').style.width = `${cpuPct}%`;
-      $('hostCpuBar').style.background = cpuPct > 85 ? '#ef4444' : cpuPct > 60 ? '#f59e0b' : '#3b82f6';
+      $('hostCpuBar').style.background = metricFillColor(cpuPct);
     }
 
     // CPU 多核拓扑分布
@@ -10757,7 +10776,7 @@ function renderLocalHostView(info) {
     }
     if ($('hostMemBar')) {
       $('hostMemBar').style.width = `${memPct}%`;
-      $('hostMemBar').style.background = memPct > 85 ? '#ef4444' : memPct > 60 ? '#f59e0b' : '#10b981';
+      $('hostMemBar').style.background = metricFillColor(memPct);
     }
 
     // 3. Node.js 虚拟机内存 (RSS & Heap)
@@ -10793,7 +10812,7 @@ function renderLocalHostView(info) {
             <span style="color:var(--text-main);font-family:var(--font-mono);">${p.usedPercent}% (${fmtHostBytes(p.usedBytes)} / ${fmtHostBytes(p.totalBytes)})</span>
           </div>
           <div class="progress-track" style="height:5px;">
-            <div style="width: ${p.usedPercent}%; height: 100%; background: ${p.usedPercent > 85 ? 'var(--danger)' : p.usedPercent > 70 ? 'var(--warning)' : 'var(--primary)'};"></div>
+            <div style="width: ${p.usedPercent}%; height: 100%; background: ${metricFillColor(p.usedPercent)};"></div>
           </div>
           <div style="font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between;">
             <span>可用空间: ${fmtHostBytes(p.freeBytes)}</span>
@@ -11135,7 +11154,7 @@ function renderDiskScanResult(report) {
   const score = report.healthScore ?? 95;
   if ($('diskHealthScore')) {
     $('diskHealthScore').textContent = score;
-    $('diskHealthScore').style.color = score >= 90 ? '#16a34a' : score >= 70 ? '#d97706' : '#dc2626';
+    $('diskHealthScore').style.color = score >= 90 ? 'var(--success)' : score >= 70 ? 'var(--warning)' : 'var(--danger)';
   }
   if ($('diskHealthLevel')) {
     $('diskHealthLevel').textContent = score >= 90 ? '空间充裕' : score >= 70 ? '建议优化' : '空间偏紧';
@@ -11991,7 +12010,7 @@ async function refreshHostDetailsModalContent() {
     if ($('hostModalCpuPercent')) $('hostModalCpuPercent').textContent = `${info.cpu?.usagePercent || 0}%`;
     if ($('hostModalCpuBar')) {
       $('hostModalCpuBar').style.width = `${info.cpu?.usagePercent || 0}%`;
-      $('hostModalCpuBar').style.background = (info.cpu?.usagePercent || 0) > 85 ? '#ef4444' : (info.cpu?.usagePercent || 0) > 60 ? '#f59e0b' : '#3b82f6';
+      $('hostModalCpuBar').style.background = metricFillColor(info.cpu?.usagePercent || 0);
     }
     if ($('hostModalCpuModel')) $('hostModalCpuModel').textContent = info.cpu?.model || '--';
 
@@ -12003,7 +12022,7 @@ async function refreshHostDetailsModalContent() {
     if ($('hostModalMemTotal')) $('hostModalMemTotal').textContent = `总量: ${totalGb} GB (空闲 ${freeGb} GB)`;
     if ($('hostModalMemBar')) {
       $('hostModalMemBar').style.width = `${info.memory?.usedPercent || 0}%`;
-      $('hostModalMemBar').style.background = (info.memory?.usedPercent || 0) > 85 ? '#ef4444' : (info.memory?.usedPercent || 0) > 60 ? '#f59e0b' : '#10b981';
+      $('hostModalMemBar').style.background = metricFillColor(info.memory?.usedPercent || 0);
     }
 
     if ($('hostModalProcessPid')) $('hostModalProcessPid').textContent = `PID: ${info.process?.pid || '--'}`;
@@ -12090,7 +12109,7 @@ async function refreshServerDetailsModalContent(id) {
     if ($('serverDetailsCpuPercent')) $('serverDetailsCpuPercent').textContent = `${cpuPct}%`;
     if ($('serverDetailsCpuBar')) {
       $('serverDetailsCpuBar').style.width = `${cpuPct}%`;
-      $('serverDetailsCpuBar').style.background = cpuPct > 85 ? '#ef4444' : cpuPct > 60 ? '#f59e0b' : '#3b82f6';
+      $('serverDetailsCpuBar').style.background = metricFillColor(cpuPct);
     }
     if ($('serverDetailsCpuModel')) $('serverDetailsCpuModel').textContent = cpuModel;
 
@@ -12099,7 +12118,7 @@ async function refreshServerDetailsModalContent(id) {
     if ($('serverDetailsMemTotal')) $('serverDetailsMemTotal').textContent = `总量: ${totalGb} GB (空闲: ${(freeMem / (1024 * 1024 * 1024)).toFixed(1)} GB)`;
     if ($('serverDetailsMemBar')) {
       $('serverDetailsMemBar').style.width = `${memPct}%`;
-      $('serverDetailsMemBar').style.background = memPct > 85 ? '#ef4444' : memPct > 60 ? '#f59e0b' : '#10b981';
+      $('serverDetailsMemBar').style.background = metricFillColor(memPct);
     }
 
     if ($('serverDetailsDiskBadge')) $('serverDetailsDiskBadge').textContent = diskTotal > 0 ? `${diskPct}%` : '未知';
@@ -13802,7 +13821,7 @@ window.refreshHostView = async () => {
       if ($('hostCpuModel')) $('hostCpuModel').textContent = cpuModel;
       if ($('hostCpuBar')) {
         $('hostCpuBar').style.width = `${cpuPct}%`;
-        $('hostCpuBar').style.background = cpuPct > 85 ? '#ef4444' : cpuPct > 60 ? '#f59e0b' : '#3b82f6';
+        $('hostCpuBar').style.background = metricFillColor(cpuPct);
       }
 
       const totalMem = info.totalMemBytes ?? info.memory?.total ?? 0;
@@ -13819,7 +13838,7 @@ window.refreshHostView = async () => {
       }
       if ($('hostMemBar')) {
         $('hostMemBar').style.width = `${memPct}%`;
-        $('hostMemBar').style.background = memPct > 85 ? '#ef4444' : memPct > 60 ? '#f59e0b' : '#10b981';
+        $('hostMemBar').style.background = metricFillColor(memPct);
       }
 
       if ($('hostProcessPidBadge')) $('hostProcessPidBadge').textContent = `Daemon Port: ${s?.daemonPort || 9527}`;
@@ -13845,7 +13864,7 @@ window.refreshHostView = async () => {
               <span style="font-family:var(--font-mono);font-weight:600;color:var(--text-main);">${diskTotal > 0 ? `${diskPct}%` : '未知'}</span>
             </div>
             <div class="progress-track" style="height:4px;margin-bottom:4px;">
-              <div style="width:${diskPct}%; height:100%; background:var(--primary);"></div>
+              <div style="width:${diskPct}%; height:100%; background:${metricFillColor(diskPct)};"></div>
             </div>
             <div style="font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between;">
               <span>已用: ${diskTotal > 0 ? fmtHostBytes(diskUsed) : '不可用'}</span>
@@ -14910,11 +14929,11 @@ async function renderMemories(searchQuery = '') {
     }
 
     const catMap = {
-      preference: { label: '用户偏好', color: 'var(--primary)', bg: 'var(--primary-subtle)' },
-      architecture: { label: '架构约束', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.12)' },
-      convention: { label: '代码规范', color: 'var(--success)', bg: 'var(--success-subtle)' },
-      domain: { label: '业务背景', color: 'var(--warning)', bg: 'var(--warning-subtle)' },
-      custom: { label: '自定义', color: 'var(--text-secondary)', bg: 'var(--bg-subtle)' },
+      preference: { label: '用户偏好', color: 'var(--text-main)', bg: 'var(--bg-active)' },
+      architecture: { label: '架构约束', color: 'var(--text-main)', bg: 'var(--bg-active)' },
+      convention: { label: '代码规范', color: 'var(--text-main)', bg: 'var(--bg-active)' },
+      domain: { label: '业务背景', color: 'var(--text-main)', bg: 'var(--bg-active)' },
+      custom: { label: '自定义', color: 'var(--text-main)', bg: 'var(--bg-active)' },
     };
 
     listEl.innerHTML = filtered.map(m => {
@@ -15521,7 +15540,7 @@ window.renderGatewayOverview = async () => {
 
     if (overview.enabled) {
       if (dot) {
-        dot.style.background = '#22c55e';
+        dot.style.background = 'var(--success)';
         dot.style.boxShadow = 'none';
       }
       if (badge) {
@@ -15536,7 +15555,7 @@ window.renderGatewayOverview = async () => {
       }
     } else {
       if (dot) {
-        dot.style.background = '#ef4444';
+        dot.style.background = 'var(--danger)';
         dot.style.boxShadow = 'none';
       }
       if (badge) {
@@ -15629,7 +15648,7 @@ window.renderGatewayKeys = async () => {
 
       const rpmDisplay = k.rateLimitRpm > 0 ? `${k.rateLimitRpm} 次/分` : '无限制';
       const statusBadge = k.enabled
-        ? `<span style="display:inline-flex;align-items:center;gap:4px;color:var(--success);font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:var(--success);"></span>启用</span>`
+        ? `<span style="display:inline-flex;align-items:center;gap:4px;color:var(--text-main);font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:var(--success);"></span>启用</span>`
         : `<span style="display:inline-flex;align-items:center;gap:4px;color:var(--danger);font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:var(--danger);"></span>停用</span>`;
 
       html += `
@@ -15823,8 +15842,8 @@ window.renderGatewayLogs = async () => {
     for (const log of logs) {
       const timeStr = new Date(log.timestamp).toLocaleTimeString();
       const statusBadge = log.status === 200
-        ? `<span class="badge" style="background:rgba(16,185,129,0.12);color:var(--success);font-weight:700;">200 OK</span>`
-        : `<span class="badge" style="background:rgba(239,68,68,0.12);color:var(--danger);font-weight:700;">${log.status}</span>`;
+        ? `<span class="badge" style="background:var(--success-subtle);color:var(--success);font-weight:700;">200 OK</span>`
+        : `<span class="badge" style="background:var(--danger-subtle);color:var(--danger);font-weight:700;">${log.status}</span>`;
 
       const modelMapping = log.requestedModel === log.targetModel
         ? `<span style="font-family:var(--font-mono);">${escapeHtml(log.requestedModel)}</span>`
@@ -16172,11 +16191,11 @@ async function renderHostingMemories() {
     }
 
     const catLabels = {
-      preference: { label: '用户习惯', color: '#2563eb', bg: 'rgba(37,99,235,0.1)' },
-      fact: { label: '领域事实', color: '#059669', bg: 'rgba(5,150,105,0.1)' },
-      convention: { label: '约定规则', color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
-      architecture: { label: '架构约束', color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' },
-      domain: { label: '业务背景', color: '#0891b2', bg: 'rgba(8,145,178,0.1)' },
+      preference: { label: '用户习惯', color: 'var(--text-main)', bg: 'var(--bg-active)' },
+      fact: { label: '领域事实', color: 'var(--text-main)', bg: 'var(--bg-active)' },
+      convention: { label: '约定规则', color: 'var(--text-main)', bg: 'var(--bg-active)' },
+      architecture: { label: '架构约束', color: 'var(--text-main)', bg: 'var(--bg-active)' },
+      domain: { label: '业务背景', color: 'var(--text-main)', bg: 'var(--bg-active)' },
       custom: { label: '自定义', color: 'var(--text-muted)', bg: 'var(--bg-subtle)' },
     };
 
@@ -16187,11 +16206,11 @@ async function renderHostingMemories() {
 
       let geneBadge = '';
       if (m.agentId === currentAgentId) {
-        geneBadge = `<span class="badge" style="background:#fdf2f8;color:#be185d;border:1px solid #fbcfe8;font-size:9.5px;font-weight:600;">${curAgentEmoji} ${esc(curAgentName)}专属</span>`;
+        geneBadge = `<span class="badge" style="background:var(--bg-active);color:var(--text-main);border:1px solid var(--border-default);font-size:9.5px;font-weight:600;">${curAgentEmoji} ${esc(curAgentName)}专属</span>`;
       } else if (!m.agentId) {
         geneBadge = '<span class="badge neutral" style="font-size:9.5px;">全局通用</span>';
       } else {
-        geneBadge = `<span class="badge" style="background:var(--bg-subtle);color:#475569;font-size:9.5px;">${esc(m.agentId)}</span>`;
+        geneBadge = `<span class="badge" style="background:var(--bg-subtle);color:var(--text-secondary);font-size:9.5px;">${esc(m.agentId)}</span>`;
       }
 
       return `
@@ -16524,7 +16543,7 @@ window.openVisionTestModal = async () => {
               <span>识屏失败</span>
             </div>
             <div style="font-size:12.5px;line-height:1.5;">${esc(res.error || '未知错误')}</div>
-            <div style="font-size:11.5px;color:#b91c1c;margin-top:4px;">
+            <div style="font-size:11.5px;color:var(--danger);margin-top:4px;">
               提示：${res.isWeChatRunning ? '检测到微信客户端已在运行，请确保微信窗口未被完全最小化，并检查 macOS 系统设置 -> 隐私与安全性 -> 屏幕录制权限。' : '未检测到正在运行的微信客户端，请先打开桌面端微信并登录。'}
             </div>
           </div>
@@ -16540,7 +16559,7 @@ window.openVisionTestModal = async () => {
               <span>识屏分析遇到错误</span>
             </div>
             <div style="font-size:12.5px;line-height:1.5;">${esc(p.error)}</div>
-            <div style="font-size:11.5px;color:#b91c1c;margin-top:4px;">
+            <div style="font-size:11.5px;color:var(--danger);margin-top:4px;">
               提示：若使用云端大模型识屏，请检查网络或在【设置 -> 模型】中选择可用的模型；在 macOS 下系统将优先采用免 Token 纯本地原生 OCR。
             </div>
           </div>
@@ -16570,7 +16589,7 @@ window.openVisionTestModal = async () => {
 
       let directionHtml = '';
       if (hasText) {
-        directionHtml = `<strong style="color:${isFromMe ? '#16a34a' : '#2563eb'};">${isFromMe ? '我方发送 (右侧绿色)' : '对方发送 (左侧白色)'}</strong>`;
+        directionHtml = `<strong style="color:var(--text-main);">${isFromMe ? '我方发送 (右侧)' : '对方发送 (左侧)'}</strong>`;
       } else {
         directionHtml = '<span style="color:var(--text-muted);">暂无</span>';
       }
@@ -16581,7 +16600,7 @@ window.openVisionTestModal = async () => {
       let hintCallout = '';
       if (!p?.chatTarget || !hasText) {
         hintCallout = `
-          <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--text-main);line-height:1.45;">
+          <div style="background:var(--bg-subtle);border:1px solid var(--border-default);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--text-main);line-height:1.45;">
             <strong>为什么显示待机无需回复？</strong><br/>
             检测到当前微信处于<strong>主界面空白状态</strong>（右侧大灰标，尚未点击选中任何好友或群聊对话）。<br/>
             <strong>操作建议：</strong>请在桌面微信中点击选中任意一个好友会话，然后点击下方【重新识屏检测】即可看到实时消息抓取与代答判断。
@@ -16797,7 +16816,7 @@ function renderHostingGuideMarkup() {
           已支持全量好友自动接管，统一由默认智能体代答。当您在手机上亲自回复时，分身将自动静默避让
         </p>
       </div>
-      <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:9px 14px;margin-bottom:14px;max-width:520px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-main);line-height:1.4;">
+      <div style="background:var(--bg-subtle);border:1px solid var(--border-default);border-radius:8px;padding:9px 14px;margin-bottom:14px;max-width:520px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-main);line-height:1.4;">
         <span style="font-size:16px;"></span>
         <div><strong>无需手动录入好友：</strong>启动代管后，任何好友发来消息，智能体都会<strong>自动接管回复</strong>并在此自动归档。</div>
       </div>
@@ -16904,8 +16923,8 @@ async function selectHostingContact(contact) {
       modeBadge.textContent = '人工接管中';
     } else if (contact.hostingMode === 'draft') {
       modeBadge.className = 'badge';
-      modeBadge.style.background = '#e0f2fe';
-      modeBadge.style.color = '#0284c7';
+      modeBadge.style.background = 'var(--bg-active)';
+      modeBadge.style.color = 'var(--text-main)';
       modeBadge.textContent = '半托管草稿';
     } else if (contact.hostingMode === 'off') {
       modeBadge.className = 'badge neutral';

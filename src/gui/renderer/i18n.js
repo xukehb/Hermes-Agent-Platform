@@ -147,6 +147,7 @@
       'hero.cardGit': 'Git 变更与提交',
       'hero.cardGitDesc': '生成规范提交并推送远程',
       'hero.boundProject': '当前绑定的工程：',
+      'hero.defaultProject': '默认工程',
 
       // 会话流与建议回复 (Chat Thread & Suggested Replies)
       'chat.suggestedReplies': '建议快捷回复',
@@ -362,6 +363,7 @@
       'hero.cardGit': 'Git Changes & Commit',
       'hero.cardGitDesc': 'Generate a conventional commit and push',
       'hero.boundProject': 'Active project: ',
+      'hero.defaultProject': 'Default project',
 
       // 会话流与建议回复 (Chat Thread & Suggested Replies)
       'chat.suggestedReplies': 'Suggested Replies',

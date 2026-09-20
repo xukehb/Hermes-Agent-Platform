@@ -85,6 +85,7 @@
 
   /* 功能状态色 (低饱和、同一明度) */
   --danger: #dc2626;
+  --danger-strong: #b91c1c;
   --danger-hover: #b91c1c;
   --danger-soft: #fef2f2;
   --danger-subtle: var(--danger-soft);
@@ -184,6 +185,7 @@
   --accent-glow: rgba(59, 130, 246, 0.18);
 
   --danger: #f87171;
+  --danger-strong: #fca5a5;
   --danger-hover: #fca5a5;
   --danger-soft: rgba(248, 113, 113, 0.12);
   --danger-subtle: var(--danger-soft);
@@ -272,6 +274,7 @@
   --accent-border: rgba(59, 130, 246, 0.32);
   --accent-glow: rgba(59, 130, 246, 0.18);
   --danger: #f87171;
+  --danger-strong: #fca5a5;
   --danger-hover: #fca5a5;
   --danger-soft: rgba(248, 113, 113, 0.12);
   --danger-subtle: var(--danger-soft);
@@ -3306,7 +3309,7 @@ body.has-wallpaper .rail-mac-spacer {
 
 .badge.danger {
   background: var(--danger-soft);
-  color: var(--danger);
+  color: var(--danger-strong);
   border-color: var(--danger-border);
 }
 
@@ -3451,12 +3454,14 @@ body.has-wallpaper .rail-mac-spacer {
 }
 
 .btn.danger {
+  background: var(--bg-surface);
+  border-color: var(--border-default);
+  color: var(--text-secondary);
+}
+.btn.danger:hover {
   background: var(--danger-soft);
   border-color: var(--danger-border);
   color: var(--danger);
-}
-.btn.danger:hover {
-  background: var(--danger-border);
 }
 
 .btn.text-btn {
@@ -3467,6 +3472,17 @@ body.has-wallpaper .rail-mac-spacer {
 .btn.text-btn:hover {
   background: var(--bg-hover);
   color: var(--text-main);
+}
+
+/* 破坏性操作在静默态保持中性，仅在悬停/聚焦时给出警示色，
+   避免列表页出现成片红色文字。 */
+.btn-quiet-danger {
+  color: var(--text-muted);
+}
+.btn-quiet-danger:hover,
+.btn-quiet-danger:focus-visible {
+  background: transparent;
+  color: var(--danger);
 }
 
 /* 全局按钮禁用与加载态规范 */
@@ -4431,16 +4447,16 @@ dialog .toast-container.in-dialog {
 
 .server-meter-fill {
   height: 100%;
-  background: #10a37f;
+  background: var(--text-main);
   transition: width 0.3s ease;
 }
 
 .server-meter-fill.warn {
-  background: #f59e0b;
+  background: var(--warning);
 }
 
 .server-meter-fill.danger {
-  background: #ef4444;
+  background: var(--danger);
 }
 
 .step-item {
@@ -6549,7 +6565,7 @@ body:not(.is-chat-generating) .streaming-cursor,
 }
 .btn-segmented.active {
   background: var(--bg-surface);
-  color: var(--primary);
+  color: var(--text-main);
   box-shadow: var(--shadow-xs);
 }
 .btn-segmented:hover:not(.active) {
@@ -7844,12 +7860,13 @@ body.has-wallpaper .user-bubble {
 }
 
 .header-capsule-group .mini-i-trigger-btn {
-  color: var(--primary) !important;
-  font-weight: 600 !important;
+  color: var(--text-secondary) !important;
+  font-weight: 500 !important;
 }
 
 .header-capsule-group .mini-i-trigger-btn:hover {
-  background: var(--primary-subtle) !important;
+  background: var(--bg-hover) !important;
+  color: var(--text-main) !important;
 }
 
 .sidebar-toggle-btn {
@@ -8057,34 +8074,27 @@ body.has-wallpaper .user-bubble {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--primary-subtle);
-  border: 1px solid var(--primary-border);
-  color: var(--primary);
-  border-radius: var(--radius-pill);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
   padding: 4px 10px;
-  font-weight: 600;
-  transition: all 0.2s ease;
+  font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .mini-i-trigger-btn:hover {
-  background: var(--primary);
-  color: #ffffff;
-  box-shadow: 0 0 12px var(--accent-glow);
+  background: var(--bg-hover);
+  color: var(--text-main);
+  box-shadow: none;
 }
 
 .mini-i-capsule {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  display: none;
 }
 
 .mini-i-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #22c55e;
-  box-shadow: none;
-  animation: mini-i-pulse-anim 2s infinite;
+  display: none;
 }
 
 .mini-i-letter {
