@@ -515,7 +515,7 @@ describe('Electron renderer UI contracts', () => {
 
     // 2. 模板里用到的每一个 data-i18n* 键都必须能在词条表里解析出来
     const used = new Set<string>();
-    const attrRe = /data-i18n(?:-placeholder|-title|-aria-label)?="([^"]+)"/g;
+    const attrRe = /data-i18n(?:-placeholder|-title|-aria)?="([^"]+)"/g;
     let hit: RegExpExecArray | null;
     while ((hit = attrRe.exec(html))) used.add(hit[1]!);
     expect(used.size).toBeGreaterThan(100);
@@ -524,6 +524,49 @@ describe('Electron renderer UI contracts', () => {
     const missingEn = [...used].filter((k) => !enDict.has(k));
     expect(missingZh, `模板引用但 zh-CN 缺失: ${missingZh.join(', ')}`).toEqual([]);
     expect(missingEn, `模板引用但 en-US 缺失: ${missingEn.join(', ')}`).toEqual([]);
+  });
+
+  it('translates every CJK attribute through the source dictionary or a data-i18n key', () => {
+    // 多行 placeholder / 带 HTML 实体（&#10;）的文案只有在词典键与 DOM 解码、
+    // 空白折叠后的运行时文本一致时才能命中，否则英文模式下会残留中文。
+    const decodeEntities = (value: string): string =>
+      value
+        .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+        .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)))
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;|&apos;/g, "'")
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&');
+    const normalize = (value: string): string => value.replace(/\s+/g, ' ').trim();
+
+    const dict = JSON.parse(
+      readFileSync(resolve(process.cwd(), 'tools/i18n/source-en.json'), 'utf8')
+    ) as Record<string, string>;
+    const dictKeys = new Set(Object.keys(dict).map((k) => normalize(decodeEntities(k))));
+
+    const attrRe = /(placeholder|title|aria-label)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
+    const coveredRe = /data-i18n(?:-placeholder|-title|-aria)?\s*=/;
+    const untranslated: string[] = [];
+    let scanned = 0;
+
+    html.split('\n').forEach((line, index) => {
+      let match: RegExpExecArray | null;
+      const re = new RegExp(attrRe.source, 'g');
+      while ((match = re.exec(line))) {
+        const raw = match[2] !== undefined ? match[2] : match[3];
+        const value = normalize(decodeEntities(raw ?? ''));
+        if (!value || !/[\u4e00-\u9fa5]/.test(value)) continue;
+        scanned++;
+        // data-i18n-* 属性会优先生效，此时源码里的中文只是回退文案
+        if (coveredRe.test(line)) continue;
+        if (!dictKeys.has(value)) untranslated.push(`L${index + 1} [${match[1]}] ${value}`);
+      }
+    });
+
+    expect(scanned).toBeGreaterThan(200);
+    expect(untranslated, `以下属性缺少英文译文:\n${untranslated.join('\n')}`).toEqual([]);
   });
 
   it('implements macOS frameless titlebar with traffic light avoidance and unified drag header', () => {

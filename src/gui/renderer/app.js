@@ -2135,6 +2135,19 @@ function initOpacityAndGlass() {
         console.warn('[i18n] 重新渲染欢迎页失败:', err);
       }
     }
+
+    // 下拉框文案由代码拼装（模型名 + 服务商 + 状态），词典无法整串匹配，
+    // 必须在语言切换后重新拼装，否则会停留在上一次的语言。
+    try {
+      if (typeof fillSelects === 'function') fillSelects();
+    } catch (err) {
+      console.warn('[i18n] 重新渲染模型下拉框失败:', err);
+    }
+    try {
+      if (typeof initPresetSelect === 'function') initPresetSelect();
+    } catch (err) {
+      console.warn('[i18n] 重新渲染预置模板下拉框失败:', err);
+    }
   });
 }
 
@@ -5184,7 +5197,9 @@ function renderTelemetry() {
   }
   if (pill) {
     pill.classList.toggle('is-degraded', telemetry.status !== 'ok');
-    pill.title = telemetry.status === 'ok' ? '今日实时 Token 消耗' : 'Token 遥测降级，正在使用最近可用数据';
+    pill.title = telemetry.status === 'ok'
+      ? updateText('more.tokenTooltip', '今日实时 Token 消耗')
+      : updateText('more.tokenTooltipDegraded', 'Token 遥测降级，正在使用最近可用数据');
   }
 }
 
@@ -6686,7 +6701,8 @@ function fillSelects() {
       const p = providersMap.get(m.providerId);
       const isReady = p && p.healthStatus === 'ok';
       const statusText = isReady ? '就绪' : (p?.healthStatus === 'missing_credentials' ? '需配置 Key' : '需连通测试');
-      return `<option value="${esc(m.fullName || m.alias)}">${esc(m.alias)} (${esc(p?.name || m.providerId)} · ${statusText})</option>`;
+      const providerLabel = trSourceText(p?.name || m.providerId);
+      return `<option value="${esc(m.fullName || m.alias)}">${esc(m.alias)} (${esc(providerLabel)} · ${trSourceText(statusText)})</option>`;
     }).join('');
 
     if (previousModel && state.models.some((m) => (m.fullName || m.alias) === previousModel)) {
@@ -7694,9 +7710,9 @@ function initPresetSelect() {
   const options = ['<option value="">-- 选择预置模板（如 DeepSeek、Qwen、OpenAI、Anthropic、Ollama 等） --</option>'];
   Object.entries(categories).forEach(([categoryName, list]) => {
     if (list.length === 0) return;
-    options.push(`<optgroup label="${categoryName}">`);
+    options.push(`<optgroup label="${esc(trSourceText(categoryName))}">`);
     list.forEach(t => {
-      options.push(`<option value="${t.key}">${t.name} (${t.key})</option>`);
+      options.push(`<option value="${t.key}">${esc(trSourceText(t.name))} (${t.key})</option>`);
     });
     options.push(`</optgroup>`);
   });
@@ -15854,6 +15870,19 @@ $('logoutWxBtn')?.addEventListener('click', async () => {
 
 function updateText(key, fallback) {
   return window.I18N ? window.I18N.t(key, fallback) : fallback;
+}
+
+/**
+ * 翻译由代码拼装出来的文案（如「模型名 (服务商 · 状态)」）。
+ * 这类文本节点在运行时无法与词典键整串匹配，只能在拼装阶段逐段翻译。
+ * 中文模式下必须原样返回，否则切回中文时会残留英文。
+ */
+function trSourceText(text) {
+  const value = String(text == null ? '' : text);
+  if (!window.I18N || typeof window.I18N.lookupSourceTranslation !== 'function') return value;
+  if (window.I18N.getLanguage() !== 'en-US') return value;
+  const translated = window.I18N.lookupSourceTranslation(value.replace(/\s+/g, ' ').trim());
+  return translated === undefined ? value : translated;
 }
 
 function formatUpdateBytes(value) {

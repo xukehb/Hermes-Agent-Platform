@@ -12,6 +12,30 @@ const EMOJI =
 
 type SourceDict = Record<string, string>;
 
+/**
+ * 词典键的归一化规则必须与 tools/i18n/generate-source-dict.mjs 以及
+ * i18n.js 的 normalizeSourceText 一致：解码 HTML 实体后折叠空白。
+ * 否则像多行 placeholder（源码里写作 &#10;）这类文案在运行时永远匹配不上。
+ */
+function normalizeDictKey(value: string): string {
+  return value
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)))
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** 归一化后的词典：与生成器保持一致，同义键只保留一条。 */
+function normalizedDictKeys(source: SourceDict): string[] {
+  return [...new Set(Object.keys(source).map(normalizeDictKey).filter(Boolean))].sort();
+}
+
 let dict: SourceDict;
 let patterns: [RegExp, string][];
 let lookup: (source: string) => string | undefined;
@@ -60,11 +84,11 @@ describe('GUI 源文案英文字典 (source text dictionary)', () => {
   it('is exposed to the runtime through i18n.js', () => {
     const g = globalThis as any;
     expect(g.HAP_SOURCE_TEXT_EN).toBeDefined();
-    expect(Object.keys(g.HAP_SOURCE_TEXT_EN).length).toBe(Object.keys(dict).length);
+    expect(Object.keys(g.HAP_SOURCE_TEXT_EN).length).toBe(normalizedDictKeys(dict).length);
   });
 
   it('generated module stays in sync with the maintained dictionary', () => {
-    const keys = Object.keys(dict).sort();
+    const keys = normalizedDictKeys(dict);
     expect(Object.keys((globalThis as any).HAP_SOURCE_TEXT_EN).sort()).toEqual(keys);
     // index.html 必须在 i18n.js 之前加载词典，否则 I18N 初始化时拿不到数据
     const html = readFileSync(join(ROOT, 'src', 'gui', 'renderer', 'index.html'), 'utf8');
@@ -72,6 +96,21 @@ describe('GUI 源文案英文字典 (source text dictionary)', () => {
     const i18nIdx = html.indexOf('./i18n.js');
     expect(dictIdx).toBeGreaterThan(-1);
     expect(dictIdx).toBeLessThan(i18nIdx);
+  });
+
+  it('resolves multi-line placeholders whose source uses HTML entities', () => {
+    // 回归：index.html 里的多行 placeholder 写作 &#10;，DOM 会把它解码成换行；
+    // 词典键若不做同样的实体解码 + 空白折叠，英文模式下这些输入框会残留中文。
+    const runtime = (globalThis as any).HAP_SOURCE_TEXT_EN;
+    const mcpArgs = normalizeDictKey('{&#10;  // 请输入工具调用参数 JSON&#10;}');
+    expect(runtime[mcpArgs], 'MCP 参数编辑器 placeholder 未收录').toBeDefined();
+    expect(lookup('{ // 请输入工具调用参数 JSON }')).toBe('{\n  // Enter tool arguments as JSON\n}');
+
+    const commitMsg = normalizeDictKey(
+      '输入提交说明，例如:&#10;refactor(gui): 重构聊天界面和主机监控功能&#10;&#10;- 重构聊天输入框初始化逻辑，清空输入内容并重置附件状态&#10;- 将 scheduledTasksBtn 点击事件的目标页面从 logs 改为 schedules'
+    );
+    expect(runtime[commitMsg], 'Git 提交说明 placeholder 未收录').toBeDefined();
+    expect(lookup(commitMsg)).toContain('Enter a commit message');
   });
 
   it('resolves exact source text', () => {
