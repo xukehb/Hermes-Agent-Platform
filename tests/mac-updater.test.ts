@@ -35,7 +35,7 @@ describe('mac-updater helper', () => {
 
     const versionedZip = path.join(
       pendingDir,
-      'Hermes-Agent-Platform-0.1.16-macOS-arm64.zip'
+      'Hermes-Agent-Platform-0.1.17-macOS-arm64.zip'
     );
     fs.writeFileSync(versionedZip, 'dummy');
     expect(findDownloadedMacZip(tempDir)).toBe(versionedZip);
