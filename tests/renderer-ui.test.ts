@@ -491,6 +491,41 @@ describe('Electron renderer UI contracts', () => {
     expect(css).toMatch(/\.opacity-value-badge[\s\S]{0,200}font-variant-numeric: tabular-nums/);
   });
 
+  it('resolves every data-i18n key in both languages', () => {
+    const readDict = (lang: string): Map<string, string> => {
+      const start = i18n.indexOf(`'${lang}': {`);
+      expect(start, `missing dictionary ${lang}`).toBeGreaterThanOrEqual(0);
+      const body = i18n.slice(start, i18n.indexOf('\n    },', start));
+      const map = new Map<string, string>();
+      // 词条值可能用单引号，也可能因为包含撇号而改用双引号
+      const re = /'([^']+)':\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(body))) map.set(m[1]!, m[2] ?? m[3] ?? '');
+      return map;
+    };
+
+    const zhDict = readDict('zh-CN');
+    const enDict = readDict('en-US');
+
+    // 1. 两种语言的词条必须完全对齐，缺一条就会出现「切不回中文 / 切不到英文」
+    const onlyZh = [...zhDict.keys()].filter((k) => !enDict.has(k));
+    const onlyEn = [...enDict.keys()].filter((k) => !zhDict.has(k));
+    expect(onlyZh, `en-US 缺少词条: ${onlyZh.join(', ')}`).toEqual([]);
+    expect(onlyEn, `zh-CN 缺少词条: ${onlyEn.join(', ')}`).toEqual([]);
+
+    // 2. 模板里用到的每一个 data-i18n* 键都必须能在词条表里解析出来
+    const used = new Set<string>();
+    const attrRe = /data-i18n(?:-placeholder|-title|-aria-label)?="([^"]+)"/g;
+    let hit: RegExpExecArray | null;
+    while ((hit = attrRe.exec(html))) used.add(hit[1]!);
+    expect(used.size).toBeGreaterThan(100);
+
+    const missingZh = [...used].filter((k) => !zhDict.has(k));
+    const missingEn = [...used].filter((k) => !enDict.has(k));
+    expect(missingZh, `模板引用但 zh-CN 缺失: ${missingZh.join(', ')}`).toEqual([]);
+    expect(missingEn, `模板引用但 en-US 缺失: ${missingEn.join(', ')}`).toEqual([]);
+  });
+
   it('implements macOS frameless titlebar with traffic light avoidance and unified drag header', () => {
     // 1. Electron BrowserWindow config
     expect(main).toContain("titleBarStyle: 'hidden'");

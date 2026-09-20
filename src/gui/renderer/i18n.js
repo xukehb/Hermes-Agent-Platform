@@ -147,6 +147,13 @@
       'wallpaper.adaptiveDesc': '自动提取背景主色，联动按钮/开关/选中态配色，并按背景明暗自动选择白色或黑色文字',
       'wallpaper.adaptiveOnToast': '已开启背景智能取色，组件配色跟随背景主色',
       'wallpaper.adaptiveOffToast': '已关闭背景智能取色，组件配色恢复主题默认',
+      'telegram.botTokenLabel': '机器人 API Token *',
+      'bot.telegramTokenLabel': 'Telegram 机器人 Token *',
+      'bot.discordTokenLabel': 'Discord 机器人 Token *',
+      'bot.slackTokenLabel': 'Slack 机器人 Token (xoxb-...) *',
+      'gitAuth.patClassicLabel': '个人访问令牌 (classic)：',
+      'serverDetails.uptimeBadge': '运行中',
+      'script.terminalConsoleTitle': '终端流式控制台',
 
       // 输入悬浮岛 (Composer)
       'composer.quickGit': '/git 状态',
@@ -208,6 +215,9 @@
       'mini.pinTooltip': '置顶窗口',
       'mini.minimizeTooltip': '最小化窗口',
       'mini.closeTooltip': '关闭窗口',
+      'mini.modelLabel': '模型:',
+      'mini.agentLabel': '智能体:',
+      'mini.tokensLabel': 'Token 用量:',
 
       // 设置中心 (Settings Center)
       'settings.title': '系统设置中心',
@@ -403,6 +413,13 @@
       'wallpaper.adaptiveDesc': 'Extract the wallpaper accent color to tint buttons, switches and active states, and auto-pick white or black text for contrast',
       'wallpaper.adaptiveOnToast': 'Adaptive wallpaper colors enabled',
       'wallpaper.adaptiveOffToast': 'Adaptive wallpaper colors disabled',
+      'telegram.botTokenLabel': 'Bot API Token *',
+      'bot.telegramTokenLabel': 'Telegram Bot Token *',
+      'bot.discordTokenLabel': 'Discord Bot Token *',
+      'bot.slackTokenLabel': 'Slack Bot Token (xoxb-...) *',
+      'gitAuth.patClassicLabel': 'Personal Access Token (classic):',
+      'serverDetails.uptimeBadge': 'Uptime',
+      'script.terminalConsoleTitle': 'Terminal Stream Console',
 
       // 输入悬浮岛 (Composer)
       'composer.quickGit': '/git Status',
@@ -464,6 +481,9 @@
       'mini.pinTooltip': 'Always on Top',
       'mini.minimizeTooltip': 'Minimize Window',
       'mini.closeTooltip': 'Close Window',
+      'mini.modelLabel': 'Model:',
+      'mini.agentLabel': 'Agent:',
+      'mini.tokensLabel': 'Tokens:',
 
       // 设置中心 (Settings Center)
       'settings.title': 'Settings Center',

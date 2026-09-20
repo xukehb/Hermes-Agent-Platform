@@ -1511,7 +1511,7 @@
                   <form id="tgConfigForm" style="display:flex;flex-direction:column;gap:12px;">
                     <div class="form-group">
                       <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <label style="font-size:12px;font-weight:600;">Bot API Token *</label>
+                        <label style="font-size:12px;font-weight:600;" data-i18n="telegram.botTokenLabel">机器人 API Token *</label>
                         <button type="button" class="btn text-btn" id="toggleTgTokenVisibilityBtn" style="font-size:11.5px;padding:2px 6px;">显示明文</button>
                       </div>
                       <input id="tgTokenInput" type="password" placeholder="例如：123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ..." required />
@@ -3652,7 +3652,7 @@
             </div>
 
             <div class="form-group" style="margin-bottom:0;">
-              <label style="font-size:12px;font-weight:600;margin-bottom:4px;display:block;">Personal Access Token (classic)：</label>
+              <label style="font-size:12px;font-weight:600;margin-bottom:4px;display:block;" data-i18n="gitAuth.patClassicLabel">个人访问令牌 (classic)：</label>
               <input type="password" id="gitAuthTokenInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="width:100%;" />
             </div>
 
@@ -4021,7 +4021,7 @@
             <div class="metric-stat-card">
               <div style="font-size:11.5px;color:var(--text-secondary);display:flex;justify-content:space-between;">
                 <span>系统运行时间</span>
-                <span class="badge success" style="font-size:10px;">Uptime</span>
+                <span class="badge success" style="font-size:10px;" data-i18n="serverDetails.uptimeBadge">运行中</span>
               </div>
               <div style="font-size:18px;font-weight:700;color:var(--text-main);margin:4px 0;" id="serverDetailsUptime">--</div>
               <div style="font-size:11px;color:var(--text-secondary);margin-top:6px;" id="serverDetailsPlatform">Linux</div>
@@ -4139,7 +4139,7 @@
             <div class="metric-stat-card">
               <div style="font-size:11.5px;color:var(--text-secondary);display:flex;justify-content:space-between;">
                 <span>系统运行时间</span>
-                <span class="badge success" style="font-size:10px;">Uptime</span>
+                <span class="badge success" style="font-size:10px;" data-i18n="serverDetails.uptimeBadge">运行中</span>
               </div>
               <div style="font-size:18px;font-weight:700;color:var(--text-main);margin:4px 0;" id="hostModalUptime">--</div>
               <div style="font-size:11px;color:var(--text-secondary);margin-top:6px;" id="hostModalProcessUptime">Codex 服务: --</div>
@@ -4658,7 +4658,7 @@
               <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--danger);"></span>
               <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warning);"></span>
               <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--success);"></span>
-              <span style="margin-left:6px;font-weight:600;color:#e4e4e7;">Terminal Stream Console</span>
+              <span style="margin-left:6px;font-weight:600;color:#e4e4e7;" data-i18n="script.terminalConsoleTitle">终端流式控制台</span>
             </div>
             <div style="display:flex;gap:8px;">
               <button type="button" class="btn secondary" id="copyExecOutputBtn" style="padding:2px 8px;font-size:11px;background:#27272a;color:#e4e4e7;">复制输出</button>
@@ -4740,7 +4740,7 @@
           
           <div id="botFields_telegram" class="bot-platform-fields">
             <div class="form-group">
-              <label style="font-size:11.5px;">Telegram Bot Token *</label>
+              <label style="font-size:11.5px;" data-i18n="bot.telegramTokenLabel">Telegram 机器人 Token *</label>
               <input type="password" id="botTgToken" placeholder="从 @BotFather 获取的 Token (如 123456:ABC-DEF...)" autocomplete="off" />
             </div>
             <div class="form-group">
@@ -4804,14 +4804,14 @@
 
           <div id="botFields_discord" class="bot-platform-fields" style="display:none;">
             <div class="form-group">
-              <label style="font-size:11.5px;">Discord Bot Token *</label>
+              <label style="font-size:11.5px;" data-i18n="bot.discordTokenLabel">Discord 机器人 Token *</label>
               <input type="password" id="botDiscordToken" placeholder="Discord Developer Portal Bot Token" autocomplete="off" />
             </div>
           </div>
 
           <div id="botFields_slack" class="bot-platform-fields" style="display:none;">
             <div class="form-group">
-              <label style="font-size:11.5px;">Slack Bot Token (xoxb-...) *</label>
+              <label style="font-size:11.5px;" data-i18n="bot.slackTokenLabel">Slack 机器人 Token (xoxb-...) *</label>
               <input type="password" id="botSlackToken" placeholder="xoxb-..." autocomplete="off" />
             </div>
           </div>
@@ -5599,15 +5599,15 @@
 
       <div class="mini-i-meta-bar">
         <div class="mini-i-meta-chip" title="当前对话模型">
-          <span class="meta-label">模型:</span>
+          <span class="meta-label" data-i18n="mini.modelLabel">模型:</span>
           <span class="meta-val" id="miniModelBadge">HAP</span>
         </div>
         <div class="mini-i-meta-chip" title="当前智能体">
-          <span class="meta-label">Agent:</span>
+          <span class="meta-label" data-i18n="mini.agentLabel">智能体:</span>
           <span class="meta-val" id="miniAgentBadge">Default</span>
         </div>
         <div class="mini-i-meta-chip" title="今日消耗 Token">
-          <span class="meta-label">Tokens:</span>
+          <span class="meta-label" data-i18n="mini.tokensLabel">Token 用量:</span>
           <span class="meta-val" id="miniTokensBadge">0</span>
         </div>
       </div>
