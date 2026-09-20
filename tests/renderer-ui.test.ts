@@ -514,6 +514,24 @@ describe('Electron renderer UI contracts', () => {
     expect(narrow).toMatch(/\.header-right-tools \{[\s\S]{0,200}flex: 0 0 auto/);
     expect(narrow).toMatch(/\.header-left-tools \{[\s\S]{0,160}flex: 1 1 auto/);
   });
+  it('disables spellcheck on machine-value fields but keeps it for prose', () => {
+    const tagOf = (id: string): string => {
+      const re = new RegExp('<(?:input|textarea)\\b[^>]*id="' + id + '"[^>]*>');
+      const match = re.exec(html);
+      expect(match, `missing field ${id}`).not.toBeNull();
+      return match![0];
+    };
+
+    // 密钥/地址/ID 这类机器值不应该出现拼写红线
+    for (const id of ['providerInputBaseUrl', 'providerInputId', 'modelInputModel', 'scheduleInputCron', 'agentInputParamsJson', 'serverInputPrivateKey']) {
+      expect(tagOf(id), `${id} 应关闭拼写检查`).toContain('spellcheck="false"');
+    }
+
+    // 面向人的自然语言输入仍保留拼写检查
+    for (const id of ['chatInput', 'gitCommitMessageInput', 'memoryInputTitle', 'agentInputSystemPrompt']) {
+      expect(tagOf(id), `${id} 不应关闭拼写检查`).not.toContain('spellcheck="false"');
+    }
+  });
   it('resolves every data-i18n key in both languages', () => {
     const readDict = (lang: string): Map<string, string> => {
       const start = i18n.indexOf(`'${lang}': {`);

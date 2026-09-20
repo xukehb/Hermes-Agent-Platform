@@ -71,7 +71,7 @@
       </div>
 
       <div class="projects-filter-bar" id="projectsFilterBar" style="display:none;">
-        <input type="text" id="projectsFilterInput" class="filter-input" placeholder="过滤项目或会话..." data-i18n-placeholder="rail.filterPlaceholder" />
+        <input spellcheck="false" type="text" id="projectsFilterInput" class="filter-input" placeholder="过滤项目或会话..." data-i18n-placeholder="rail.filterPlaceholder" />
       </div>
 
       <div class="projects-tree-section" id="projectsTreeContainer">
@@ -562,7 +562,7 @@
                 <span style="font-size:11.5px;color:var(--text-muted);font-weight:normal;">(在当前选中的目标节点免密执行)</span>
               </div>
               <div style="display:flex;gap:8px;margin-top:10px;">
-                <input id="sdCustomCommandInput" placeholder="输入任意 Linux Shell 命令，例如: uptime, uname -a, systemctl status nginx, free -h..." style="flex:1;font-family:var(--font-mono);" />
+                <input spellcheck="false" id="sdCustomCommandInput" placeholder="输入任意 Linux Shell 命令，例如: uptime, uname -a, systemctl status nginx, free -h..." style="flex:1;font-family:var(--font-mono);" />
                 <button type="button" class="btn primary" onclick="window.sdRunCustomCommand()" style="padding:8px 18px;font-size:13px;">
                   下发执行
                 </button>
@@ -581,7 +581,7 @@
                 <div id="sdTerminalOutput" style="background:var(--code-bg);color:var(--code-text);padding:12px;border-radius:8px;font-family:var(--font-mono);font-size:12px;height:350px;overflow-y:auto;white-space:pre-wrap;">终端就绪，正在连接服务器...</div>
                 <div style="display:flex;gap:8px;margin-top:10px;">
                   <span style="display:grid;place-items:center;font-family:var(--font-mono);font-size:13px;color:var(--text-main);font-weight:700;">$</span>
-                  <input id="sdTerminalInput" placeholder="输入远程命令并回车..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border-default);background:var(--bg-main);color:var(--text-main);font-size:13px;font-family:var(--font-mono);" />
+                  <input spellcheck="false" id="sdTerminalInput" placeholder="输入远程命令并回车..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border-default);background:var(--bg-main);color:var(--text-main);font-size:13px;font-family:var(--font-mono);" />
                   <button type="button" class="btn primary" onclick="window.sdSendTerminalCmd()" style="padding:8px 16px;font-size:12.5px;">发送</button>
                 </div>
               </div>
@@ -795,7 +795,7 @@
 
                 <!-- 记忆搜索与筛选条 -->
                 <div style="display:flex;gap:8px;align-items:center;">
-                  <input type="text" id="hostingMemorySearchInput" class="filter-input" style="flex:1;font-size:12px;" placeholder="搜索专属基因、偏好或约定..." />
+                  <input spellcheck="false" type="text" id="hostingMemorySearchInput" class="filter-input" style="flex:1;font-size:12px;" placeholder="搜索专属基因、偏好或约定..." />
                   <select id="hostingMemoryCategoryFilter" style="width:105px;font-size:11.5px;padding:4px 6px;">
                     <option value="">全部分类</option>
                     <option value="preference">用户习惯</option>
@@ -840,7 +840,7 @@
           <div style="display:none;" aria-hidden="true">
             <div id="hostingWorkbenchLayout">
               <div class="hosting-left-pane">
-                <input type="text" id="hostingContactSearchInput" />
+                <input spellcheck="false" type="text" id="hostingContactSearchInput" />
                 <div id="hostingContactsContainer"></div>
               </div>
               <div class="hosting-mid-pane">
@@ -872,9 +872,9 @@
                     <button id="hpOpenMemoryBtn"></button>
                     <select id="hpAgentSelect"></select>
                     <textarea id="hpSystemPromptInput"></textarea>
-                    <input id="hpCooldownInput" />
-                    <input id="hpDelayInput" />
-                    <input id="hpWorkspaceInput" />
+                    <input spellcheck="false" id="hpCooldownInput" />
+                    <input spellcheck="false" id="hpDelayInput" />
+                    <input spellcheck="false" id="hpWorkspaceInput" />
                     <button id="hpSaveBtn"></button>
                     <button id="hpDeleteBtn"></button>
                   </form>
@@ -1034,7 +1034,7 @@
                 <!-- 实时检索与多维筛选过滤栏 -->
                 <div class="provider-toolbar">
                   <div class="provider-toolbar-search">
-                    <input type="text" id="pmSearchInput" oninput="window.onProviderModelSearch(this.value)" placeholder="搜索服务商名、ID、模型别名或真实模型 (如 deepseek, gpt-4o, qwen)..." />
+                    <input spellcheck="false" type="text" id="pmSearchInput" oninput="window.onProviderModelSearch(this.value)" placeholder="搜索服务商名、ID、模型别名或真实模型 (如 deepseek, gpt-4o, qwen)..." />
                   </div>
 
                   <div class="provider-toolbar-filters">
@@ -1161,7 +1161,7 @@
               </div>
 
               <div style="display:flex;align-items:center;gap:8px;min-width:280px;flex:1;max-width:420px;">
-                <input type="text" id="marketSearchInput" placeholder="搜索生态插件 (如 GitHub, Docker, Postgres, React)..." style="width:100%;font-size:12.5px;padding:7px 12px;" />
+                <input spellcheck="false" type="text" id="marketSearchInput" placeholder="搜索生态插件 (如 GitHub, Docker, Postgres, React)..." style="width:100%;font-size:12.5px;padding:7px 12px;" />
               </div>
             </div>
 
@@ -1184,7 +1184,7 @@
                   </button>
                 </div>
                 <div class="mcp-search-wrap">
-                  <input type="text" id="mcpPlaygroundSearchInput" placeholder="按工具名或服务商搜索..." style="width:100%;font-size:12px;padding:6px 10px;" />
+                  <input spellcheck="false" type="text" id="mcpPlaygroundSearchInput" placeholder="按工具名或服务商搜索..." style="width:100%;font-size:12px;padding:6px 10px;" />
                 </div>
                 <div id="mcpPlaygroundToolsList" class="mcp-tools-list">
                   <div style="padding:16px;text-align:center;color:var(--text-muted);font-size:12px;">
@@ -1248,7 +1248,7 @@
                           <button type="button" class="btn text-btn" id="mcpResetArgsBtn" style="font-size:11.5px;padding:2px 6px;">填充模板</button>
                         </div>
                       </div>
-                      <textarea id="mcpToolArgsEditor" class="mcp-json-editor" rows="6" placeholder="{&#10;  // 请输入工具调用参数 JSON&#10;}"></textarea>
+                      <textarea spellcheck="false" id="mcpToolArgsEditor" class="mcp-json-editor" rows="6" placeholder="{&#10;  // 请输入工具调用参数 JSON&#10;}"></textarea>
                       
                       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
                         <div id="mcpExecutionStatusTag" style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
@@ -1378,7 +1378,7 @@
                     <div id="wxWeComFields" class="channel-info-box" style="display:none;flex-direction:column;gap:10px;">
                       <div class="form-group">
                         <label style="font-size:11.5px;font-weight:600;">企业微信企业 ID (CorpID)</label>
-                        <input id="wxCorpIdInput" placeholder="例如：wwa1b2c3d4e5f6..." />
+                        <input spellcheck="false" id="wxCorpIdInput" placeholder="例如：wwa1b2c3d4e5f6..." />
                       </div>
                       <div class="form-group">
                         <label style="font-size:11.5px;font-weight:600;">应用 AgentID</label>
@@ -1420,7 +1420,7 @@
 
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">绑定工作区目录 (Workspace Path)</label>
-                      <input id="wxWorkspaceInput" placeholder="留空默认使用当前激活的项目工作区" />
+                      <input spellcheck="false" id="wxWorkspaceInput" placeholder="留空默认使用当前激活的项目工作区" />
                       <select id="wxWorkspacePickerSelect" style="margin-top:6px;">
                         <option value="">-- 从项目库快捷点选 --</option>
                       </select>
@@ -1467,7 +1467,7 @@
 
                   <!-- 模拟测试消息 -->
                   <div style="display:flex;gap:8px;">
-                    <input id="wxTestMessageInput" placeholder="向选中的微信联系人或群发送测试消息..." style="flex:1;" />
+                    <input spellcheck="false" id="wxTestMessageInput" placeholder="向选中的微信联系人或群发送测试消息..." style="flex:1;" />
                     <button type="button" class="btn secondary" id="sendWxTestMsgBtn" style="font-size:12px;">发送</button>
                   </div>
                 </div>
@@ -1527,7 +1527,7 @@
 
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">授权用户白名单 (Allowed Users ID)</label>
-                      <input id="tgAllowedUsersInput" placeholder="例如：12345678, 87654321 (逗号分隔，留空允许所有用户)" />
+                      <input spellcheck="false" id="tgAllowedUsersInput" placeholder="例如：12345678, 87654321 (逗号分隔，留空允许所有用户)" />
                       <span style="font-size:11px;color:var(--text-muted);margin-top:2px;">仅白名单内的 Telegram User ID 能够唤醒智能体执行系统命令</span>
                     </div>
 
@@ -1538,7 +1538,7 @@
 
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">绑定工作区目录 (Workspace Path)</label>
-                      <input id="tgWorkspaceInput" placeholder="留空默认使用当前激活的项目工作区" />
+                      <input spellcheck="false" id="tgWorkspaceInput" placeholder="留空默认使用当前激活的项目工作区" />
                       <select id="tgWorkspacePickerSelect" style="margin-top:6px;">
                         <option value="">-- 从项目库快捷点选 --</option>
                       </select>
@@ -1611,7 +1611,7 @@
                   <form id="feishuConfigForm" style="display:flex;flex-direction:column;gap:12px;">
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">App ID (应用唯一标识) *</label>
-                      <input id="feishuAppIdInput" placeholder="cli_a1b2c3d4e5..." />
+                      <input spellcheck="false" id="feishuAppIdInput" placeholder="cli_a1b2c3d4e5..." />
                     </div>
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">App Secret (应用密钥) *</label>
@@ -1619,11 +1619,11 @@
                     </div>
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">Encrypt Key (消息加解密 Key，可选)</label>
-                      <input id="feishuEncryptKeyInput" placeholder="如开启加密则填写" />
+                      <input spellcheck="false" id="feishuEncryptKeyInput" placeholder="如开启加密则填写" />
                     </div>
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">Verification Token (事件校验 Token，可选)</label>
-                      <input id="feishuVerifyTokenInput" placeholder="用于安全校验请求合法性" />
+                      <input spellcheck="false" id="feishuVerifyTokenInput" placeholder="用于安全校验请求合法性" />
                     </div>
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">默认响应智能体 (Default Agent)</label>
@@ -1642,7 +1642,7 @@
                   <div class="channel-info-box">
                     <div style="color:var(--text-secondary);font-weight:600;">事件请求网址 (Request URL):</div>
                     <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
-                      <input id="feishuWebhookUrlDisplay" readonly value="http://127.0.0.1:8765/api/channels/feishu/events" style="flex:1;font-family:var(--font-mono);font-size:11.5px;" />
+                      <input spellcheck="false" id="feishuWebhookUrlDisplay" readonly value="http://127.0.0.1:8765/api/channels/feishu/events" style="flex:1;font-family:var(--font-mono);font-size:11.5px;" />
                       <button type="button" class="btn secondary" onclick="copyText($('feishuWebhookUrlDisplay')?.value, '飞书回调地址')" style="font-size:11.5px;padding:5px 10px;">复制</button>
                     </div>
                     <div style="margin-top:10px;color:var(--text-muted);font-size:11px;">
@@ -1675,7 +1675,7 @@
                   <form id="qqConfigForm" style="display:flex;flex-direction:column;gap:12px;">
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">OneBot 接口地址 (WebSocket / HTTP) *</label>
-                      <input id="qqEndpointInput" placeholder="例如：ws://127.0.0.1:3001 或 http://127.0.0.1:3000" />
+                      <input spellcheck="false" id="qqEndpointInput" placeholder="例如：ws://127.0.0.1:3001 或 http://127.0.0.1:3000" />
                     </div>
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">Access Token (访问凭证)</label>
@@ -1683,7 +1683,7 @@
                     </div>
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">管理员 QQ 号 (逗号分隔)</label>
-                      <input id="qqAdminListInput" placeholder="例如：10001, 10002" />
+                      <input spellcheck="false" id="qqAdminListInput" placeholder="例如：10001, 10002" />
                     </div>
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">默认响应智能体 (Default Agent)</label>
@@ -1703,7 +1703,7 @@
                     <div style="color:var(--text-muted);text-align:center;padding:24px 0;">连接 OneBot 服务后，QQ 消息与群聊指令将在此实时输出</div>
                   </div>
                   <div style="display:flex;gap:8px;">
-                    <input id="qqTestMessageInput" placeholder="向选中的 QQ 好友或群发送测试消息..." style="flex:1;" />
+                    <input spellcheck="false" id="qqTestMessageInput" placeholder="向选中的 QQ 好友或群发送测试消息..." style="flex:1;" />
                     <button type="button" class="btn primary" id="sendQQTestMsgBtn" style="font-size:12px;">发送</button>
                   </div>
                 </div>
@@ -1732,7 +1732,7 @@
                   <form id="dingtalkConfigForm" style="display:flex;flex-direction:column;gap:12px;">
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">AppKey (应用凭证) *</label>
-                      <input id="dingAppKeyInput" placeholder="dingxxxxxxxx" />
+                      <input spellcheck="false" id="dingAppKeyInput" placeholder="dingxxxxxxxx" />
                     </div>
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">AppSecret (应用密钥) *</label>
@@ -1740,7 +1740,7 @@
                     </div>
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">自定义 Webhook 地址 (可选)</label>
-                      <input id="dingWebhookInput" placeholder="https://oapi.dingtalk.com/robot/send?access_token=..." />
+                      <input spellcheck="false" id="dingWebhookInput" placeholder="https://oapi.dingtalk.com/robot/send?access_token=..." />
                     </div>
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">默认响应智能体 (Default Agent)</label>
@@ -1759,7 +1759,7 @@
                   <div class="channel-info-box">
                     <div style="color:var(--text-secondary);font-weight:600;">钉钉 HTTP 回调地址:</div>
                     <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
-                      <input id="dingWebhookUrlDisplay" readonly value="http://127.0.0.1:8765/api/channels/dingtalk/callback" style="flex:1;font-family:var(--font-mono);font-size:11.5px;padding:6px 8px;" />
+                      <input spellcheck="false" id="dingWebhookUrlDisplay" readonly value="http://127.0.0.1:8765/api/channels/dingtalk/callback" style="flex:1;font-family:var(--font-mono);font-size:11.5px;padding:6px 8px;" />
                       <button type="button" class="btn secondary" onclick="copyText($('dingWebhookUrlDisplay')?.value, '钉钉回调地址')" style="font-size:11.5px;padding:5px 10px;">复制</button>
                     </div>
                     <div style="margin-top:10px;color:var(--text-muted);font-size:11px;">
@@ -1825,7 +1825,7 @@
             <div class="card">
               <div class="card-body" style="padding:16px;">
                 <div style="margin-bottom:12px;display:flex;gap:8px;">
-                  <input id="memorySearchInput" placeholder="按关键字搜索记忆条目..." style="flex:1;" />
+                  <input spellcheck="false" id="memorySearchInput" placeholder="按关键字搜索记忆条目..." style="flex:1;" />
                   <select id="memoryAgentFilter" style="width:150px;">
                     <option value="">全部智能体</option>
                   </select>
@@ -2635,7 +2635,7 @@
 
           <div class="form-group">
             <label>Cron 周期表达式 *</label>
-            <input type="text" id="scheduleInputCron" placeholder="例如：0 9 * * * 或 */30 * * * *" required />
+            <input spellcheck="false" type="text" id="scheduleInputCron" placeholder="例如：0 9 * * * 或 */30 * * * *" required />
             <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">如 `0 9 * * *` (每天早9点), `*/15 * * * *` (每15分钟)</div>
           </div>
 
@@ -2716,7 +2716,7 @@
         </div>
         <div class="form-group">
           <label>GitHub 仓库名或完整 URL *</label>
-          <input name="repo" id="skillRepoInput" placeholder="例如：open-skills/code-auditor 或 https://github.com/..." required />
+          <input spellcheck="false" name="repo" id="skillRepoInput" placeholder="例如：open-skills/code-auditor 或 https://github.com/..." required />
         </div>
         <div style="font-size:12px;color:var(--text-muted);">
           安装后将自动拉取并在智能体编排系统中加载该技能规则与提示词。
@@ -2771,7 +2771,7 @@
           </div>
           <div class="form-group" style="margin-bottom:8px;">
             <label style="font-size:12px;font-weight:600;">技能唯一标识 (Skill ID)</label>
-            <input name="id" id="importSkillIdInput" placeholder="留空自动生成，如：img-skill-cyberpunk" />
+            <input spellcheck="false" name="id" id="importSkillIdInput" placeholder="留空自动生成，如：img-skill-cyberpunk" />
           </div>
           <div class="form-group" style="margin-bottom:8px;">
             <label style="font-size:12px;font-weight:600;">技能类别 (Category)</label>
@@ -2813,11 +2813,11 @@
         <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div class="form-group" style="margin-bottom:8px;">
             <label style="font-size:12px;font-weight:600;">反向提示词 (Negative Prompt)</label>
-            <input name="negativePrompt" id="importSkillNegativePromptInput" placeholder="如：low quality, blurry, distorted" />
+            <input spellcheck="false" name="negativePrompt" id="importSkillNegativePromptInput" placeholder="如：low quality, blurry, distorted" />
           </div>
           <div class="form-group" style="margin-bottom:8px;">
             <label style="font-size:12px;font-weight:600;">标签分类 (Tags，逗号分隔)</label>
-            <input name="tags" id="importSkillTagsInput" placeholder="如：生图, Cyberpunk, 8K" />
+            <input spellcheck="false" name="tags" id="importSkillTagsInput" placeholder="如：生图, Cyberpunk, 8K" />
           </div>
         </div>
 
@@ -2838,11 +2838,11 @@
         <div class="form-grid">
           <div class="form-group">
             <label>插件 ID *</label>
-            <input name="id" placeholder="例如：postgres-mcp" required />
+            <input spellcheck="false" name="id" placeholder="例如：postgres-mcp" required />
           </div>
           <div class="form-group">
             <label>插件名称 *</label>
-            <input name="name" placeholder="例如：PostgreSQL 数据库直连" required />
+            <input spellcheck="false" name="name" placeholder="例如：PostgreSQL 数据库直连" required />
           </div>
           <div class="form-group full-width">
             <label>功能描述</label>
@@ -2850,11 +2850,11 @@
           </div>
           <div class="form-group">
             <label>执行命令 (Command) *</label>
-            <input name="command" placeholder="npx, python, node..." required />
+            <input spellcheck="false" name="command" placeholder="npx, python, node..." required />
           </div>
           <div class="form-group">
             <label>参数列表 (Args，逗号分隔)</label>
-            <input name="args" placeholder="-y, @modelcontextprotocol/server-postgres" />
+            <input spellcheck="false" name="args" placeholder="-y, @modelcontextprotocol/server-postgres" />
           </div>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:14px;border-top:1px solid var(--border-default);">
@@ -2882,7 +2882,7 @@
         <div class="form-grid">
           <div class="form-group">
             <label>服务商 ID *</label>
-            <input name="id" id="providerInputId" placeholder="例如：openai, deepseek" required />
+            <input spellcheck="false" name="id" id="providerInputId" placeholder="例如：openai, deepseek" required />
           </div>
 
           <div class="form-group">
@@ -2892,7 +2892,7 @@
 
           <div class="form-group full-width">
             <label>API 基础地址 (URL / Base URL) *</label>
-            <input name="baseUrl" id="providerInputBaseUrl" placeholder="https://api.openai.com/v1" required />
+            <input spellcheck="false" name="baseUrl" id="providerInputBaseUrl" placeholder="https://api.openai.com/v1" required />
           </div>
 
           <div class="form-group full-width">
@@ -2906,12 +2906,12 @@
 
           <div class="form-group full-width">
             <label>测试模型 ID *</label>
-            <input id="providerInputTestModel" placeholder="例如：gpt-4o、deepseek-chat、claude-sonnet-4-5" />
+            <input spellcheck="false" id="providerInputTestModel" placeholder="例如：gpt-4o、deepseek-chat、claude-sonnet-4-5" />
           </div>
 
           <div class="form-group full-width">
             <label>API Key 环境变量名 (可选)</label>
-            <input name="envKey" id="providerInputEnvKey" placeholder="留空自动根据 ID 生成" />
+            <input spellcheck="false" name="envKey" id="providerInputEnvKey" placeholder="留空自动根据 ID 生成" />
           </div>
 
           <div class="form-group">
@@ -2951,7 +2951,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px;">
               <span style="font-size:11.5px;font-weight:600;color:var(--text-main);">点击快速添加模型（或点击右侧全部导入）：</span>
               <div style="display:flex;align-items:center;gap:6px;">
-                <input type="text" id="remoteModelFilterInput" placeholder="过滤模型名 (如 deepseek, gpt)..." style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border-default);width:160px;" />
+                <input spellcheck="false" type="text" id="remoteModelFilterInput" placeholder="过滤模型名 (如 deepseek, gpt)..." style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border-default);width:160px;" />
                 <button type="button" class="btn text-btn" id="addAllRemoteModelsBtn" style="font-size:11px;color:var(--text-main);white-space:nowrap;">+ 全部添加</button>
               </div>
             </div>
@@ -2960,8 +2960,8 @@
 
           <!-- 手动添加模型输入行 -->
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px;align-items:center;margin-bottom:8px;">
-            <input type="text" id="manualModelNameInput" placeholder="真实模型名 (如 deepseek-chat)" style="font-size:12px;padding:6px 8px;border-radius:6px;min-width:0;" />
-            <input type="text" id="manualModelAliasInput" placeholder="显示别名 (可选)" style="font-size:12px;padding:6px 8px;border-radius:6px;min-width:0;" />
+            <input spellcheck="false" type="text" id="manualModelNameInput" placeholder="真实模型名 (如 deepseek-chat)" style="font-size:12px;padding:6px 8px;border-radius:6px;min-width:0;" />
+            <input spellcheck="false" type="text" id="manualModelAliasInput" placeholder="显示别名 (可选)" style="font-size:12px;padding:6px 8px;border-radius:6px;min-width:0;" />
             <input type="number" id="manualModelContextInput" placeholder="上下文 (64000)" style="font-size:12px;padding:6px 8px;border-radius:6px;min-width:0;" />
             <button type="button" class="btn primary" id="addManualModelBtn" style="justify-self:start;font-size:11.5px;padding:6px 12px;white-space:nowrap;">+ 手动添加</button>
           </div>
@@ -3072,7 +3072,7 @@
             </div>
 
             <div style="display:flex;align-items:center;gap:8px;min-width:200px;">
-              <input type="text" id="hubSearchInput" oninput="window.onModelHubSearch(this.value)" placeholder="搜索模型 (如 r1, qwen, 7b)..." style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--border-default);background:var(--bg-surface);width:100%;" />
+              <input spellcheck="false" type="text" id="hubSearchInput" oninput="window.onModelHubSearch(this.value)" placeholder="搜索模型 (如 r1, qwen, 7b)..." style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--border-default);background:var(--bg-surface);width:100%;" />
             </div>
           </div>
 
@@ -3121,12 +3121,12 @@
         <div class="form-grid">
           <div class="form-group">
             <label>模型别名 (Alias) *</label>
-            <input name="alias" id="modelInputAlias" placeholder="例如：gpt-4.1, ds-v3" required />
+            <input spellcheck="false" name="alias" id="modelInputAlias" placeholder="例如：gpt-4.1, ds-v3" required />
           </div>
 
           <div class="form-group">
             <label>厂商真实模型名 (Model Name) *</label>
-            <input name="model" id="modelInputModel" placeholder="例如：deepseek-chat" required />
+            <input spellcheck="false" name="model" id="modelInputModel" placeholder="例如：deepseek-chat" required />
           </div>
 
           <div class="form-group">
@@ -3194,7 +3194,7 @@
         <div class="form-grid">
           <div class="form-group full-width" id="agentIdFormGroup">
             <label for="agentInputId">角色 ID *</label>
-            <input id="agentInputId" name="id" autocomplete="off" placeholder="如：data-analyst" required />
+            <input spellcheck="false" id="agentInputId" name="id" autocomplete="off" placeholder="如：data-analyst" required />
             <small style="font-size:11.5px;color:var(--text-muted);">创建后不可修改，用于对话、通道和自动化任务引用。</small>
           </div>
           <div class="form-group">
@@ -3203,7 +3203,7 @@
           </div>
           <div class="form-group">
             <label>图标 (Emoji)</label>
-            <input id="agentInputEmoji" name="emoji" placeholder="如：" style="max-width:80px;" />
+            <input spellcheck="false" id="agentInputEmoji" name="emoji" placeholder="如：" style="max-width:80px;" />
           </div>
           <div class="form-group full-width">
             <label>主要绑定模型 (Primary Model)</label>
@@ -3211,11 +3211,11 @@
           </div>
           <div class="form-group full-width">
             <label>备选模型 (Fallback Models)</label>
-            <input id="agentInputFallbackModels" name="fallbackModels" placeholder="多个模型用逗号分隔" />
+            <input spellcheck="false" id="agentInputFallbackModels" name="fallbackModels" placeholder="多个模型用逗号分隔" />
           </div>
           <div class="form-group">
             <label>辅助模型 (Utility Model)</label>
-            <input id="agentInputUtilityModel" name="utilityModel" placeholder="留空则继承" />
+            <input spellcheck="false" id="agentInputUtilityModel" name="utilityModel" placeholder="留空则继承" />
           </div>
           <div class="form-group">
             <label>协议 (Protocol)</label>
@@ -3239,15 +3239,15 @@
           </div>
           <div class="form-group">
             <label>允许工具 (Allow Tools)</label>
-            <input id="agentInputAllowTools" name="allowTools" placeholder="留空则使用档位全集" />
+            <input spellcheck="false" id="agentInputAllowTools" name="allowTools" placeholder="留空则使用档位全集" />
           </div>
           <div class="form-group">
             <label>禁用工具 (Deny Tools)</label>
-            <input id="agentInputDenyTools" name="denyTools" placeholder="多个工具用逗号分隔" />
+            <input spellcheck="false" id="agentInputDenyTools" name="denyTools" placeholder="多个工具用逗号分隔" />
           </div>
           <div class="form-group">
             <label>子智能体 (Subagents)</label>
-            <input id="agentInputSubagents" name="subagents" placeholder="多个 ID 用逗号分隔" />
+            <input spellcheck="false" id="agentInputSubagents" name="subagents" placeholder="多个 ID 用逗号分隔" />
           </div>
           <div class="form-group">
             <label>运行模式 (Runtime)</label>
@@ -3258,7 +3258,7 @@
           </div>
           <div class="form-group full-width">
             <label>默认工作区目录 (Workspace Path)</label>
-            <input id="agentInputWorkspace" name="workspace" placeholder="留空则继承全局 workspace_root 规则" />
+            <input spellcheck="false" id="agentInputWorkspace" name="workspace" placeholder="留空则继承全局 workspace_root 规则" />
           </div>
           <div class="form-group full-width checkbox-row">
             <label for="agentInputReasoningVisible">
@@ -3268,7 +3268,7 @@
           </div>
           <div class="form-group full-width">
             <label>模型参数 JSON (Params)</label>
-            <textarea id="agentInputParamsJson" name="paramsJson" rows="3" placeholder='例如：{"temperature":0.2,"top_p":0.9}'></textarea>
+            <textarea spellcheck="false" id="agentInputParamsJson" name="paramsJson" rows="3" placeholder='例如：{"temperature":0.2,"top_p":0.9}'></textarea>
           </div>
           <div class="form-group full-width">
             <label>系统提示词 (System Prompt)</label>
@@ -3302,7 +3302,7 @@
 
         <div class="form-group">
           <label>本地绝对路径 *</label>
-          <input name="path" id="projectInputPath" placeholder="C:\projects\my-app" required />
+          <input spellcheck="false" name="path" id="projectInputPath" placeholder="C:\projects\my-app" required />
         </div>
 
         <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:14px;border-top:1px solid var(--border-default);">
@@ -3529,7 +3529,7 @@
           </div>
           <div class="form-group" style="margin-bottom:0;">
             <label style="font-size:12px;font-weight:600;margin-bottom:4px;display:block;">暂存说明 / 备注 (可选)：</label>
-            <input type="text" id="gitStashMessageInput" placeholder="输入暂存说明，如: 临时保存当前功能联调中途代码" style="width:100%;font-size:12.5px;" />
+            <input spellcheck="false" type="text" id="gitStashMessageInput" placeholder="输入暂存说明，如: 临时保存当前功能联调中途代码" style="width:100%;font-size:12.5px;" />
           </div>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:16px;margin-top:16px;border-top:1px solid var(--border-default);">
@@ -3616,7 +3616,7 @@
                 <label style="font-size:12px;font-weight:600;color:var(--text-main);">本地 SSH 公钥 (~/.ssh/id_ed25519.pub)：</label>
                 <button type="button" class="btn small secondary" id="gitAuthCopySshKeyBtn" style="padding:3px 10px;font-size:11.5px;">复制公钥</button>
               </div>
-              <textarea id="gitAuthSshKeyDisplay" rows="3" readonly class="git-auth-key-area" placeholder="点击下方按钮即可一键生成密钥并加载公钥..."></textarea>
+              <textarea spellcheck="false" id="gitAuthSshKeyDisplay" rows="3" readonly class="git-auth-key-area" placeholder="点击下方按钮即可一键生成密钥并加载公钥..."></textarea>
             </div>
 
             <div style="display:flex;gap:10px;align-items:center;">
@@ -3648,7 +3648,7 @@
 
             <div class="form-group" style="margin-bottom:0;">
               <label style="font-size:12px;font-weight:600;margin-bottom:4px;display:block;">GitHub 用户名：</label>
-              <input type="text" id="gitAuthUsernameInput" placeholder="例如: xukehb" style="width:100%;" />
+              <input spellcheck="false" type="text" id="gitAuthUsernameInput" placeholder="例如: xukehb" style="width:100%;" />
             </div>
 
             <div class="form-group" style="margin-bottom:0;">
@@ -3737,7 +3737,7 @@
           <div id="branchPanelSwitch" style="display:flex;flex-direction:column;gap:12px;">
             <!-- 搜索与筛选 -->
             <div style="display:flex;gap:8px;align-items:center;">
-              <input type="search" id="branchSearchInput" placeholder="搜索本地或远程分支..." style="flex:1;" />
+              <input spellcheck="false" type="search" id="branchSearchInput" placeholder="搜索本地或远程分支..." style="flex:1;" />
               <button type="button" class="btn secondary" id="refreshBranchListBtn" title="刷新分支列表" style="padding:6px 10px;font-size:12px;">
                 刷新
               </button>
@@ -3756,7 +3756,7 @@
                 基于当前分支创建并切换新分支：
               </div>
               <div style="display:flex;gap:8px;">
-                <input type="text" id="newBranchNameInput" placeholder="输入新分支名称，如 feat/login 或 fix/ui-bug" style="flex:1;" />
+                <input spellcheck="false" type="text" id="newBranchNameInput" placeholder="输入新分支名称，如 feat/login 或 fix/ui-bug" style="flex:1;" />
                 <button type="button" class="btn primary" id="createNewBranchBtn" style="white-space:nowrap;padding:6px 14px;font-weight:600;">
                   创建并检出
                 </button>
@@ -3890,17 +3890,17 @@
         <div class="form-grid">
           <div class="form-group">
             <label>节点唯一 ID <span style="font-weight:normal;font-size:11px;color:var(--text-muted);">(留空自动生成)</span></label>
-            <input name="id" id="serverInputId" placeholder="例如: vps-prod, node-gpu (留空自适应)" />
+            <input spellcheck="false" name="id" id="serverInputId" placeholder="例如: vps-prod, node-gpu (留空自适应)" />
           </div>
 
           <div class="form-group">
             <label>显示别名 (名称)</label>
-            <input name="name" id="serverInputName" placeholder="例如: 生产算力集群 #1" />
+            <input spellcheck="false" name="name" id="serverInputName" placeholder="例如: 生产算力集群 #1" />
           </div>
 
           <div class="form-group full-width">
             <label>主机 IP 或域名 (Host) *</label>
-            <input name="host" id="serverInputHost" placeholder="例如: 192.168.1.100 或 123.45.67.89" required />
+            <input spellcheck="false" name="host" id="serverInputHost" placeholder="例如: 192.168.1.100 或 123.45.67.89" required />
           </div>
 
           <div class="form-group">
@@ -3910,7 +3910,7 @@
 
           <div class="form-group">
             <label>SSH 用户名 *</label>
-            <input name="username" id="serverInputUsername" value="root" required />
+            <input spellcheck="false" name="username" id="serverInputUsername" value="root" required />
           </div>
 
           <div class="form-group">
@@ -3928,7 +3928,7 @@
 
           <div class="form-group full-width" id="serverPrivateKeyGroup" style="display:none;">
             <label>SSH 私钥内容 (OpenSSH / RSA 格式)</label>
-            <textarea name="privateKey" id="serverInputPrivateKey" rows="4" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----..." style="font-family:monospace;font-size:12px;"></textarea>
+            <textarea spellcheck="false" name="privateKey" id="serverInputPrivateKey" rows="4" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----..." style="font-family:monospace;font-size:12px;"></textarea>
           </div>
 
           <div class="form-group">
@@ -3938,7 +3938,7 @@
 
           <div class="form-group">
             <label>通信安全 Token (留空自动生成)</label>
-            <input name="token" id="serverInputToken" placeholder="自动生成高强度 Token" />
+            <input spellcheck="false" name="token" id="serverInputToken" placeholder="自动生成高强度 Token" />
           </div>
 
           <div class="form-group full-width">
@@ -4353,7 +4353,7 @@
 
             <!-- 手动输入生图模型名称输入框 -->
             <div id="manualImageModelInlineBox" style="display:none;margin-top:2px;">
-              <input type="text" id="manualImageModelInput" placeholder="手动输入模型名称 (如 dall-e-3, black-forest-labs/FLUX.1-schnell, cogview-3)" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border-strong);background:var(--bg-surface);" />
+              <input spellcheck="false" type="text" id="manualImageModelInput" placeholder="手动输入模型名称 (如 dall-e-3, black-forest-labs/FLUX.1-schnell, cogview-3)" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border-strong);background:var(--bg-surface);" />
             </div>
 
 
@@ -4444,7 +4444,7 @@
         <!-- 批量导入 .env 抽屉区域 -->
         <div id="batchEnvImportBox" class="env-drawer-box" style="display:none;">
           <div style="font-size:12.5px;font-weight:600;margin-bottom:6px;color:var(--text-main);">批量粘贴 .env 内容 (支持 KEY=VALUE 格式)：</div>
-          <textarea id="batchEnvTextarea" rows="4" style="width:100%;box-sizing:border-box;font-family:monospace;font-size:12px;padding:8px;border-radius:6px;border:1px solid var(--border-default);" placeholder="DEEPSEEK_API_KEY=sk-...\nOPENAI_API_KEY=sk-...\nANTHROPIC_API_KEY=sk-..."></textarea>
+          <textarea spellcheck="false" id="batchEnvTextarea" rows="4" style="width:100%;box-sizing:border-box;font-family:monospace;font-size:12px;padding:8px;border-radius:6px;border:1px solid var(--border-default);" placeholder="DEEPSEEK_API_KEY=sk-...\nOPENAI_API_KEY=sk-...\nANTHROPIC_API_KEY=sk-..."></textarea>
           <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
             <button type="button" class="btn secondary" style="font-size:12px;padding:4px 10px;" id="cancelBatchEnvBtn">取消</button>
             <button type="button" class="btn primary" style="font-size:12px;padding:4px 12px;" id="doBatchImportEnvBtn">解析并保存</button>
@@ -4455,7 +4455,7 @@
         <div id="addCustomEnvBox" class="env-drawer-box" style="display:none;">
           <div style="font-size:12.5px;font-weight:600;margin-bottom:8px;color:var(--text-main);">新增自定义环境变量：</div>
           <div style="display:grid;grid-template-columns:1fr 1.5fr auto;gap:8px;align-items:center;">
-            <input type="text" id="newEnvKeyInput" placeholder="例如：CUSTOM_API_KEY" style="font-size:12.5px;padding:6px 10px;" />
+            <input spellcheck="false" type="text" id="newEnvKeyInput" placeholder="例如：CUSTOM_API_KEY" style="font-size:12.5px;padding:6px 10px;" />
             <input type="password" id="newEnvValInput" placeholder="在此粘贴密钥值 (Value)" style="font-size:12.5px;padding:6px 10px;" />
             <div style="display:flex;gap:6px;">
               <button type="button" class="btn primary" style="font-size:12px;padding:6px 12px;" id="saveNewEnvBtn">保存</button>
@@ -4466,7 +4466,7 @@
 
         <!-- 搜索与筛选 -->
         <div style="margin-bottom:10px;">
-          <input type="text" id="searchEnvInput" placeholder="搜索环境变量名或服务商 (如 DEEPSEEK, OPENAI, Claude, Tavily)..." style="width:100%;font-size:12.5px;padding:6px 12px;" />
+          <input spellcheck="false" type="text" id="searchEnvInput" placeholder="搜索环境变量名或服务商 (如 DEEPSEEK, OPENAI, Claude, Tavily)..." style="width:100%;font-size:12.5px;padding:6px 12px;" />
         </div>
 
         <!-- 环境变量列表容器 -->
@@ -4507,12 +4507,12 @@
 
             <div class="form-group full-width">
               <label>绑定域名 (Domain Name) * <span style="font-size:11px;color:var(--text-muted);font-weight:normal;">(支持多个域名逗号分隔，如：api.mydomain.com, www.mydomain.com)</span></label>
-              <input id="sslDomainInput" placeholder="例如: api.example.com 或 app.mydomain.cn" required />
+              <input spellcheck="false" id="sslDomainInput" placeholder="例如: api.example.com 或 app.mydomain.cn" required />
             </div>
 
             <div class="form-group">
               <label>紧急通知联系邮箱 *</label>
-              <input type="email" id="sslEmailInput" placeholder="例如: admin@example.com" required />
+              <input spellcheck="false" type="email" id="sslEmailInput" placeholder="例如: admin@example.com" required />
             </div>
 
             <div class="form-group">
@@ -4577,12 +4577,12 @@
 
             <div class="form-group">
               <label>外部访问域名 (Server Name) *</label>
-              <input id="proxyDomainInput" placeholder="例如: app.mydomain.com" required />
+              <input spellcheck="false" id="proxyDomainInput" placeholder="例如: app.mydomain.com" required />
             </div>
 
             <div class="form-group">
               <label>后端转发目标 (Proxy Pass) *</label>
-              <input id="proxyTargetInput" placeholder="例如: http://127.0.0.1:3000 或 http://127.0.0.1:9527" value="http://127.0.0.1:3000" required />
+              <input spellcheck="false" id="proxyTargetInput" placeholder="例如: http://127.0.0.1:3000 或 http://127.0.0.1:9527" value="http://127.0.0.1:3000" required />
             </div>
 
             <div class="form-group full-width env-drawer-box">
@@ -4694,12 +4694,12 @@
         <div class="form-grid">
           <div class="form-group">
             <label>机器人唯一 ID *</label>
-            <input name="id" id="botInputId" placeholder="例如：tg-server-1, qq-ops-bot" required />
+            <input spellcheck="false" name="id" id="botInputId" placeholder="例如：tg-server-1, qq-ops-bot" required />
           </div>
 
           <div class="form-group">
             <label>显示名称 *</label>
-            <input name="name" id="botInputName" placeholder="例如：生产服务器 1 号专用 TG 机器人" required />
+            <input spellcheck="false" name="name" id="botInputName" placeholder="例如：生产服务器 1 号专用 TG 机器人" required />
           </div>
 
           <div class="form-group">
@@ -4745,14 +4745,14 @@
             </div>
             <div class="form-group">
               <label style="font-size:11.5px;">管理员 User ID 白名单 (多个用逗号隔开，可选)</label>
-              <input type="text" id="botTgAdminUsers" placeholder="例如：123456789, 987654321" />
+              <input spellcheck="false" type="text" id="botTgAdminUsers" placeholder="例如：123456789, 987654321" />
             </div>
           </div>
 
           <div id="botFields_qq" class="bot-platform-fields" style="display:none;">
             <div class="form-group">
               <label style="font-size:11.5px;">OneBot WebSocket 地址 *</label>
-              <input type="text" id="botQqWsEndpoint" placeholder="ws://127.0.0.1:3001" />
+              <input spellcheck="false" type="text" id="botQqWsEndpoint" placeholder="ws://127.0.0.1:3001" />
             </div>
             <div class="form-group">
               <label style="font-size:11.5px;">Access Token (可选)</label>
@@ -4763,7 +4763,7 @@
           <div id="botFields_feishu" class="bot-platform-fields" style="display:none;">
             <div class="form-group">
               <label style="font-size:11.5px;">飞书 App ID *</label>
-              <input type="text" id="botFeishuAppId" placeholder="cli_a1b2c3d4e5..." />
+              <input spellcheck="false" type="text" id="botFeishuAppId" placeholder="cli_a1b2c3d4e5..." />
             </div>
             <div class="form-group">
               <label style="font-size:11.5px;">飞书 App Secret *</label>
@@ -4774,7 +4774,7 @@
           <div id="botFields_dingtalk" class="bot-platform-fields" style="display:none;">
             <div class="form-group">
               <label style="font-size:11.5px;">钉钉 Webhook 地址 *</label>
-              <input type="text" id="botDingWebhook" placeholder="https://oapi.dingtalk.com/robot/send?access_token=..." />
+              <input spellcheck="false" type="text" id="botDingWebhook" placeholder="https://oapi.dingtalk.com/robot/send?access_token=..." />
             </div>
             <div class="form-group">
               <label style="font-size:11.5px;">加签 Secret (可选)</label>
@@ -4874,12 +4874,12 @@
 
             <div class="form-group">
               <label id="nodeBotTargetLabel">接收目标 (Chat ID / 群号 / 接收人)</label>
-              <input id="nodeBotTargetId" placeholder="例如: -100123456789 (Telegram) 或 群号 (QQ)" />
+              <input spellcheck="false" id="nodeBotTargetId" placeholder="例如: -100123456789 (Telegram) 或 群号 (QQ)" />
             </div>
 
             <div class="form-group full-width">
               <label id="nodeBotWebhookLabel">Webhook 地址 / 机器人 Endpoint *</label>
-              <input id="nodeBotWebhookUrl" placeholder="例如: https://open.feishu.cn/open-apis/bot/v2/hook/xxxx" style="font-family:monospace;font-size:12px;" />
+              <input spellcheck="false" id="nodeBotWebhookUrl" placeholder="例如: https://open.feishu.cn/open-apis/bot/v2/hook/xxxx" style="font-family:monospace;font-size:12px;" />
             </div>
 
             <div class="form-group full-width">
@@ -4981,12 +4981,12 @@
         <div class="form-grid">
           <div class="form-group">
             <label>联系人 / 群聊 ID *</label>
-            <input name="id" id="wxContactInputId" placeholder="例如：wxid_xxx 或 xxx@chatroom" required />
+            <input spellcheck="false" name="id" id="wxContactInputId" placeholder="例如：wxid_xxx 或 xxx@chatroom" required />
           </div>
 
           <div class="form-group">
             <label>备注 / 显示名称 *</label>
-            <input name="name" id="wxContactInputName" placeholder="例如：架构研发群、产品经理张三" required />
+            <input spellcheck="false" name="name" id="wxContactInputName" placeholder="例如：架构研发群、产品经理张三" required />
           </div>
 
           <div class="form-group">
@@ -5023,7 +5023,7 @@
 
           <div class="form-group full-width">
             <label>专属工程工作区 (可选)</label>
-            <input name="workspace" id="wxContactInputWorkspace" placeholder="例如：/home/user/my-project，留空继承通道或智能体默认工作区" />
+            <input spellcheck="false" name="workspace" id="wxContactInputWorkspace" placeholder="例如：/home/user/my-project，留空继承通道或智能体默认工作区" />
           </div>
         </div>
 
@@ -5142,7 +5142,7 @@
           <button type="button" class="btn-close" id="closeGlobalHistoryModalBtn" aria-label="关闭" title="关闭"></button>
         </div>
         <div style="margin-bottom:12px;">
-          <input type="text" id="globalHistorySearchInput" placeholder="输入关键词即时检索全部对话与问答内容..." class="form-control" style="width:100%;font-size:13px;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-input);background:var(--bg-surface);color:var(--text-main);" />
+          <input spellcheck="false" type="text" id="globalHistorySearchInput" placeholder="输入关键词即时检索全部对话与问答内容..." class="form-control" style="width:100%;font-size:13px;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-input);background:var(--bg-surface);color:var(--text-main);" />
         </div>
         <div id="globalHistoryListContainer" style="flex:1;overflow-y:auto;max-height:55vh;display:flex;flex-direction:column;gap:8px;padding-right:4px;">
           <!-- 动态渲染搜索结果 -->
@@ -5389,7 +5389,7 @@
               <span data-i18n="wallpaper.uploadBtn">+ 上传本地图片</span>
             </button>
             <div style="flex:1;min-width:180px;display:flex;gap:6px;">
-              <input type="text" id="wallpaperUrlInput" placeholder="或输入外部图片 URL 地址..." data-i18n-placeholder="wallpaper.urlPlaceholder" style="flex:1;font-size:12px;padding:5px 8px;height:28px;" />
+              <input spellcheck="false" type="text" id="wallpaperUrlInput" placeholder="或输入外部图片 URL 地址..." data-i18n-placeholder="wallpaper.urlPlaceholder" style="flex:1;font-size:12px;padding:5px 8px;height:28px;" />
               <button type="button" class="btn secondary" id="applyWallpaperUrlBtn" style="font-size:11.5px;padding:4px 10px;height:28px;" data-i18n="wallpaper.urlApply">应用</button>
             </div>
           </div>
@@ -5789,11 +5789,11 @@
         <div class="form-grid">
           <div class="form-group full-width">
             <label>密钥备注名称 *</label>
-            <input type="text" id="gatewayKeyInputName" required placeholder="例如：Cursor IDE 专属、同事张三" />
+            <input spellcheck="false" type="text" id="gatewayKeyInputName" required placeholder="例如：Cursor IDE 专属、同事张三" />
           </div>
           <div class="form-group full-width">
             <label>允许访问模型 (可选)</label>
-            <input type="text" id="gatewayKeyInputModels" placeholder="留空表示允许访问全部模型。指定多模型请用英文逗号隔开，例如：qwen2.5-coder:7b, deepseek-chat" />
+            <input spellcheck="false" type="text" id="gatewayKeyInputModels" placeholder="留空表示允许访问全部模型。指定多模型请用英文逗号隔开，例如：qwen2.5-coder:7b, deepseek-chat" />
             <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">留空表示放行平台内所有可用模型。</div>
           </div>
           <div class="form-group full-width">
@@ -5819,19 +5819,19 @@
         <div class="form-grid">
           <div class="form-group">
             <label>客户端请求别名 (Alias) *</label>
-            <input type="text" id="gatewayAliasInputAlias" required placeholder="例如：gpt-4o, claude-3-5-sonnet" />
+            <input spellcheck="false" type="text" id="gatewayAliasInputAlias" required placeholder="例如：gpt-4o, claude-3-5-sonnet" />
           </div>
           <div class="form-group">
             <label>实际映射目标模型 (Target) *</label>
-            <input type="text" id="gatewayAliasInputTarget" required placeholder="例如：qwen2.5-coder:7b, deepseek-chat" />
+            <input spellcheck="false" type="text" id="gatewayAliasInputTarget" required placeholder="例如：qwen2.5-coder:7b, deepseek-chat" />
           </div>
           <div class="form-group full-width">
             <label>故障转移备用模型 (Fallback，可选)</label>
-            <input type="text" id="gatewayAliasInputFallback" placeholder="当目标模型异常或本地 Ollama 未启动时自动调用的模型，如 deepseek/deepseek-chat" />
+            <input spellcheck="false" type="text" id="gatewayAliasInputFallback" placeholder="当目标模型异常或本地 Ollama 未启动时自动调用的模型，如 deepseek/deepseek-chat" />
           </div>
           <div class="form-group full-width">
             <label>规则说明备注 (可选)</label>
-            <input type="text" id="gatewayAliasInputDesc" placeholder="例如：Cursor 编码请求重定向至本地优质模型" />
+            <input spellcheck="false" type="text" id="gatewayAliasInputDesc" placeholder="例如：Cursor 编码请求重定向至本地优质模型" />
           </div>
         </div>
         <div class="modal-actions-row">
@@ -5870,11 +5870,11 @@
           </div>
           <div class="form-group">
             <label>唯一标识 ID (微信号/QQ号/群号) *</label>
-            <input type="text" id="harIdInput" required placeholder="例如：10001 或 wx_user_xxx 或 987654321" />
+            <input spellcheck="false" type="text" id="harIdInput" required placeholder="例如：10001 或 wx_user_xxx 或 987654321" />
           </div>
           <div class="form-group">
             <label>显示备注名称 *</label>
-            <input type="text" id="harNameInput" required placeholder="例如：架构讨论群、张三 (核心客户)" />
+            <input spellcheck="false" type="text" id="harNameInput" required placeholder="例如：架构讨论群、张三 (核心客户)" />
           </div>
           <div class="form-group">
             <label>托管代答模式 (Hosting Mode)</label>
