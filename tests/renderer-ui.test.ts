@@ -428,6 +428,52 @@ describe('Electron renderer UI contracts', () => {
     expect(css).toContain('color-mix(in srgb, var(--border-focus) 20%, transparent)');
   });
 
+  it('collapses the rail into an icon-only bar on narrow screens', () => {
+    const narrowScreen = section(css, '@media (max-width: 768px) {', '@media (max-width: 560px) {');
+    const lastBreakpoint = css.slice(css.indexOf('窄屏（≤768px）优化'));
+
+    // 文字标签在 70px 图标栏里必须隐藏，否则会出现逐字竖排的破碎排版
+    expect(lastBreakpoint).toMatch(/\.global-nav-item span[\s\S]{0,400}display: none !important/);
+    expect(lastBreakpoint).toContain('.new-conversation-btn span');
+    expect(lastBreakpoint).toContain('.sidebar-bottom-panel .nav span');
+    expect(lastBreakpoint).toMatch(/\.global-nav-item \{[^}]*justify-content: center/);
+
+    // 工具条与筛选项在小屏换行，防止下拉框被裁切
+    expect(lastBreakpoint).toMatch(/\.provider-toolbar-filters \{[^}]*flex-wrap: wrap/);
+    expect(lastBreakpoint).toMatch(/\.provider-toolbar-filters select \{[^}]*max-width: none/);
+    expect(narrowScreen.length).toBeGreaterThan(0);
+  });
+
+  it('keeps placeholder text above the 4.5:1 contrast bar in every theme', () => {
+    const hexLuminance = (hex: string): number => {
+      const clean = hex.trim().replace('#', '');
+      const channels = [0, 2, 4].map((i) => parseInt(clean.slice(i, i + 2), 16) / 255);
+      const [r, g, b] = channels.map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)) as [number, number, number];
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const contrast = (a: string, b: string): number => {
+      const [hi, lo] = [hexLuminance(a), hexLuminance(b)].sort((x, y) => y - x) as [number, number];
+      return (hi + 0.05) / (lo + 0.05);
+    };
+
+    const themes = ['light', 'dark', 'cyber', 'aurora', 'sunset', 'vibrant'];
+    themes.forEach((theme) => {
+      const marker = theme === 'light'
+        ? ':root,\n[data-theme="light"] {'
+        : theme === 'dark'
+          ? '[data-theme="dark"],\n[data-theme="custom"][data-custom-base="dark"] {'
+          : `[data-theme="${theme}"] {`;
+      const block = section(css, marker, '}');
+      const read = (token: string): string => {
+        const match = new RegExp(`--${token}:\\s*(#[0-9a-fA-F]{3,8})`).exec(block);
+        if (!match || !match[1]) throw new Error(`${theme} is missing a --${token} hex value`);
+        return match[1];
+      };
+      const ratio = contrast(read('text-placeholder'), read('bg-app'));
+      expect(ratio, `${theme} placeholder contrast ${ratio.toFixed(2)}`).toBeGreaterThanOrEqual(4.5);
+    });
+  });
+
   it('implements macOS frameless titlebar with traffic light avoidance and unified drag header', () => {
     // 1. Electron BrowserWindow config
     expect(main).toContain("titleBarStyle: 'hidden'");

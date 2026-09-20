@@ -67,7 +67,7 @@
   --text-main: #09090b;
   --text-secondary: #3f3f46;
   --text-muted: #52525b;
-  --text-placeholder: #8b8b93;
+  --text-placeholder: #75757e;
 
   /* 唯一强调色：企业级中性黑。
      设计立场：界面不引入任何装饰性色相，只有「选中 / 聚焦 / 主操作」
@@ -179,7 +179,7 @@
   --text-main: #fafafa;
   --text-secondary: #d4d4d8;
   --text-muted: #a1a1aa;
-  --text-placeholder: #71717a;
+  --text-placeholder: #7d7d87;
 
   --primary: #fafafa;
   --primary-hover: #e4e4e7;
@@ -264,7 +264,7 @@
   --text-main: #f8fafc;
   --text-secondary: #e2e8f0;
   --text-muted: #a855f7;
-  --text-placeholder: #7e22ce;
+  --text-placeholder: #9f52e3;
   --primary: #a855f7;
   --primary-hover: #c084fc;
   --primary-active: #9333ea;
@@ -342,7 +342,7 @@
   --text-main: #f0fdf4;
   --text-secondary: #d1fae5;
   --text-muted: #6ee7b7;
-  --text-placeholder: #047857;
+  --text-placeholder: #058e67;
   --primary: #10b981;
   --primary-hover: #34d399;
   --primary-active: #059669;
@@ -420,7 +420,7 @@
   --text-main: #fffbeb;
   --text-secondary: #fef3c7;
   --text-muted: #fcd34d;
-  --text-placeholder: #b45309;
+  --text-placeholder: #c75c0a;
   --primary: #f59e0b;
   --primary-hover: #fbbf24;
   --primary-active: #d97706;
@@ -11488,5 +11488,132 @@ input[type="file"]:focus-visible,
   dialog.modal,
   dialog.modal[open] {
     animation: none !important;
+  }
+}
+
+/* ==========================================================================
+   窄屏（≤768px）优化
+   - 侧栏固定为 70px 图标栏：复用桌面折叠态的图标化规则，避免文字逐字竖排
+   - 恢复工具条/筛选器换行能力，避免下拉框被横向裁切
+   ========================================================================== */
+@media (max-width: 768px) {
+  .new-conversation-box {
+    padding: 10px 8px;
+  }
+
+  .new-conversation-btn {
+    padding: 8px;
+    justify-content: center;
+  }
+
+  .new-conversation-btn span,
+  .global-nav-item span,
+  .projects-header-row,
+  .projects-filter-bar,
+  .projects-tree-section,
+  .sidebar-bottom-panel .nav span,
+  .config-footer-row span {
+    display: none !important;
+  }
+
+  .global-nav-item {
+    justify-content: center;
+    padding: 8px;
+  }
+
+  .global-nav-item svg,
+  .sidebar-bottom-panel .nav svg,
+  .new-conversation-btn .plus-icon {
+    flex: 0 0 auto;
+  }
+
+  .sidebar-bottom-panel {
+    padding: 6px;
+  }
+
+  .sidebar-bottom-panel .nav {
+    justify-content: center;
+    padding: 8px;
+  }
+
+  .provider-toolbar {
+    align-items: stretch;
+    padding: 10px 12px;
+  }
+
+  .provider-toolbar-search {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .provider-toolbar-filters {
+    flex-wrap: wrap;
+  }
+
+  .provider-toolbar-filters select {
+    flex: 1 1 130px;
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* 窄屏下输入岛底部按钮与快捷键提示改为换行排布，避免文字被挤成竖排 */
+@media (max-width: 768px) {
+  .composer-bottom-bar {
+    flex-wrap: wrap;
+    gap: 6px;
+    row-gap: 8px;
+  }
+
+  .composer-bottom-left {
+    flex-wrap: wrap;
+    row-gap: 6px;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .composer-bottom-bar .btn,
+  .composer-bottom-left .btn,
+  .composer-hint-tag,
+  .composer-kbd {
+    white-space: nowrap;
+  }
+
+  /* 软键盘/触屏场景下「Enter 发送 / Shift+Enter 换行」提示无意义且占地 */
+  .composer-hint-tag {
+    display: none;
+  }
+
+  /* 顶栏胶囊群组允许横向滚动，避免最右侧按钮被挤出屏幕 */
+  .chat-header {
+    gap: 6px;
+  }
+
+  .header-left-tools,
+  .header-right-tools {
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .header-left-tools::-webkit-scrollbar,
+  .header-right-tools::-webkit-scrollbar {
+    display: none;
+  }
+
+  .header-capsule-group .capsule-label {
+    max-width: 96px;
+  }
+}
+
+/* 窄屏顶栏：图标按钮禁止折行或压缩，超宽时由容器横向滚动兜底 */
+@media (max-width: 768px) {
+  .chat-header .btn,
+  .chat-header .text-btn,
+  .chat-header .header-capsule,
+  .chat-header .model-switch-pill,
+  .chat-header .tool-capsule {
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 }
