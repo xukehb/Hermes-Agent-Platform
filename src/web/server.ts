@@ -1152,31 +1152,38 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
     return c.html(html);
   });
 
-  app.get('/styles.css', (c) => {
-    const p = join(rendererDir, 'styles.css');
-    if (existsSync(p)) {
-      c.header('Content-Type', 'text/css');
-      return c.body(readFileSync(p, 'utf8'));
-    }
-    return c.text('', 404);
-  });
+  // 渲染层静态资源统一服务。
+  // 早期实现只逐个枚举 styles.css / app.js / qrcode.js，导致新增的 i18n.js 在 Web 端
+  // 始终 404、window.I18N 为 undefined，语言切换按钮静默失效。此处改为按白名单
+  // 后缀统一托管 rendererDir 下的资源，避免同类缺陷再次发生。
+  app.get('/:asset{[A-Za-z0-9._-]+}', (c) => {
+    const asset = c.req.param('asset');
+    const allowed = new Set(['.css', '.js', '.mjs', '.cjs', '.json', '.map', '.svg', '.png', '.jpg', '.ico', '.woff', '.woff2']);
+    const ext = asset.slice(asset.lastIndexOf('.')).toLowerCase();
+    if (!asset.includes('.') || !allowed.has(ext)) return c.text('', 404);
 
-  app.get('/app.js', (c) => {
-    const p = join(rendererDir, 'app.js');
-    if (existsSync(p)) {
-      c.header('Content-Type', 'application/javascript');
-      return c.body(readFileSync(p, 'utf8'));
-    }
-    return c.text('', 404);
-  });
+    const p = join(rendererDir, asset);
+    if (!existsSync(p)) return c.text('', 404);
 
-  app.get('/qrcode.js', (c) => {
-    const p = join(rendererDir, 'qrcode.js');
-    if (existsSync(p)) {
-      c.header('Content-Type', 'application/javascript');
-      return c.body(readFileSync(p, 'utf8'));
-    }
-    return c.text('', 404);
+    const contentTypes: Record<string, string> = {
+      '.css': 'text/css; charset=utf-8',
+      '.js': 'application/javascript; charset=utf-8',
+      '.mjs': 'application/javascript; charset=utf-8',
+      '.cjs': 'application/javascript; charset=utf-8',
+      '.json': 'application/json; charset=utf-8',
+      '.map': 'application/json; charset=utf-8',
+      '.svg': 'image/svg+xml',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.ico': 'image/x-icon',
+      '.woff': 'font/woff',
+      '.woff2': 'font/woff2',
+    };
+
+    const binary = new Set(['.png', '.jpg', '.ico', '.woff', '.woff2']);
+    c.header('Content-Type', contentTypes[ext] || 'application/octet-stream');
+    c.header('Cache-Control', 'no-cache');
+    return c.body(binary.has(ext) ? readFileSync(p) : readFileSync(p, 'utf8'));
   });
 
   return app;

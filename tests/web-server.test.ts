@@ -13,6 +13,40 @@ function tempConfigPath(): { path: string; cleanup: () => void } {
 }
 
 describe('Headless Web Workbench Server', () => {
+  it('serves every renderer asset referenced by index.html', async () => {
+    // Regression: the web workbench used to hardcode routes for styles.css/app.js/qrcode.js
+    // only, so /i18n.js returned 404. window.I18N stayed undefined and every
+    // language-switch control silently did nothing on the web build.
+    const app = createWebApp();
+    const html = await (await app.request('/')).text();
+    const refs = [...html.matchAll(/(?:src|href)="\.\/([^"]+)"/g)].map((m) => m[1]);
+
+    expect(refs).toContain('i18n.js');
+    for (const ref of refs) {
+      const res = await app.request(`/${ref}`);
+      expect(res.status, `renderer asset /${ref} must be served`).toBe(200);
+      expect((await res.text()).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('serves i18n.js as executable JavaScript', async () => {
+    const app = createWebApp();
+    const res = await app.request('/i18n.js');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('javascript');
+    const body = await res.text();
+    expect(body).toContain('TRANSLATIONS');
+    expect(body).toContain('zh-CN');
+  });
+
+  it('does not expose arbitrary files through the renderer static route', async () => {
+    const app = createWebApp();
+    for (const path of ['/config.toml', '/secret.txt', '/package.json.bak', '/..%2fpackage.json']) {
+      const res = await app.request(path);
+      expect(res.status, `${path} must not be served`).not.toBe(200);
+    }
+  });
+
   it('detects local IP addresses', () => {
     const ips = getLocalIpAddresses();
     expect(Array.isArray(ips)).toBe(true);

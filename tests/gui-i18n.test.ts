@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('GUI Internationalization (i18n)', () => {
   let I18N: any;
@@ -28,6 +28,79 @@ describe('GUI Internationalization (i18n)', () => {
       expect(typeof I18N.TRANSLATIONS['zh-CN'][key]).toBe('string');
       expect(I18N.TRANSLATIONS['en-US'][key]).toBeTruthy();
       expect(typeof I18N.TRANSLATIONS['en-US'][key]).toBe('string');
+    }
+  });
+
+  it('defaults to Simplified Chinese even when the browser locale is English', async () => {
+    const g = globalThis as any;
+    const prevStorage = Object.getOwnPropertyDescriptor(g, 'localStorage');
+    Object.defineProperty(g, 'localStorage', {
+      configurable: true,
+      value: { getItem: () => null, setItem: () => {} },
+    });
+
+    try {
+      vi.resetModules();
+      await import('../src/gui/renderer/i18n.js');
+      const fresh = (globalThis as any).I18N;
+      // Regression: the platform used to fall back to en-US for non-Chinese
+      // browser locales, so Chinese users saw an English UI on first launch.
+      expect(String(g.navigator?.language ?? '').startsWith('zh')).toBe(false);
+      expect(fresh.getLanguage()).toBe('zh-CN');
+    } finally {
+      if (prevStorage) Object.defineProperty(g, 'localStorage', prevStorage);
+      else delete g.localStorage;
+      vi.resetModules();
+      await import('../src/gui/renderer/i18n.js');
+      I18N = (globalThis as any).I18N;
+    }
+  });
+
+  it('honours an explicitly saved language preference', async () => {
+    const g = globalThis as any;
+    const prevStorage = Object.getOwnPropertyDescriptor(g, 'localStorage');
+    Object.defineProperty(g, 'localStorage', {
+      configurable: true,
+      value: { getItem: () => 'en-US', setItem: () => {} },
+    });
+
+    try {
+      vi.resetModules();
+      await import('../src/gui/renderer/i18n.js');
+      expect((globalThis as any).I18N.getLanguage()).toBe('en-US');
+    } finally {
+      if (prevStorage) Object.defineProperty(g, 'localStorage', prevStorage);
+      else delete g.localStorage;
+      vi.resetModules();
+      await import('../src/gui/renderer/i18n.js');
+      I18N = (globalThis as any).I18N;
+    }
+  });
+
+  it('preserves icon markup when the localized element wraps child elements', () => {
+    const icon = { nodeType: 1 };
+    const textNode = { nodeType: 3 };
+    const wrapper: any = {
+      getAttribute: (attr: string) => (attr === 'data-i18n' ? 'header.appearance' : null),
+      childNodes: [icon, textNode],
+      textContent: 'x',
+      dataset: {},
+    };
+
+    const originalDoc = (globalThis as any).document;
+    (globalThis as any).document = {
+      documentElement: { lang: 'zh-CN' },
+      querySelectorAll: (selector: string) => (selector === '[data-i18n]' ? [wrapper] : []),
+      getElementById: () => null
+    };
+
+    try {
+      I18N.applyLanguage('en-US');
+      // The wrapper keeps its children (icon preserved) and stashes the label.
+      expect(wrapper.dataset.i18nText).toBe('Appearance');
+      expect(wrapper.textContent).toBe('x');
+    } finally {
+      (globalThis as any).document = originalDoc;
     }
   });
 

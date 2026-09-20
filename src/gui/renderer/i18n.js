@@ -45,6 +45,7 @@
       'header.appearance': '外观',
       'header.moreTooltip': '更多工具与会话管理',
       'header.more': '操作',
+      'header.languageTooltip': '切换界面语言 (Switch Language)',
 
       // 更多操作下拉菜单 (Header More Menu)
       'more.currentAgent': '当前智能体:',
@@ -254,6 +255,7 @@
       'header.appearanceTooltip': 'Adjust Theme Colors & Opacity',
       'header.appearance': 'Appearance',
       'header.moreTooltip': 'More Tools & Conversation Management',
+      'header.languageTooltip': 'Switch Language (切换界面语言)',
       'header.more': 'Actions',
 
       // 更多操作下拉菜单 (Header More Menu)
@@ -449,17 +451,11 @@
           return saved;
         }
       }
-      if (currentLang && TRANSLATIONS[currentLang]) {
-        return currentLang;
-      }
-      if (typeof navigator !== 'undefined' && navigator.language) {
-        if (!navigator.language.toLowerCase().startsWith('zh')) {
-          return 'en-US';
-        }
-      }
     } catch {
       // Fallback if storage access is restricted
     }
+    // 默认语言固定为简体中文。此前会依据 navigator.language 回退到 en-US，
+    // 导致中文用户在英文环境的浏览器里首次打开即被切换为英文界面。
     return currentLang || 'zh-CN';
   }
 
@@ -490,15 +486,25 @@
     if (typeof document.querySelectorAll === 'function') {
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
-        if (key && TRANSLATIONS[lang][key]) {
-          el.textContent = TRANSLATIONS[lang][key];
+        if (!key) return;
+        const text = TRANSLATIONS[lang][key];
+        if (text === undefined) return;
+        // 仅替换叶子节点文本，避免 textContent 覆盖掉内部的图标/子元素结构。
+        const nodes = el.childNodes;
+        const hasElementChild = nodes && typeof nodes.length === 'number'
+          ? Array.prototype.some.call(nodes, n => n && n.nodeType === 1)
+          : false;
+        if (hasElementChild) {
+          if (el.dataset) el.dataset.i18nText = text;
+        } else {
+          el.textContent = text;
         }
       });
 
       // 3. 遍历带有 data-i18n-placeholder 的元素
       document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
         const key = el.getAttribute('data-i18n-placeholder');
-        if (key && TRANSLATIONS[lang][key]) {
+        if (key && TRANSLATIONS[lang][key] !== undefined) {
           el.setAttribute('placeholder', TRANSLATIONS[lang][key]);
         }
       });
@@ -506,8 +512,16 @@
       // 4. 遍历带有 data-i18n-title 的元素
       document.querySelectorAll('[data-i18n-title]').forEach(el => {
         const key = el.getAttribute('data-i18n-title');
-        if (key && TRANSLATIONS[lang][key]) {
+        if (key && TRANSLATIONS[lang][key] !== undefined) {
           el.setAttribute('title', TRANSLATIONS[lang][key]);
+        }
+      });
+
+      // 4b. 遍历带有 data-i18n-aria 的元素 (无障碍标签)
+      document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+        const key = el.getAttribute('data-i18n-aria');
+        if (key && TRANSLATIONS[lang][key] !== undefined) {
+          el.setAttribute('aria-label', TRANSLATIONS[lang][key]);
         }
       });
 
@@ -528,11 +542,18 @@
       }
     }
 
-    // 7. 更新 More 菜单中的语言切换按钮文字
+    // 7. 更新语言切换按钮文字 (More 菜单项 + 顶栏快捷切换按钮)
+    const nextLangLabel = lang === 'zh-CN' ? 'English' : '中文';
     const toggleLangSpan = typeof document.querySelector === 'function' ? document.querySelector('#toggleLangMoreBtn span') : null;
     if (toggleLangSpan) {
-      toggleLangSpan.textContent = lang === 'zh-CN' ? '切换语言 (English)' : '切换语言 (中文)';
+      toggleLangSpan.textContent = lang === 'zh-CN' ? '切换语言 (English)' : 'Switch language (中文)';
     }
+    document.querySelectorAll('[data-lang-current]').forEach(el => {
+      el.textContent = nextLangLabel;
+    });
+    document.querySelectorAll('.lang-option-item').forEach(el => {
+      el.classList.toggle('active', el.getAttribute('data-lang') === lang);
+    });
 
     // 8. 派发自定义全局事件
     if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {

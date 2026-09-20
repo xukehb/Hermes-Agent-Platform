@@ -1973,6 +1973,14 @@ function initOpacityAndGlass() {
     }
   });
 
+  // 顶栏语言快捷切换按钮 (右上角直接切换，无需展开二级菜单)
+  $('headerLangBtn')?.addEventListener('click', () => {
+    if (!window.I18N) return;
+    const next = window.I18N.toggleLanguage();
+    const label = next === 'zh-CN' ? '已切换为简体中文' : 'Switched to English';
+    if (typeof showToast === 'function') showToast(label);
+  });
+
   // 监听语言切换事件，同步状态文本
   window.addEventListener('languagechange', () => {
     const rangeInput = $('opacityRangeInput');
@@ -17734,5 +17742,4 @@ function initChatHostingEvents() {
 initDesktopUpdater();
 initGatewayEvents();
 initChatHostingEvents();
-
 
