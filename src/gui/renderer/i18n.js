@@ -461,6 +461,32 @@
   // 仅在英文模式下生效，中文（默认语言）不产生任何遍历开销。
   // ==========================================================================
   const SOURCE_TEXT_EN = (typeof globalThis !== 'undefined' && globalThis.HAP_SOURCE_TEXT_EN) || {};
+  // 带插值的模板（如「共 3 个文件变更」）无法用静态键命中，改用正则规则匹配。
+  const SOURCE_TEXT_PATTERNS = (typeof globalThis !== 'undefined' && globalThis.HAP_SOURCE_TEXT_PATTERNS) || [];
+
+  // 先精确匹配，再退回模式匹配；两者都未命中则保留原文。
+  function lookupSourceTranslation(source) {
+    const exact = SOURCE_TEXT_EN[source];
+    if (exact !== undefined) return exact;
+    for (let i = 0; i < SOURCE_TEXT_PATTERNS.length; i++) {
+      const rule = SOURCE_TEXT_PATTERNS[i];
+      if (!rule[0].test(source)) continue;
+      let out = source.replace(rule[0], rule[1]);
+      // 捕获到的片段本身若正好是一条词典（例如「... 自愈: 已开启」里的「已开启」），
+      // 说明它是内置文案而非用户数据，这里一并翻译。
+      const groups = source.match(rule[0]);
+      for (let g = 1; g < groups.length; g++) {
+        const fragment = groups[g];
+        if (!fragment) continue;
+        const fragmentEn = SOURCE_TEXT_EN[fragment];
+        if (fragmentEn !== undefined && out.indexOf(fragment) !== -1) {
+          out = out.split(fragment).join(fragmentEn);
+        }
+      }
+      return out;
+    }
+    return undefined;
+  }
 
   // 这些区域承载用户/智能体产出的内容，绝不能被界面词典改写。
   const TRANSLATE_SKIP_SELECTOR = [
@@ -479,10 +505,17 @@
     return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
   }
 
+  // data-i18n-allow 用于在跳过区域内显式放行：像 <code>/chat &lt;内容&gt;</code>
+  // 这类既带命令语法又带中文占位符的界面文案，需要参与翻译。
+  const TRANSLATE_ALLOW_SELECTOR = '[data-i18n-allow]';
+
   function isInsideSkippedRegion(node) {
     let el = node.parentNode;
     while (el && el.nodeType === 1) {
-      if (typeof el.matches === 'function' && el.matches(TRANSLATE_SKIP_SELECTOR)) return true;
+      if (typeof el.matches === 'function') {
+        if (el.matches(TRANSLATE_ALLOW_SELECTOR)) return false;
+        if (el.matches(TRANSLATE_SKIP_SELECTOR)) return true;
+      }
       el = el.parentNode;
     }
     return false;
@@ -502,7 +535,7 @@
     if (!source || !/[\u4e00-\u9fa5]/.test(source)) return;
 
     if (lang === 'en-US') {
-      const translated = SOURCE_TEXT_EN[source];
+      const translated = lookupSourceTranslation(source);
       if (translated === undefined) return;
       if (node.__hapSourceText === undefined) node.__hapSourceText = original;
       const next = withPreservedWhitespace(node.__hapSourceText, translated);
@@ -529,7 +562,7 @@
         const storeKey = `hapSource${attr.replace(/(^|-)([a-z])/g, (_, __, c) => c.toUpperCase())}`;
         const original = el.dataset ? el.dataset[storeKey] : undefined;
         if (lang === 'en-US') {
-          const translated = SOURCE_TEXT_EN[normalizeSourceText(current)];
+          const translated = lookupSourceTranslation(normalizeSourceText(current));
           if (translated === undefined) return;
           if (original === undefined && el.dataset) el.dataset[storeKey] = current;
           el.setAttribute(attr, translated);
@@ -752,6 +785,8 @@
   return {
     TRANSLATIONS,
     SOURCE_TEXT_EN,
+    SOURCE_TEXT_PATTERNS,
+    lookupSourceTranslation,
     STORAGE_KEY,
     getLanguage,
     setLanguage,

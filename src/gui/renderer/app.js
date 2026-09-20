@@ -12531,7 +12531,7 @@ window.selectMcpPlaygroundTool = (toolName) => {
   }
 
   if ($('mcpExecutionStatusTag')) $('mcpExecutionStatusTag').innerHTML = '<span>就绪</span>';
-  if ($('mcpToolOutputPre')) $('mcpToolOutputPre').innerHTML = '<code>（点击【发起测试调用】运行当前工具）</code>';
+  if ($('mcpToolOutputPre')) $('mcpToolOutputPre').innerHTML = '<code data-i18n-allow>（点击【发起测试调用】运行当前工具）</code>';
 };
 
 function renderMcpSchemaTable(schema) {

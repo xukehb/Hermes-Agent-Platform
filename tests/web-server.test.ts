@@ -29,6 +29,18 @@ describe('Headless Web Workbench Server', () => {
     }
   });
 
+  it('serves the source-text dictionary the renderer depends on', async () => {
+    // 英文模式依赖 i18n-source-en.js 提供的 HAP_SOURCE_TEXT_EN / HAP_SOURCE_TEXT_PATTERNS，
+    // 缺失时英文界面会整片保留中文，因此这里单独锁定该资源。
+    const app = createWebApp();
+    const res = await app.request('/i18n-source-en.js');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('javascript');
+    const body = await res.text();
+    expect(body).toContain('HAP_SOURCE_TEXT_EN');
+    expect(body).toContain('HAP_SOURCE_TEXT_PATTERNS');
+  });
+
   it('serves i18n.js as executable JavaScript', async () => {
     const app = createWebApp();
     const res = await app.request('/i18n.js');
