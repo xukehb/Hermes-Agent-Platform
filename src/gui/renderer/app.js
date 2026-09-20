@@ -23,6 +23,11 @@ function esc(val) {
     .replace(/'/g, '&#39;');
 }
 
+// 网关密钥/别名/预设等表格渲染处沿用了 escapeHtml 这一命名。
+// 该函数此前从未定义，导致相关渲染函数直接抛出 ReferenceError、
+// 整个面板无法显示。这里统一为同一实现，保留历史调用点。
+const escapeHtml = esc;
+
 function escJs(val) {
   if (val === undefined || val === null) return '';
   return String(val)
@@ -523,7 +528,7 @@ function renderMarkdownContent(rawText) {
   // 引用块 (Blockquote)
   safe = safe.replace(/^\> (.*$)/gim, '<blockquote class="md-quote">$1</blockquote>');
 
-  // 智能建议快捷回复交互化 (自动将 '你可以直接回复：' 转换为现代点击即发的交互胶囊)
+  // 智能建议快捷回复交互化 (自动将 '你可以直接回复：'转换为现代点击即发的交互胶囊)
   const suggestRegex = /(?:你可以直接回复|你也可以回复|快捷回复|建议回复|建议下一步|你可以通过以下方式继续|you can reply with|suggested replies|suggested next steps)[：:]\s*((?:[\r\n]+(?:\s*[-*]|\s*\d+\.)\s+[^\r\n]+)+)/gi;
   safe = safe.replace(suggestRegex, (match, listBody) => {
     const rawItems = listBody.split(/\r?\n/).map(l => l.trim()).filter(l => /^(?:[-*]|\d+\.)\s+/.test(l));
@@ -966,7 +971,7 @@ window.switchSession = (id) => {
   }
   // 目标会话自愈：若最后一条消息已是 assistant 且无未决流式内容，自动重置生成状态
   const lastMsg = target?.messages?.[target.messages.length - 1];
-  if (target?.isGenerating && lastMsg && lastMsg.role === 'assistant' && !target.liveContent && !target.liveReasoning) {
+  if (target?.isGenerating && lastMsg && lastMsg.role === 'assistant'&& !target.liveContent && !target.liveReasoning) {
     target.isGenerating = false;
     target.generatingPlugin = null;
   }
@@ -1101,7 +1106,7 @@ function renderCurrentSessionMessages() {
 
   // 自动化自愈防护：如果会话标记为生成中，但最后一条消息已是 assistant 完整输出，且没有活跃 liveContent，强制重置
   const lastMsg = session.messages && session.messages.length > 0 ? session.messages[session.messages.length - 1] : null;
-  if (session.isGenerating && lastMsg && lastMsg.role === 'assistant' && !session.liveContent && !session.liveReasoning) {
+  if (session.isGenerating && lastMsg && lastMsg.role === 'assistant'&& !session.liveContent && !session.liveReasoning) {
     session.isGenerating = false;
     session.generatingPlugin = null;
     setChatGenerating(false, session);
@@ -1304,7 +1309,7 @@ function renderCurrentSessionMessages() {
       messagesHtml += `
         <div class="msg-row assistant waiting-row" id="activeStreamingRow">
           <div class="assistant-container">
-            <div class="assistant-avatar" style="background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;"></div>
+            <div class="assistant-avatar" style="background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;"></div>
             <div class="assistant-content" style="max-width:85%;">
               <div class="plugin-executing-card" id="pluginExecCard_${esc(session.id)}">
                 <div class="plugin-executing-header">
@@ -1314,7 +1319,7 @@ function renderCurrentSessionMessages() {
                 </div>
                 ${skill ? `
                   <div class="plugin-executing-skill-banner">
-                    <div class="plugin-executing-skill-title">Stream 正在应用生图技能：${esc(skill.name)}</div>
+                    <div class="plugin-executing-skill-title">正在应用生图技能：${esc(skill.name)}</div>
                     <div class="plugin-executing-skill-desc">${esc(skill.description || '视觉画质增强与风格微调')}</div>
                     <div class="plugin-executing-skill-prompt"> 增强合成提示词：${esc(enhancedPrompt)}</div>
                     ${plugin.explicitModel ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;"> 指定模型：<code>${esc(plugin.explicitModel)}</code></div>` : ''}
@@ -1364,7 +1369,7 @@ function renderCurrentSessionMessages() {
                 </details>
               </div>
               <div id="streamingContentText">
-                ${hasLiveText ? renderMarkdownContent(session.liveContent) + '<span class="streaming-cursor"></span>' : `
+                ${hasLiveText ? renderMarkdownContent(session.liveContent) + '<span class="streaming-cursor"></span>': `
                   <div class="thinking-loading-pill" title="正在深度思考与执行中，若已输出可点击强制清除">
                     <span class="thinking-pulse-dot"></span>
                     <span>正在深度思考与执行中...</span>
@@ -1763,7 +1768,7 @@ function initOpacityAndGlass() {
       if (typeof modal.showModal === 'function') modal.showModal();
       else modal.style.display = 'block';
       setTimeout(() => {
-        document.querySelector('.theme-wallpaper-section')?.scrollIntoView({ behavior: 'smooth' });
+        document.querySelector('.theme-wallpaper-section')?.scrollIntoView({ behavior: 'smooth'});
       }, 50);
     }
   });
@@ -1931,7 +1936,7 @@ function initWallpaperSystem() {
           if (typeof modal.showModal === 'function') modal.showModal();
           else modal.style.display = 'block';
           setTimeout(() => {
-            document.querySelector('.theme-wallpaper-section')?.scrollIntoView({ behavior: 'smooth' });
+            document.querySelector('.theme-wallpaper-section')?.scrollIntoView({ behavior: 'smooth'});
           }, 50);
         }
       } else {
@@ -2176,7 +2181,7 @@ function compressImageForWallpaper(file) {
 initWallpaperSystem();
 
 // ==========================================================================
-// Mini 模式与“小 i”交互弹窗系统 (Mini Mode & Mini 'i' Popover)
+// Mini 模式与“小 i”交互弹窗系统 (Mini Mode & Mini 'i'Popover)
 // ==========================================================================
 
 let isMiniModeActive = false;
@@ -2280,7 +2285,7 @@ function initMiniModeAndMiniI() {
   });
 
   $('miniPromptTextarea')?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter'&& !e.shiftKey) {
       e.preventDefault();
       sendMiniPrompt();
     }
@@ -2292,7 +2297,7 @@ function initMiniModeAndMiniI() {
   });
 
   $('miniStageInput')?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter'&& !e.shiftKey) {
       e.preventDefault();
       sendMiniStagePrompt();
     }
@@ -4103,7 +4108,7 @@ $('gitAuthTestPushBtn')?.addEventListener('click', async () => {
   showToast('正在测试推送到远端仓库...', 'info');
   try {
     const res = await window.hap.gitPush(currentActiveProject);
-    showToast(' 测试推送成功！代码已成功同步至远程仓库！', 'success');
+    showToast('测试推送成功！代码已成功同步至远程仓库！', 'success');
     $('gitAuthModal')?.close();
     await updateGitStatus(currentActiveProject);
     renderGitModalContent();
@@ -5066,7 +5071,7 @@ function renderProviderMetrics() {
   if ($('statTotalModels')) $('statTotalModels').textContent = String(totalModels);
   if ($('statDefaultModel')) {
     if (defaultModel) {
-      $('statDefaultModel').innerHTML = `<span style="color:#d97706;font-weight:700;display:inline-flex;align-items:center;gap:4px;" title="${esc(defaultModel)}"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>${esc(defaultModel)}</span></span>`;
+      $('statDefaultModel').innerHTML = `<span title="${esc(defaultModel)}">${esc(defaultModel)}</span>`;
     } else {
       $('statDefaultModel').textContent = '未设置';
     }
@@ -5202,7 +5207,7 @@ window.testAllProviders = async (clickBtn) => {
 
   if (btn) {
     btn.disabled = false;
-    btn.innerHTML = origText || 'Stream 一键测全部服务商';
+    btn.innerHTML = origText || '一键测全部服务商';
   }
 
   showToast(`服务商连通测试完成：${successCount} 成功，${failCount} 异常`, successCount > 0 ? 'success' : 'warning');
@@ -5309,11 +5314,11 @@ function renderProviders() {
 
           const caps = Array.isArray(m.capabilities) ? m.capabilities : [];
           const capIcons = [];
-          if (caps.includes('tools')) capIcons.push('<span class="cap-pill tools" title="工具调用 (Tools)">Tools Tools</span>');
-          if (caps.includes('vision')) capIcons.push('<span class="cap-pill vision" title="多模态视觉 (Vision)">Vision Vision</span>');
-          if (caps.includes('reasoning')) capIcons.push('<span class="cap-pill reasoning" title="深度思考 (Reasoning)">Reasoning Reasoning</span>');
-          if (caps.includes('streaming')) capIcons.push('<span class="cap-pill streaming" title="流式传输 (Streaming)">Stream Stream</span>');
-          if (caps.includes('longctx')) capIcons.push('<span class="cap-pill longctx" title="长上下文 (LongCtx)">LongCtx LongCtx</span>');
+          if (caps.includes('tools')) capIcons.push('<span class="cap-pill tools" title="工具调用 (Tools)">Tools</span>');
+          if (caps.includes('vision')) capIcons.push('<span class="cap-pill vision" title="多模态视觉 (Vision)">Vision</span>');
+          if (caps.includes('reasoning')) capIcons.push('<span class="cap-pill reasoning" title="深度思考 (Reasoning)">Reasoning</span>');
+          if (caps.includes('streaming')) capIcons.push('<span class="cap-pill streaming" title="流式传输 (Streaming)">Stream</span>');
+          if (caps.includes('longctx')) capIcons.push('<span class="cap-pill longctx" title="长上下文 (LongCtx)">LongCtx</span>');
 
           let latBadge = '';
           if (mLat) {
@@ -5336,7 +5341,7 @@ function renderProviders() {
 
               <div class="chip-actions">
                 ${!isDefault ? `<button type="button" class="chip-action-btn default-btn" title="设为全局默认主模型" onclick="event.stopPropagation(); window.setGlobalDefaultModel('${escJs(m.alias)}')"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-right:2px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>设默认</button>` : ''}
-                <button type="button" class="chip-action-btn test-btn" title="测试模型延迟" onclick="event.stopPropagation(); window.testSingleModel('${escJs(m.alias)}', this)">Stream 测速</button>
+                <button type="button" class="chip-action-btn test-btn" title="测试模型延迟" onclick="event.stopPropagation(); window.testSingleModel('${escJs(m.alias)}', this)">测速</button>
                 <button type="button" class="chip-action-btn edit-btn" title="编辑模型" onclick="event.stopPropagation(); window.openModelDialog('${escJs(m.alias)}')"></button>
                 <button type="button" class="chip-action-btn delete-btn" title="删除模型" onclick="event.stopPropagation(); window.deleteModel('${escJs(m.alias)}')">×</button>
               </div>
@@ -5356,7 +5361,7 @@ function renderProviders() {
                 <span class="badge ${p.healthStatus === 'ok' ? 'success' : p.healthStatus === 'missing_credentials' ? 'warn' : 'neutral'}" style="font-size:11px;">
                   ${p.healthStatus === 'ok' ? '[就绪] 连通就绪' : p.healthStatus === 'missing_credentials' ? '[注意] 缺凭据' : '... 待测试'}
                 </span>
-                ${pLatency ? (pLatency.ok ? `<span class="badge success" style="font-size:11px;">Stream ${pLatency.latencyMs}ms</span>` : `<span class="badge danger" style="font-size:11px;">连通失败</span>`) : ''}
+                ${pLatency ? (pLatency.ok ? `<span class="badge success" style="font-size:11px;">${pLatency.latencyMs}ms</span>` : `<span class="badge danger" style="font-size:11px;">连通失败</span>`) : ''}
               </div>
               <div style="font-size:12px;color:var(--text-secondary);margin-top:5px;word-break:break-all;font-family:var(--font-mono);display:flex;gap:12px;flex-wrap:wrap;">
                 <span><strong>URL:</strong> ${esc(p.baseUrl)}</span>
@@ -5870,11 +5875,11 @@ function renderModels() {
 
     const caps = Array.isArray(m.capabilities) ? m.capabilities : [];
     const capBadges = [];
-    if (caps.includes('tools')) capBadges.push('<span class="cap-pill tools" title="工具调用">Tools Tools</span>');
-    if (caps.includes('vision')) capBadges.push('<span class="cap-pill vision" title="视觉多模态">Vision Vision</span>');
-    if (caps.includes('reasoning')) capBadges.push('<span class="cap-pill reasoning" title="深度思考推理">Reasoning Reasoning</span>');
-    if (caps.includes('streaming')) capBadges.push('<span class="cap-pill streaming" title="流式传输">Stream Stream</span>');
-    if (caps.includes('longctx')) capBadges.push('<span class="cap-pill longctx" title="长上下文">LongCtx LongCtx</span>');
+    if (caps.includes('tools')) capBadges.push('<span class="cap-pill tools" title="工具调用">Tools</span>');
+    if (caps.includes('vision')) capBadges.push('<span class="cap-pill vision" title="视觉多模态">Vision</span>');
+    if (caps.includes('reasoning')) capBadges.push('<span class="cap-pill reasoning" title="深度思考推理">Reasoning</span>');
+    if (caps.includes('streaming')) capBadges.push('<span class="cap-pill streaming" title="流式传输">Stream</span>');
+    if (caps.includes('longctx')) capBadges.push('<span class="cap-pill longctx" title="长上下文">LongCtx</span>');
     const capHtml = capBadges.length > 0 ? capBadges.join(' ') : '<span style="color:var(--text-muted);font-size:11px;">基础对话</span>';
 
     let latBadge = '<span style="color:var(--text-muted);font-size:11px;">未测试</span>';
@@ -6507,7 +6512,7 @@ async function renderWeChatContactsList() {
       <div style="display:flex;flex-direction:column;gap:5px;">
         ${contacts.map((c) => {
           const isRoom = c.isRoom || c.type === 'room';
-          const typeIcon = isRoom ? '👥' : '👤';
+          const typeIcon = '';
           const agentBadge = c.agentId
             ? `<span class="badge" style="background:var(--primary-subtle);color:var(--primary);font-size:10px;padding:1px 5px;">${esc(c.agentId)}</span>`
             : `<span class="badge neutral" style="font-size:10px;padding:1px 5px;">默认智能体</span>`;
@@ -7055,7 +7060,7 @@ const PRESET_TEMPLATES = {
   siliconflow: { name: 'SiliconFlow 硅基流动', baseUrl: 'https://api.siliconflow.cn/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'deepseek-ai/DeepSeek-V3', category: '国内主流大模型' },
   moonshot: { name: 'Moonshot Kimi 月之暗面', baseUrl: 'https://api.moonshot.cn/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'moonshot-v1-8k', category: '国内主流大模型' },
   zhipu: { name: '智谱 GLM', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', wireApi: 'chat', protocol: 'openai-tools', testModel: 'glm-4-flash', category: '国内主流大模型' },
-  minimax: { name: 'MiniMax 海螺', baseUrl: 'https://api.minimax.chat/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'abab6.5s-chat', category: '国内主流大模型' },
+  minimax: { name: 'MiniMax 海螺', baseUrl: 'https://api.minimax.chat/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'abab6.5s-chat', category: '国内主流大模型'},
 
   // 国际前沿大模型
   openai: { name: 'OpenAI 官方', baseUrl: 'https://api.openai.com/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'gpt-4o-mini', category: '国际前沿大模型' },
@@ -7063,7 +7068,7 @@ const PRESET_TEMPLATES = {
   openrouter: { name: 'OpenRouter 全球聚合', baseUrl: 'https://openrouter.ai/api/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'openai/gpt-4o-mini', category: '国际前沿大模型' },
   groq: { name: 'Groq 极速推理', baseUrl: 'https://api.groq.com/openai/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'llama-3.3-70b-versatile', category: '国际前沿大模型' },
   mistral: { name: 'Mistral AI', baseUrl: 'https://api.mistral.ai/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'mistral-small-latest', category: '国际前沿大模型' },
-  xai: { name: 'xAI Grok', baseUrl: 'https://api.x.ai/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'grok-beta', category: '国际前沿大模型' },
+  xai: { name: 'xAI Grok', baseUrl: 'https://api.x.ai/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'grok-beta', category: '国际前沿大模型'},
 
   // 本地与私有化部署
   ollama: { name: 'Ollama 本地运行', baseUrl: 'http://127.0.0.1:11434/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'llama3:latest', category: '本地与私有化部署' },
@@ -7365,7 +7370,7 @@ window.openModelDialog = (alias) => {
   const testBtn = $('testDialogModelBtn');
   if (testBtn) {
     testBtn.disabled = false;
-    testBtn.innerHTML = 'Stream 测试模型连通性与测速';
+    testBtn.innerHTML = '测试模型连通性与测速';
     testBtn.onclick = async () => {
       const a = $('modelInputAlias')?.value.trim();
       if (!a) {
@@ -7386,7 +7391,7 @@ window.openModelDialog = (alias) => {
         showToast(`测试失败：${err.message}`, 'error');
       } finally {
         testBtn.disabled = false;
-        testBtn.innerHTML = 'Stream 测试模型连通性与测速';
+        testBtn.innerHTML = '测试模型连通性与测速';
       }
     };
   }
@@ -7595,7 +7600,7 @@ window.onModelHubSearch = (keyword) => {
 window.refreshModelHub = async () => {
   const titleEl = $('hubHwTitle');
   const adviceEl = $('hubHwAdvice');
-  if (titleEl) titleEl.textContent = '🖥️ 正在探测本机硬件与引擎状态...';
+  if (titleEl) titleEl.textContent = '正在探测本机硬件与引擎状态...';
 
   try {
     const [ollamaStatus, profile] = await Promise.all([
@@ -7606,7 +7611,7 @@ window.refreshModelHub = async () => {
     hubOllamaStatus = ollamaStatus;
     hubCurrentProfile = profile;
 
-    if (titleEl) titleEl.textContent = `🖥️ ${profile.profileTitle}`;
+    if (titleEl) titleEl.textContent = `${profile.profileTitle}`;
     if (adviceEl) adviceEl.textContent = profile.profileAdvice;
     if ($('chipRam')) $('chipRam').textContent = `物理内存: ${profile.totalRamGb} GB (可用 ${profile.freeRamGb} GB)`;
     if ($('chipGpu')) {
@@ -7636,7 +7641,7 @@ window.refreshModelHub = async () => {
       if (sub) sub.textContent = '点击右侧按钮可一键在后台拉起服务';
       if (actions) {
         actions.innerHTML = `
-          <button type="button" class="btn primary" onclick="window.startOllamaFromHub()" style="font-size:11.5px;padding:4px 12px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);">一键启动服务</button>
+          <button type="button" class="btn primary" onclick="window.startOllamaFromHub()" style="font-size:11.5px;padding:4px 12px;background:var(--success);">一键启动服务</button>
           <button type="button" class="btn secondary" onclick="window.refreshModelHub()" style="font-size:11.5px;padding:4px 10px;">刷新</button>
         `;
       }
@@ -7666,7 +7671,7 @@ window.refreshModelHub = async () => {
 
     renderModelHubCards();
   } catch (err) {
-    if (titleEl) titleEl.textContent = '⚠️ 探测硬件状态失败';
+    if (titleEl) titleEl.textContent = '探测硬件状态失败';
     if (adviceEl) adviceEl.textContent = err.message;
   }
 };
@@ -7725,19 +7730,19 @@ function renderModelHubCards() {
       `;
     } else if (isInstalled) {
       actionButtonHtml = `
-        <span class="badge success" style="font-size:11.5px;padding:4px 8px;">✓ 本地已就绪</span>
+        <span class="badge success" style="font-size:11.5px;padding:4px 8px;">本地已就绪</span>
         <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 9px;" onclick="window.setDefaultHubModel('${escJs(m.id)}')">设为主模型</button>
         <button type="button" class="btn primary" style="font-size:11.5px;padding:4px 10px;" onclick="window.testHubModelChat('${escJs(m.id)}')">去对话</button>
-        <button type="button" class="btn danger" style="font-size:11px;padding:4px 7px;" title="从磁盘删除模型" onclick="window.deleteHubModel('${escJs(m.id)}')">🗑️</button>
+        <button type="button" class="btn danger" style="font-size:11px;padding:4px 7px;" title="从磁盘删除模型" onclick="window.deleteHubModel('${escJs(m.id)}')"></button>
       `;
     } else {
       if (e.tier === 'insufficient') {
         actionButtonHtml = `
-          <button type="button" class="btn danger" style="font-size:11.5px;padding:4px 12px;opacity:0.9;" onclick="window.pullHubModel('${escJs(m.id)}', true)">⚠️ 硬件不足，仍要安装</button>
+          <button type="button" class="btn danger" style="font-size:11.5px;padding:4px 12px;opacity:0.9;" onclick="window.pullHubModel('${escJs(m.id)}', true)">硬件不足，仍要安装</button>
         `;
       } else if (e.tier === 'best') {
         actionButtonHtml = `
-          <button type="button" class="btn primary" style="font-size:12px;padding:5px 14px;background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);color:#fff;border:none;box-shadow:0 2px 6px rgba(245,158,11,0.3);" onclick="window.pullHubModel('${escJs(m.id)}')">🌟 一键极速部署</button>
+          <button type="button" class="btn primary" style="font-size:12px;padding:5px 14px;background:var(--warning);color:#fff;border:none;box-shadow:0 2px 6px rgba(245,158,11,0.3);" onclick="window.pullHubModel('${escJs(m.id)}')">一键极速部署</button>
         `;
       } else {
         actionButtonHtml = `
@@ -7902,7 +7907,7 @@ window.deleteHubModel = async (modelTag) => {
 };
 
 window.setDefaultHubModel = async (modelTag) => {
-  const alias = 'ollama/' + modelTag;
+  const alias = 'ollama/'+ modelTag;
   try {
     await window.hap.setDefaultModel(alias);
     showToast(`已将 ${modelTag} 设为系统默认主模型`, 'success');
@@ -8510,7 +8515,7 @@ function renderActivePluginTray() {
   }
   tray.style.display = 'flex';
   const skillNameTag = activeComposerPlugin.skill
-    ? `<span class="plugin-badge-tag" style="background:rgba(2,132,199,0.12);color:var(--primary);">Stream ${esc(activeComposerPlugin.skill.name)}</span>`
+    ? `<span class="plugin-badge-tag">${esc(activeComposerPlugin.skill.name)}</span>`
     : '';
   tray.innerHTML = `
     <div class="composer-active-plugin" id="composerActivePluginBadge">
@@ -8518,7 +8523,7 @@ function renderActivePluginTray() {
       <span class="plugin-badge-title">${esc(activeComposerPlugin.name)}</span>
       <span class="plugin-badge-tag">${esc(activeComposerPlugin.badge || '插件')}</span>
       ${skillNameTag}
-      ${activeComposerPlugin.id === 'image-gen' ? `<button type="button" class="plugin-badge-btn" id="activePluginConfigBtn" title="配置生图服务商、模型与技能"> 设置</button>` : ''}
+      ${activeComposerPlugin.id === 'image-gen'? `<button type="button" class="plugin-badge-btn" id="activePluginConfigBtn" title="配置生图服务商、模型与技能"> 设置</button>` : ''}
       <button type="button" class="plugin-badge-btn plugin-badge-close" id="activePluginRemoveBtn" title="移除当前插件引用"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
   `;
@@ -8888,7 +8893,7 @@ async function executeImageGenPlugin(promptText, targetSessionId, explicitSkill,
         renderCurrentSessionMessages();
         setChatGenerating(false, finishSession);
       }
-      showToast(' AI 图像生成成功！', 'success');
+      showToast('AI 图像生成成功！', 'success');
     } catch (err) {
       console.error('生图成功后的界面更新失败:', err);
       showToast('图像已生成，但界面更新不完整，请切换会话后重试', 'warning');
@@ -9943,7 +9948,7 @@ $('remoteExecForm')?.addEventListener('submit', async (e) => {
 
     let fullOutput = '';
     if (res.stdout) fullOutput += res.stdout;
-    if (res.stderr) fullOutput += (fullOutput ? '\n' : '') + '[stderr] ' + res.stderr;
+    if (res.stderr) fullOutput += (fullOutput ? '\n' : '') + '[stderr] '+ res.stderr;
     if (!fullOutput) fullOutput = `(命令已执行完毕，退出码: ${res.code})`;
 
     outEl.textContent = `[${server ? server.name : targetId}]$ ${command}\n\n${fullOutput}\n\n[Process exited with code ${res.code} in ${duration}ms]`;
@@ -10653,7 +10658,7 @@ async function requestRemoteProcessKill(serverId, proc, signal) {
 }
 
 function parseProcessDisplay(rawPath) {
-  if (!rawPath || typeof rawPath !== 'string') return { title: '未知进程', fullPath: '' };
+  if (!rawPath || typeof rawPath !== 'string') return { title: '未知进程', fullPath: ''};
   const trimmed = rawPath.trim();
   const parts = trimmed.split(/[\/\\]/);
   const exe = parts[parts.length - 1] || trimmed;
@@ -10687,7 +10692,7 @@ window.requestLocalProcessKill = async (pid, name, memoryFormatted) => {
   if (!confirmed) return;
 
   try {
-    const res = await window.hap.killServerProcess({ serverId: 'local', pid: safePid, signal: 'KILL' });
+    const res = await window.hap.killServerProcess({ serverId: 'local', pid: safePid, signal: 'KILL'});
     if (res && res.killed) {
       showToast(` 已成功结束进程 ${name} (PID: ${safePid})`, 'success');
       if (typeof window.refreshHostView === 'function') {
@@ -10801,20 +10806,14 @@ function renderLocalHostView(info) {
           const isSelf = selfPid && p.pid === selfPid;
 
           // Rank styling with clear visual hierarchy
-          let rankBadge = '';
-          if (idx === 0) {
-            rankBadge = '<span style="font-size:11px; font-weight:700; color:#b45309; background:#fef3c7; border:1px solid #fcd34d; border-radius:4px; min-width:24px; height:20px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">#1</span>';
-          } else if (idx === 1) {
-            rankBadge = '<span style="font-size:11px; font-weight:700; color:var(--text-secondary); background:var(--bg-subtle); border:1px solid var(--border-default); border-radius:4px; min-width:24px; height:20px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">#2</span>';
-          } else if (idx === 2) {
-            rankBadge = '<span style="font-size:11px; font-weight:700; color:#c2410c; background:rgba(234, 88, 12, 0.12); border:1px solid rgba(234, 88, 12, 0.3); border-radius:4px; min-width:24px; height:20px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">#3</span>';
-          } else {
-            rankBadge = `<span style="font-size:11px; font-weight:600; color:var(--text-muted); background:var(--bg-subtle); border:1px solid var(--border-default); border-radius:4px; min-width:24px; height:20px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">#${idx + 1}</span>`;
-          }
+          const rankTone = idx === 0
+            ? 'color:var(--text-main); background:var(--bg-active); border-color:var(--border-default); font-weight:700;'
+            : 'color:var(--text-muted); background:var(--bg-subtle); border-color:var(--border-default); font-weight:600;';
+          const rankBadge = `<span style="font-size:11px; ${rankTone} border:1px solid; border-radius:var(--radius-sm); min-width:24px; height:20px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">#${idx + 1}</span>`;
 
           const actionBtn = isSelf
             ? '<span class="badge neutral" style="font-size:10.5px; padding:2px 8px; flex-shrink:0;" title="当前平台控制台运行主进程">当前平台</span>'
-            : `<button type="button" class="btn danger local-process-kill-btn" onclick="window.requestLocalProcessKill(${p.pid}, '${escJs(parsed.title)}', '${escJs(p.memoryFormatted)}')" style="font-size:11px; padding:3px 9px; font-weight:600; display:inline-flex; align-items:center; gap:3px; flex-shrink:0; cursor:pointer;" title="一键强制结束此进程 (PID: ${p.pid})">Stream Kill</button>`;
+            : `<button type="button" class="btn danger local-process-kill-btn" onclick="window.requestLocalProcessKill(${p.pid}, '${escJs(parsed.title)}', '${escJs(p.memoryFormatted)}')" style="font-size:11px; padding:3px 9px; font-weight:600; display:inline-flex; align-items:center; gap:3px; flex-shrink:0; cursor:pointer;" title="一键强制结束此进程 (PID: ${p.pid})">结束进程</button>`;
 
           return `
             <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-surface); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-default); gap:12px; box-shadow:var(--shadow-sm);">
@@ -10825,13 +10824,11 @@ function renderLocalHostView(info) {
                     <strong style="color:var(--text-main); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${esc(parsed.fullPath)}">${esc(parsed.title)}</strong>
                     <span style="color:var(--text-secondary); font-size:10.5px; font-family:var(--font-mono); background:var(--bg-subtle); padding:1px 5px; border-radius:3px; flex-shrink:0; border:1px solid var(--border-default);">PID ${p.pid}</span>
                   </div>
-                  <div style="font-size:11px; color:#94a3b8; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:2px;" title="${esc(parsed.fullPath)}">
-                    ${esc(parsed.fullPath)}
-                  </div>
+                  <div class="process-path" title="${esc(parsed.fullPath)}">${esc(parsed.fullPath)}</div>
                 </div>
               </div>
               <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-                <span style="font-weight:700; font-family:var(--font-mono); color:#1d4ed8; background:#eff6ff; border:1px solid #bfdbfe; padding:2px 8px; border-radius:4px; font-size:11.5px; white-space:nowrap;">
+                <span style="font-weight:600; font-family:var(--font-mono); color:var(--text-main); background:var(--bg-subtle); border:1px solid var(--border-default); padding:2px 8px; border-radius:var(--radius-sm); font-size:11.5px; white-space:nowrap; font-variant-numeric:tabular-nums;">
                   ${esc(p.memoryFormatted)}
                 </span>
                 ${actionBtn}
@@ -10964,7 +10961,7 @@ function formatDiskRoots(roots) {
 function getDiskScanContext(report = {}) {
   const target = report.target || currentDiskScanTarget || activePanoramaTarget || 'local';
   const isRemote = target !== 'local' && target !== 'host';
-  const platform = normalizeDiskPlatform(report.platform || (isRemote ? '' : navigator.platform));
+  const platform = normalizeDiskPlatform(report.platform || (isRemote ? '': navigator.platform));
   const platformLabel = report.platformLabel || getDiskPlatformLabel(platform, isRemote);
   const roots = Array.isArray(report.scannedRoots) && report.scannedRoots.length > 0
     ? report.scannedRoots
@@ -11225,7 +11222,7 @@ async function handleCleanDisk(type) {
   try {
     showToast('正在执行磁盘安全清理...', 'info');
     const result = await window.hap.executeDiskCleanup({
-      server: targetId === 'local' ? undefined : targetId,
+      server: targetId === 'local'? undefined : targetId,
       itemIds: targetIds,
     });
     showToast(`清理成功！已释放 ${fmtHostBytes(result.cleanedBytes)} 空间！`, 'success');
@@ -11251,7 +11248,7 @@ window.cleanSingleDiskItem = async (itemId) => {
   try {
     showToast(`正在清理 ${item.name}...`, 'info');
     const result = await window.hap.executeDiskCleanup({
-      server: targetId === 'local' ? undefined : targetId,
+      server: targetId === 'local'? undefined : targetId,
       itemIds: [itemId],
     });
     showToast(`清理完成！已释放 ${fmtHostBytes(result.cleanedBytes)}`, 'success');
@@ -11660,7 +11657,7 @@ window.switchSettingsTab = (tabId) => {
 };
 
 window.switchSettingsSubTab = (subTab) => {
-  const normSubTab = (subTab === 'telegram') ? 'tg' : subTab;
+  const normSubTab = (subTab === 'telegram') ? 'tg': subTab;
   
   // 更新子选项卡按钮高亮
   document.querySelectorAll('.channel-subtab-btn').forEach(btn => {
@@ -12325,7 +12322,7 @@ function renderMarket(query = '', tab = activeMarketTab) {
     if (tab === 'mcp' && item.kind !== 'mcp') return false;
     if (tab === 'skill' && item.kind !== 'skill') return false;
     if (tab === 'builtin' && item.kind !== 'builtin') return false;
-    if (tab === 'active' && !item.enabled) return false;
+    if (tab === 'active'&& !item.enabled) return false;
 
     // 关键词搜索过滤
     if (!q) return true;
@@ -13063,7 +13060,7 @@ window.saveSingleEnvVar = async (key) => {
 
 window.clearSingleEnvVar = async (key) => {
   try {
-    await window.hap.saveEnvVar({ key, value: '' });
+    await window.hap.saveEnvVar({ key, value: ''});
     showToast(`环境变量 [${key}] 已清除`, 'info');
     await renderEnvManagerModal();
     await refresh();
@@ -13323,7 +13320,7 @@ function initAiImageStudio() {
       if (!input.value.trim()) {
         input.value = promptText;
       } else {
-        input.value = input.value.trim() + '，' + promptText;
+        input.value = input.value.trim() + '，'+ promptText;
       }
       input.focus();
     });
@@ -13682,7 +13679,7 @@ initImportSkillModal();
 // 计算节点全景监控控制器 (Universal Node & Server Panorama Controller)
 // ==========================================================================
 
-let activePanoramaTarget = 'local'; // 'local' 或 serverId
+let activePanoramaTarget = 'local'; // 'local'或 serverId
 
 window.openNodePanorama = (targetId) => {
   activePanoramaTarget = targetId || 'local';
@@ -13745,7 +13742,7 @@ window.refreshHostView = async () => {
       : botCfg?.channel === 'qq' ? 'QQ OneBot 机器人'
       : botCfg?.webhookUrl ? '自定义 Webhook' : '未绑定通道';
 
-    $('panoramaBotTitle').textContent = `[${isLocal ? '本机宿主' : (s?.name || targetId)}] 专属智能体与告警机器人`;
+    $('panoramaBotTitle').textContent = `[${isLocal ? '本机宿主': (s?.name || targetId)}] 专属智能体与告警机器人`;
     if ($('panoramaBotSub')) {
       $('panoramaBotSub').textContent = `负责智能体: ${agentId} (智能运维) | 告警通道: ${channelName} | 自动自愈: ${botCfg?.autoHealing !== false ? '已开启' : '关闭'}`;
     }
@@ -15794,7 +15791,7 @@ window.renderGatewayLogs = async () => {
             <th style="padding:8px 10px;">状态</th>
             <th style="padding:8px 10px;">客户端 IP</th>
             <th style="padding:8px 10px;">所用 Key</th>
-            <th style="padding:8px 10px;">请求模型 ➔ 映射模型</th>
+            <th style="padding:8px 10px;">请求模型 映射模型</th>
             <th style="padding:8px 10px;">耗时</th>
             <th style="padding:8px 10px;">Tokens</th>
             <th style="padding:8px 10px;">流式</th>
@@ -15811,7 +15808,7 @@ window.renderGatewayLogs = async () => {
 
       const modelMapping = log.requestedModel === log.targetModel
         ? `<span style="font-family:var(--font-mono);">${escapeHtml(log.requestedModel)}</span>`
-        : `<span style="font-family:var(--font-mono);">${escapeHtml(log.requestedModel)}</span> <span style="color:var(--text-muted);">➔</span> <span style="font-family:var(--font-mono);color:#10b981;">${escapeHtml(log.targetModel)}</span>`;
+        : `<span style="font-family:var(--font-mono);">${escapeHtml(log.requestedModel)}</span> <span style="color:var(--text-muted);"></span> <span style="font-family:var(--font-mono);color:#10b981;">${escapeHtml(log.targetModel)}</span>`;
 
       html += `
         <tr style="border-bottom:1px solid var(--border-default);">
@@ -16018,7 +16015,7 @@ async function loadDefaultHostingPolicy() {
         const emoji = a.emoji || a.identity?.emoji ? `${a.emoji || a.identity?.emoji} ` : '';
         return `<option value="${esc(a.id)}">${emoji}${esc(formatAgentLabel(a))}</option>`;
       }).join('');
-      agentSelect.innerHTML = opts || '<option value="xx">👧 小莹 (微信托管助手)</option><option value="coder">默认分身 (coder)</option>';
+      agentSelect.innerHTML = opts || '<option value="xx">小莹 (微信托管助手)</option><option value="coder">默认分身 (coder)</option>';
       if (policy.agentId && agents.some((a) => a.id === policy.agentId)) {
         agentSelect.value = policy.agentId;
       } else if (agents.some((a) => a.id === 'xx')) {
@@ -16172,9 +16169,9 @@ async function renderHostingMemories() {
       if (m.agentId === currentAgentId) {
         geneBadge = `<span class="badge" style="background:#fdf2f8;color:#be185d;border:1px solid #fbcfe8;font-size:9.5px;font-weight:600;">${curAgentEmoji} ${esc(curAgentName)}专属</span>`;
       } else if (!m.agentId) {
-        geneBadge = '<span class="badge neutral" style="font-size:9.5px;">🌐 全局通用</span>';
+        geneBadge = '<span class="badge neutral" style="font-size:9.5px;">全局通用</span>';
       } else {
-        geneBadge = `<span class="badge" style="background:#f1f5f9;color:#475569;font-size:9.5px;">💻 ${esc(m.agentId)}</span>`;
+        geneBadge = `<span class="badge" style="background:#f1f5f9;color:#475569;font-size:9.5px;">${esc(m.agentId)}</span>`;
       }
 
       return `
@@ -16202,7 +16199,7 @@ async function renderHostingMemories() {
 
 function renderFeedItemHtml(item) {
   if (typeof item === 'string') {
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit'});
     return `
       <div class="feed-item info">
         <div class="feed-item-header">
@@ -16231,9 +16228,9 @@ function renderFeedItemHtml(item) {
   const tagLabel = item.tag || conf.label;
 
   const metaBadges = [];
-  if (item.model) metaBadges.push(`<span class="feed-meta-badge">🧠 ${esc(item.model)}</span>`);
-  if (item.agentName || item.agentId) metaBadges.push(`<span class="feed-meta-badge">👧 ${esc(item.agentName || item.agentId)}</span>`);
-  if (item.elapsedMs) metaBadges.push(`<span class="feed-meta-badge">⚡ ${(item.elapsedMs / 1000).toFixed(1)}s</span>`);
+  if (item.model) metaBadges.push(`<span class="feed-meta-badge">${esc(item.model)}</span>`);
+  if (item.agentName || item.agentId) metaBadges.push(`<span class="feed-meta-badge">${esc(item.agentName || item.agentId)}</span>`);
+  if (item.elapsedMs) metaBadges.push(`<span class="feed-meta-badge">${(item.elapsedMs / 1000).toFixed(1)}s</span>`);
 
   const detailHtml = item.detail ? `<div class="feed-detail">${esc(item.detail)}</div>` : '';
 
@@ -16369,7 +16366,7 @@ async function renderHostingOverview() {
 
     if (wxModeBadge) {
       wxModeBadge.className = isVision ? 'badge info' : 'badge neutral';
-      wxModeBadge.textContent = isVision ? '💻 桌面免扫码代管' : '📱 手机扫码登录';
+      wxModeBadge.textContent = isVision ? '桌面免扫码代管' : '手机扫码登录';
     }
 
     if (wxModeDesc) {
@@ -16383,7 +16380,7 @@ async function renderHostingOverview() {
     }
 
     if (wxSwitchModeBtn) {
-      wxSwitchModeBtn.textContent = isVision ? '🔄 切换扫码登录' : '🔄 切换桌面免扫码';
+      wxSwitchModeBtn.textContent = isVision ? '切换扫码登录' : '切换桌面免扫码';
       wxSwitchModeBtn.title = isVision ? '点击切换为手机微信扫码登录模式' : '点击切换为桌面微信免扫码视觉代管模式（防封号）';
       wxSwitchModeBtn.onclick = async () => {
         const nextPuppet = isVision ? 'ilink' : 'desktop_vision';
@@ -16439,7 +16436,7 @@ async function renderHostingOverview() {
         wxBadge.className = 'badge neutral';
         wxBadge.textContent = '未启动';
         wxUser.textContent = isVision ? '就绪，点击启动代管' : '点击启动微信扫码';
-        wxActionBtn.textContent = isVision ? '启动代管' : '📲 扫码登录';
+        wxActionBtn.textContent = isVision ? '启动代管' : '扫码登录';
         wxActionBtn.className = 'btn primary action-main-btn';
         wxActionBtn.onclick = async () => {
           try {
@@ -16504,7 +16501,7 @@ window.openVisionTestModal = async () => {
         container.innerHTML = `
           <div style="padding:16px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;color:#991b1b;display:flex;flex-direction:column;gap:8px;">
             <div style="font-weight:700;display:flex;align-items:center;gap:6px;">
-              <span>⚠️ 识屏失败</span>
+              <span>识屏失败</span>
             </div>
             <div style="font-size:12.5px;line-height:1.5;">${esc(res.error || '未知错误')}</div>
             <div style="font-size:11.5px;color:#b91c1c;margin-top:4px;">
@@ -16520,7 +16517,7 @@ window.openVisionTestModal = async () => {
         container.innerHTML = `
           <div style="padding:16px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;color:#991b1b;display:flex;flex-direction:column;gap:8px;">
             <div style="font-weight:700;display:flex;align-items:center;gap:6px;">
-              <span>⚠️ 识屏分析遇到错误</span>
+              <span>识屏分析遇到错误</span>
             </div>
             <div style="font-size:12.5px;line-height:1.5;">${esc(p.error)}</div>
             <div style="font-size:11.5px;color:#b91c1c;margin-top:4px;">
@@ -16565,7 +16562,7 @@ window.openVisionTestModal = async () => {
       if (!p?.chatTarget || !hasText) {
         hintCallout = `
           <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--text-main);line-height:1.45;">
-            💡 <strong>为什么显示待机无需回复？</strong><br/>
+            <strong>为什么显示待机无需回复？</strong><br/>
             检测到当前微信处于<strong>主界面空白状态</strong>（右侧大灰标，尚未点击选中任何好友或群聊对话）。<br/>
             <strong>操作建议：</strong>请在桌面微信中点击选中任意一个好友会话，然后点击下方【重新识屏检测】即可看到实时消息抓取与代答判断。
           </div>
@@ -16599,7 +16596,7 @@ window.openVisionTestModal = async () => {
           <div style="padding:14px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;flex-direction:column;gap:10px;">
             <div style="display:flex;align-items:center;justify-content:space-between;">
               <div style="font-size:12.5px;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:6px;">
-                <span>💬 活跃聊天对象：</span>
+                <span>活跃聊天对象：</span>
                 <span style="color:var(--primary, #2563eb);">${esc(p?.chatTarget || '（未锁定具体会话）')}</span>
                 ${p?.isGroup ? '<span class="badge info" style="font-size:10px;">群聊</span>' : ''}
               </div>
@@ -16616,7 +16613,7 @@ window.openVisionTestModal = async () => {
               </div>
             </div>
 
-            ${p?.summary ? `<div style="font-size:12px;color:var(--text-muted);">💡 <strong>AI 场景分析：</strong>${esc(p.summary)}</div>` : ''}
+            ${p?.summary ? `<div style="font-size:12px;color:var(--text-muted);"><strong>AI 场景分析：</strong>${esc(p.summary)}</div>` : ''}
           </div>
 
           ${imgHtml}
@@ -16723,7 +16720,7 @@ async function renderHostingContacts() {
         statusBadge = `<span class="badge warning" style="font-size:9.5px;padding:1px 4px;">人工中</span>`;
       } else if (c.hostingMode === 'draft') {
         statusBadge = `<span class="badge" style="font-size:9.5px;padding:1px 4px;background:#e0f2fe;color:#0284c7;">草稿</span>`;
-      } else if (c.hostingMode === 'off' || c.autoReply === false) {
+      } else if (c.hostingMode === 'off'|| c.autoReply === false) {
         statusBadge = `<span class="badge neutral" style="font-size:9.5px;padding:1px 4px;">关闭</span>`;
       } else {
         statusBadge = `<span class="badge success" style="font-size:9.5px;padding:1px 4px;">全自动</span>`;
@@ -16774,14 +16771,14 @@ function renderHostingGuideMarkup() {
   return `
     <div class="hosting-empty-guide-wrap">
       <div class="hosting-guide-header">
-        <div style="font-size:36px;margin-bottom:6px;">🤖💬</div>
+        <div style="font-size:36px;margin-bottom:6px;"></div>
         <h3 style="font-size:16px;font-weight:700;margin:0 0 4px 0;color:var(--text-main);">微信与 QQ 全量自动托管就绪</h3>
         <p style="font-size:12.5px;color:var(--text-muted);margin:0;max-width:480px;line-height:1.5;">
           已支持全量好友自动接管，统一由默认智能体代答。当您在手机上亲自回复时，分身将自动静默避让
         </p>
       </div>
       <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:9px 14px;margin-bottom:14px;max-width:520px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-main);line-height:1.4;">
-        <span style="font-size:16px;">💡</span>
+        <span style="font-size:16px;"></span>
         <div><strong>无需手动录入好友：</strong>启动代管后，任何好友发来消息，智能体都会<strong>自动接管回复</strong>并在此自动归档。</div>
       </div>
       <div class="hosting-guide-steps">
@@ -16819,7 +16816,7 @@ function renderHostingGuideMarkup() {
           + 特殊好友定制 (可选)
         </button>
         <button type="button" class="btn secondary" id="hostingGuideVisionBtn" style="font-size:12.5px;padding:7px 16px;">
-          👁️ 测试桌面微信识屏
+          测试桌面微信识屏
         </button>
       </div>
     </div>
@@ -16914,10 +16911,10 @@ function updateHostingTakeoverButton(inCooldown) {
   const btn = $('hostingToggleTakeoverBtn');
   if (!btn) return;
   if (inCooldown) {
-    btn.innerHTML = '⚡ 恢复 AI 托管';
+    btn.innerHTML = '恢复 AI 托管';
     btn.className = 'btn primary';
   } else {
-    btn.innerHTML = '🙋 人工接管';
+    btn.innerHTML = '人工接管';
     btn.className = 'btn secondary';
   }
 }
@@ -16978,13 +16975,13 @@ async function renderHostingMessages(contact) {
         return `
           <div class="hmsg-row outbound" style="max-width:90%;">
             <div class="hmsg-meta">
-              <span>🤖 AI 智能体 (${esc(m.agentId || 'coder')})</span>
+              <span>AI 智能体 (${esc(m.agentId || 'coder')})</span>
               <span>· 待确认草稿</span>
               <span>${esc(m.time)}</span>
             </div>
             <div class="hmsg-draft-card">
               <div class="draft-card-header">
-                <span>📝 半托管自动生成回复草稿 (未下发)</span>
+                <span>半托管自动生成回复草稿 (未下发)</span>
                 <span>耗时 ${((m.elapsedMs || 1000) / 1000).toFixed(1)}s</span>
               </div>
               <div class="draft-card-body">${esc(m.text)}</div>
@@ -16993,7 +16990,7 @@ async function renderHostingMessages(contact) {
                   舍弃草稿
                 </button>
                 <button type="button" class="btn primary approve-draft-btn" data-id="${esc(m.id)}" style="font-size:11.5px;padding:4px 12px;">
-                  🚀 确认并立即发送
+                  确认并立即发送
                 </button>
               </div>
             </div>
@@ -17008,7 +17005,7 @@ async function renderHostingMessages(contact) {
         metaText = `我 (人工发送) · ${esc(m.time)}`;
       } else {
         const elapsedText = m.elapsedMs ? ` · 耗时 ${(m.elapsedMs / 1000).toFixed(1)}s` : '';
-        metaText = `🤖 AI 代答 · ${esc(m.agentId || 'coder')}${elapsedText} · ${esc(m.time)}`;
+        metaText = `AI 代答 · ${esc(m.agentId || 'coder')}${elapsedText} · ${esc(m.time)}`;
       }
 
       return `
@@ -17240,7 +17237,7 @@ function initChatHostingEvents() {
     const isCollapsed = layout.classList.contains('right-collapsed');
     const toggleBtn = $('hostingTogglePolicyBtn');
     if (toggleBtn) {
-      toggleBtn.innerHTML = isCollapsed ? '⚙️ 展开策略' : '⚙️ 分身策略';
+      toggleBtn.innerHTML = isCollapsed ? '展开策略' : '分身策略';
       toggleBtn.className = isCollapsed ? 'btn primary' : 'btn secondary';
     }
   };
@@ -17519,7 +17516,7 @@ function initChatHostingEvents() {
   $('hostingSendBtn')?.addEventListener('click', doSendHumanMessage);
 
   $('hostingMessageInput')?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter'&& !e.shiftKey) {
       e.preventDefault();
       doSendHumanMessage();
     }

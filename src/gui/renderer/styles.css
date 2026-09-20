@@ -4988,10 +4988,10 @@ body.sidebar-collapsed .sidebar-bottom-panel.sidebar-settings-only .nav-settings
    ========================================================================== */
 .settings-nav-tabs {
   display: flex;
-  gap: 8px;
-  border-bottom: 1px solid var(--border-default);
-  padding-bottom: 12px;
-  margin-bottom: 20px;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 18px;
   overflow-x: auto;
   scrollbar-width: thin;
 }
@@ -5005,31 +5005,31 @@ body.sidebar-collapsed .sidebar-bottom-panel.sidebar-settings-only .nav-settings
   border-radius: 4px;
 }
 
+/* 二级分组标签：中性分段控件，仅用底色与字重区分选中态 */
 .settings-tab-btn {
-  padding: 8px 16px;
-  font-size: 13px;
+  padding: 6px 13px;
+  font-size: 12.5px;
   font-weight: 500;
-  border-radius: 8px;
-  border: 1px solid var(--border-default);
-  background: var(--bg-surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .settings-tab-btn:hover {
   background: var(--bg-hover);
-  border-color: var(--border-hover);
   color: var(--text-main);
 }
 
 .settings-tab-btn.active {
-  background: var(--bg-surface) !important;
-  color: var(--primary) !important;
-  border-color: var(--primary) !important;
+  background: var(--bg-active) !important;
+  color: var(--text-main) !important;
+  border-color: var(--border-default) !important;
   font-weight: 600 !important;
-  box-shadow: 0 0 0 2px var(--primary-subtle), 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+  box-shadow: none !important;
 }
 
 /* ==========================================================================
@@ -6597,45 +6597,34 @@ body:not(.is-chat-generating) .streaming-cursor,
 }
 
 /* 能力徽章样式体系 */
+/* 能力标签：统一中性底色，仅用边框深浅区分，避免多色象形色块 */
 .cap-pill {
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  white-space: nowrap;
 }
-.cap-pill.tools {
-  background: #f0f9ff;
-  color: #0284c7;
-  border: 1px solid #bae6fd;
-}
-.cap-pill.vision {
-  background: #fdf4ff;
-  color: #c026d3;
-  border: 1px solid #f5d0fe;
-}
-.cap-pill.reasoning {
-  background: #fff7ed;
-  color: #ea580c;
-  border: 1px solid #ffedd5;
-}
-.cap-pill.streaming {
-  background: #ecfdf5;
-  color: #059669;
-  border: 1px solid #a7f3d0;
-}
+.cap-pill.tools,
+.cap-pill.vision,
+.cap-pill.reasoning,
+.cap-pill.streaming,
 .cap-pill.longctx {
-  background: #f0fdfa;
-  color: #0d9488;
-  border: 1px solid #99f6e4;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
 }
 .cap-pill.default-tag {
-  background: #fef3c7;
-  color: #b45309;
-  border: 1px solid #fde68a;
-  font-weight: 700;
+  background: var(--primary-subtle);
+  color: var(--primary);
+  border: 1px solid var(--primary-border);
+  font-weight: 600;
 }
 
 /* 全量模型综合数据表格样式 */
@@ -10558,3 +10547,229 @@ body.platform-mac .mini-drag-titlebar {
 
 
 
+
+/* ==========================================================================
+   设置中心 · 指标卡 (Metric Stat Cards)
+   - 使用统一的卡片骨架，图标仅作中性提示，不引入额外色相
+   ========================================================================== */
+.metric-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+}
+
+.stat-card-icon {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-default);
+  color: var(--text-muted);
+}
+
+.stat-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.stat-card-label {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.stat-card-value {
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--text-main);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 长文本 (如模型名) 允许收缩并以省略号收尾，避免撑破卡片 */
+.stat-card-value-sm {
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 默认主模型徽章：中性灰底 + 主文本色，避免橙色小字造成的对比度不足 */
+.stat-card-value-sm > span,
+.stat-card-value-sm .default-model-chip {
+  color: var(--text-main) !important;
+}
+
+/* ==========================================================================
+   计算节点全景大盘 · 细节修补
+   ========================================================================== */
+/* 节点选择器标签不可换行 (窄容器下曾断成「监测节 / 点:」) */
+.node-picker-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* 栅格子项必须可收缩，否则长进程路径会把 1fr 列撑到容器之外 */
+.grid > *,
+.card-grid > * {
+  min-width: 0;
+}
+
+/* 进程路径：中性次要色 (原先硬编码 #94a3b8，深色主题下对比度过低) */
+.process-path {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+  min-width: 0;
+}
+
+/* ==========================================================================
+   设置中心 · 纵向导航布局
+   - 12 个分组在横向标签栏下会被裁切 (仅靠 4px 滚动条露出)，改为左侧纵向
+     导航，保证每个分组的文字完整可读
+   ========================================================================== */
+.settings-layout {
+  display: grid;
+  grid-template-columns: 208px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+  margin-top: 4px;
+}
+
+.settings-layout .settings-nav-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-bottom: none;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+  position: sticky;
+  top: 8px;
+}
+
+.settings-layout .settings-tab-btn {
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  white-space: normal;
+  line-height: 1.45;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.settings-layout .settings-tab-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+}
+
+.settings-layout .settings-tab-btn.active {
+  background: var(--bg-active);
+  color: var(--text-main);
+  font-weight: 600;
+  border: none;
+}
+
+.settings-panes {
+  min-width: 0;
+}
+
+/* 窄屏回落为横向换行标签，避免纵向导航挤压内容 */
+@media (max-width: 900px) {
+  .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .settings-layout .settings-nav-tabs {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    position: static;
+    border-bottom: 1px solid var(--border-default);
+    padding-bottom: 12px;
+  }
+  .settings-layout .settings-tab-btn {
+    width: auto;
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+  }
+}
+
+/* ==========================================================================
+   设置中心 · 服务商检索与筛选工具栏
+   ========================================================================== */
+.provider-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.provider-toolbar-search {
+  flex: 1 1 320px;
+  min-width: 240px;
+}
+
+.provider-toolbar-search input {
+  width: 100%;
+  font-size: 12.5px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-main);
+}
+
+.provider-toolbar-filters {
+  display: flex;
+  align-items: center;
+  /* 保持单行：下拉框一旦换行就会各自占据整行，破坏工具栏节奏 */
+  flex-wrap: nowrap;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+/* 下拉框按内容自适应宽度：
+   全局 select 规则带 width:100%，若再叠加 max-width 会超出筛选组宽度，
+   两个下拉框就会各自占据整行并上下堆叠。这里显式 width:auto 让其按内容排布。 */
+.provider-toolbar-filters select {
+  width: 168px;
+  flex: 0 0 168px;
+  min-width: 128px;
+  max-width: 168px;
+  font-size: 12.5px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+}

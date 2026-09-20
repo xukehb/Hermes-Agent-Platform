@@ -433,7 +433,7 @@
             <div class="ops-assistant-card">
               <div class="server-ops-header">
                 <div style="display:flex;align-items:center;gap:10px;">
-                  <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;">OPS</div>
+                  <div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;">OPS</div>
                   <div>
                     <div style="font-weight:700;font-size:13.5px;color:var(--text-main);">专属智能体运维助手</div>
                     <div style="font-size:11.5px;color:var(--text-muted);">针对当前服务器下发智能运维指令，支持自动诊断、故障自愈与多模态指令</div>
@@ -546,7 +546,7 @@
               </div>
 
               <div style="display:flex;gap:8px;">
-                <button type="button" class="btn primary" onclick="window.openSslCertModal()" style="font-size:12px;padding:6px 14px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                <button type="button" class="btn primary" onclick="window.openSslCertModal()" style="font-size:12px;padding:6px 14px;background:var(--success);">
                   申请 SSL 证书向导
                 </button>
                 <button type="button" class="btn primary" onclick="window.openNginxProxyModal()" style="font-size:12px;padding:6px 14px;">
@@ -623,17 +623,14 @@
             <div class="hosting-header-actions-group">
               <div class="hosting-stats-bar">
                 <div class="hosting-stat-pill" title="已成功自动代答消息总次数">
-                  <span class="stat-icon">🤖</span>
                   <span class="stat-label">累计代答</span>
                   <strong id="hostingStatAutoCount">0</strong>
                 </div>
                 <div class="hosting-stat-pill warning" id="hostingStatDraftPill" style="display:none;" title="点击可筛选查看待您人工确认审核的回复草稿">
-                  <span class="stat-icon">📝</span>
                   <span class="stat-label">待确认草稿</span>
                   <strong id="hostingStatDraftCount">0</strong>
                 </div>
                 <div class="hosting-stat-pill info" id="hostingStatCooldownPill" style="display:none;" title="当前处于人工接管防撞车静默期的会话">
-                  <span class="stat-icon">🛡️</span>
                   <span class="stat-label">人工接管中</span>
                   <strong id="hostingStatCooldownCount">0</strong>
                 </div>
@@ -660,7 +657,7 @@
             <!-- 左栏：通道状态与分身人设策略 -->
             <div class="hosting-card-pane">
               <div class="hosting-pane-header">
-                <span class="pane-title">⚙️ 智能体角色与分身人设 (Agent & Persona)</span>
+                <span class="pane-title">智能体角色与分身人设 (Agent & Persona)</span>
               </div>
               <div class="hosting-pane-body">
                 <!-- 微信通道卡片 -->
@@ -682,7 +679,7 @@
 
                   <!-- 模式标识 -->
                   <div class="account-mode-bar">
-                    <span class="badge info" id="hostingWxModeBadge" style="font-size:10px;padding:1px 6px;">💻 桌面免扫码代管</span>
+                    <span class="badge info" id="hostingWxModeBadge" style="font-size:10px;padding:1px 6px;">桌面免扫码代管</span>
                     <span class="account-mode-desc" id="hostingWxModeDesc" title="直接接管已登录的桌面微信，零封号风险">
                       接管电脑已登录微信
                     </span>
@@ -691,8 +688,8 @@
                   <!-- 微信操作组 -->
                   <div class="account-actions-row">
                     <button type="button" class="btn text-btn switch-mode-btn" id="hostingWxSwitchModeBtn" title="切换模式：桌面免扫码视觉代管 / 手机扫码登录协议">
-                      🔄 切换扫码登录
-                    </button>
+                       切换扫码登录
+</button>
                     <div style="display:flex;gap:4px;align-items:center;">
                       <button type="button" class="btn text-btn vision-test-btn" id="hostingWxTestVisionBtn" style="font-size:11px;color:var(--primary, #2563eb);display:none;" title="测试视觉识别桌面微信窗口">
                         测试识屏
@@ -738,9 +735,9 @@
                       <span style="font-size:10.5px;color:var(--text-muted);">点击套用风格：</span>
                     </div>
                     <div class="persona-templates-row" id="hpPersonaTemplates">
-                      <button type="button" class="persona-template-chip" data-template="natural">💬 自然口语</button>
-                      <button type="button" class="persona-template-chip" data-template="business">💼 商务得体</button>
-                      <button type="button" class="persona-template-chip" data-template="tech">💻 技术专家</button>
+                      <button type="button" class="persona-template-chip" data-template="natural">自然口语</button>
+                      <button type="button" class="persona-template-chip" data-template="business">商务得体</button>
+                      <button type="button" class="persona-template-chip" data-template="tech">技术专家</button>
                       <button type="button" class="persona-template-chip" data-template="polite">⏳ 稍后联系</button>
                     </div>
                     <textarea id="hpDefaultSystemPromptInput" rows="4" placeholder="例如：以本人的口吻友好简明地回复，像真人发微信一样，1~2句话内说清楚。切忌说教和长篇大论。"></textarea>
@@ -750,9 +747,9 @@
                     <div class="form-group">
                       <label style="font-size:11px;font-weight:600;">托管代答模式</label>
                       <select id="hpDefaultModeSelect">
-                        <option value="auto">🟢 全自动托管代答</option>
-                        <option value="draft">🔵 半托管草稿确认</option>
-                        <option value="off">🔴 暂停自动回复</option>
+                        <option value="auto">全自动托管代答</option>
+                        <option value="draft">半托管草稿确认</option>
+                        <option value="off">暂停自动回复</option>
                       </select>
                     </div>
                     <div class="form-group">
@@ -767,8 +764,8 @@
                   </div>
 
                   <button type="button" class="btn primary" id="hpSaveDefaultPolicyBtn" style="font-size:12px;font-weight:600;padding:8px 14px;margin-top:2px;">
-                    💾 保存分身人设与托管配置
-                  </button>
+                     保存分身人设与托管配置
+</button>
                 </form>
               </div>
             </div>
@@ -777,7 +774,7 @@
             <div class="hosting-card-pane">
               <div class="hosting-pane-header">
                 <div>
-                  <span class="pane-title">🧬 智能体专属基因库与长期记忆 (Gene Pool)</span>
+                  <span class="pane-title">智能体专属基因库与长期记忆 (Gene Pool)</span>
                   <div style="font-size:11px;color:var(--text-muted);margin-top:1px;" id="hostingGenePoolSubtext">
                     智能体拥有独立的专属基因库，互不污染。代答时仅调取当前分身的专属基因与通用知识。
                   </div>
@@ -791,14 +788,14 @@
                 <!-- 基因库作用域隔离切换 Chip -->
                 <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                   <button type="button" class="hosting-chip-btn active" id="hostingScopeActiveBtn" data-scope="active">
-                    👧 当前分身专属基因
-                  </button>
+                     当前分身专属基因
+</button>
                   <button type="button" class="hosting-chip-btn" id="hostingScopeUniversalBtn" data-scope="universal">
-                    🌐 全局通用知识
-                  </button>
+                     全局通用知识
+</button>
                   <button type="button" class="hosting-chip-btn" id="hostingScopeAllBtn" data-scope="all">
-                    📁 全部智能体 (含 coder 等)
-                  </button>
+                     全部智能体 (含 coder 等)
+</button>
                 </div>
 
                 <!-- 记忆搜索与筛选条 -->
@@ -821,7 +818,6 @@
 
                 <!-- 桌面免扫码原生微信操作指南卡片 -->
                 <div class="hosting-info-banner">
-                  <div style="font-size:16px;">💡</div>
                   <div style="font-size:11.5px;line-height:1.5;color:var(--text-main);">
                     <strong>真实微信就在右侧</strong>：本系统已直接接管您的原生桌面微信。<br/>
                     日常聊天您直接在屏幕右侧的微信中进行即可，<strong>无需在此查看重复的聊天记录</strong>；AI 会在后台静默监听、自动调用上面的记忆库并拟人化代答。
@@ -916,7 +912,9 @@
           </div>
 
           <!-- 设置中心选项卡切换栏 -->
-          <div class="settings-nav-tabs">
+          <!-- 设置中心：左侧纵向导航 + 右侧内容区 (企业级设置布局) -->
+          <div class="settings-layout">
+            <nav class="settings-nav-tabs" aria-label="设置分组">
             <button type="button" class="settings-tab-btn active" data-tab="providers" onclick="window.switchSettingsTab('providers')" data-i18n="settings.tabProviders">
               模型与服务商
             </button>
@@ -953,42 +951,50 @@
             <button type="button" class="settings-tab-btn" data-tab="system" onclick="window.switchSettingsTab('system')" data-i18n="settings.tabSystem" id="settingsSystemTabBtn">
               版本更新与系统日志
             </button>
-          </div>
+            </nav>
+
+            <div class="settings-panes">
 
           <!-- Tab 1 内容: AI 服务商与模型一站式管理 -->
           <div id="settingsPane_providers" class="settings-pane" style="display:block;">
             <div class="card" style="border:none;box-shadow:none;background:transparent;">
               <!-- 顶部现代卡片式统计看板 -->
               <div class="provider-metrics-grid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
-                <div class="card metric-stat-card" style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);">
-                  <div style="width:38px;height:38px;border-radius:8px;background:#f0f9ff;color:#0284c7;display:grid;place-items:center;font-size:18px;flex-shrink:0;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2" ry="2"/><path d="M7 2v20"/><path d="M17 2v20"/><path d="M2 12h20"/><path d="M2 7h5"/><path d="M2 17h5"/><path d="M17 17h5"/><path d="M17 7h5"/></svg></div>
-                  <div>
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">已配置服务商</div>
-                    <div style="font-size:19px;font-weight:700;color:var(--text-main);margin-top:2px;" id="statTotalProviders">0</div>
-                  </div>
+                <div class="card metric-stat-card">
+                  <span class="stat-card-icon" aria-hidden="true">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 3v18"/><path d="M3 12h18"/></svg>
+                  </span>
+                  <span class="stat-card-text">
+                    <span class="stat-card-label" data-i18n="settings.statProviders">已配置服务商</span>
+                    <span class="stat-card-value" id="statTotalProviders">0</span>
+                  </span>
                 </div>
-                <div class="card metric-stat-card" style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);">
-                  <div style="width:38px;height:38px;border-radius:8px;background:#ecfdf5;color:#10b981;display:grid;place-items:center;font-size:18px;flex-shrink:0;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
-                  <div>
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">连通正常服务商</div>
-                    <div style="font-size:19px;font-weight:700;color:#10b981;margin-top:2px;" id="statHealthyProviders">0</div>
-                  </div>
+                <div class="card metric-stat-card">
+                  <span class="stat-card-icon" aria-hidden="true">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  </span>
+                  <span class="stat-card-text">
+                    <span class="stat-card-label" data-i18n="settings.statHealthy">连通正常服务商</span>
+                    <span class="stat-card-value" id="statHealthyProviders">0</span>
+                  </span>
                 </div>
-                <div class="card metric-stat-card" style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);">
-                  <div style="width:38px;height:38px;border-radius:8px;background:#faf5ff;color:#a855f7;display:grid;place-items:center;font-size:18px;flex-shrink:0;"></div>
-                  <div>
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">已收录模型总数</div>
-                    <div style="font-size:19px;font-weight:700;color:var(--text-main);margin-top:2px;" id="statTotalModels">0</div>
-                  </div>
+                <div class="card metric-stat-card">
+                  <span class="stat-card-icon" aria-hidden="true">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                  </span>
+                  <span class="stat-card-text">
+                    <span class="stat-card-label" data-i18n="settings.statModels">已收录模型总数</span>
+                    <span class="stat-card-value" id="statTotalModels">0</span>
+                  </span>
                 </div>
-                <div class="card metric-stat-card" style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);">
-                  <div style="width:38px;height:38px;border-radius:8px;background:#fffbeb;color:#f59e0b;display:grid;place-items:center;flex-shrink:0;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                  </div>
-                  <div style="min-width:0;flex:1;">
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">全局默认主模型</div>
-                    <div style="font-size:14px;font-weight:700;color:var(--text-main);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="statDefaultModel">未设置</div>
-                  </div>
+                <div class="card metric-stat-card">
+                  <span class="stat-card-icon" aria-hidden="true">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  </span>
+                  <span class="stat-card-text">
+                    <span class="stat-card-label" data-i18n="settings.statDefaultModel">全局默认主模型</span>
+                    <span class="stat-card-value stat-card-value-sm" id="statDefaultModel">未设置</span>
+                  </span>
                 </div>
               </div>
 
@@ -1008,9 +1014,9 @@
 
                   <!-- 右侧全局操作按钮组 -->
                   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                    <button type="button" class="btn primary" id="openModelHubBtn" onclick="window.openModelHubModal()" style="font-size:12px;padding:6px 14px;background:linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);color:#fff;border:none;box-shadow:0 2px 6px rgba(99,102,241,0.3);display:inline-flex;align-items:center;gap:6px;">
+                    <button type="button" class="btn primary" id="openModelHubBtn" onclick="window.openModelHubModal()" style="font-size:12px;padding:6px 14px;background:var(--primary);color:#fff;border:none;box-shadow:0 2px 6px rgba(99,102,241,0.3);display:inline-flex;align-items:center;gap:6px;">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                      <span>🚀 开源模型中心 (硬件推荐一键部署)</span>
+                      <span>开源模型中心 (硬件推荐一键部署)</span>
                     </button>
                     <button type="button" class="btn secondary" id="testAllProvidersBtn" onclick="window.testAllProviders(this)" style="font-size:12px;padding:6px 12px;display:inline-flex;align-items:center;gap:4px;">
                       测试全部服务商
@@ -1031,28 +1037,28 @@
                 </div>
 
                 <!-- 实时检索与多维筛选过滤栏 -->
-                <div style="padding:12px 16px;background:var(--bg-subtle);border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-                  <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:260px;max-width:440px;">
-                    <input type="text" id="pmSearchInput" oninput="window.onProviderModelSearch(this.value)" placeholder="搜索服务商名、ID、模型别名或真实模型 (如 deepseek, gpt-4o, qwen)..." style="width:100%;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border-default);background:var(--bg-surface);" />
+                <div class="provider-toolbar">
+                  <div class="provider-toolbar-search">
+                    <input type="text" id="pmSearchInput" oninput="window.onProviderModelSearch(this.value)" placeholder="搜索服务商名、ID、模型别名或真实模型 (如 deepseek, gpt-4o, qwen)..." />
                   </div>
 
-                  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                  <div class="provider-toolbar-filters">
                     <!-- 状态筛选 -->
-                    <select id="pmStatusFilter" onchange="window.onProviderModelFilterChange()" style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--border-default);background:var(--bg-surface);color:var(--text-secondary);">
-                      <option value="all">全部连通状态</option>
-                      <option value="ok">[就绪] 连通正常</option>
-                      <option value="missing_credentials">[缺失] 缺少凭据 (API Key)</option>
-                      <option value="unknown">[待测] 待测试探测</option>
+                    <select id="pmStatusFilter" onchange="window.onProviderModelFilterChange()">
+                        <option value="all">全部状态</option>
+                        <option value="ok">连通正常</option>
+                        <option value="missing_credentials">缺少凭据</option>
+                        <option value="unknown">待测试</option>
                     </select>
 
                     <!-- 能力筛选 (主要用于模型视图) -->
-                    <select id="pmCapabilityFilter" onchange="window.onProviderModelFilterChange()" style="font-size:12px;padding:5px 10px;border-radius:6px;border:1px solid var(--border-default);background:var(--bg-surface);color:var(--text-secondary);">
-                      <option value="all">全部能力特性</option>
-                      <option value="tools">工具调用 (Tools)</option>
-                      <option value="vision">视觉能力 (Vision)</option>
-                      <option value="reasoning">深度思考 (Reasoning)</option>
-                      <option value="streaming">流式传输 (Streaming)</option>
-                      <option value="longctx">长上下文 (LongCtx)</option>
+                    <select id="pmCapabilityFilter" onchange="window.onProviderModelFilterChange()">
+                        <option value="all">全部能力</option>
+                        <option value="tools">工具调用</option>
+                        <option value="vision">视觉</option>
+                        <option value="reasoning">深度思考</option>
+                        <option value="streaming">流式传输</option>
+                        <option value="longctx">长上下文</option>
                     </select>
 
                     <!-- 批量操作栏 (当有勾选时显示) -->
@@ -1104,7 +1110,7 @@
             <div class="market-header-banner">
               <div>
                 <div style="display:flex;align-items:center;gap:10px;">
-                  <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg, #6366f1 0%, #a855f7 100%);color:#fff;display:grid;place-items:center;box-shadow:0 3px 10px rgba(99,102,241,0.25);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></div>
+                  <div style="width:34px;height:34px;border-radius:10px;background:var(--primary);color:#fff;display:grid;place-items:center;box-shadow:0 3px 10px rgba(99,102,241,0.25);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></div>
                   <div>
                     <h2 class="page-title" style="margin:0;font-size:18px;">Skill & MCP 扩展生态市场</h2>
                     <p class="page-subtitle" style="margin:2px 0 0 0;font-size:12px;">融合 GitHub 专家技能包与 Model Context Protocol (MCP) 标准插件，赋予智能体任意外部能力</p>
@@ -1112,7 +1118,7 @@
                 </div>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button id="openMcpPlaygroundBtn" class="btn primary" style="font-size:12.5px;padding:6px 14px;background:linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);color:#fff;border:none;">
+                <button id="openMcpPlaygroundBtn" class="btn primary" style="font-size:12.5px;padding:6px 14px;background:var(--primary);color:#fff;border:none;">
                   MCP 调试台
                 </button>
                 <button id="openPresetMcpModalBtn" class="btn secondary" style="font-size:12.5px;padding:6px 14px;">
@@ -1329,7 +1335,7 @@
               <!-- 微信状态 Hero 顶部横幅 -->
               <div class="channel-status-hero">
                 <div class="channel-hero-left">
-                  <div class="channel-hero-icon" style="background:linear-gradient(135deg, #22c55e 0%, #16a34a 100%);color:#fff;display:grid;place-items:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg></div>
+                  <div class="channel-hero-icon" style="background:var(--success);color:#fff;display:grid;place-items:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg></div>
                   <div>
                     <div style="display:flex;align-items:center;gap:8px;">
                       <h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text-main);" id="wxDisplayName">微信智能体网关</h3>
@@ -1366,7 +1372,7 @@
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">接入模式 (Integration Mode) *</label>
                       <select id="wxModeSelect">
-                        <option value="desktop_vision">🖥️ 桌面视觉代管 (SightFlow 零封号真实好友代答)</option>
+                        <option value="desktop_vision">桌面视觉代管 (SightFlow 零封号真实好友代答)</option>
                         <option value="ilink_bot">个人微信扫码绑定 iLink Bot</option>
                         <option value="personal">高级：Wechaty Puppet Service</option>
                         <option value="wecom">企业微信自建应用 (CorpID & Secret 模式)</option>
@@ -1478,7 +1484,7 @@
               <!-- TG 状态 Hero 顶部横幅 -->
               <div class="channel-status-hero">
                 <div class="channel-hero-left">
-                  <div class="channel-hero-icon" style="background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%);color:#fff;display:grid;place-items:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></div>
+                  <div class="channel-hero-icon" style="background:var(--primary);color:#fff;display:grid;place-items:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></div>
                   <div>
                     <div style="display:flex;align-items:center;gap:8px;">
                       <h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text-main);" id="tgBotDisplayName">Telegram 智能体机器人</h3>
@@ -1592,7 +1598,7 @@
             <div id="channelSubPane_feishu" class="channel-subpane" style="display:none;">
               <div class="channel-status-hero">
                 <div class="channel-hero-left">
-                  <div class="channel-hero-icon" style="background:linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);color:#fff;display:grid;place-items:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path><line x1="16" y1="8" x2="2" y2="22"></line><line x1="17.5" y1="15" x2="9" y2="15"></line></svg></div>
+                  <div class="channel-hero-icon" style="background:var(--primary);color:#fff;display:grid;place-items:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path><line x1="16" y1="8" x2="2" y2="22"></line><line x1="17.5" y1="15" x2="9" y2="15"></line></svg></div>
                   <div>
                     <h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text-main);">飞书企业协同机器人 (Feishu / Lark)</h3>
                     <p style="margin:4px 0 0 0;font-size:12px;color:var(--text-muted);">
@@ -1656,7 +1662,7 @@
             <div id="channelSubPane_qq" class="channel-subpane" style="display:none;">
               <div class="channel-status-hero">
                 <div class="channel-hero-left">
-                  <div class="channel-hero-icon" style="background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);color:#fff;display:grid;place-items:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>
+                  <div class="channel-hero-icon" style="background:var(--warning);color:#fff;display:grid;place-items:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>
                   <div>
                     <h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text-main);">QQ / OneBot (NapCat / LLOneBot) 协议网关</h3>
                     <p style="margin:4px 0 0 0;font-size:12px;color:var(--text-muted);">
@@ -1713,7 +1719,7 @@
             <div id="channelSubPane_dingtalk" class="channel-subpane" style="display:none;">
               <div class="channel-status-hero">
                 <div class="channel-hero-left">
-                  <div class="channel-hero-icon" style="background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></div>
+                  <div class="channel-hero-icon" style="background:var(--primary);color:#fff;display:grid;place-items:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></div>
                   <div>
                     <h3 style="margin:0;font-size:15px;font-weight:700;color:var(--text-main);">钉钉企业应用机器人 (DingTalk)</h3>
                     <p style="margin:4px 0 0 0;font-size:12px;color:var(--text-muted);">
@@ -1842,7 +1848,7 @@
             <div class="page-header-row" style="margin-bottom:16px;flex-wrap:wrap;gap:12px;">
               <div>
                 <div style="display:flex;align-items:center;gap:10px;">
-                  <div class="agent-avatar-badge" style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;box-shadow:0 3px 10px rgba(14,165,233,0.25);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
+                  <div class="agent-avatar-badge" style="width:34px;height:34px;border-radius:10px;background:var(--primary);color:#fff;display:grid;place-items:center;box-shadow:0 3px 10px rgba(14,165,233,0.25);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
                   <div>
                     <h2 class="page-title" style="font-size:18px;margin:0;" id="panoramaMainTitle">计算节点全景监控大盘 (Node Panorama)</h2>
                     <p class="page-subtitle" style="margin:2px 0 0 0;font-size:12.5px;" id="panoramaMainSub">多机硬件指标全景看板 · 支持本机宿主与所有远程服务器节点无缝切换与毫秒级监控</p>
@@ -1852,14 +1858,14 @@
               <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                 <!-- 节点选择器 -->
                 <div class="node-picker-box">
-                  <span style="font-size:12px;font-weight:600;color:var(--text-secondary);">监控节点:</span>
+                  <span class="node-picker-label">监控节点:</span>
                   <select id="panoramaNodeSelect">
                     <option value="local">本机宿主环境 (Local Host)</option>
                   </select>
                 </div>
 
                 <!-- 节点机器人配置入口 -->
-                <button type="button" class="btn primary" onclick="window.openNodeBotConfigModal()" style="font-size:12.5px;padding:6px 14px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);display:flex;align-items:center;gap:6px;">
+                <button type="button" class="btn primary" onclick="window.openNodeBotConfigModal()" style="font-size:12.5px;padding:6px 14px;background:var(--success);display:flex;align-items:center;gap:6px;">
                   <span>节点机器人与告警设置</span>
                 </button>
 
@@ -1877,7 +1883,7 @@
             <div class="card panorama-bot-card" id="panoramaBotCard">
               <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
                 <div style="display:flex;align-items:center;gap:12px;">
-                  <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:#fff;display:grid;place-items:center;box-shadow:0 2px 6px rgba(16,185,129,0.3);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg></div>
+                  <div style="width:40px;height:40px;border-radius:10px;background:var(--success);color:#fff;display:grid;place-items:center;box-shadow:0 2px 6px rgba(16,185,129,0.3);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg></div>
                   <div>
                     <div style="display:flex;align-items:center;gap:8px;">
                       <strong style="font-size:14.5px;color:var(--text-main);" id="panoramaBotTitle">节点专属智能体与告警机器人</strong>
@@ -1889,7 +1895,7 @@
                   </div>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                  <button type="button" class="btn primary" onclick="window.openNodeBotConfigModal()" style="font-size:12px;padding:6px 14px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                  <button type="button" class="btn primary" onclick="window.openNodeBotConfigModal()" style="font-size:12px;padding:6px 14px;background:var(--success);">
                     机器人设置
                   </button>
                   <button type="button" class="btn secondary" onclick="window.testNodeBotAlert()" style="font-size:12px;padding:6px 12px;">
@@ -1965,7 +1971,7 @@
             </div>
 
             <!-- 第二行: CPU 多核拓扑分布 + 磁盘卷分区 -->
-            <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+            <div class="grid" style="grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 14px; margin-bottom: 18px;">
               <!-- CPU 多核分布 -->
               <div class="card dashboard-card">
                 <div class="dashboard-card-header">
@@ -1994,7 +2000,7 @@
             </div>
 
             <!-- 第三行: 活跃进程 Top 榜 + 公网 IP / 地理位置与网卡 -->
-            <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+            <div class="grid" style="grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 14px; margin-bottom: 18px;">
               <!-- 活跃高消耗进程 Top 榜 -->
               <div class="card dashboard-card">
                 <div class="dashboard-card-header">
@@ -2059,7 +2065,7 @@
             <div class="card disk-clean-card">
               <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-bottom: 1px solid var(--border-default); padding-bottom: 14px;">
                 <div style="display:flex; align-items:center; gap:12px;">
-                  <div style="width:40px; height:40px; border-radius:10px; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); color:#fff; display:grid; place-items:center; box-shadow: 0 2px 8px rgba(99,102,241,0.3);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg></div>
+                  <div style="width:40px; height:40px; border-radius:10px; background: var(--primary); color:#fff; display:grid; place-items:center; box-shadow: 0 2px 8px rgba(99,102,241,0.3);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg></div>
                   <div>
                     <div style="font-size: 16px; font-weight: 700; color: var(--text-main); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                       <span>AI 智能全盘扫描与深度瘦身 (AI Smart Disk Scanner)</span>
@@ -2072,7 +2078,7 @@
                   </div>
                 </div>
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                  <button id="scanDiskBtn" class="btn primary" style="background:linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border:none; font-size:12.5px; padding:6px 16px; box-shadow: 0 2px 6px rgba(79,70,229,0.25);">
+                  <button id="scanDiskBtn" class="btn primary" style="background:var(--primary); border:none; font-size:12.5px; padding:6px 16px; box-shadow: 0 2px 6px rgba(79,70,229,0.25);">
                     从根目录开始全盘扫描
                   </button>
                   <button id="safeCleanDiskBtn" class="btn primary" style="background:#16a34a; border-color:#16a34a; font-size:12.5px; display:none;">
@@ -2097,7 +2103,7 @@
                   <span style="font-size:11.5px; color:var(--text-muted);">全盘深度体检中</span>
                 </div>
                 <div class="progress-track" style="height:6px;">
-                  <div id="diskScanProgressBar" style="width:40%; height:100%; background:linear-gradient(90deg, #6366f1, #a855f7); animation:indeterminate 1.5s infinite linear;"></div>
+                  <div id="diskScanProgressBar" style="width:40%; height:100%; background:var(--primary); animation:indeterminate 1.5s infinite linear;"></div>
                 </div>
               </div>
 
@@ -2200,7 +2206,7 @@
             <div class="card host-node-card">
               <div class="card-header host-node-header">
                 <div style="display:flex;align-items:center;gap:12px;">
-                  <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;font-size:18px;">
+                  <div style="width:38px;height:38px;border-radius:10px;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:18px;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                   </div>
                   <div>
@@ -2436,42 +2442,42 @@
               <!-- 4 个统计数据指标卡 -->
               <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
                 <div class="card metric-stat-card" style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);">
-                  <div style="width:38px;height:38px;border-radius:8px;background:#f0f9ff;color:#0284c7;display:grid;place-items:center;font-size:18px;flex-shrink:0;">
+                  <span class="stat-card-icon" aria-hidden="true">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                  </div>
-                  <div>
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;">今日请求总数</div>
-                    <div style="font-size:19px;font-weight:700;color:var(--text-main);margin-top:2px;" id="statGatewayTodayRequests">0</div>
+                  </span>
+                  <div class="stat-card-text">
+                    <div class="stat-card-label">今日请求总数</div>
+                    <div class="stat-card-value" id="statGatewayTodayRequests">0</div>
                   </div>
                 </div>
 
                 <div class="card metric-stat-card" style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);">
-                  <div style="width:38px;height:38px;border-radius:8px;background:#ecfdf5;color:#10b981;display:grid;place-items:center;font-size:18px;flex-shrink:0;">
+                  <span class="stat-card-icon" aria-hidden="true">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                  </div>
-                  <div>
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;">今日消耗 Tokens</div>
-                    <div style="font-size:19px;font-weight:700;color:#10b981;margin-top:2px;" id="statGatewayTodayTokens">0</div>
+                  </span>
+                  <div class="stat-card-text">
+                    <div class="stat-card-label">今日消耗 Tokens</div>
+                    <div class="stat-card-value" id="statGatewayTodayTokens">0</div>
                   </div>
                 </div>
 
                 <div class="card metric-stat-card" style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);">
-                  <div style="width:38px;height:38px;border-radius:8px;background:#faf5ff;color:#a855f7;display:grid;place-items:center;font-size:18px;flex-shrink:0;">
+                  <span class="stat-card-icon" aria-hidden="true">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-                  </div>
-                  <div>
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;">活跃 API 密钥</div>
-                    <div style="font-size:19px;font-weight:700;color:var(--text-main);margin-top:2px;" id="statGatewayActiveKeys">0</div>
+                  </span>
+                  <div class="stat-card-text">
+                    <div class="stat-card-label">活跃 API 密钥</div>
+                    <div class="stat-card-value" id="statGatewayActiveKeys">0</div>
                   </div>
                 </div>
 
                 <div class="card metric-stat-card" style="padding:14px 16px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:10px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow-xs);">
-                  <div style="width:38px;height:38px;border-radius:8px;background:#fff7ed;color:#f97316;display:grid;place-items:center;font-size:18px;flex-shrink:0;">
+                  <span class="stat-card-icon" aria-hidden="true">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  </div>
-                  <div>
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;">平均推理延迟</div>
-                    <div style="font-size:19px;font-weight:700;color:var(--text-main);margin-top:2px;" id="statGatewayAvgLatency">0 ms</div>
+                  </span>
+                  <div class="stat-card-text">
+                    <div class="stat-card-label">平均推理延迟</div>
+                    <div class="stat-card-value" id="statGatewayAvgLatency">0 ms</div>
                   </div>
                 </div>
               </div>
@@ -2479,17 +2485,17 @@
               <!-- 网关二级选项卡：密钥管理 / 模型别名映射 / 客户端一键接入 / 审计调用日志 -->
               <div class="settings-nav-tabs" style="margin-bottom:14px;border-bottom:1px solid var(--border-default);padding-bottom:2px;">
                 <button type="button" class="settings-tab-btn active" id="gatewaySubTabBtn_keys" onclick="window.switchGatewaySubTab('keys')">
-                  🔑 API 密钥管理
-                </button>
+                   API 密钥管理
+</button>
                 <button type="button" class="settings-tab-btn" id="gatewaySubTabBtn_aliases" onclick="window.switchGatewaySubTab('aliases')">
-                  🔀 模型别名与路由
-                </button>
+                   模型别名与路由
+</button>
                 <button type="button" class="settings-tab-btn" id="gatewaySubTabBtn_presets" onclick="window.switchGatewaySubTab('presets')">
-                  🚀 外部客户端接入预设
-                </button>
+                   外部客户端接入预设
+</button>
                 <button type="button" class="settings-tab-btn" id="gatewaySubTabBtn_logs" onclick="window.switchGatewaySubTab('logs')">
-                  📊 请求审计与调用日志
-                </button>
+                   请求审计与调用日志
+</button>
               </div>
 
               <!-- 子 Pane 1: API 密钥管理 -->
@@ -2562,6 +2568,8 @@
                 </div>
               </div>
 
+            </div>
+          </div>
             </div>
           </div>
         </div>
@@ -2730,7 +2738,7 @@
       <form id="importSkillForm" class="modal-form-wrap" style="max-width:680px;">
         <div class="modal-header-row">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff;display:grid;place-items:center;font-size:16px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+            <div style="width:32px;height:32px;border-radius:8px;background:var(--primary);color:#fff;display:grid;place-items:center;font-size:16px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
             <div>
               <h2 style="margin:0;font-size:16px;font-weight:700;">导入技能 (Import Skill)</h2>
               <p style="margin:2px 0 0 0;font-size:12px;color:var(--text-muted);">导入或自定义 AI 生图视觉技能、智能体提示词模版或业务扩展能力</p>
@@ -2992,7 +3000,7 @@
         <!-- 模态框顶部导航条 -->
         <div style="padding:16px 20px;border-bottom:1px solid var(--border-default);display:flex;justify-content:space-between;align-items:center;background:var(--bg-surface);">
           <div style="display:flex;align-items:center;gap:12px;">
-            <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);color:#fff;display:grid;place-items:center;box-shadow:0 3px 10px rgba(99,102,241,0.3);">
+            <div style="width:38px;height:38px;border-radius:10px;background:var(--primary);color:#fff;display:grid;place-items:center;box-shadow:0 3px 10px rgba(99,102,241,0.3);">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
             </div>
             <div>
@@ -3009,11 +3017,11 @@
         <!-- 模态框主体滚动区 -->
         <div style="padding:16px 20px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:14px;">
           <!-- 1. 硬件算力诊断与适配卡片 -->
-          <div id="modelHubHwBanner" class="card" style="padding:14px 16px;background:linear-gradient(135deg, rgba(99,102,241,0.06) 0%, rgba(168,85,247,0.04) 100%);border:1px solid rgba(99,102,241,0.2);border-radius:10px;">
+          <div id="modelHubHwBanner" class="card" style="padding:14px 16px;background:var(--bg-subtle);border:1px solid rgba(99,102,241,0.2);border-radius:10px;">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">
               <div>
                 <div style="display:flex;align-items:center;gap:8px;">
-                  <span style="font-size:13.5px;font-weight:700;color:var(--text-main);" id="hubHwTitle">🖥️ 正在探测本机硬件...</span>
+                  <span style="font-size:13.5px;font-weight:700;color:var(--text-main);" id="hubHwTitle">正在探测本机硬件...</span>
                   <span class="badge" id="hubHwBadge" style="background:#e0e7ff;color:#4338ca;font-size:11px;">算力诊断</span>
                 </div>
                 <div style="margin-top:4px;font-size:12px;color:var(--text-secondary);" id="hubHwAdvice">
@@ -3051,19 +3059,19 @@
                 <span class="market-tab-badge" id="hubCountAll">0</span>
               </button>
               <button type="button" class="market-tab-btn" data-hub-cat="recommended" onclick="window.onModelHubFilterChange('recommended')">
-                <span>🌟 本机最佳推荐</span>
+                <span>本机最佳推荐</span>
                 <span class="market-tab-badge" id="hubCountRec" style="background:#fef3c7;color:#d97706;">0</span>
               </button>
               <button type="button" class="market-tab-btn" data-hub-cat="coding" onclick="window.onModelHubFilterChange('coding')">
-                <span>💻 代码大模型</span>
+                <span>代码大模型</span>
                 <span class="market-tab-badge" id="hubCountCoding">0</span>
               </button>
               <button type="button" class="market-tab-btn" data-hub-cat="reasoning" onclick="window.onModelHubFilterChange('reasoning')">
-                <span>🧠 深度思考推理</span>
+                <span>深度思考推理</span>
                 <span class="market-tab-badge" id="hubCountReasoning">0</span>
               </button>
               <button type="button" class="market-tab-btn" data-hub-cat="fast" onclick="window.onModelHubFilterChange('fast')">
-                <span>⚡ 轻量端侧极速</span>
+                <span>轻量端侧极速</span>
                 <span class="market-tab-badge" id="hubCountFast">0</span>
               </button>
             </div>
@@ -3961,7 +3969,7 @@
       <div class="modal-form-wrap" style="max-height:88vh;display:flex;flex-direction:column;padding:20px 24px;">
         <div class="modal-header-row" style="margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:12px;">
-            <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></div>
+            <div style="width:36px;height:36px;border-radius:8px;background:var(--success);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></div>
             <div>
               <div style="display:flex;align-items:center;gap:8px;">
                 <h2 id="serverDetailsTitle" style="font-size:16px;margin:0;font-weight:700;">服务器节点详情</h2>
@@ -4054,7 +4062,7 @@
 
           <!-- 快捷操作栏 -->
           <div style="display:flex;flex-wrap:wrap;gap:8px;padding-top:6px;">
-            <button type="button" class="btn primary" id="serverDetailsPanoramaBtn" style="font-size:12.5px;padding:6px 14px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);">
+            <button type="button" class="btn primary" id="serverDetailsPanoramaBtn" style="font-size:12.5px;padding:6px 14px;background:var(--primary);">
               进入节点全景监控大盘
             </button>
             <button type="button" class="btn secondary" id="serverDetailsTerminalBtn" style="font-size:12.5px;padding:6px 14px;">
@@ -4079,7 +4087,7 @@
       <div class="modal-form-wrap" style="max-height:88vh;display:flex;flex-direction:column;padding:20px 24px;">
         <div class="modal-header-row" style="margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:12px;">
-            <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
+            <div style="width:36px;height:36px;border-radius:8px;background:var(--primary);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
             <div>
               <div style="display:flex;align-items:center;gap:8px;">
                 <h2 style="font-size:16px;margin:0;font-weight:700;">本机宿主系统完整指标与硬件画像</h2>
@@ -4174,7 +4182,7 @@
       <div class="modal-form-wrap" style="max-height:85vh;display:flex;flex-direction:column;padding:22px 24px;">
         <div class="modal-header-row" style="margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:12px;">
-            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.439 7.85c0-1.571-1.277-2.85-2.852-2.85a2.85 2.85 0 0 0-2.85 2.85V9H10V7.85C10 6.279 8.723 5 7.148 5 5.572 5 4.296 6.279 4.296 7.85v1.299a2.85 2.85 0 0 0 2.852 2.851h.704V14H6.57a2.85 2.85 0 0 0-2.851 2.85v1.299c0 1.571 1.276 2.851 2.851 2.851h1.299a2.85 2.85 0 0 0 2.85-2.851v-.704H13.73v.704a2.85 2.85 0 0 0 2.851 2.851h1.306c1.575 0 2.852-1.28 2.852-2.851V16.85a2.85 2.85 0 0 0-2.852-2.85h-.704V12h.704a2.85 2.85 0 0 0 2.852-2.851V7.85z"></path></svg></div>
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--primary);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.439 7.85c0-1.571-1.277-2.85-2.852-2.85a2.85 2.85 0 0 0-2.85 2.85V9H10V7.85C10 6.279 8.723 5 7.148 5 5.572 5 4.296 6.279 4.296 7.85v1.299a2.85 2.85 0 0 0 2.852 2.851h.704V14H6.57a2.85 2.85 0 0 0-2.851 2.85v1.299c0 1.571 1.276 2.851 2.851 2.851h1.299a2.85 2.85 0 0 0 2.85-2.851v-.704H13.73v.704a2.85 2.85 0 0 0 2.851 2.851h1.306c1.575 0 2.852-1.28 2.852-2.851V16.85a2.85 2.85 0 0 0-2.852-2.85h-.704V12h.704a2.85 2.85 0 0 0 2.852-2.851V7.85z"></path></svg></div>
             <div>
               <h2 style="margin:0;font-size:16px;font-weight:700;">热门官方与社区 MCP 扩展库</h2>
               <p style="margin:2px 0 0 0;font-size:12px;color:var(--text-muted);">一键快捷安装标准 Model Context Protocol 插件，无须手动编写命令行与 JSON 参数</p>
@@ -4208,7 +4216,7 @@
             <span id="installPercentText" style="color:var(--accent);font-weight:700;">15%</span>
           </div>
           <div style="height:8px;background:var(--bg-main);border-radius:4px;overflow:hidden;border:1px solid var(--border-default);">
-            <div id="installProgressBar" style="width:15%;height:100%;background:linear-gradient(90deg, #10a37f, #22c55e);transition:width 0.3s ease;"></div>
+            <div id="installProgressBar" style="width:15%;height:100%;background:var(--success);transition:width 0.3s ease;"></div>
           </div>
         </div>
 
@@ -4253,7 +4261,7 @@
       <div class="modal-form-wrap" style="max-width:880px;">
         <div class="modal-header-row" style="margin-bottom:14px;">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"></circle><circle cx="17.5" cy="10.5" r=".5"></circle><circle cx="8.5" cy="7.5" r=".5"></circle><circle cx="6.5" cy="12.5" r=".5"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path></svg></div>
+            <div style="width:34px;height:34px;border-radius:10px;background:var(--primary);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"></circle><circle cx="17.5" cy="10.5" r=".5"></circle><circle cx="8.5" cy="7.5" r=".5"></circle><circle cx="6.5" cy="12.5" r=".5"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path></svg></div>
             <div>
               <h2 style="margin:0;font-size:16px;font-weight:700;">AI 生图与视觉创作中心 (AI Image Studio)</h2>
             </div>
@@ -4412,7 +4420,7 @@
       <div class="modal-form-wrap" style="max-width:920px;">
         <div class="modal-header-row" style="margin-bottom:12px;">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-1.5 1.5L14 9l-1.5-1.5M9 13l-4 4a3 3 0 1 0 4 4l4-4"></path></svg></div>
+            <div style="width:34px;height:34px;border-radius:10px;background:var(--primary);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-1.5 1.5L14 9l-1.5-1.5M9 13l-4 4a3 3 0 1 0 4 4l4-4"></path></svg></div>
             <div>
               <h2 style="margin:0;font-size:16px;font-weight:700;">全局 AI 环境变量与凭据中心 (Environment Variables)</h2>
               <p style="margin:2px 0 0 0;font-size:12px;color:var(--text-muted);">集中管理所有 AI 大模型服务商的 API Key 与通信密钥，数据持久化存储于本地，全局智能体即刻生效</p>
@@ -4486,7 +4494,7 @@
       <div class="modal-form-wrap" style="padding:22px 26px;">
         <div class="modal-header-row" style="margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></div>
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--success);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></div>
             <div>
               <h2 style="font-size:16.5px;margin:0;font-weight:700;">一键申请 Let's Encrypt SSL 安全证书</h2>
               <p style="font-size:12px;color:var(--text-muted);margin:2px 0 0 0;">通过官方 Certbot 协议全自动申请 HTTPS 证书，并可直接绑定至 Nginx 与开启自动续期</p>
@@ -4542,7 +4550,7 @@
             </div>
             <div style="display:flex;gap:8px;">
               <button type="button" class="btn secondary" onclick="$('sslCertModal').close()">取消</button>
-              <button type="submit" class="btn primary" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%);">
+              <button type="submit" class="btn primary" style="background:var(--success);">
                 开始一键申请并部署
               </button>
             </div>
@@ -4556,7 +4564,7 @@
       <div class="modal-form-wrap" style="padding:22px 26px;">
         <div class="modal-header-row" style="margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></div>
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--primary);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></div>
             <div>
               <h2 style="font-size:16.5px;margin:0;font-weight:700;">一键生成与应用 Nginx 反向代理</h2>
               <p style="font-size:12px;color:var(--text-muted);margin:2px 0 0 0;">自动生成标准的 sites-available 配置文件、开启 WebSocket、流式传输并自动 reload</p>
@@ -4831,7 +4839,7 @@
       <div class="modal-form-wrap" style="padding:22px 26px;">
         <div class="modal-header-row" style="margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg, #10b981 0%, #059669 100%);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg></div>
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--success);color:#fff;display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg></div>
             <div>
               <h2 style="font-size:16.5px;margin:0;font-weight:700;">设置节点专属智能体与告警机器人</h2>
               <p style="font-size:12px;color:var(--text-muted);margin:2px 0 0 0;">为该计算节点绑定负责运维的专属 Agent，并配置飞书、微信、Telegram 告警通道与自动自愈策略</p>
@@ -4920,7 +4928,7 @@
             </button>
             <div style="display:flex;gap:8px;">
               <button type="button" class="btn secondary" onclick="$('nodeBotConfigModal').close()">取消</button>
-              <button type="submit" class="btn primary" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%);">
+              <button type="submit" class="btn primary" style="background:var(--success);">
                 保存机器人与告警设置
               </button>
             </div>
@@ -4934,7 +4942,7 @@
       <div class="modal-form-wrap" style="padding:24px 28px;">
         <div class="modal-header-row" style="margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg, #22c55e 0%, #16a34a 100%);color:#fff;display:grid;place-items:center;">
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--success);color:#fff;display:grid;place-items:center;">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
             </div>
             <div>
@@ -4964,7 +4972,7 @@
       <form id="wxContactForm" class="modal-form-wrap" style="padding:24px 28px;">
         <div class="modal-header-row" style="margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%);color:#fff;display:grid;place-items:center;">
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--primary);color:#fff;display:grid;place-items:center;">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
             </div>
             <div>
@@ -5727,8 +5735,8 @@
           <div>
             <h2 id="hostingAddRuleModalTitle">特殊好友/群聊托管规则定制 (可选)</h2>
             <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;font-weight:normal;">
-              💡 日常无需手动录入：启动代管后好友来信会自动接管并在此归档。本弹窗仅用于提前为特定 VIP 好友定制独立人设或专属智能体。
-            </div>
+               日常无需手动录入：启动代管后好友来信会自动接管并在此归档。本弹窗仅用于提前为特定 VIP 好友定制独立人设或专属智能体。
+</div>
           </div>
           <button type="button" class="btn-close" id="closeHostingAddRuleBtn" aria-label="关闭" title="关闭"></button>
         </div>
@@ -5743,8 +5751,8 @@
           <div class="form-group">
             <label>会话类型 (Type) *</label>
             <select id="harTypeSelect">
-              <option value="user">👤 好友单聊 (User)</option>
-              <option value="room">👥 群聊 (Room / Group)</option>
+              <option value="user">好友单聊 (User)</option>
+              <option value="room">群聊 (Room / Group)</option>
             </select>
           </div>
           <div class="form-group">
@@ -5758,10 +5766,10 @@
           <div class="form-group">
             <label>托管代答模式 (Hosting Mode)</label>
             <select id="harModeSelect">
-              <option value="auto">🟢 全自动托管代答</option>
-              <option value="draft">🔵 半托管草稿确认</option>
-              <option value="mention">🟡 仅在 @ 或唤醒词时回复</option>
-              <option value="manual">⚪ 仅记录不自动代答</option>
+              <option value="auto">全自动托管代答</option>
+              <option value="draft">半托管草稿确认</option>
+              <option value="mention">仅在 @ 或唤醒词时回复</option>
+              <option value="manual">仅记录不自动代答</option>
             </select>
           </div>
           <div class="form-group">
@@ -5774,9 +5782,9 @@
               <span style="font-size:10px;color:var(--text-muted);">点击套用模板：</span>
             </div>
             <div class="persona-templates-row" id="harPersonaTemplates" style="margin-bottom:6px;">
-              <button type="button" class="persona-template-chip" data-template="business">💼 商务严谨</button>
-              <button type="button" class="persona-template-chip" data-template="humor">😄 幽默风趣</button>
-              <button type="button" class="persona-template-chip" data-template="tech">💻 技术顾问</button>
+              <button type="button" class="persona-template-chip" data-template="business">商务严谨</button>
+              <button type="button" class="persona-template-chip" data-template="humor">幽默风趣</button>
+              <button type="button" class="persona-template-chip" data-template="tech">技术顾问</button>
               <button type="button" class="persona-template-chip" data-template="polite">⏳ 客套延后</button>
             </div>
             <textarea id="harSystemPromptInput" rows="4" placeholder="例如：我是徐克的 AI 助理，说话风趣幽默，遇到工作请先记录下来转告本人..."></textarea>
@@ -5794,10 +5802,10 @@
       <div class="modal-form-wrap" style="display:flex;flex-direction:column;gap:14px;padding:20px;">
         <div class="modal-header-row" style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border-default);padding-bottom:12px;">
           <div style="font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;">
-            <span style="font-size:18px;">👁️</span>
+            <span style="font-size:18px;"></span>
             <span>桌面微信视觉识别自测 (SightFlow 引擎)</span>
           </div>
-          <button type="button" class="btn text-btn" onclick="$('visionTestModal')?.close()" style="font-size:16px;">✕</button>
+          <button type="button" class="btn text-btn" onclick="$('visionTestModal')?.close()" style="font-size:16px;"></button>
         </div>
         <div id="visionTestContent" style="display:flex;flex-direction:column;gap:12px;max-height:65vh;overflow-y:auto;">
           <!-- 识别测试结果动态注入 -->
@@ -5805,10 +5813,10 @@
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;border-top:1px solid var(--border-default);padding-top:12px;">
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-main);cursor:pointer;user-select:none;">
             <input type="checkbox" id="visionTestLiveToggle" style="cursor:pointer;" />
-            <span style="font-weight:500;">🟢 开启实时持续监听 (Live 巡检，每2秒自动刷新)</span>
+            <span style="font-weight:500;">开启实时持续监听 (Live 巡检，每2秒自动刷新)</span>
           </label>
           <div style="display:flex;gap:10px;">
-            <button type="button" class="btn secondary" id="visionTestRecheckBtn" style="font-size:12px;padding:6px 14px;">🔄 重新识别截屏</button>
+            <button type="button" class="btn secondary" id="visionTestRecheckBtn" style="font-size:12px;padding:6px 14px;">重新识别截屏</button>
             <button type="button" class="btn primary" onclick="$('visionTestModal')?.close()" style="font-size:12px;padding:6px 18px;">关闭</button>
           </div>
         </div>
