@@ -32,6 +32,7 @@
     "appId": "com.hermes.agent.platform",
     "productName": "Hermes Agent Platform",
     "copyright": "Copyright © 2026 Hermes Agent Platform Team",
+    "afterPack": "scripts/after-pack.cjs",
     "directories": {
       "output": "release"
     },
