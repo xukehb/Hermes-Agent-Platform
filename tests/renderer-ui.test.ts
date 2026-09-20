@@ -52,6 +52,17 @@ describe('Electron renderer UI contracts', () => {
     expect(css).toMatch(/\.btn-close::before\s*{/);
   });
 
+  it('keeps toast notifications from covering the header controls', () => {
+    // 回归：提示条曾固定在 y=18px，正好压住顶栏右侧的 Git / 小 i / 外观 / 语言 /
+    // 操作 按钮并吞掉点击，用户切到英文后再也点不回中文，只能刷新页面。
+    const container = section(css, '.toast-container {', 'dialog .toast-container,');
+    const top = Number(/top:\s*(\d+)px/.exec(container)?.[1] ?? '0');
+    expect(top).toBeGreaterThanOrEqual(48);
+    // 提示条本身不参与交互，避免任何位置遮挡
+    expect(css).toMatch(/\.toast\s*\{[^}]*pointer-events:\s*none/);
+    expect(css).not.toMatch(/\.toast\s*\{[^}]*pointer-events:\s*auto/);
+  });
+
   it('routes Scheduled Tasks to the schedules view', () => {
     const handler = section(app, "$('scheduledTasksBtn')?.addEventListener", '// 快捷导入本地工程');
     expect(handler).toContain("show('schedules')");
@@ -313,6 +324,4 @@ describe('Electron renderer UI contracts', () => {
     expect(css).toContain('-webkit-app-region: drag');
   });
 });
-
-
 

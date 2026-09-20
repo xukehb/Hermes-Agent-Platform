@@ -4081,7 +4081,10 @@ select optgroup {
 /* Toast 提示 */
 .toast-container {
   position: fixed;
-  top: 18px;
+  /* 顶栏右侧集中了 Git / 小 i / 外观 / 语言 / 操作 等按钮，提示条若停在
+     y=18px 会整块盖住它们并吞掉点击（表现为「切到英文后再也点不动语言按钮，
+     只有刷新页面才能切回中文」）。因此整体下移到顶栏之下。 */
+  top: 58px;
   right: 20px;
   z-index: 9999;
   display: flex;
@@ -4108,7 +4111,8 @@ dialog .toast-container.in-dialog {
 }
 
 .toast {
-  pointer-events: auto;
+  /* 提示条只承载只读文本，不参与交互；保持穿透可彻底避免遮挡下方控件 */
+  pointer-events: none;
   padding: 8px 14px;
   border-radius: var(--radius-pill);
   background: #1e293b;

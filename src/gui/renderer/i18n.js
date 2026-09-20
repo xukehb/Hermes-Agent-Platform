@@ -189,6 +189,10 @@
       'settings.tabPermissions': '权限与安全策略',
       'settings.tabGateway': 'API 分发网关',
       'settings.tabSystem': '版本更新与系统日志',
+      'settings.statProviders': '已配置服务商',
+      'settings.statHealthy': '连通正常服务商',
+      'settings.statModels': '已收录模型总数',
+      'settings.statDefaultModel': '全局默认主模型',
 
       // 任务与历史弹窗 (Modals)
       'modal.historyTitle': '全局会话历史记录 (Conversation History)',
@@ -405,6 +409,10 @@
       'settings.tabPermissions': 'Security & Permissions',
       'settings.tabGateway': 'API Gateway',
       'settings.tabSystem': 'Version Updates & Logs',
+      'settings.statProviders': 'Providers configured',
+      'settings.statHealthy': 'Providers online',
+      'settings.statModels': 'Models catalogued',
+      'settings.statDefaultModel': 'Global default model',
 
       // 任务与历史弹窗 (Modals)
       'modal.historyTitle': 'Conversation History',
@@ -532,23 +540,25 @@
 
   function translateTextNode(node, lang) {
     const original = node.nodeValue;
+    // 回切中文时必须先无条件还原：被词典翻译过的节点此时正文是纯英文，
+    // 若先做「必须含中文」的判定就会提前 return，导致弹窗/设置页再也回不到中文，
+    // 用户只有刷新页面才能恢复。还原分支因此必须放在中文判定之前。
+    if (lang !== 'en-US') {
+      if (node.__hapSourceText === undefined) return;
+      node.nodeValue = node.__hapSourceText;
+      delete node.__hapSourceText;
+      return;
+    }
+
     if (!original) return;
     const source = normalizeSourceText(original);
     if (!source || !/[\u4e00-\u9fa5]/.test(source)) return;
 
-    if (lang === 'en-US') {
-      const translated = lookupSourceTranslation(source);
-      if (translated === undefined) return;
-      if (node.__hapSourceText === undefined) node.__hapSourceText = original;
-      const next = withPreservedWhitespace(node.__hapSourceText, translated);
-      if (node.nodeValue !== next) node.nodeValue = next;
-      return;
-    }
-
-    if (node.__hapSourceText !== undefined) {
-      node.nodeValue = node.__hapSourceText;
-      delete node.__hapSourceText;
-    }
+    const translated = lookupSourceTranslation(source);
+    if (translated === undefined) return;
+    if (node.__hapSourceText === undefined) node.__hapSourceText = original;
+    const next = withPreservedWhitespace(node.__hapSourceText, translated);
+    if (node.nodeValue !== next) node.nodeValue = next;
   }
 
   function translateSourceAttributes(root, lang) {
