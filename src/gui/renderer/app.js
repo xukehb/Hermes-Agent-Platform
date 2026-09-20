@@ -1922,9 +1922,24 @@ function initTheme() {
   });
 }
 
+// 切换主题时临时禁用过渡：否则整页元素会一起做补间动画，切换显得拖沓且有闪烁感
+function suppressThemeTransitions() {
+  const root = document.documentElement;
+  root.classList.add('theme-switching');
+  // 读取布局属性强制回流，确保禁用过渡的规则在本次主题改写之前生效
+  void root.offsetHeight;
+  const release = () => root.classList.remove('theme-switching');
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(() => requestAnimationFrame(release));
+  } else {
+    setTimeout(release, 32);
+  }
+}
+
 function applyTheme(theme, showNotice = false) {
   const finalTheme = AVAILABLE_THEMES.includes(theme) ? theme : 'dark';
   const root = document.documentElement;
+  suppressThemeTransitions();
 
   if (finalTheme === 'custom') {
     const base = getCustomThemeBase();

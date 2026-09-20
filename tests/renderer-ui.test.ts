@@ -474,6 +474,23 @@ describe('Electron renderer UI contracts', () => {
     });
   });
 
+  it('polishes theme switching, text selection and touch interaction details', () => {
+    // 1. 主题切换期间临时关闭过渡，避免整页元素同时补间
+    expect(app).toContain('function suppressThemeTransitions()');
+    expect(app).toContain("root.classList.add('theme-switching')");
+    expect(css).toMatch(/html\.theme-switching \*[\s\S]{0,200}transition: none !important/);
+
+    // 2. 选中文本跟随主题色，深色代码块与浅色正文都清晰
+    expect(css).toMatch(/::selection \{[^}]*color-mix\(in srgb, currentColor 26%, transparent\)/);
+
+    // 3. 触屏点按高光与文本自动缩放
+    expect(css).toContain('-webkit-tap-highlight-color: transparent');
+    expect(css).toContain('text-size-adjust: 100%');
+
+    // 4. 数字徽标等宽数字，数值变化不抖动
+    expect(css).toMatch(/\.opacity-value-badge[\s\S]{0,200}font-variant-numeric: tabular-nums/);
+  });
+
   it('implements macOS frameless titlebar with traffic light avoidance and unified drag header', () => {
     // 1. Electron BrowserWindow config
     expect(main).toContain("titleBarStyle: 'hidden'");

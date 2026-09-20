@@ -11617,3 +11617,36 @@ input[type="file"]:focus-visible,
     flex-shrink: 0;
   }
 }
+
+/* ==========================================================================
+   细节打磨：主题切换平滑、文本选中与触屏点按
+   ========================================================================== */
+
+/* 主题切换期间关闭过渡，避免整页元素同时补间造成的拖影 */
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: none !important;
+  animation-duration: 0s !important;
+}
+
+/* 选中文本跟随主题：以当前文字色混合，深色代码块与浅色正文都能看清 */
+::selection {
+  background: color-mix(in srgb, currentColor 26%, transparent);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* 触屏设备点按不要出现系统蓝色高光，交互反馈由组件自身提供 */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 数字类徽标使用等宽数字，避免数值变化时宽度跳动 */
+.opacity-value-badge,
+.stat-card-value,
+.sidebar-version-tag,
+.token-telemetry-pill,
+.metric-value {
+  font-variant-numeric: tabular-nums;
+}
