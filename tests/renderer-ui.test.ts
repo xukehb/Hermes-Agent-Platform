@@ -491,6 +491,29 @@ describe('Electron renderer UI contracts', () => {
     expect(css).toMatch(/\.opacity-value-badge[\s\S]{0,200}font-variant-numeric: tabular-nums/);
   });
 
+  it('tames sticky hover and iOS focus zoom on touch devices', () => {
+    // 触摸端没有真正的悬停，浏览器会把最后一次点按的元素保持在 :hover，
+    // 上浮/放大动效会「粘」在卡片上，因此需要在这些选择器上收敛 transform。
+    const touchBlock = section(css, '@media (hover: none), (pointer: coarse)', '@media (hover: none) and (pointer: coarse)');
+    expect(touchBlock).toContain('.stat-card:hover');
+    expect(touchBlock).toContain('.hub-card:hover');
+    expect(touchBlock).toMatch(/\.hub-card:hover[\s\S]{0,200}transform: none/);
+
+    // iOS Safari 聚焦小于 16px 的输入框会自动放大整页
+    const zoomBlock = section(css, '@media (hover: none) and (pointer: coarse)', '窄屏（≤768px）优化');
+    expect(zoomBlock).toMatch(/input:not\(\[type="checkbox"\]\)[\s\S]{0,400}font-size: 16px/);
+    expect(zoomBlock).toContain('-webkit-user-select: none');
+  });
+
+  it('keeps every header action reachable on ultra-narrow screens', () => {
+    // 超窄屏顶栏空间不足：文字标签收起为图标，右侧高频操作优先完整可见。
+    const narrow = section(css, '/* 超窄屏（≤560px）', '@media (max-width: 560px) {\n  .desktop-update-panel');
+    for (const id of ['#appearanceDisplayLabel', '#headerLangBtn', '#headerMoreBtn', '#gitBranchTopText']) {
+      expect(narrow, `缺少 ${id} 的收起规则`).toContain(id);
+    }
+    expect(narrow).toMatch(/\.header-right-tools \{[\s\S]{0,200}flex: 0 0 auto/);
+    expect(narrow).toMatch(/\.header-left-tools \{[\s\S]{0,160}flex: 1 1 auto/);
+  });
   it('resolves every data-i18n key in both languages', () => {
     const readDict = (lang: string): Map<string, string> => {
       const start = i18n.indexOf(`'${lang}': {`);

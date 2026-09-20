@@ -9946,6 +9946,51 @@ body.platform-mac .mini-drag-titlebar {
   transform: none !important;
 }
 
+/* 超窄屏（≤560px）：顶栏空间不足以同时容纳图标与文字，
+   文字标签统一收起（图标与 tooltip 仍在，功能不受影响），避免最右侧按钮被挤出屏幕。 */
+@media (max-width: 560px) {
+  .chat-header {
+    gap: 4px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .header-right-tools {
+    gap: 4px;
+    /* 右侧是高频操作（小 i、外观、语言、更多），优先保证完整可见；
+       空间不足时让左侧的模型/工程选择器收缩并横向滚动。 */
+    flex: 0 0 auto;
+  }
+
+  .header-left-tools {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .header-right-tools .btn,
+  .header-left-tools .btn {
+    padding-left: 7px;
+    padding-right: 7px;
+  }
+
+  #miniIAssistantBtn > span[data-i18n],
+  #miniModeToggleBtn > span[data-i18n],
+  #appearanceToggleBtn > #appearanceDisplayLabel,
+  #headerLangBtn > span[data-lang-current],
+  #headerMoreBtn > span[data-i18n],
+  #gitBranchTopText {
+    display: none;
+  }
+
+  /* 收起文字后图标间距收紧，避免胶囊出现多余留白 */
+  #appearanceToggleBtn,
+  #headerLangBtn,
+  #headerMoreBtn,
+  #miniModeToggleBtn {
+    gap: 0;
+  }
+}
+
 @media (max-width: 560px) {
   .desktop-update-panel { padding: 18px; }
   .desktop-update-versions { gap: 8px; padding: 12px; }
@@ -11488,6 +11533,57 @@ input[type="file"]:focus-visible,
   dialog.modal,
   dialog.modal[open] {
     animation: none !important;
+  }
+}
+
+/* ==========================================================================
+   触屏与指针粗糙的设备
+   - 触摸没有真正的悬停态，但浏览器会把最后一次点按的元素一直保持在 :hover，
+     于是「上浮 / 放大」这类悬停动效会「粘」在卡片上。这里统一收敛为静止态。
+   - 输入控件字号提到 16px：iOS Safari 在聚焦小于 16px 的输入框时会自动放大页面，
+     导致布局跳动，用户还得手动缩放回来。
+   ========================================================================== */
+@media (hover: none), (pointer: coarse) {
+  .user-img-card:hover,
+  .suggested-reply-chip:hover,
+  .suggested-reply-chip:hover svg,
+  .attachment-remove-btn:hover,
+  .composer-attach-btn.ai-gen-btn:hover svg,
+  .permission-mode-card:hover,
+  .stat-card:hover,
+  .card:hover,
+  .sidebar-bottom-panel.sidebar-settings-only .nav-settings-btn:hover .nav-icon,
+  .nav:hover .nav-icon,
+  .eco-card:hover,
+  .history-search-card:hover,
+  .stop-generate-btn:hover,
+  .server-card:hover,
+  .metric-stat-card:hover,
+  .git-ai-commit-btn:hover,
+  .wallpaper-card:hover,
+  .mini-send-btn:hover,
+  .hub-card:hover {
+    transform: none;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  textarea,
+  select {
+    /* 触摸端统一到 16px，避免 iOS 聚焦时自动放大整页 */
+    font-size: 16px;
+  }
+
+  /* 触摸端点按不做文本选中，避免拖动列表时误选文字 */
+  button,
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  .nav,
+  .settings-tab-btn {
+    -webkit-user-select: none;
+    user-select: none;
   }
 }
 
