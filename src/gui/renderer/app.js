@@ -6,6 +6,35 @@
    - 深度集成 Git 版本协同：分支探测、未提交文件审查、AI Commit、Push 推送与 Pull 拉取
    ========================================================================== */
 
+// --- 背景智能取色的全局状态 ---
+// 这些声明必须位于文件顶部：主题初始化会回调 refreshWallpaperDerivedTheme，
+// 若放在文件中后段会触发 let/const 的暂时性死区错误并中断整个脚本初始化。
+const WALLPAPER_ADAPTIVE_KEY = 'hap_wallpaper_adaptive';
+const WALLPAPER_ACCENT_CACHE = new Map();
+let wallpaperDeriveToken = 0;
+
+// 预设壁纸没有可采样图片，以其渐变主色作为取色基准
+const WALLPAPER_PRESET_ACCENTS = {
+  nebula: '#7c6cff',
+  cyber: '#22a7e8',
+  aurora: '#10b981',
+  sunset: '#f59e0b',
+  mesh: '#8b7cf6',
+  carbon: '#64748b',
+};
+
+const WALLPAPER_DERIVED_VARS = [
+  '--wp-accent',
+  '--wp-accent-hover',
+  '--wp-accent-active',
+  '--wp-accent-subtle',
+  '--wp-accent-border',
+  '--wp-accent-glow',
+  '--wp-on-accent',
+  '--wp-on-wallpaper',
+  '--wp-on-wallpaper-muted',
+];
+
 const $ = (id) => document.getElementById(id);
 
 if (window.hap?.isMac || (typeof navigator !== 'undefined' && (navigator.userAgent.includes('Mac') || navigator.platform?.includes('Mac')))) {
@@ -2202,6 +2231,7 @@ function initWallpaperSystem() {
     try {
       showToast('正在优化并加载背景图片...', 'info');
       const dataUrl = await compressImageForWallpaper(file);
+      WALLPAPER_ACCENT_CACHE.clear();
       localStorage.setItem('hap_wallpaper_custom', dataUrl);
       const customPreview = $('customWallpaperPreview');
       if (customPreview) {
@@ -2225,6 +2255,7 @@ function initWallpaperSystem() {
       showToast('请输入有效的图片链接地址', 'warning');
       return;
     }
+    WALLPAPER_ACCENT_CACHE.clear();
     localStorage.setItem('hap_wallpaper_custom', url);
     const customPreview = $('customWallpaperPreview');
     if (customPreview) {
@@ -2242,6 +2273,22 @@ function initWallpaperSystem() {
       $('applyWallpaperUrlBtn')?.click();
     }
   });
+
+  // 背景智能取色开关
+  const adaptiveToggle = $('wallpaperAdaptiveToggle');
+  if (adaptiveToggle) {
+    adaptiveToggle.checked = isWallpaperAdaptiveEnabled();
+    adaptiveToggle.addEventListener('change', (e) => {
+      localStorage.setItem(WALLPAPER_ADAPTIVE_KEY, e.target.checked ? '1' : '0');
+      refreshWallpaperDerivedTheme();
+      showToast(
+        e.target.checked
+          ? updateText('wallpaper.adaptiveOnToast', '已开启背景智能取色，组件配色将跟随背景主色')
+          : updateText('wallpaper.adaptiveOffToast', '已关闭背景智能取色，组件配色恢复主题默认'),
+        'info'
+      );
+    });
+  }
 
   // 清除壁纸按钮
   $('clearWallpaperBtn')?.addEventListener('click', () => {
@@ -2324,6 +2371,9 @@ function applyWallpaper(wallpaperId, save = true) {
   if (save) {
     localStorage.setItem('hap_wallpaper_id', validId);
   }
+
+  // 壁纸变化后重新提取主色，驱动组件强调色与冲突文本色
+  refreshWallpaperDerivedTheme();
 }
 
 function setWallpaperOpacity(val, save = true) {
@@ -2334,6 +2384,7 @@ function setWallpaperOpacity(val, save = true) {
   const range = $('wallpaperOpacityRange');
   if (range && range.value !== String(num)) range.value = String(num);
   if (save) localStorage.setItem('hap_wallpaper_opacity', String(num));
+  refreshWallpaperDerivedTheme();
 }
 
 function setWallpaperBlur(val, save = true) {
@@ -2354,6 +2405,7 @@ function setWallpaperDim(val, save = true) {
   const range = $('wallpaperDimRange');
   if (range && range.value !== String(num)) range.value = String(num);
   if (save) localStorage.setItem('hap_wallpaper_dim', String(num));
+  refreshWallpaperDerivedTheme();
 }
 
 function setWallpaperFit(val, save = true) {
@@ -2421,6 +2473,277 @@ function compressImageForWallpaper(file) {
       img.src = reader.result;
     };
     reader.readAsDataURL(file);
+  });
+}
+
+// ==========================================================================
+// 背景智能取色 (Wallpaper Adaptive Accent)
+// 上传/选择背景后自动提取主色，派生按钮等组件强调色，
+// 并按背景明暗自动选择白色或黑色冲突文本色，保证可读性。
+// ==========================================================================
+
+function isWallpaperAdaptiveEnabled() {
+  return localStorage.getItem(WALLPAPER_ADAPTIVE_KEY) !== '0';
+}
+
+function wpRelativeLuminance(r, g, b) {
+  const channel = (v) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}
+
+function wpHexToRgb(hex) {
+  const normalized = normalizeHexColor(hex);
+  if (!normalized) return null;
+  return {
+    r: parseInt(normalized.slice(1, 3), 16),
+    g: parseInt(normalized.slice(3, 5), 16),
+    b: parseInt(normalized.slice(5, 7), 16),
+  };
+}
+
+function wpRgbToHsl(r, g, b) {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h;
+  if (max === rn) h = ((gn - bn) / d) % 6;
+  else if (max === gn) h = (bn - rn) / d + 2;
+  else h = (rn - gn) / d + 4;
+  h *= 60;
+  if (h < 0) h += 360;
+  return [h, s, l];
+}
+
+function wpHslToRgb(h, s, l) {
+  const hn = ((h % 360) + 360) % 360 / 360;
+  if (s === 0) {
+    const v = Math.round(l * 255);
+    return { r: v, g: v, b: v };
+  }
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const hue2rgb = (t) => {
+    let tn = t;
+    if (tn < 0) tn += 1;
+    if (tn > 1) tn -= 1;
+    if (tn < 1 / 6) return p + (q - p) * 6 * tn;
+    if (tn < 1 / 2) return q;
+    if (tn < 2 / 3) return p + (q - p) * (2 / 3 - tn) * 6;
+    return p;
+  };
+  return {
+    r: Math.round(hue2rgb(hn + 1 / 3) * 255),
+    g: Math.round(hue2rgb(hn) * 255),
+    b: Math.round(hue2rgb(hn - 1 / 3) * 255),
+  };
+}
+
+function wpRgbToHex(r, g, b) {
+  const toHex = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+  return '#' + toHex(r) + toHex(g) + toHex(b);
+}
+
+// 白字与黑字谁的实际对比度更高就用谁（对比度交叉点约在相对亮度 0.179）
+function wpContrastTextForLuminance(luminance) {
+  const whiteContrast = 1.05 / (luminance + 0.05);
+  const blackContrast = (luminance + 0.05) / 0.05;
+  return whiteContrast >= blackContrast ? '#ffffff' : '#09090b';
+}
+
+function wpRgba(rgb, alpha) {
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+}
+
+// 从缩略图像素中提取主色（按饱和度与中间调加权聚类），并统计整体亮度
+function analyzeWallpaperPixels(data) {
+  const buckets = new Map();
+  let luminanceSum = 0;
+  let pixelCount = 0;
+
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 128) continue;
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const luma = wpRelativeLuminance(r, g, b);
+    luminanceSum += luma;
+    pixelCount += 1;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    // 跳过死黑与死白，它们几乎不携带"主题色"信息
+    if (max < 26 || min > 236) continue;
+
+    const sat = max === 0 ? 0 : (max - min) / max;
+    const toneWeight = Math.max(0.08, 1 - Math.abs(luma - 0.5) * 1.7);
+    const weight = (0.18 + sat * 1.7) * toneWeight;
+    const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
+    const bucket = buckets.get(key) || { r: 0, g: 0, b: 0, count: 0, score: 0 };
+    bucket.r += r;
+    bucket.g += g;
+    bucket.b += b;
+    bucket.count += 1;
+    bucket.score += weight;
+    buckets.set(key, bucket);
+  }
+
+  const averageLuminance = pixelCount ? luminanceSum / pixelCount : 0.1;
+  if (!buckets.size) return { accent: null, averageLuminance, saturation: 0 };
+
+  // 取得分最高的若干色簇加权平均，避免单个噪点决定整站配色
+  const top = [...buckets.values()].sort((a, b) => b.score - a.score).slice(0, 4);
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  let total = 0;
+  top.forEach((bucket) => {
+    const avg = { r: bucket.r / bucket.count, g: bucket.g / bucket.count, b: bucket.b / bucket.count };
+    r += avg.r * bucket.score;
+    g += avg.g * bucket.score;
+    b += avg.b * bucket.score;
+    total += bucket.score;
+  });
+  const accent = { r: r / total, g: g / total, b: b / total };
+  const hsl = wpRgbToHsl(accent.r, accent.g, accent.b);
+  return { accent, averageLuminance, saturation: hsl[1] };
+}
+
+function sampleWallpaperImage(url) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const done = (result) => resolve(result);
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const size = 40;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, size, size);
+        const { data } = ctx.getImageData(0, 0, size, size);
+        done(analyzeWallpaperPixels(data));
+      } catch {
+        // 跨域图片会污染画布，无法读取像素时退回主题默认色
+        done(null);
+      }
+    };
+    img.onerror = () => done(null);
+    img.src = url;
+  });
+}
+
+// 依据当前主题底色与壁纸质感，生成整套派生变量
+function buildWallpaperDerivedVars(analysis, baseIsDark) {
+  const { accent, averageLuminance, saturation = 0 } = analysis;
+  const vars = {};
+
+  const opacity = Math.max(10, Math.min(100, Number(localStorage.getItem('hap_wallpaper_opacity')) || 45)) / 100;
+  const dim = Math.max(0, Math.min(90, Number(localStorage.getItem('hap_wallpaper_dim')) || 40)) / 100;
+  const backdropLuminance = baseIsDark ? 0.02 : 0.98;
+  const overlayLuminance = baseIsDark ? 0.05 : 0.95;
+  // 壁纸是半透明图层，需要先与底层背景合成，再叠加暗化遮罩，才能得到真实观感亮度
+  const compositeLuminance = averageLuminance * opacity + backdropLuminance * (1 - opacity);
+  const effectiveLuminance = compositeLuminance * (1 - dim) + overlayLuminance * dim;
+  const wallText = wpContrastTextForLuminance(effectiveLuminance);
+  vars['--wp-on-wallpaper'] = wallText;
+  vars['--wp-on-wallpaper-muted'] = wallText === '#ffffff' ? 'rgba(255, 255, 255, 0.78)' : 'rgba(9, 9, 11, 0.72)';
+
+  // 背景本身接近中性灰时，保留主题的中性强调色，不做无谓的染色
+  if (!accent || saturation < 0.12) return vars;
+
+  const [hue] = wpRgbToHsl(accent.r, accent.g, accent.b);
+  let [rawHue, rawSat, rawLight] = wpRgbToHsl(accent.r, accent.g, accent.b);
+  const sat = Math.min(0.86, Math.max(rawSat, 0.32));
+  const light = baseIsDark
+    ? Math.min(0.74, Math.max(rawLight, 0.54))
+    : Math.min(0.56, Math.max(rawLight, 0.34));
+  const main = wpHslToRgb(rawHue, sat, light);
+  const hover = wpHslToRgb(rawHue, sat, baseIsDark ? Math.min(0.84, light + 0.08) : Math.max(0.24, light - 0.06));
+  const active = wpHslToRgb(rawHue, sat, baseIsDark ? Math.max(0.3, light - 0.07) : Math.max(0.18, light - 0.1));
+  const onAccent = wpContrastTextForLuminance(wpRelativeLuminance(main.r, main.g, main.b));
+
+  vars['--wp-accent'] = wpRgbToHex(main.r, main.g, main.b);
+  vars['--wp-accent-hover'] = wpRgbToHex(hover.r, hover.g, hover.b);
+  vars['--wp-accent-active'] = wpRgbToHex(active.r, active.g, active.b);
+  vars['--wp-accent-subtle'] = wpRgba(main, baseIsDark ? 0.2 : 0.14);
+  vars['--wp-accent-border'] = wpRgba(main, baseIsDark ? 0.46 : 0.36);
+  vars['--wp-accent-glow'] = wpRgba(main, baseIsDark ? 0.32 : 0.18);
+  vars['--wp-on-accent'] = onAccent;
+  return vars;
+}
+
+function applyWallpaperDerivedVars(vars) {
+  const root = document.documentElement;
+  WALLPAPER_DERIVED_VARS.forEach((name) => {
+    if (vars && vars[name]) root.style.setProperty(name, vars[name]);
+    else root.style.removeProperty(name);
+  });
+  // 该标记是 CSS 派生规则的唯一开关，关闭取色时保证零视觉影响
+  if (vars) root.setAttribute('data-wp-adaptive', 'on');
+  else root.removeAttribute('data-wp-adaptive');
+}
+
+function getWallpaperColorSource(wallpaperId) {
+  if (wallpaperId === 'custom') {
+    const custom = localStorage.getItem('hap_wallpaper_custom');
+    return custom ? { kind: 'image', key: 'custom:' + custom.slice(0, 96) + ':' + custom.length, url: custom } : null;
+  }
+  const preset = WALLPAPER_PRESET_ACCENTS[wallpaperId];
+  return preset ? { kind: 'preset', key: 'preset:' + wallpaperId, hex: preset } : null;
+}
+
+// 主题切换、壁纸切换、透明度/遮罩调整后都需要重新对账派生色
+function refreshWallpaperDerivedTheme() {
+  const wallpaperId = localStorage.getItem('hap_wallpaper_id') || 'none';
+  const hasWallpaper = wallpaperId !== 'none' && !!document.body && document.body.classList.contains('has-wallpaper');
+  if (!hasWallpaper || !isWallpaperAdaptiveEnabled()) {
+    wallpaperDeriveToken += 1;
+    applyWallpaperDerivedVars(null);
+    return;
+  }
+
+  const baseIsDark = (document.documentElement.getAttribute('data-theme') || 'dark') !== 'light';
+  const source = getWallpaperColorSource(wallpaperId);
+  if (!source) {
+    applyWallpaperDerivedVars(null);
+    return;
+  }
+
+  const token = (wallpaperDeriveToken += 1);
+  const commit = (analysis) => {
+    if (token !== wallpaperDeriveToken) return;
+    applyWallpaperDerivedVars(buildWallpaperDerivedVars(analysis, baseIsDark));
+  };
+
+  if (source.kind === 'preset') {
+    const rgb = wpHexToRgb(source.hex);
+    commit({ accent: rgb, averageLuminance: wpRelativeLuminance(rgb.r, rgb.g, rgb.b) * 0.7, saturation: 0.6 });
+    return;
+  }
+
+  const cached = WALLPAPER_ACCENT_CACHE.get(source.key);
+  if (cached) {
+    commit(cached);
+    return;
+  }
+
+  sampleWallpaperImage(source.url).then((analysis) => {
+    if (!analysis) {
+      commit(null);
+      return;
+    }
+    WALLPAPER_ACCENT_CACHE.set(source.key, analysis);
+    commit(analysis);
   });
 }
 

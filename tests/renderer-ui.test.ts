@@ -368,6 +368,43 @@ describe('Electron renderer UI contracts', () => {
     expect(i18n).toContain("'wallpaper.aurora'");
   });
 
+  it('derives component accent and contrast text colors from the wallpaper', () => {
+    // 1. Toggle in the wallpaper section
+    expect(html).toContain('id="wallpaperAdaptiveToggle"');
+    expect(html).toContain('class="wallpaper-adaptive-row"');
+    expect(html).toContain('data-i18n="wallpaper.adaptiveTitle"');
+
+    // 2. Pixel analysis + accent derivation
+    expect(app).toContain('function refreshWallpaperDerivedTheme(');
+    expect(app).toContain('function analyzeWallpaperPixels(');
+    expect(app).toContain('function wpRelativeLuminance(');
+    expect(app).toContain('function buildWallpaperDerivedVars(');
+    expect(app).toContain('function sampleWallpaperImage(');
+    expect(app).toContain("'--wp-on-accent'");
+    expect(app).toContain("'--wp-on-wallpaper'");
+    expect(app).toContain('WALLPAPER_PRESET_ACCENTS');
+    // 以真实对比度决定白色或黑色冲突文本色
+    expect(app).toContain('function wpContrastTextForLuminance(');
+    expect(app).toContain("return whiteContrast >= blackContrast ? '#ffffff' : '#09090b';");
+    expect(app).toContain('wpContrastTextForLuminance(effectiveLuminance)');
+    expect(app).toContain('wpContrastTextForLuminance(wpRelativeLuminance(main.r, main.g, main.b))');
+    // 壁纸 / 遮罩 / 透明度变化后重新对账
+    expect(app).toContain('refreshWallpaperDerivedTheme();');
+
+    // 3. CSS 派生规则默认回退到主题强调色，仅在启用取色时生效
+    expect(css).toContain('--wp-accent: var(--primary-black)');
+    expect(css).toContain('--wp-on-accent: var(--bg-app)');
+    expect(css).toContain('html[data-wp-adaptive="on"] body.has-wallpaper .btn.primary');
+    expect(css).toContain('html[data-wp-adaptive="on"] body.has-wallpaper .theme-quick-chip.active');
+    expect(css).toContain('.wallpaper-adaptive-row');
+
+    // 4. i18n
+    expect(i18n).toContain("'wallpaper.adaptiveTitle'");
+    expect(i18n).toContain("'wallpaper.adaptiveDesc'");
+    expect(i18n).toContain("'wallpaper.adaptiveOnToast'");
+    expect(i18n).toContain("'wallpaper.adaptiveOffToast'");
+  });
+
   it('implements macOS frameless titlebar with traffic light avoidance and unified drag header', () => {
     // 1. Electron BrowserWindow config
     expect(main).toContain("titleBarStyle: 'hidden'");

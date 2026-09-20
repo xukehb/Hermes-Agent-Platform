@@ -7961,6 +7961,126 @@ body.has-wallpaper .user-bubble {
   background-color: color-mix(in srgb, var(--bg-user-bubble) 85%, transparent) !important;
 }
 
+/* --------------------------------------------------------------------------
+   背景智能取色派生层 (Wallpaper Adaptive Accent)
+   默认回退到当前主题的中性强调色；只有启用智能取色的壁纸场景会覆盖这些变量，
+   因此无壁纸 / 关闭取色时与既有视觉完全一致。
+   -------------------------------------------------------------------------- */
+:root {
+  --wp-accent: var(--primary-black);
+  --wp-accent-hover: var(--primary-black-hover);
+  --wp-accent-active: var(--primary-active);
+  --wp-accent-subtle: var(--primary-subtle);
+  --wp-accent-border: var(--primary-border);
+  --wp-accent-glow: var(--accent-glow);
+  --wp-on-accent: var(--bg-app);
+  --wp-on-wallpaper: var(--text-main);
+  --wp-on-wallpaper-muted: var(--text-muted);
+}
+
+html[data-wp-adaptive="on"] body.has-wallpaper .btn.primary,
+html[data-wp-adaptive="on"] body.has-wallpaper .git-ai-commit-btn,
+html[data-wp-adaptive="on"] body.has-wallpaper #desktopUpdateDownloadBtn,
+html[data-wp-adaptive="on"] body.has-wallpaper #desktopUpdateInstallBtn {
+  background: var(--wp-accent);
+  border-color: var(--wp-accent);
+  color: var(--wp-on-accent);
+}
+
+html[data-wp-adaptive="on"] body.has-wallpaper .btn.primary:hover,
+html[data-wp-adaptive="on"] body.has-wallpaper .git-ai-commit-btn:hover {
+  background: var(--wp-accent-hover);
+  border-color: var(--wp-accent-hover);
+  color: var(--wp-on-accent);
+}
+
+html[data-wp-adaptive="on"] body.has-wallpaper .btn.primary:active {
+  background: var(--wp-accent-active);
+  border-color: var(--wp-accent-active);
+}
+
+/* 选中态芯片 / 导航：用背景主色的浅色底与描边表达「当前项」 */
+html[data-wp-adaptive="on"] body.has-wallpaper .theme-quick-chip.active,
+html[data-wp-adaptive="on"] body.has-wallpaper .wallpaper-quick-chip.active,
+html[data-wp-adaptive="on"] body.has-wallpaper .popover-chip.active,
+html[data-wp-adaptive="on"] body.has-wallpaper .chip.active {
+  background: var(--wp-accent-subtle);
+  border-color: var(--wp-accent-border);
+  color: var(--wp-accent) !important;
+}
+
+html[data-wp-adaptive="on"] body.has-wallpaper .settings-layout > .settings-nav-tabs > .settings-tab-btn.active {
+  background: var(--wp-accent-subtle);
+  color: var(--wp-accent);
+  box-shadow: inset 2px 0 0 var(--wp-accent);
+}
+
+/* 滑块、开关与聚焦环跟随背景主色 */
+html[data-wp-adaptive="on"] body.has-wallpaper .opacity-range-slider,
+html[data-wp-adaptive="on"] body.has-wallpaper input[type="range"] {
+  accent-color: var(--wp-accent);
+}
+
+html[data-wp-adaptive="on"] body.has-wallpaper .switch input:checked + .slider {
+  background-color: var(--wp-accent);
+}
+
+html[data-wp-adaptive="on"] body.has-wallpaper .btn:focus-visible,
+html[data-wp-adaptive="on"] body.has-wallpaper .settings-tab-btn:focus-visible,
+html[data-wp-adaptive="on"] body.has-wallpaper a:focus-visible {
+  outline-color: var(--wp-accent);
+}
+
+/* 直接压在壁纸上的正文：按背景明暗自动切换白/黑，避免「浅底白字」不可读 */
+html[data-wp-adaptive="on"] body.has-wallpaper .msg-row.assistant .assistant-content,
+html[data-wp-adaptive="on"] body.has-wallpaper .chat-header,
+html[data-wp-adaptive="on"] body.has-wallpaper .chat-header .chat-title,
+html[data-wp-adaptive="on"] body.has-wallpaper .status-bar {
+  color: var(--wp-on-wallpaper);
+}
+
+html[data-wp-adaptive="on"] body.has-wallpaper .chat-header .chat-subtitle,
+html[data-wp-adaptive="on"] body.has-wallpaper .status-bar .status-item {
+  color: var(--wp-on-wallpaper-muted);
+}
+
+/* 智能取色开关行 */
+.wallpaper-adaptive-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  cursor: pointer;
+}
+
+.wallpaper-adaptive-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.wallpaper-adaptive-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.wallpaper-adaptive-desc {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.wallpaper-adaptive-row .switch {
+  flex: 0 0 auto;
+}
+
 /* 预设壁纸样式 */
 .wp-preset-nebula {
   background-image: radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.55), transparent 45%),

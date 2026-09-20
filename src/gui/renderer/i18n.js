@@ -143,6 +143,10 @@
       'wallpaper.fitCover': '撑满铺满 (Cover)',
       'wallpaper.fitContain': '等比完整 (Contain)',
       'wallpaper.fitTile': '平铺纹理 (Tile)',
+      'wallpaper.adaptiveTitle': '背景智能取色',
+      'wallpaper.adaptiveDesc': '自动提取背景主色，联动按钮/开关/选中态配色，并按背景明暗自动选择白色或黑色文字',
+      'wallpaper.adaptiveOnToast': '已开启背景智能取色，组件配色跟随背景主色',
+      'wallpaper.adaptiveOffToast': '已关闭背景智能取色，组件配色恢复主题默认',
 
       // 输入悬浮岛 (Composer)
       'composer.quickGit': '/git 状态',
@@ -395,6 +399,10 @@
       'wallpaper.fitCover': 'Cover',
       'wallpaper.fitContain': 'Contain',
       'wallpaper.fitTile': 'Tile Pattern',
+      'wallpaper.adaptiveTitle': 'Adaptive Colors from Wallpaper',
+      'wallpaper.adaptiveDesc': 'Extract the wallpaper accent color to tint buttons, switches and active states, and auto-pick white or black text for contrast',
+      'wallpaper.adaptiveOnToast': 'Adaptive wallpaper colors enabled',
+      'wallpaper.adaptiveOffToast': 'Adaptive wallpaper colors disabled',
 
       // 输入悬浮岛 (Composer)
       'composer.quickGit': '/git Status',
