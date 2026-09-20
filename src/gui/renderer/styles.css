@@ -57,7 +57,7 @@
   --border-hover: #a1a1aa;
   --border-dark: #71717a;
   --border-strong: #a1a1aa;
-  --border-focus: #2563eb;
+  --border-focus: #09090b;
 
   /* 字体体系 */
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Roboto, sans-serif;
@@ -69,19 +69,22 @@
   --text-muted: #52525b;
   --text-placeholder: #8b8b93;
 
-  /* 唯一强调色 (Single Accent) */
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --primary-active: #1e40af;
-  --primary-subtle: #eff6ff;
-  --primary-border: #dbeafe;
+  /* 唯一强调色：企业级中性黑。
+     设计立场：界面不引入任何装饰性色相，只有「选中 / 聚焦 / 主操作」
+     三种语义，全部用中性深浅表达；色相仅保留给功能状态色
+     (成功 / 警告 / 危险)。 */
+  --primary: #09090b;
+  --primary-hover: #27272a;
+  --primary-active: #18181b;
+  --primary-subtle: #f4f4f5;
+  --primary-border: #e4e4e7;
   --primary-black: #18181b;
   --primary-black-hover: #27272a;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --accent-soft: #eff6ff;
-  --accent-border: #dbeafe;
-  --accent-glow: rgba(37, 99, 235, 0.10);
+  --accent: #09090b;
+  --accent-hover: #27272a;
+  --accent-soft: #f4f4f5;
+  --accent-border: #e4e4e7;
+  --accent-glow: transparent;
 
   /* 功能状态色 (低饱和、同一明度) */
   --danger: #dc2626;
@@ -164,25 +167,25 @@
   --border-hover: #4b4b53;
   --border-dark: #52525b;
   --border-strong: #52525b;
-  --border-focus: #3b82f6;
+  --border-focus: #fafafa;
 
   --text-main: #fafafa;
   --text-secondary: #d4d4d8;
   --text-muted: #a1a1aa;
   --text-placeholder: #71717a;
 
-  --primary: #3b82f6;
-  --primary-hover: #60a5fa;
-  --primary-active: #2563eb;
-  --primary-subtle: rgba(59, 130, 246, 0.14);
-  --primary-border: rgba(59, 130, 246, 0.32);
+  --primary: #fafafa;
+  --primary-hover: #e4e4e7;
+  --primary-active: #d4d4d8;
+  --primary-subtle: #26262b;
+  --primary-border: #3f3f46;
   --primary-black: #fafafa;
   --primary-black-hover: #e4e4e7;
-  --accent: #3b82f6;
-  --accent-hover: #60a5fa;
-  --accent-soft: rgba(59, 130, 246, 0.14);
-  --accent-border: rgba(59, 130, 246, 0.32);
-  --accent-glow: rgba(59, 130, 246, 0.18);
+  --accent: #fafafa;
+  --accent-hover: #e4e4e7;
+  --accent-soft: #26262b;
+  --accent-border: #3f3f46;
+  --accent-glow: transparent;
 
   --danger: #f87171;
   --danger-strong: #fca5a5;
@@ -2189,6 +2192,7 @@ body.has-wallpaper .rail-mac-spacer {
   flex-shrink: 0;
   position: relative;
   width: 100%;
+  box-sizing: border-box;
   padding: 0 20px 24px 20px;
   background: linear-gradient(180deg, transparent 0%, var(--bg-app) 30%, var(--bg-app) 100%);
   z-index: 15;
@@ -2982,8 +2986,8 @@ body.has-wallpaper .rail-mac-spacer {
 }
 
 .send-circle-btn:not(:disabled):hover {
-  transform: scale(1.1) rotate(-6deg);
-  box-shadow: 0 6px 20px -2px var(--accent-glow, rgba(99, 102, 241, 0.65)), 0 0 14px rgba(236, 72, 153, 0.4);
+  transform: none;
+  box-shadow: var(--shadow-sm);
 }
 
 .send-circle-btn:not(:disabled):active {
@@ -8167,24 +8171,25 @@ body.has-wallpaper .user-bubble {
 }
 
 .theme-select-card:hover {
-  border-color: var(--primary);
+  border-color: var(--border-hover);
   background: var(--bg-surface-raised);
   box-shadow: var(--shadow-sm);
 }
 
 .theme-select-card.active {
-  border-color: var(--primary);
-  background: var(--primary-subtle);
-  box-shadow: 0 0 0 1px var(--primary), var(--shadow-sm);
+  border-color: var(--text-main);
+  background: var(--bg-active);
+  box-shadow: var(--shadow-sm);
 }
 
 .theme-select-card .theme-active-tag {
   display: none;
+  flex-shrink: 0;
   font-size: 10.5px;
   padding: 1px 6px;
   border-radius: var(--radius-pill);
-  background: var(--primary);
-  color: #ffffff;
+  background: var(--text-main);
+  color: var(--bg-app);
   font-weight: 600;
 }
 
@@ -8206,11 +8211,11 @@ body.has-wallpaper .user-bubble {
 
 .theme-preview-dark { background: #090a0f; }
 .theme-preview-dark .theme-swatch-surface { height: 14px; border-radius: 3px; background: #181b24; }
-.theme-preview-dark .theme-swatch-accent { height: 8px; border-radius: 2px; background: #38bdf8; width: 60%; }
+.theme-preview-dark .theme-swatch-accent { height: 8px; border-radius: 2px; background: #fafafa; width: 60%; }
 
 .theme-preview-light { background: #f8fafc; border-color: #cbd5e1; }
 .theme-preview-light .theme-swatch-surface { height: 14px; border-radius: 3px; background: #ffffff; border: 1px solid #e2e8f0; }
-.theme-preview-light .theme-swatch-accent { height: 8px; border-radius: 2px; background: #0284c7; width: 60%; }
+.theme-preview-light .theme-swatch-accent { height: 8px; border-radius: 2px; background: #18181b; width: 60%; }
 
 .theme-preview-cyber { background: #070614; }
 .theme-preview-cyber .theme-swatch-surface { height: 14px; border-radius: 3px; background: #161436; }
@@ -8253,6 +8258,7 @@ body.has-wallpaper .user-bubble {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .theme-desc {

@@ -1113,7 +1113,7 @@
                 </div>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button id="openMcpPlaygroundBtn" class="btn primary" style="font-size:12.5px;padding:6px 14px;">
+                <button id="openMcpPlaygroundBtn" class="btn secondary" style="font-size:12.5px;padding:6px 14px;">
                   MCP 调试台
                 </button>
                 <button id="openPresetMcpModalBtn" class="btn secondary" style="font-size:12.5px;padding:6px 14px;">
@@ -1426,7 +1426,7 @@
                       </select>
                     </div>
 
-                    <button type="submit" class="btn primary" id="saveWxConfigBtn" style="font-size:12.5px;font-weight:600;margin-top:4px;">
+                    <button type="submit" class="btn secondary" id="saveWxConfigBtn" style="font-size:12.5px;font-weight:600;margin-top:4px;">
                       保存微信通道配置
                     </button>
                   </form>
@@ -1468,7 +1468,7 @@
                   <!-- 模拟测试消息 -->
                   <div style="display:flex;gap:8px;">
                     <input id="wxTestMessageInput" placeholder="向选中的微信联系人或群发送测试消息..." style="flex:1;" />
-                    <button type="button" class="btn primary" id="sendWxTestMsgBtn" style="font-size:12px;">发送</button>
+                    <button type="button" class="btn secondary" id="sendWxTestMsgBtn" style="font-size:12px;">发送</button>
                   </div>
                 </div>
               </div>
@@ -1868,7 +1868,7 @@
                   <input type="checkbox" id="hostAutoRefreshToggle" checked />
                   <span>自动轮询 (3s)</span>
                 </label>
-                <button id="refreshHostBtn" class="btn primary" style="font-size:12.5px;padding:6px 14px;">
+                <button id="refreshHostBtn" class="btn secondary" style="font-size:12.5px;padding:6px 14px;">
                   立即刷新
                 </button>
               </div>
@@ -1890,7 +1890,7 @@
                   </div>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                  <button type="button" class="btn primary" onclick="window.openNodeBotConfigModal()" style="font-size:12px;padding:6px 14px;">
+                  <button type="button" class="btn secondary" onclick="window.openNodeBotConfigModal()" style="font-size:12px;padding:6px 14px;">
                     机器人设置
                   </button>
                   <button type="button" class="btn secondary" onclick="window.testNodeBotAlert()" style="font-size:12px;padding:6px 12px;">
@@ -2073,10 +2073,10 @@
                   </div>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                  <button id="scanDiskBtn" class="btn primary" style="font-size:12.5px;padding:6px 16px;">
+                  <button id="scanDiskBtn" class="btn secondary" style="font-size:12.5px;padding:6px 16px;">
                     从根目录开始全盘扫描
                   </button>
-                  <button id="safeCleanDiskBtn" class="btn primary" style="border-color:var(--success);font-size:12.5px;display:none;">
+                  <button id="safeCleanDiskBtn" class="btn primary" style="font-size:12.5px;display:none;">
                     仅清理安全项 (Safe)
                   </button>
                   <button id="allCleanDiskBtn" class="btn danger" style="font-size:12.5px;display:none;">
@@ -2213,7 +2213,7 @@
                   </div>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                  <button type="button" class="btn primary" onclick="window.switchSettingsTab('host')" style="font-size:12px;padding:6px 14px;">
+                  <button type="button" class="btn secondary" onclick="window.switchSettingsTab('host')" style="font-size:12px;padding:6px 14px;">
                     进入全景监控大盘
                   </button>
                 </div>
@@ -2959,11 +2959,11 @@
           </div>
 
           <!-- 手动添加模型输入行 -->
-          <div style="display:grid;grid-template-columns:1.5fr 1fr 0.8fr auto;gap:6px;align-items:center;margin-bottom:8px;">
-            <input type="text" id="manualModelNameInput" placeholder="真实模型名 (如 deepseek-chat, gpt-4o, qwen-plus)" style="font-size:12px;padding:6px 8px;border-radius:6px;" />
-            <input type="text" id="manualModelAliasInput" placeholder="显示别名 (可选，如 ds-chat)" style="font-size:12px;padding:6px 8px;border-radius:6px;" />
-            <input type="number" id="manualModelContextInput" placeholder="上下文 (64000)" style="font-size:12px;padding:6px 8px;border-radius:6px;" />
-            <button type="button" class="btn primary" id="addManualModelBtn" style="font-size:11.5px;padding:6px 12px;white-space:nowrap;">+ 手动添加</button>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px;align-items:center;margin-bottom:8px;">
+            <input type="text" id="manualModelNameInput" placeholder="真实模型名 (如 deepseek-chat)" style="font-size:12px;padding:6px 8px;border-radius:6px;min-width:0;" />
+            <input type="text" id="manualModelAliasInput" placeholder="显示别名 (可选)" style="font-size:12px;padding:6px 8px;border-radius:6px;min-width:0;" />
+            <input type="number" id="manualModelContextInput" placeholder="上下文 (64000)" style="font-size:12px;padding:6px 8px;border-radius:6px;min-width:0;" />
+            <button type="button" class="btn primary" id="addManualModelBtn" style="justify-self:start;font-size:11.5px;padding:6px 12px;white-space:nowrap;">+ 手动添加</button>
           </div>
 
           <!-- 当前已添加模型列表 -->
@@ -5162,7 +5162,7 @@
               </svg>
             </div>
             <div>
-              <h2 style="margin:0;font-size:16px;font-weight:600;">界面色彩风格与多主题系统</h2>
+              <h2 style="margin:0;font-size:16px;font-weight:600;">界面色彩风格</h2>
               <p style="margin:2px 0 0;font-size:12px;color:var(--text-muted);">浅色与深色两套中性主题，全站统一色彩语义</p>
             </div>
           </div>
@@ -5178,10 +5178,10 @@
             </div>
             <div class="theme-card-info">
               <div class="theme-card-header">
-                <span class="theme-name">曜石深空 (Deep Obsidian)</span>
-                <span class="theme-active-tag">当前使用</span>
+                <span class="theme-name">深色模式</span>
+                <span class="theme-active-tag">使用中</span>
               </div>
-              <p class="theme-desc">经典极客暗黑，纯正深空黑曜底色与冷冽电光青蓝，沉浸护眼。</p>
+              <p class="theme-desc">深灰底色配高对比正文，长时间阅读更省力。</p>
             </div>
           </div>
 
@@ -5193,10 +5193,10 @@
             </div>
             <div class="theme-card-info">
               <div class="theme-card-header">
-                <span class="theme-name">极简冷玉 (Minimal Frost)</span>
-                <span class="theme-active-tag">当前使用</span>
+                <span class="theme-name">浅色模式</span>
+                <span class="theme-active-tag">使用中</span>
               </div>
-              <p class="theme-desc">高雅明亮纯净，无瑕瓷白与纯净黑曜字阶，清晰通透。</p>
+              <p class="theme-desc">纯白底色配深色正文，清晰锐利，适合明亮环境。</p>
             </div>
           </div>
 

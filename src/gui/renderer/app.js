@@ -5608,7 +5608,7 @@ function renderAgents() {
           <button type="button" class="btn danger" onclick="deleteAgentRole('${escJs(agent.id)}')">删除</button>
           ${agent.id === state.defaultAgentId ? '' : `<button type="button" class="btn secondary" onclick="setDefaultAgent('${escJs(agent.id)}')">设为默认</button>`}
           <button type="button" class="btn secondary" onclick="openAgentDialog('${escJs(agent.id)}')">编辑配置</button>
-          <button type="button" class="btn primary" onclick="startChatWithAgent('${escJs(agent.id)}')">开始对话</button>
+          <button type="button" class="btn secondary" onclick="startChatWithAgent('${escJs(agent.id)}')">开始对话</button>
         </div>
       </div>
     </div>
@@ -9534,7 +9534,7 @@ async function renderServers() {
         <div style="font-size:13px;max-width:440px;margin:0 auto 18px auto;line-height:1.5;color:var(--text-muted);">
           输入服务器 IP 与 SSH 凭据，即可一键自动化部署 HAP 守护进程，实现跨机器算力协同与实时操控。
         </div>
-        <button type="button" class="btn primary" onclick="window.openServerDialog()" style="margin:0 auto;padding:7px 18px;font-size:13px;">
+        <button type="button" class="btn secondary" onclick="window.openServerDialog()" style="margin:0 auto;padding:7px 18px;font-size:13px;">
           + 立即添加第一台服务器
         </button>
       </div>
@@ -10057,7 +10057,7 @@ window.renderBotInstancesGrid = () => {
         <div style="margin-bottom:8px;display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);margin-bottom:8px;"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg></div>
         <div style="font-size:14px;font-weight:600;color:var(--text-main);margin-bottom:4px;">暂无配置任何机器人实例</div>
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">您可以为不同的服务器或业务场景创建多个专属机器人，直接在群内遥控目标服务器。</div>
-        <button type="button" class="btn primary" onclick="window.openBotDialog()" style="font-size:12.5px;padding:6px 16px;">
+        <button type="button" class="btn secondary" onclick="window.openBotDialog()" style="font-size:12.5px;padding:6px 16px;">
           + 立即添加第一个机器人
         </button>
       </div>
@@ -12377,7 +12377,7 @@ function renderMarket(query = '', tab = activeMarketTab) {
         <div style="margin-bottom:10px;display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);margin-bottom:8px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></div>
         <div style="font-size:15px;font-weight:700;color:var(--text-main);margin-bottom:6px;">未检索到匹配的插件或技能</div>
         <div style="font-size:12.5px;max-width:400px;margin:0 auto 16px auto;">您可以清空搜索条件，或者点击上方按钮安装热门 MCP 或导入 GitHub Skill</div>
-        <button type="button" class="btn primary" onclick="$('openPresetMcpModalBtn').click()" style="margin:0 auto;">
+        <button type="button" class="btn secondary" onclick="$('openPresetMcpModalBtn').click()" style="margin:0 auto;">
           浏览热门 MCP 扩展市场
         </button>
       </div>
