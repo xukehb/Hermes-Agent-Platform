@@ -52,6 +52,16 @@ describe('Electron renderer UI contracts', () => {
     expect(css).toMatch(/\.btn-close::before\s*{/);
   });
 
+  it('keeps the header capsule group from shrinking below its content', () => {
+    // 回归：顶栏空间紧张时胶囊群组被压缩，「小 i」按钮只剩 17px 文字宽度，
+    // 右侧半个字被圆角边框切掉。群组与按钮都必须保持内容宽度且不换行。
+    const group = section(css, '.header-capsule-group {', '.header-capsule-group .btn {');
+    expect(group).toContain('flex-shrink: 0');
+    const button = section(css, '.header-capsule-group .btn {', '.header-capsule-group .btn:hover');
+    expect(button).toContain('white-space: nowrap !important');
+    expect(button).toContain('flex-shrink: 0 !important');
+  });
+
   it('keeps toast notifications from covering the header controls', () => {
     // 回归：提示条曾固定在 y=18px，正好压住顶栏右侧的 Git / 小 i / 外观 / 语言 /
     // 操作 按钮并吞掉点击，用户切到英文后再也点不回中文，只能刷新页面。
@@ -324,4 +334,3 @@ describe('Electron renderer UI contracts', () => {
     expect(css).toContain('-webkit-app-region: drag');
   });
 });
-

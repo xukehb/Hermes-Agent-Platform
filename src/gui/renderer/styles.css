@@ -7845,6 +7845,9 @@ body.has-wallpaper .user-bubble {
   overflow: hidden;
   padding: 1px;
   gap: 2px;
+  /* 顶栏横向空间不足时，胶囊群组不允许被压缩：一旦压缩，「小 i」会被裁成
+     半个字（内容宽度 35px 只留给文字 17px）。空间紧张时优先压缩 Git 胶囊。 */
+  flex-shrink: 0;
 }
 
 .header-capsule-group .btn {
@@ -7858,6 +7861,8 @@ body.has-wallpaper .user-bubble {
   align-items: center !important;
   gap: 4px !important;
   color: var(--text-secondary) !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -7966,6 +7971,8 @@ body.has-wallpaper .user-bubble {
   color: var(--text-secondary) !important;
   font-size: 11.5px !important;
   font-weight: 500 !important;
+  white-space: nowrap !important;
+  min-width: 0 !important;
   cursor: pointer !important;
   box-shadow: none !important;
   transition: all 0.15s ease !important;
@@ -7976,6 +7983,16 @@ body.has-wallpaper .user-bubble {
   background: var(--bg-hover) !important;
   color: var(--text-main) !important;
   border-color: var(--border-default) !important;
+}
+
+/* 顶栏宽度不足时，Git 胶囊是唯一允许被压缩的元素：分支名走省略号，
+   而不是把「小 i / 外观 / 操作」等固定文案挤到换行或被裁切。 */
+.git-capsule-btn #gitBranchTopText {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .header-more-menu {
