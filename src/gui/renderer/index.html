@@ -636,7 +636,7 @@
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                   <span>刷新</span>
                 </button>
-                <button type="button" class="btn secondary" id="hostingClearAllBtn" style="font-size:12px;padding:6px 11px;color:var(--danger, var(--danger));display:inline-flex;align-items:center;gap:4px;" title="清空历史缓存">
+                <button type="button" class="btn secondary btn-quiet-danger" id="hostingClearAllBtn" style="font-size:12px;padding:6px 11px;display:inline-flex;align-items:center;gap:4px;" title="清空历史缓存">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                   <span>清空缓存</span>
                 </button>
@@ -3055,7 +3055,7 @@
               </button>
               <button type="button" class="market-tab-btn" data-hub-cat="recommended" onclick="window.onModelHubFilterChange('recommended')">
                 <span>本机最佳推荐</span>
-                <span class="market-tab-badge" id="hubCountRec" style="background:var(--warning-soft);color:var(--warning);">0</span>
+                <span class="market-tab-badge" id="hubCountRec">0</span>
               </button>
               <button type="button" class="market-tab-btn" data-hub-cat="coding" onclick="window.onModelHubFilterChange('coding')">
                 <span>代码大模型</span>
@@ -4429,7 +4429,7 @@
           <div style="display:flex;align-items:center;gap:12px;">
             <div style="font-size:13px;color:var(--text-main);">
               <span>已配置密钥：</span>
-              <strong id="envSetCount" style="color:var(--success);font-size:15px;">0</strong>
+              <strong id="envSetCount" style="color:var(--text-main);font-size:15px;">0</strong>
               <span style="color:var(--text-muted);margin:0 4px;">/</span>
               <span id="envTotalCount" style="color:var(--text-muted);">0</span>
             </div>
@@ -4545,7 +4545,7 @@
             </div>
             <div style="display:flex;gap:8px;">
               <button type="button" class="btn secondary" onclick="$('sslCertModal').close()">取消</button>
-              <button type="submit" class="btn primary" style="">
+              <button type="submit" class="btn primary">
                 开始一键申请并部署
               </button>
             </div>
@@ -4923,7 +4923,7 @@
             </button>
             <div style="display:flex;gap:8px;">
               <button type="button" class="btn secondary" onclick="$('nodeBotConfigModal').close()">取消</button>
-              <button type="submit" class="btn primary" style="">
+              <button type="submit" class="btn primary">
                 保存机器人与告警设置
               </button>
             </div>

@@ -3480,13 +3480,13 @@ body.has-wallpaper .rail-mac-spacer {
 
 /* 破坏性操作在静默态保持中性，仅在悬停/聚焦时给出警示色，
    避免列表页出现成片红色文字。 */
-.btn-quiet-danger {
+.btn.btn-quiet-danger {
   color: var(--text-muted);
 }
-.btn-quiet-danger:hover,
-.btn-quiet-danger:focus-visible {
-  background: transparent;
+.btn.btn-quiet-danger:hover,
+.btn.btn-quiet-danger:focus-visible {
   color: var(--danger);
+  border-color: var(--danger-border);
 }
 
 /* 全局按钮禁用与加载态规范 */
@@ -9849,25 +9849,25 @@ body.platform-mac .mini-drag-titlebar {
 .feed-item {
   line-height: 1.4;
   padding: 6px 9px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
   transition: background 0.15s ease;
 }
 .feed-item:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-hover);
 }
 .feed-item.info {
-  border-left: 3px solid #38bdf8;
+  border-left: 3px solid var(--border-strong);
 }
 .feed-item.success {
-  border-left: 3px solid #22c55e;
+  border-left: 3px solid var(--success);
 }
 .feed-item.warning {
-  border-left: 3px solid #f59e0b;
+  border-left: 3px solid var(--warning);
 }
 .feed-item.error {
-  border-left: 3px solid #ef4444;
+  border-left: 3px solid var(--danger);
 }
 
 .feed-item-header {

@@ -13018,8 +13018,10 @@ window.openEnvManagerModal = async () => {
 
 async function renderEnvManagerModal() {
   try {
-    const data = await window.hap.getEnvVars();
-    cachedEnvList = data.list || [];
+    // Web 工作台没有桌面端的环境变量接口，降级层会返回 null；
+    // 这里做空值兜底，避免抛出 "Cannot read properties of null" 而丢掉整个面板。
+    const data = (await window.hap.getEnvVars()) || {};
+    cachedEnvList = Array.isArray(data.list) ? data.list : [];
     if ($('envSetCount')) $('envSetCount').textContent = String(data.totalSet || 0);
     if ($('envTotalCount')) $('envTotalCount').textContent = String(cachedEnvList.length);
     renderEnvVarsList(cachedEnvList);
