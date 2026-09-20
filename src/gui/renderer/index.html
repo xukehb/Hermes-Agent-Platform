@@ -480,7 +480,7 @@
                 <div id="sdOpsOutputWrap" style="display:none;margin-top:12px;">
                   <div style="font-size:12px;font-weight:700;color:var(--text-main);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
                     <span>执行结果与诊断输出</span>
-                    <span id="sdOpsStatusText" style="font-size:11px;color:#0284c7;">执行中...</span>
+                    <span id="sdOpsStatusText" style="font-size:11px;color:var(--text-main);">执行中...</span>
                   </div>
                   <pre id="sdOpsOutputText" style="background:#18181b;color:#e4e4e7;padding:12px;border-radius:8px;font-family:var(--font-mono);font-size:11.5px;max-height:280px;overflow-y:auto;white-space:pre-wrap;"></pre>
                 </div>
@@ -636,7 +636,7 @@
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                   <span>刷新</span>
                 </button>
-                <button type="button" class="btn secondary" id="hostingClearAllBtn" style="font-size:12px;padding:6px 11px;color:var(--danger, #ef4444);display:inline-flex;align-items:center;gap:4px;" title="清空历史缓存">
+                <button type="button" class="btn secondary" id="hostingClearAllBtn" style="font-size:12px;padding:6px 11px;color:var(--danger, var(--danger));display:inline-flex;align-items:center;gap:4px;" title="清空历史缓存">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                   <span>清空缓存</span>
                 </button>
@@ -686,7 +686,7 @@
                        切换扫码登录
 </button>
                     <div style="display:flex;gap:4px;align-items:center;">
-                      <button type="button" class="btn text-btn vision-test-btn" id="hostingWxTestVisionBtn" style="font-size:11px;color:var(--primary, #2563eb);display:none;" title="测试视觉识别桌面微信窗口">
+                      <button type="button" class="btn text-btn vision-test-btn" id="hostingWxTestVisionBtn" style="font-size:11px;color:var(--primary, var(--primary));display:none;" title="测试视觉识别桌面微信窗口">
                         测试识屏
                       </button>
                       <button type="button" class="btn primary-subtle action-main-btn" id="hostingWxActionBtn" style="font-size:11px;font-weight:600;padding:3px 10px;">
@@ -1916,7 +1916,7 @@
                   <div class="metric-sub" id="hostCpuSpeed">-- MHz</div>
                 </div>
                 <div class="progress-track">
-                  <div id="hostCpuBar" style="width:0%;height:100%;background:#3b82f6;transition:width 0.3s;"></div>
+                  <div id="hostCpuBar" style="width:0%;height:100%;background:var(--text-main);transition:width 0.3s;"></div>
                 </div>
                 <div style="font-size:11px;color:var(--text-muted);text-overflow:ellipsis;overflow:hidden;white-space:nowrap;" id="hostCpuModel">--</div>
               </div>
@@ -1932,7 +1932,7 @@
                   <div class="metric-sub" id="hostMemTotalBrief">/ -- GB</div>
                 </div>
                 <div class="progress-track">
-                  <div id="hostMemBar" style="width:0%;height:100%;background:#10b981;transition:width 0.3s;"></div>
+                  <div id="hostMemBar" style="width:0%;height:100%;background:var(--text-main);transition:width 0.3s;"></div>
                 </div>
                 <div style="font-size:11px;color:var(--text-muted);" id="hostMemTotal">空闲: -- GB</div>
               </div>
@@ -1945,7 +1945,7 @@
                 </div>
                 <div class="metric-number" id="hostProcessRss">-- MB</div>
                 <div class="progress-track">
-                  <div id="hostHeapBar" style="width:0%;height:100%;background:#8b5cf6;transition:width 0.3s;"></div>
+                  <div id="hostHeapBar" style="width:0%;height:100%;background:var(--text-main);transition:width 0.3s;"></div>
                 </div>
                 <div style="font-size:11px;color:var(--text-muted);" id="hostProcessHeap">堆使用: -- MB / -- MB</div>
               </div>
@@ -2076,7 +2076,7 @@
                   <button id="scanDiskBtn" class="btn primary" style="font-size:12.5px;padding:6px 16px;">
                     从根目录开始全盘扫描
                   </button>
-                  <button id="safeCleanDiskBtn" class="btn primary" style="background:#16a34a;border-color:#16a34a;font-size:12.5px;display:none;">
+                  <button id="safeCleanDiskBtn" class="btn primary" style="border-color:var(--success);font-size:12.5px;display:none;">
                     仅清理安全项 (Safe)
                   </button>
                   <button id="allCleanDiskBtn" class="btn danger" style="font-size:12.5px;display:none;">
@@ -2322,7 +2322,7 @@
                     <div style="padding:12px 14px;background:var(--bg-main);border:1px solid var(--border-default);border-radius:8px;">
                       <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:600;">开源项目与版本发布</div>
                       <div style="font-size:13px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                        <a href="https://github.com/xukehb/Hermes-Agent-Platform/releases" target="_blank" style="color:var(--primary);text-decoration:none;font-weight:600;">GitHub Releases ↗</a>
+                        <a href="https://github.com/xukehb/Hermes-Agent-Platform/releases" target="_blank" style="color:var(--text-main);text-decoration:none;font-weight:600;">GitHub Releases ↗</a>
                       </div>
                       <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">xukehb/Hermes-Agent-Platform</div>
                     </div>
@@ -2379,7 +2379,7 @@
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;">
                   <div>
                     <div style="display:flex;align-items:center;gap:10px;">
-                      <span id="gatewayStatusDot" style="width:8px;height:8px;border-radius:50%;background:#22c55e;"></span>
+                      <span id="gatewayStatusDot" style="width:8px;height:8px;border-radius:50%;background:var(--success);"></span>
                       <h3 style="margin:0;font-size:17px;font-weight:700;color:var(--text-main);">OpenAI 兼容模型分发网关</h3>
                       <span id="gatewayStatusBadge" class="badge" style="background:var(--bg-subtle);color:var(--text-secondary);border:1px solid var(--border-default);font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:4px;">运行中 (Active)</span>
                     </div>
@@ -3017,7 +3017,7 @@
               <div>
                 <div style="display:flex;align-items:center;gap:8px;">
                   <span style="font-size:13.5px;font-weight:700;color:var(--text-main);" id="hubHwTitle">正在探测本机硬件...</span>
-                  <span class="badge" id="hubHwBadge" style="background:#e0e7ff;color:#4338ca;font-size:11px;">算力诊断</span>
+                  <span class="badge" id="hubHwBadge" style="background:var(--bg-subtle);color:var(--text-secondary);font-size:11px;">算力诊断</span>
                 </div>
                 <div style="margin-top:4px;font-size:12px;color:var(--text-secondary);" id="hubHwAdvice">
                   正在分析 CPU、内存、独显与显存数据...
@@ -3035,7 +3035,7 @@
           <!-- 2. 本地推理引擎 (Ollama) 看护状态条 -->
           <div id="modelHubEngineBar" style="padding:10px 14px;background:var(--bg-subtle);border:1px solid var(--border-subtle);border-radius:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
             <div style="display:flex;align-items:center;gap:10px;">
-              <span id="engineStatusDot" style="width:10px;height:10px;border-radius:50%;background:#94a3b8;display:inline-block;"></span>
+              <span id="engineStatusDot" style="width:10px;height:10px;border-radius:50%;background:var(--text-muted);display:inline-block;"></span>
               <div>
                 <span style="font-size:12.5px;font-weight:600;color:var(--text-main);" id="engineStatusText">正在检查 Ollama 本地引擎状态...</span>
                 <span style="font-size:11.5px;color:var(--text-muted);margin-left:6px;" id="engineStatusSub"></span>
@@ -3055,7 +3055,7 @@
               </button>
               <button type="button" class="market-tab-btn" data-hub-cat="recommended" onclick="window.onModelHubFilterChange('recommended')">
                 <span>本机最佳推荐</span>
-                <span class="market-tab-badge" id="hubCountRec" style="background:#fef3c7;color:#d97706;">0</span>
+                <span class="market-tab-badge" id="hubCountRec" style="background:var(--warning-soft);color:var(--warning);">0</span>
               </button>
               <button type="button" class="market-tab-btn" data-hub-cat="coding" onclick="window.onModelHubFilterChange('coding')">
                 <span>代码大模型</span>
@@ -3384,7 +3384,7 @@
               <span id="gitLatestStashText" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">-</span>
             </div>
             <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
-              <button type="button" class="btn small" id="gitRollbackLatestStashBtn" style="font-size:11.5px;padding:3px 10px;background:#f59e0b;border-color:#d97706;font-weight:600;" title="撤销该暂存 Commit 并将修改原封不动恢复到未提交工作区">
+              <button type="button" class="btn small" id="gitRollbackLatestStashBtn" style="font-size:11.5px;padding:3px 10px;border-color:var(--warning);font-weight:600;" title="撤销该暂存 Commit 并将修改原封不动恢复到未提交工作区">
                 回滚恢复到工作区
               </button>
             </div>
@@ -3401,9 +3401,9 @@
               <div style="display:flex;gap:6px;align-items:center;" id="gitConflictActionGroup">
                 <button type="button" class="btn secondary" id="gitAbortMergeBtn" style="display:none;font-size:11px;padding:2px 8px;color:var(--danger);border-color:var(--danger);" title="终止本次合并并恢复现场">终止合并 (--abort)</button>
                 <button type="button" class="btn secondary" id="gitAbortRebaseBtn" style="display:none;font-size:11px;padding:2px 8px;color:var(--danger);border-color:var(--danger);" title="终止本次变基并恢复现场">终止变基 (--abort)</button>
-                <button type="button" class="btn primary" id="gitContinueRebaseBtn" style="display:none;font-size:11px;padding:2px 8px;background:#0284c7;border-color:#0284c7;" title="冲突已解决并暂存后继续变基">继续变基 (--continue)</button>
+                <button type="button" class="btn primary" id="gitContinueRebaseBtn" style="display:none;font-size:11px;padding:2px 8px;border-color:var(--primary);" title="冲突已解决并暂存后继续变基">继续变基 (--continue)</button>
                 <button type="button" class="btn secondary" onclick="window.openVsCodeForProject?.()" style="font-size:11px;padding:2px 8px;">VS Code 解决冲突</button>
-                <button type="button" class="btn primary" onclick="window.askAiResolveConflicts?.()" style="font-size:11px;padding:2px 8px;background:#e11d48;border-color:#be123c;"> 唤醒 AI 智能解决</button>
+                <button type="button" class="btn primary" onclick="window.askAiResolveConflicts?.()" style="font-size:11px;padding:2px 8px;border-color:var(--danger);"> 唤醒 AI 智能解决</button>
               </div>
             </div>
 
@@ -3478,7 +3478,7 @@
                     <span id="gitHistoryDiffTitle" style="font-family:var(--font-mono);font-size:12px;color:#e1e4e8;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">选择左侧提交查看差异与改动</span>
                   </div>
                   <div style="display:flex;gap:6px;align-items:center;" id="gitHistoryCommitActions">
-                    <button type="button" class="codeblock-btn" id="gitHistoryRollbackBtn" style="display:none;color:#f59e0b;font-weight:600;" title="回滚该提交，修改重新恢复至工作区未提交状态">回滚到工作区</button>
+                    <button type="button" class="codeblock-btn" id="gitHistoryRollbackBtn" style="display:none;color:var(--warning);font-weight:600;" title="回滚该提交，修改重新恢复至工作区未提交状态">回滚到工作区</button>
                     <button type="button" class="codeblock-btn" id="gitHistoryRevertBtn" style="display:none;" title="通过 git revert 安全撤销该提交">撤销此提交 (Revert)</button>
                     <button type="button" class="codeblock-btn" id="gitHistoryCopyHashBtn" style="font-size:11px;">复制 Hash</button>
                   </div>
@@ -3498,7 +3498,7 @@
             </div>
             <div style="display:flex;gap:8px;">
               <button type="button" class="btn secondary" id="cancelGitModalBtn">关闭</button>
-              <button type="button" class="btn secondary" id="gitStashBtn" style="color:#d97706;border-color:rgba(217,119,6,0.45);background:rgba(245,158,11,0.06);font-weight:600;" title="将当前所有未提交修改一键保存为 [暂存] Commit 快照，工作区重置干净，支持随时回滚恢复">一键暂存快照 (Stash)</button>
+              <button type="button" class="btn secondary" id="gitStashBtn" style="color:var(--warning);border-color:rgba(217,119,6,0.45);background:rgba(245,158,11,0.06);font-weight:600;" title="将当前所有未提交修改一键保存为 [暂存] Commit 快照，工作区重置干净，支持随时回滚恢复">一键暂存快照 (Stash)</button>
               <button type="button" class="btn primary" id="gitCommitBtn">提交变更 (Commit)</button>
             </div>
           </div>
@@ -3521,7 +3521,7 @@
         </div>
         <div style="display:flex;flex-direction:column;gap:12px;">
           <div class="git-auth-info-tip" style="background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.25);">
-            <span class="hint-pill" style="background:#f59e0b;color:#fff;">说明</span>
+            <span class="hint-pill">说明</span>
             <div style="font-size:12px;color:var(--text-secondary);">
               系统将自动执行 <code>git add -A</code> 并生成带有 <strong>[暂存]</strong> 专属标识的快照提交。<br>
               暂存后工作区变干净，可在历史记录中随时<strong>一键回滚恢复到工作区</strong>继续开发。
@@ -3534,7 +3534,7 @@
         </div>
         <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:16px;margin-top:16px;border-top:1px solid var(--border-default);">
           <button type="button" class="btn secondary" id="cancelGitStashModalBtn">取消</button>
-          <button type="button" class="btn primary" id="confirmGitStashModalBtn" style="background:#f59e0b;border-color:#d97706;font-weight:600;">确认暂存快照</button>
+          <button type="button" class="btn primary" id="confirmGitStashModalBtn" style="border-color:var(--warning);font-weight:600;">确认暂存快照</button>
         </div>
       </div>
     </dialog>
@@ -3989,7 +3989,7 @@
               </div>
               <div style="font-size:24px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin:4px 0;" id="serverDetailsCpuPercent">--%</div>
               <div class="metric-stat-track">
-                <div id="serverDetailsCpuBar" style="width:0%;height:100%;background:#3b82f6;transition:width 0.3s;"></div>
+                <div id="serverDetailsCpuBar" style="width:0%;height:100%;background:var(--text-main);transition:width 0.3s;"></div>
               </div>
               <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="serverDetailsCpuModel">--</div>
             </div>
@@ -4001,7 +4001,7 @@
               </div>
               <div style="font-size:24px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin:4px 0;" id="serverDetailsMemUsed">-- GB</div>
               <div class="metric-stat-track">
-                <div id="serverDetailsMemBar" style="width:0%;height:100%;background:#10b981;transition:width 0.3s;"></div>
+                <div id="serverDetailsMemBar" style="width:0%;height:100%;background:var(--text-main);transition:width 0.3s;"></div>
               </div>
               <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px;" id="serverDetailsMemTotal">总量: -- GB</div>
             </div>
@@ -4013,7 +4013,7 @@
               </div>
               <div style="font-size:24px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin:4px 0;" id="serverDetailsDiskFree">-- GB</div>
               <div class="metric-stat-track">
-                <div id="serverDetailsDiskBar" style="width:0%;height:100%;background:#8b5cf6;transition:width 0.3s;"></div>
+                <div id="serverDetailsDiskBar" style="width:0%;height:100%;background:var(--text-main);transition:width 0.3s;"></div>
               </div>
               <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px;" id="serverDetailsDiskTotal">总空间: -- GB</div>
             </div>
@@ -4047,7 +4047,7 @@
                 <span>HAP 守护进程与通讯连接</span>
               </div>
               <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;">
-                <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">守护进程端口:</span><strong id="serverDetailsDaemonPort" style="color:#10b981;font-family:var(--font-mono);">9527</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">守护进程端口:</span><strong id="serverDetailsDaemonPort" style="color:var(--success);font-family:var(--font-mono);">9527</strong></div>
                 <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">SSH 登录账户:</span><span id="serverDetailsSshUser">root</span></div>
                 <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">认证鉴权模式:</span><span id="serverDetailsAuthType">password</span></div>
                 <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Node.js 运行时:</span><span id="serverDetailsNodeVer" style="font-family:var(--font-mono);">--</span></div>
@@ -4107,7 +4107,7 @@
               </div>
               <div style="font-size:24px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin:4px 0;" id="hostModalCpuPercent">--%</div>
               <div class="metric-stat-track">
-                <div id="hostModalCpuBar" style="width:0%;height:100%;background:#3b82f6;transition:width 0.3s;"></div>
+                <div id="hostModalCpuBar" style="width:0%;height:100%;background:var(--text-main);transition:width 0.3s;"></div>
               </div>
               <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="hostModalCpuModel">--</div>
             </div>
@@ -4119,7 +4119,7 @@
               </div>
               <div style="font-size:24px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin:4px 0;" id="hostModalMemUsed">-- GB</div>
               <div class="metric-stat-track">
-                <div id="hostModalMemBar" style="width:0%;height:100%;background:#10b981;transition:width 0.3s;"></div>
+                <div id="hostModalMemBar" style="width:0%;height:100%;background:var(--text-main);transition:width 0.3s;"></div>
               </div>
               <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px;" id="hostModalMemTotal">空闲: -- GB</div>
             </div>
@@ -4131,7 +4131,7 @@
               </div>
               <div style="font-size:24px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin:4px 0;" id="hostModalProcessRss">-- MB</div>
               <div class="metric-stat-track">
-                <div id="hostModalHeapBar" style="width:0%;height:100%;background:#8b5cf6;transition:width 0.3s;"></div>
+                <div id="hostModalHeapBar" style="width:0%;height:100%;background:var(--text-main);transition:width 0.3s;"></div>
               </div>
               <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px;" id="hostModalProcessHeap">堆: -- MB</div>
             </div>
@@ -4161,7 +4161,7 @@
             <div class="card" style="padding:14px;">
               <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--text-main);">Node.js 运行时与网络接口</div>
               <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;">
-                <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Node.js 版本:</span><strong id="hostModalNodeVer" style="color:#10b981;font-family:var(--font-mono);">--</strong></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">Node.js 版本:</span><strong id="hostModalNodeVer" style="color:var(--success);font-family:var(--font-mono);">--</strong></div>
                 <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">V8 引擎 / libuv:</span><span id="hostModalV8Ver">--</span></div>
                 <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">主要网卡 IPv4:</span><span id="hostModalIp" style="font-family:var(--font-mono);font-weight:600;">--</span></div>
                 <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-muted);">工作目录 (Cwd):</span><code id="hostModalCwd" style="font-size:10.5px;">--</code></div>
@@ -4211,7 +4211,7 @@
             <span id="installPercentText" style="color:var(--accent);font-weight:700;">15%</span>
           </div>
           <div style="height:8px;background:var(--bg-main);border-radius:4px;overflow:hidden;border:1px solid var(--border-default);">
-            <div id="installProgressBar" style="width:15%;height:100%;background:var(--success);transition:width 0.3s ease;"></div>
+            <div id="installProgressBar" style="width:15%;height:100%;background:var(--text-main);transition:width 0.3s ease;"></div>
           </div>
         </div>
 
@@ -4339,7 +4339,7 @@
             <div class="form-group" style="margin-bottom:0;">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
                 <label style="font-size:12px;font-weight:600;">生图服务商与模型 (Model & Provider) *</label>
-                <span id="imageModelStatusChip" style="font-size:11px;color:#10b981;"></span>
+                <span id="imageModelStatusChip" style="font-size:11px;color:var(--success);"></span>
               </div>
               <label for="imageGenProviderSelect">服务商</label>
               <select id="imageGenProviderSelect" style="margin-bottom:8px;">
@@ -4353,7 +4353,7 @@
 
             <!-- 手动输入生图模型名称输入框 -->
             <div id="manualImageModelInlineBox" style="display:none;margin-top:2px;">
-              <input type="text" id="manualImageModelInput" placeholder="手动输入模型名称 (如 dall-e-3, black-forest-labs/FLUX.1-schnell, cogview-3)" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid #0284c7;background:#f0f9ff;" />
+              <input type="text" id="manualImageModelInput" placeholder="手动输入模型名称 (如 dall-e-3, black-forest-labs/FLUX.1-schnell, cogview-3)" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--primary);background:#f0f9ff;" />
             </div>
 
 
@@ -4429,8 +4429,8 @@
           <div style="display:flex;align-items:center;gap:12px;">
             <div style="font-size:13px;color:var(--text-main);">
               <span>已配置密钥：</span>
-              <strong id="envSetCount" style="color:#10b981;font-size:15px;">0</strong>
-              <span style="color:#94a3b8;margin:0 4px;">/</span>
+              <strong id="envSetCount" style="color:var(--success);font-size:15px;">0</strong>
+              <span style="color:var(--text-muted);margin:0 4px;">/</span>
               <span id="envTotalCount" style="color:var(--text-muted);">0</span>
             </div>
             <span class="badge success" style="font-size:11px;" id="envStatusBadge">本地配置就绪</span>
@@ -4628,7 +4628,7 @@
       <div class="modal-form-wrap" style="max-height:88vh;display:flex;flex-direction:column;padding:20px 24px;">
         <div class="modal-header-row" style="margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:12px;">
-            <div style="width:36px;height:36px;border-radius:10px;background:#18181b;color:#10b981;display:grid;place-items:center;font-size:18px;font-family:monospace;">$_</div>
+            <div style="width:36px;height:36px;border-radius:10px;background:#18181b;color:var(--success);display:grid;place-items:center;font-size:18px;font-family:monospace;">$_</div>
             <div>
               <div style="display:flex;align-items:center;gap:8px;">
                 <h2 id="execModalTitle" style="font-size:16px;margin:0;font-weight:700;">远程脚本下发执行</h2>
@@ -4655,9 +4655,9 @@
         <div style="flex:1;min-height:300px;max-height:460px;background:#09090b;border-radius:10px;border:1px solid #27272a;display:flex;flex-direction:column;overflow:hidden;box-shadow:inset 0 2px 8px rgba(0,0,0,0.5);">
           <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 12px;background:#18181b;border-bottom:1px solid #27272a;font-size:11.5px;color:#a1a1aa;">
             <div style="display:flex;align-items:center;gap:6px;">
-              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;"></span>
-              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;"></span>
-              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;"></span>
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--danger);"></span>
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warning);"></span>
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--success);"></span>
               <span style="margin-left:6px;font-weight:600;color:#e4e4e7;">Terminal Stream Console</span>
             </div>
             <div style="display:flex;gap:8px;">
@@ -4670,7 +4670,7 @@
 
         <div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px;border-top:1px solid var(--border-default);margin-top:12px;">
           <div id="execModalExitCode" style="font-size:12px;color:var(--text-muted);">
-            退出代码: <strong style="color:#10b981;">0 (成功)</strong>
+            退出代码: <strong style="color:var(--success);">0 (成功)</strong>
           </div>
           <div style="display:flex;gap:8px;">
             <button type="button" class="btn secondary" id="reRunExecBtn">重新执行</button>
@@ -4783,16 +4783,16 @@
           </div>
 
           <div id="botFields_wechat" class="bot-platform-fields" style="display:none;">
-            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 14px;margin-bottom:12px;">
+            <div style="background:var(--success-soft);border:1px solid var(--success-border);border-radius:8px;padding:12px 14px;margin-bottom:12px;">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-                <div style="font-weight:700;font-size:13px;color:#15803d;display:flex;align-items:center;gap:6px;">
+                <div style="font-weight:700;font-size:13px;color:var(--success);display:flex;align-items:center;gap:6px;">
                   个人微信扫码登录 (无需填写 Token)
                 </div>
                 <button type="button" class="btn primary" id="openWechatScanFromModalBtn" style="font-size:11.5px;padding:3px 10px;">
                   立即弹出扫码面板
                 </button>
               </div>
-              <p style="font-size:11.5px;color:#166534;margin:0;line-height:1.4;">
+              <p style="font-size:11.5px;color:var(--success);margin:0;line-height:1.4;">
                 Hermes 平台内置原生微信网关支持个人微信直接扫码绑定。点击上方按钮可直接跳转至扫码面板开始微信登录并联动。
               </p>
             </div>
@@ -5211,8 +5211,9 @@
           <!-- 7. 活力幻彩 -->
         </div>
 
-        <!-- 背景图片与动态壁纸专区 (Background Wallpaper Gallery) -->
-        <div class="theme-wallpaper-section" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border-default);">
+        <!-- 背景图片与动态壁纸专区 (Background Wallpaper Gallery)
+             企业级界面默认不提供装饰性壁纸，此处保留实现但默认隐藏 -->
+        <div class="theme-wallpaper-section" hidden style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
             <div style="display:flex;align-items:center;gap:8px;">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -5337,8 +5338,8 @@
           </div>
         </div>
 
-        <!-- 半透明与毛玻璃透亮调节 -->
-        <div class="theme-opacity-section" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border-default);">
+        <!-- 半透明与毛玻璃透亮调节（默认隐藏：窗口始终为实色，保证正文对比度） -->
+        <div class="theme-opacity-section" hidden style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
             <div style="display:flex;align-items:center;gap:8px;">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -5398,10 +5399,10 @@
 
       <button type="button" class="btn text-btn" id="popoverOpenThemeModalBtn" style="width:100%;justify-content:center;font-size:11px;padding:4px;color:var(--text-main);" data-i18n="popover.themeDetails">查看主题与外观详情 ▾</button>
 
-      <div class="popover-divider"></div>
+      <div class="popover-divider" hidden></div>
 
-      <div class="popover-section-title" data-i18n="popover.wallpaperTitle">背景图片与壁纸</div>
-      <div class="popover-theme-chips" id="popoverWallpaperChips">
+      <div class="popover-section-title" hidden data-i18n="popover.wallpaperTitle">背景图片与壁纸</div>
+      <div class="popover-theme-chips" id="popoverWallpaperChips" hidden>
         <button type="button" class="wallpaper-quick-chip active" data-wallpaper-id="none" data-i18n="wallpaper.none">纯净无壁纸</button>
         <button type="button" class="wallpaper-quick-chip" data-wallpaper-id="nebula" data-i18n="wallpaper.nebula">深空星云</button>
         <button type="button" class="wallpaper-quick-chip" data-wallpaper-id="cyber" data-i18n="wallpaper.cyber">赛博霓虹</button>
@@ -5410,11 +5411,11 @@
         <button type="button" class="wallpaper-quick-chip" data-wallpaper-id="custom" data-i18n="wallpaper.custom">自定义图片</button>
       </div>
 
-      <button type="button" class="btn text-btn" id="popoverOpenWallpaperModalBtn" style="width:100%;justify-content:center;font-size:11px;padding:4px;color:var(--text-main);" data-i18n="popover.wallpaperDetails">壁纸与磨砂柔焦详细配置 ▾</button>
+      <button type="button" class="btn text-btn" id="popoverOpenWallpaperModalBtn" hidden style="width:100%;justify-content:center;font-size:11px;padding:4px;color:var(--text-main);" data-i18n="popover.wallpaperDetails">壁纸与磨砂柔焦详细配置 ▾</button>
 
-      <div class="popover-divider"></div>
+      <div class="popover-divider" hidden></div>
 
-      <div class="popover-header">
+      <div class="popover-header" hidden>
         <div class="popover-title">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="9" cy="12" r="6"/>
@@ -5425,7 +5426,7 @@
         <span class="opacity-value-badge" id="opacityValueText">100%</span>
       </div>
 
-      <div class="opacity-slider-wrap">
+      <div class="opacity-slider-wrap" hidden>
         <input type="range" id="opacityRangeInput" min="40" max="100" step="2" value="100" class="opacity-range-slider" />
         <div class="opacity-slider-labels">
           <span data-i18n="popover.opacityClear">40% 通透</span>
@@ -5434,7 +5435,7 @@
         </div>
       </div>
 
-      <div class="opacity-presets-grid">
+      <div class="opacity-presets-grid" hidden>
         <button type="button" class="opacity-preset-chip" data-opacity="100" data-i18n="popover.opacitySolid">100% 实色</button>
         <button type="button" class="opacity-preset-chip" data-opacity="90" data-i18n="popover.opacitySlight">90% 微透</button>
         <button type="button" class="opacity-preset-chip" data-opacity="80" data-i18n="popover.opacityFrosted">80% 磨砂</button>
@@ -5442,7 +5443,7 @@
         <button type="button" class="opacity-preset-chip" data-opacity="60" data-i18n="popover.opacityAurora">60% 极光</button>
       </div>
 
-      <div class="opacity-options-row">
+      <div class="opacity-options-row" hidden>
         <label class="opacity-checkbox-label">
           <input type="checkbox" id="glassBlurToggle" checked />
           <span data-i18n="popover.backdropBlur">启用背景高斯模糊滤镜 (Backdrop Blur)</span>

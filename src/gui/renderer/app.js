@@ -618,7 +618,7 @@ function parseInlineMarkdown(text, doEscape = true) {
         </div>
         ${alt ? `<div style="padding:6px 12px;font-size:12px;color:var(--text-secondary);background:var(--bg-subtle);border-top:1px solid var(--border-default);display:flex;justify-content:space-between;align-items:center;">
           <span>${esc(alt)}</span>
-          <a href="${esc(src)}" download="image.png" target="_blank" style="color:var(--primary);text-decoration:none;font-size:11px;font-weight:600;" onclick="event.stopPropagation();">下载</a>
+          <a href="${esc(src)}" download="image.png" target="_blank" style="color:var(--text-main);text-decoration:none;font-size:11px;font-weight:600;" onclick="event.stopPropagation();">下载</a>
         </div>` : ''}
       </div>
     `;
@@ -3255,7 +3255,7 @@ async function loadGitCommitHistory() {
             ${esc(c.message)}
           </div>
           <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:4px;" onclick="event.stopPropagation()">
-            <button type="button" class="btn small secondary" style="font-size:11px;padding:1px 7px;color:#f59e0b;border-color:rgba(245,158,11,0.35);" onclick="rollbackCommitToWorkspace('${esc(c.hash)}')">
+            <button type="button" class="btn small secondary" style="font-size:11px;padding:1px 7px;color:var(--warning);border-color:rgba(245,158,11,0.35);" onclick="rollbackCommitToWorkspace('${esc(c.hash)}')">
               回滚到工作区
             </button>
             <button type="button" class="btn small secondary" style="font-size:11px;padding:1px 7px;" onclick="revertSpecificCommit('${esc(c.hash)}')">
@@ -4867,7 +4867,7 @@ function renderPermissions() {
         </div>
 
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:12px;color:#64748b;">策略已持久化到 ~/.hap/config.toml</span>
+          <span style="font-size:12px;color:var(--text-muted);">策略已持久化到 ~/.hap/config.toml</span>
           <button type="button" class="btn primary" id="saveSettingsPermBtn" onclick="window.savePermissionsFromSettings()" style="padding:7px 20px;font-weight:600;">保存权限安全策略</button>
         </div>
       </div>
@@ -5132,7 +5132,7 @@ window.testSingleModel = async (alias, clickBtn) => {
   const origText = btn ? btn.innerHTML : '';
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner" style="display:inline-block;width:10px;height:10px;border:2px solid #cbd5e1;border-top-color:#0284c7;border-radius:50%;margin-right:2px;vertical-align:middle;"></span>测速中...';
+    btn.innerHTML = '<span class="spinner" style="display:inline-block;width:10px;height:10px;border:2px solid var(--border-default);border-top-color:var(--text-main);border-radius:50%;margin-right:2px;vertical-align:middle;"></span>测速中...';
   }
 
   showToast(`正在对模型 [${alias}] 发起探针测速...`, 'info');
@@ -5175,7 +5175,7 @@ window.testAllProviders = async (clickBtn) => {
   const origText = btn ? btn.innerHTML : '';
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner" style="display:inline-block;width:11px;height:11px;border:2px solid #cbd5e1;border-top-color:#0284c7;border-radius:50%;margin-right:4px;vertical-align:middle;"></span>批量测速中...';
+    btn.innerHTML = '<span class="spinner" style="display:inline-block;width:11px;height:11px;border:2px solid var(--border-default);border-top-color:var(--text-main);border-radius:50%;margin-right:4px;vertical-align:middle;"></span>批量测速中...';
   }
 
   showToast(`开始并发测试全部 ${providers.length} 个服务商连通性...`, 'info');
@@ -5379,7 +5379,7 @@ function renderProviders() {
         <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-subtle);">
           <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
             <span>包含的模型 (${provModels.length})：</span>
-            ${provModels.length > 0 ? `<button type="button" class="btn text-btn" style="font-size:11px;color:#ef4444;padding:0;cursor:pointer;background:none;display:inline-flex;align-items:center;gap:3px;" onclick="window.clearModelsForProvider('${escJs(p.id)}')">清空本服务商模型</button>` : ''}
+            ${provModels.length > 0 ? `<button type="button" class="btn text-btn" style="font-size:11px;color:var(--danger);padding:0;cursor:pointer;background:none;display:inline-flex;align-items:center;gap:3px;" onclick="window.clearModelsForProvider('${escJs(p.id)}')">清空本服务商模型</button>` : ''}
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
             ${modelChipsHtml}
@@ -5567,7 +5567,7 @@ function renderAgents() {
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;">
-          ${agent.id === state.defaultAgentId ? '<span class="badge" style="background:#dcfce7;color:#166534;">默认智能体</span>' : ''}
+          ${agent.id === state.defaultAgentId ? '<span class="badge" style="background:var(--success-soft);color:var(--success);">默认智能体</span>' : ''}
           <span class="badge ${agent.toolTier === 'full' ? 'danger' : 'neutral'}">${esc(agent.toolTier || 'standard')}</span>
         </div>
       </div>
@@ -5891,7 +5891,7 @@ function renderModels() {
         </td>
         <td style="width:70px;text-align:center;">
           ${isDefault
-            ? `<button type="button" class="btn text-btn" style="color:#f59e0b;font-weight:700;font-size:12px;padding:2px 6px;cursor:default;display:inline-flex;align-items:center;gap:3px;" title="当前全局默认主模型"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>默认</span></button>`
+            ? `<button type="button" class="btn text-btn" style="color:var(--warning);font-weight:700;font-size:12px;padding:2px 6px;cursor:default;display:inline-flex;align-items:center;gap:3px;" title="当前全局默认主模型"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>默认</span></button>`
             : `<button type="button" class="btn text-btn" style="color:var(--text-muted);font-size:12px;padding:2px 6px;cursor:pointer;display:inline-flex;align-items:center;gap:3px;" title="点击设为全局默认主模型" onclick="window.setGlobalDefaultModel('${escJs(m.alias)}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>设默认</span></button>`
           }
         </td>
@@ -6091,6 +6091,7 @@ function fillSelects() {
     } else {
       modelPicker.value = '';
     }
+    if (typeof syncModelPickerLabel === 'function') syncModelPickerLabel();
   }
 
   const switchModelSelect = $('switchModelSelect');
@@ -6433,10 +6434,10 @@ async function renderWeChatView() {
 
           qrBox.innerHTML = `
             <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:2px 0;">
-              <div style="padding:6px;background:#ffffff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:1px solid #e2e8f0;display:inline-block;">
+              <div style="padding:6px;background:#ffffff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:1px solid var(--border-default);display:inline-block;">
                 ${qrSvgHtml}
               </div>
-              <div style="font-size:11.5px;color:#64748b;margin-top:2px;">请使用手机微信扫码并点击【确认登录】</div>
+              <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">请使用手机微信扫码并点击【确认登录】</div>
               <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
                 <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="window.hap.openExternal('${esc(wxConfig.qrCodeText)}')">
                    外部浏览器打开
@@ -6444,7 +6445,7 @@ async function renderWeChatView() {
                 <button type="button" class="btn secondary" style="font-size:11.5px;padding:3px 8px;" onclick="copyText('${esc(wxConfig.qrCodeText)}', '登录链接')">
                    复制登录链接
                 </button>
-                <button type="button" class="btn text-btn" style="font-size:11.5px;padding:3px 8px;color:#2563eb;" onclick="window.triggerRefreshWechatQr()">
+                <button type="button" class="btn text-btn" style="font-size:11.5px;padding:3px 8px;color:var(--text-main);" onclick="window.triggerRefreshWechatQr()">
                    刷新
                 </button>
               </div>
@@ -6453,7 +6454,7 @@ async function renderWeChatView() {
         } else {
           qrBox.innerHTML = `
             <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:32px 16px;text-align:center;">
-              <div class="thinking-pulse-dot" style="width:28px;height:28px;background:var(--primary, #2563eb);"></div>
+              <div class="thinking-pulse-dot" style="width:28px;height:28px;background:var(--primary, var(--primary));"></div>
               <div style="font-weight:600;font-size:13.5px;color:var(--text-main);">正在生成微信登录二维码...</div>
               <div style="font-size:12px;color:var(--text-muted);max-width:240px;line-height:1.4;">正在向微信通道服务申请扫码凭证，二维码将在此处实时呈现</div>
             </div>
@@ -6528,7 +6529,7 @@ async function renderWeChatContactsList() {
               </div>
               <div style="display:flex;align-items:center;gap:3px;">
                 <button type="button" class="btn text-btn edit-wx-contact-btn" data-id="${esc(c.id)}" style="padding:1px 4px;font-size:10.5px;color:var(--text-main);" title="编辑">编辑</button>
-                <button type="button" class="btn text-btn del-wx-contact-btn" data-id="${esc(c.id)}" style="padding:1px 4px;font-size:10.5px;color:var(--danger, #ef4444);" title="删除">删除</button>
+                <button type="button" class="btn text-btn del-wx-contact-btn" data-id="${esc(c.id)}" style="padding:1px 4px;font-size:10.5px;color:var(--danger, var(--danger));" title="删除">删除</button>
               </div>
             </div>
           `;
@@ -6785,7 +6786,7 @@ function updateWechatQrModal(wxConfig) {
   if (!wxConfig || !wxConfig.running) {
     body.innerHTML = `
       <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:36px 20px;text-align:center;">
-        <div class="thinking-pulse-dot" style="width:32px;height:32px;background:var(--primary, #2563eb);"></div>
+        <div class="thinking-pulse-dot" style="width:32px;height:32px;background:var(--primary, var(--primary));"></div>
         <div style="font-weight:600;font-size:14px;color:var(--text-main);">微信服务启动中...</div>
         <div style="font-size:12px;color:var(--text-muted);max-width:280px;line-height:1.5;">正在启动本地与微信云端握手通道，二维码将即刻呈现</div>
       </div>
@@ -6819,7 +6820,7 @@ function updateWechatQrModal(wxConfig) {
 
     body.innerHTML = `
       <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:8px 0;">
-        <div style="padding:10px;background:#ffffff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.08);border:1px solid #e2e8f0;display:inline-block;">
+        <div style="padding:10px;background:#ffffff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.08);border:1px solid var(--border-default);display:inline-block;">
           ${qrSvgHtml}
         </div>
         <div style="font-size:13px;font-weight:600;color:var(--text-main);margin-top:4px;">请使用手机微信扫码并点击【确认登录】</div>
@@ -6837,7 +6838,7 @@ function updateWechatQrModal(wxConfig) {
   } else {
     body.innerHTML = `
       <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:36px 20px;text-align:center;">
-        <div class="thinking-pulse-dot" style="width:32px;height:32px;background:var(--primary, #2563eb);"></div>
+        <div class="thinking-pulse-dot" style="width:32px;height:32px;background:var(--primary, var(--primary));"></div>
         <div style="font-weight:600;font-size:14px;color:var(--text-main);">正在生成微信登录二维码...</div>
         <div style="font-size:12px;color:var(--text-muted);max-width:280px;line-height:1.5;">正在连接腾讯微信智能体网关，二维码生成后将在此处实时呈现</div>
       </div>
@@ -6946,7 +6947,7 @@ function renderWeChatFeed() {
       return `
         <div style="display:flex;flex-direction:column;align-items:flex-start;max-width:85%;">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
-            <span class="badge neutral" style="background:#dcfce7;color:#15803d;font-size:11px;font-weight:600;">微信端用户</span>
+            <span class="badge neutral" style="background:var(--success-soft);color:var(--success);font-size:11px;font-weight:600;">微信端用户</span>
             <span style="font-size:11px;color:var(--text-muted);">${esc(timeStr)}</span>
           </div>
           <div style="background:var(--bg-surface);border:1px solid var(--border-default);padding:10px 14px;border-radius:12px 12px 12px 2px;font-size:13.5px;color:var(--text-main);line-height:1.55;box-shadow:var(--shadow-sm);word-break:break-word;">
@@ -7158,12 +7159,12 @@ window.openProviderDialog = async (id) => {
       if (statusChip) {
         if (keyInfo.isSet) {
           if (/^https?:\/\//i.test(keyInfo.value || '')) {
-            statusChip.innerHTML = `<span style="color:#ef4444;font-weight:600;">[注意] 密钥格式异常</span> 环境变量 <code>${esc(keyInfo.envKey)}</code> 当前保存的值为 URL 网址而非实际密钥，请在此重新输入真实 API Key（如 sk-...）`;
+            statusChip.innerHTML = `<span style="color:var(--danger);font-weight:600;">[注意] 密钥格式异常</span> 环境变量 <code>${esc(keyInfo.envKey)}</code> 当前保存的值为 URL 网址而非实际密钥，请在此重新输入真实 API Key（如 sk-...）`;
           } else {
-            statusChip.innerHTML = `<span style="color:#10b981;font-weight:600;">已配置密钥</span> 环境变量 <code>${esc(keyInfo.envKey)}</code> (掩码: ${esc(keyInfo.maskedValue)})，留空保存将保持原样`;
+            statusChip.innerHTML = `<span style="color:var(--success);font-weight:600;">已配置密钥</span> 环境变量 <code>${esc(keyInfo.envKey)}</code> (掩码: ${esc(keyInfo.maskedValue)})，留空保存将保持原样`;
           }
         } else {
-          statusChip.innerHTML = `<span style="color:#f59e0b;font-weight:600;">尚未配置密钥</span> 环境变量 <code>${esc(keyInfo.envKey)}</code> 当前为空`;
+          statusChip.innerHTML = `<span style="color:var(--warning);font-weight:600;">尚未配置密钥</span> 环境变量 <code>${esc(keyInfo.envKey)}</code> 当前为空`;
         }
       }
     } catch {
@@ -7265,7 +7266,7 @@ window.testProvider = async (targetId, clickBtn) => {
   const origText = btn ? btn.textContent : '';
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner" style="display:inline-block;width:11px;height:11px;border:2px solid #cbd5e1;border-top-color:#0284c7;border-radius:50%;margin-right:4px;vertical-align:middle;"></span>探测中...';
+    btn.innerHTML = '<span class="spinner" style="display:inline-block;width:11px;height:11px;border:2px solid var(--border-default);border-top-color:var(--text-main);border-radius:50%;margin-right:4px;vertical-align:middle;"></span>探测中...';
   }
 
   const dialog = $('providerDialog');
@@ -7292,7 +7293,7 @@ window.testProvider = async (targetId, clickBtn) => {
       if (apiKey && /^https?:\/\//i.test(apiKey)) {
         showToast('API Key 不能为 URL 地址，请输入服务商提供的真实密钥（如 sk-...）', 'error');
         if (statusChip) {
-          statusChip.innerHTML = '<span style="color:#ef4444;font-weight:600;">[注意] API Key 错误：您填入的是 URL 地址，请在此填入实际密钥凭据</span>';
+          statusChip.innerHTML = '<span style="color:var(--danger);font-weight:600;">[注意] API Key 错误：您填入的是 URL 地址，请在此填入实际密钥凭据</span>';
         }
         $('providerInputApiKey')?.focus();
         return;
@@ -7307,12 +7308,12 @@ window.testProvider = async (targetId, clickBtn) => {
       if (res.reachable) {
         showToast(`服务商连通性测试通过！握手成功 (${res.handshakeMs || 0}ms)`, 'success');
         if (statusChip) {
-          statusChip.innerHTML = `<span style="color:#10b981;font-weight:600;">连通测试通过！握手成功 (${res.handshakeMs || 0}ms)，网络可达</span>`;
+          statusChip.innerHTML = `<span style="color:var(--success);font-weight:600;">连通测试通过！握手成功 (${res.handshakeMs || 0}ms)，网络可达</span>`;
         }
       } else {
         showToast(`连接失败：${res.error || '无法建立握手'}`, 'error');
         if (statusChip) {
-          statusChip.innerHTML = `<span style="color:#ef4444;font-weight:600;">连接失败：${esc(res.error || '无法建立握手')}</span>`;
+          statusChip.innerHTML = `<span style="color:var(--danger);font-weight:600;">连接失败：${esc(res.error || '无法建立握手')}</span>`;
         }
       }
       return;
@@ -7331,7 +7332,7 @@ window.testProvider = async (targetId, clickBtn) => {
   } catch (error) {
     showToast('测试异常：' + error.message, 'error');
     if (statusChip && isDialogOpen) {
-      statusChip.innerHTML = `<span style="color:#ef4444;">测试异常: ${esc(error.message)}</span>`;
+      statusChip.innerHTML = `<span style="color:var(--danger);">测试异常: ${esc(error.message)}</span>`;
     }
   } finally {
     if (btn) {
@@ -7373,7 +7374,7 @@ window.openModelDialog = (alias) => {
         return;
       }
       testBtn.disabled = true;
-      testBtn.innerHTML = '<span class="spinner" style="display:inline-block;width:10px;height:10px;border:2px solid #cbd5e1;border-top-color:#0284c7;border-radius:50%;margin-right:2px;vertical-align:middle;"></span>测速中...';
+      testBtn.innerHTML = '<span class="spinner" style="display:inline-block;width:10px;height:10px;border:2px solid var(--border-default);border-top-color:var(--text-main);border-radius:50%;margin-right:2px;vertical-align:middle;"></span>测速中...';
       try {
         const res = await window.hap.testModel(a);
         modelLatencies.set(a, res);
@@ -7737,7 +7738,7 @@ function renderModelHubCards() {
         `;
       } else if (e.tier === 'best') {
         actionButtonHtml = `
-          <button type="button" class="btn primary" style="font-size:12px;padding:5px 14px;background:var(--warning);" onclick="window.pullHubModel('${escJs(m.id)}')">一键极速部署</button>
+          <button type="button" class="btn primary" style="font-size:12px;padding:5px 14px;" onclick="window.pullHubModel('${escJs(m.id)}')">一键极速部署</button>
         `;
       } else {
         actionButtonHtml = `
@@ -8356,8 +8357,21 @@ window.openImageLightbox = (src, title) => {
 const chatInput = $('chatInput');
 const sendBtn = $('sendChatBtn');
 const chatModelPicker = $('chatModelPickerSelect');
+// 顶部模型胶囊此前只显示品牌字牌「HAP」，用户看不到当前选中的模型。
+// 这里把选中项同步到胶囊上，只保留模型别名，去掉「(服务商 · 状态)」后缀。
+function syncModelPickerLabel() {
+  const select = $('chatModelPickerSelect');
+  const badge = document.querySelector('.model-brand-badge');
+  if (!select || !badge) return;
+  const raw = select.options[select.selectedIndex]?.text || '';
+  const label = raw.split(' (')[0].trim() || '默认模型';
+  badge.textContent = label;
+  badge.title = raw || label;
+}
+
 chatModelPicker?.addEventListener('change', () => {
   localStorage.setItem('hap:selected-chat-model', chatModelPicker.value);
+  syncModelPickerLabel();
 });
 const chatAgentSelectEl = $('chatAgentSelect');
 chatAgentSelectEl?.addEventListener('change', () => {
@@ -9615,7 +9629,7 @@ async function renderServers() {
             <button type="button" class="btn secondary" onclick="window.openServerDialog('${esc(s.id)}')" style="padding:4px 8px;font-size:12px;" title="编辑配置">
               编辑
             </button>
-            <button type="button" class="btn secondary" onclick="window.deleteServerNode('${esc(s.id)}')" style="padding:4px 8px;font-size:12px;color:#ef4444;border-color:#fecaca;background:#fef2f2;" title="移除此服务器">
+            <button type="button" class="btn secondary" onclick="window.deleteServerNode('${esc(s.id)}')" style="padding:4px 8px;font-size:12px;color:var(--danger);border-color:var(--danger-border);background:var(--danger-soft);" title="移除此服务器">
               删除
             </button>
           </div>
@@ -10572,7 +10586,7 @@ function renderRemoteProcessList(processList, serverId) {
           </div>
         </div>
         <code title="${esc(command)}" style="display:block;color:var(--text-main);background:var(--bg-card);border-radius:var(--radius-xs);border:1px solid var(--border-default);padding:4px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(command)}</code>
-        <div style="display:flex;justify-content:space-between;gap:8px;color:#94a3b8;font-size:10.5px;flex-wrap:wrap;">
+        <div style="display:flex;justify-content:space-between;gap:8px;color:var(--text-muted);font-size:10.5px;flex-wrap:wrap;">
           <span>启动: ${esc(formatRemoteProcessStartTime(startTime))}</span>
           <span>目标: ${esc(serverId || '--')}</span>
         </div>
@@ -10604,7 +10618,7 @@ async function refreshRemoteProcessList(serverId) {
     renderRemoteProcessList(result, serverId);
   } catch (error) {
     if (serverId !== (activePanoramaTarget || 'local')) return;
-    if (procList) procList.innerHTML = `<div style="color:#dc2626;font-size:12px;padding:8px 0;text-align:center;">远程进程获取失败：${esc(error?.message || error)}</div>`;
+    if (procList) procList.innerHTML = `<div style="color:var(--danger);font-size:12px;padding:8px 0;text-align:center;">远程进程获取失败：${esc(error?.message || error)}</div>`;
   } finally {
     if (refreshBtn && serverId === (activePanoramaTarget || 'local')) refreshBtn.disabled = false;
   }
@@ -10680,7 +10694,7 @@ window.requestLocalProcessKill = async (pid, name, memoryFormatted) => {
 
   const confirmed = await showConfirm({
     title: '一键结束高占用进程',
-    message: `确定要结束本机进程 <strong>${esc(name)}</strong> (PID: <code>${safePid}</code>${memoryFormatted ? ` · 占用: <strong>${esc(memoryFormatted)}</strong>` : ''}) 吗？<br/><small style="color:#ef4444;">该操作将发送 SIGKILL 信号强制终止该进程，请确保重要内容已保存。</small>`,
+    message: `确定要结束本机进程 <strong>${esc(name)}</strong> (PID: <code>${safePid}</code>${memoryFormatted ? ` · 占用: <strong>${esc(memoryFormatted)}</strong>` : ''}) 吗？<br/><small style="color:var(--danger);">该操作将发送 SIGKILL 信号强制终止该进程，请确保重要内容已保存。</small>`,
     okText: '确认 Kill',
     isDanger: true,
   });
@@ -11297,6 +11311,15 @@ window.updateDiskSelectedSummary = updateDiskSelectedSummary;
 window.handleAskAiDiskPlan = handleAskAiDiskPlan;
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Web 工作台没有原生窗口，桌面专属的「缩小化 / 置顶小窗」入口会变成死按钮，直接隐藏。
+  // 桌面端 (Electron) 不受影响，window.isWebMode 仅由 src/web/server.ts 注入。
+  if (window.isWebMode) {
+    ['miniModeToggleBtn', 'miniPinWindowBtn', 'miniExpandWindowBtn'].forEach((id) => {
+      const el = $(id);
+      if (el) el.remove();
+    });
+  }
+
   $('scanDiskBtn')?.addEventListener('click', () => handleScanDisk(activePanoramaTarget || 'local'));
   $('safeCleanDiskBtn')?.addEventListener('click', () => handleCleanDisk('safe'));
   $('allCleanDiskBtn')?.addEventListener('click', () => handleCleanDisk('all'));
@@ -11526,7 +11549,7 @@ window.executeServerOpsPrompt = async (server, prompt, agentId, attachments = []
   if (sendBtn) sendBtn.disabled = true;
 
   contentEl.innerHTML = `
-    <div style="display:flex;align-items:center;gap:8px;color:#6366f1;font-weight:600;margin-bottom:8px;">
+    <div style="display:flex;align-items:center;gap:8px;color:var(--text-main);font-weight:600;margin-bottom:8px;">
       <span class="thinking-pulse-dot"></span>
       <span>正在调度智能体 [${esc(agentId)}] 远程巡检与执行：${esc(server.name)} (${esc(server.host)})...</span>
     </div>
@@ -11562,7 +11585,7 @@ window.executeServerOpsPrompt = async (server, prompt, agentId, attachments = []
 
     contentEl.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <span style="font-weight:700;color:#16a34a;"> 智能体 [${esc(agentId)}] 执行完成</span>
+        <span style="font-weight:700;color:var(--success);"> 智能体 [${esc(agentId)}] 执行完成</span>
         <span style="font-size:11px;color:var(--text-muted);">目标：${esc(server.name)}</span>
       </div>
       ${reasoning ? `
@@ -11575,7 +11598,7 @@ window.executeServerOpsPrompt = async (server, prompt, agentId, attachments = []
     `;
     await renderServers();
   } catch (err) {
-    contentEl.innerHTML += `<div style="color:#ef4444;margin-top:8px;">[执行失败] ${esc(err.message)}</div>`;
+    contentEl.innerHTML += `<div style="color:var(--danger);margin-top:8px;">[执行失败] ${esc(err.message)}</div>`;
   } finally {
     if (sendBtn) sendBtn.disabled = false;
   }
@@ -11725,7 +11748,7 @@ function renderCurrentDialogModels() {
 
   if (!container) return;
   if (currentDialogModels.length === 0) {
-    container.innerHTML = '<span style="font-size:11.5px;color:#94a3b8;line-height:24px;">暂无添加模型，请点击上方「一键从服务商获取模型」或手动添加</span>';
+    container.innerHTML = '<span style="font-size:11.5px;color:var(--text-muted);line-height:24px;">暂无添加模型，请点击上方「一键从服务商获取模型」或手动添加</span>';
     return;
   }
   container.innerHTML = currentDialogModels.map((m, idx) => `
@@ -11748,7 +11771,7 @@ $('clearAllProviderModelsBtn')?.addEventListener('click', async () => {
   const count = currentDialogModels.length;
   const ok = await showConfirm({
     title: '一键清除模型',
-    message: `确定要清除当前已包含的全部 <strong>${count}</strong> 个模型吗？<br><small style="color:#64748b;">点击下方「保存」按钮后将同步从系统配置中移除。</small>`,
+    message: `确定要清除当前已包含的全部 <strong>${count}</strong> 个模型吗？<br><small style="color:var(--text-muted);">点击下方「保存」按钮后将同步从系统配置中移除。</small>`,
     okText: '确认清除',
     isDanger: true,
   });
@@ -11763,7 +11786,7 @@ window.fetchAndSyncModelsForProvider = async (providerId, clickBtn) => {
   const origText = btn ? btn.textContent : '';
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner" style="display:inline-block;width:11px;height:11px;border:2px solid #cbd5e1;border-top-color:#0284c7;border-radius:50%;margin-right:4px;vertical-align:middle;"></span>拉取中...';
+    btn.innerHTML = '<span class="spinner" style="display:inline-block;width:11px;height:11px;border:2px solid var(--border-default);border-top-color:var(--text-main);border-radius:50%;margin-right:4px;vertical-align:middle;"></span>拉取中...';
   }
 
   showToast(`正在从服务商 [${providerId}] 获取模型列表...`, 'info');
@@ -11846,7 +11869,7 @@ $('fetchRemoteModelsInDialogBtn')?.addEventListener('click', async () => {
   const btn = $('fetchRemoteModelsInDialogBtn');
   const btnText = $('fetchRemoteBtnTextInDialog');
   if (btn) btn.disabled = true;
-  if (btnText) btnText.innerHTML = '<span class="spinner" style="display:inline-block;width:11px;height:11px;border:2px solid #cbd5e1;border-top-color:#0284c7;border-radius:50%;margin-right:4px;vertical-align:middle;"></span>正在获取云端模型...';
+  if (btnText) btnText.innerHTML = '<span class="spinner" style="display:inline-block;width:11px;height:11px;border:2px solid var(--border-default);border-top-color:var(--text-main);border-radius:50%;margin-right:4px;vertical-align:middle;"></span>正在获取云端模型...';
 
   try {
     const res = await window.hap.fetchProviderModels(id || 'temp', { baseUrl, apiKey, wireApi, protocol });
@@ -12358,7 +12381,7 @@ function renderMarket(query = '', tab = activeMarketTab) {
       `;
     } else if (item.repo) {
       commandSnippetHtml = `
-        <div class="eco-command-wrap" style="color:#2563eb;" title="GitHub 开源仓库">
+        <div class="eco-command-wrap" style="color:var(--text-main);" title="GitHub 开源仓库">
           <span class="eco-command-text">github.com/${esc(item.repo)}</span>
           <button type="button" class="btn secondary" style="padding:1px 6px;font-size:10px;" onclick="window.open('https://github.com/${esc(item.repo)}', '_blank')">访问</button>
         </div>
@@ -12828,9 +12851,9 @@ async function renderSchedules() {
             <div>
               <span class="badge ${h.status === 'success' ? 'success' : 'danger'}" style="margin-right:6px;font-size:10.5px;">${h.status === 'success' ? '成功' : '失败'}</span>
               <strong style="font-size:12px;">${esc(h.scheduleName || h.scheduleId)}</strong>
-              <span style="font-size:11.5px;color:#64748b;margin-left:8px;">耗时 ${h.durationMs ? (h.durationMs / 1000).toFixed(1) + 's' : '-'}</span>
+              <span style="font-size:11.5px;color:var(--text-muted);margin-left:8px;">耗时 ${h.durationMs ? (h.durationMs / 1000).toFixed(1) + 's' : '-'}</span>
             </div>
-            <span style="font-size:11px;color:#94a3b8;">${new Date(h.executedAt).toLocaleString()}</span>
+            <span style="font-size:11px;color:var(--text-muted);">${new Date(h.executedAt).toLocaleString()}</span>
           </div>
         `).join('');
       }
@@ -13021,7 +13044,7 @@ function renderEnvVarsList(list) {
           </div>
           <div style="display:flex;gap:6px;">
             <button type="button" class="btn primary" style="font-size:11.5px;padding:4px 10px;" onclick="window.saveSingleEnvVar('${escJs(item.key)}')">保存</button>
-            ${item.isSet ? `<button type="button" class="btn text-btn" style="font-size:11.5px;padding:4px 8px;color:#ef4444;" onclick="window.clearSingleEnvVar('${escJs(item.key)}')">清除</button>` : ''}
+            ${item.isSet ? `<button type="button" class="btn text-btn" style="font-size:11.5px;padding:4px 8px;color:var(--danger);" onclick="window.clearSingleEnvVar('${escJs(item.key)}')">清除</button>` : ''}
             ${item.category === 'custom' ? `<button type="button" class="btn danger" style="font-size:11.5px;padding:4px 8px;" onclick="window.deleteCustomEnvVar('${escJs(item.key)}')">删除</button>` : ''}
           </div>
         </div>
@@ -13767,7 +13790,7 @@ window.refreshHostView = async () => {
       if (!info) return;
 
       if (processList) renderRemoteProcessList(processList, targetId);
-      else if ($('hostTopProcessList')) $('hostTopProcessList').innerHTML = '<div style="color:#dc2626;font-size:12px;padding:8px 0;text-align:center;">远程进程接口暂不可用</div>';
+      else if ($('hostTopProcessList')) $('hostTopProcessList').innerHTML = '<div style="color:var(--danger);font-size:12px;padding:8px 0;text-align:center;">远程进程接口暂不可用</div>';
 
       const cpuPct = info.cpuUsagePercent ?? info.cpu?.usagePercent ?? 0;
       const cpuCores = info.cpuCount ?? info.cpu?.cores ?? '--';
@@ -13824,7 +13847,7 @@ window.refreshHostView = async () => {
             <div class="progress-track" style="height:4px;margin-bottom:4px;">
               <div style="width:${diskPct}%; height:100%; background:var(--primary);"></div>
             </div>
-            <div style="font-size:11px;color:#64748b;display:flex;justify-content:space-between;">
+            <div style="font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between;">
               <span>已用: ${diskTotal > 0 ? fmtHostBytes(diskUsed) : '不可用'}</span>
               <span>总计: ${diskTotal > 0 ? fmtHostBytes(diskTotal) : '不可用'}</span>
             </div>
@@ -14178,14 +14201,14 @@ window.doExecuteScript = async (serverId, command) => {
         badge.textContent = '执行成功 (Exit: 0)';
         badge.className = 'badge success';
       }
-      if (exitCodeEl) exitCodeEl.innerHTML = '退出代码: <strong style="color:#10b981;">0 (成功)</strong>';
+      if (exitCodeEl) exitCodeEl.innerHTML = '退出代码: <strong style="color:var(--success);">0 (成功)</strong>';
       showToast('远程指令执行完成！', 'success');
     } else {
       if (badge) {
         badge.textContent = `异常退出 (${res.exitCode})`;
         badge.className = 'badge danger';
       }
-      if (exitCodeEl) exitCodeEl.innerHTML = `退出代码: <strong style="color:#ef4444;">${res.exitCode} (错误)</strong>`;
+      if (exitCodeEl) exitCodeEl.innerHTML = `退出代码: <strong style="color:var(--danger);">${res.exitCode} (错误)</strong>`;
       showToast(`指令执行异常，退出代码 ${res.exitCode}`, 'error');
     }
   } catch (err) {
@@ -14196,7 +14219,7 @@ window.doExecuteScript = async (serverId, command) => {
       badge.className = 'badge danger';
     }
     if (outputEl) outputEl.textContent += `\n[System Error] 执行失败：${err.message}`;
-    if (exitCodeEl) exitCodeEl.innerHTML = `错误信息: <strong style="color:#ef4444;">${esc(err.message)}</strong>`;
+    if (exitCodeEl) exitCodeEl.innerHTML = `错误信息: <strong style="color:var(--danger);">${esc(err.message)}</strong>`;
     showToast(`下发失败：${err.message}`, 'error');
   }
 };
@@ -14901,8 +14924,8 @@ async function renderMemories(searchQuery = '') {
           <div style="flex:1;">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
               <span class="prop-chip" style="background:${cat.bg};color:${cat.color};font-weight:600;font-size:11px;">${cat.label}</span>
-              ${m.agentId ? `<span class="prop-chip" style="font-size:11px;">${esc(m.agentId)}</span>` : '<span class="prop-chip" style="font-size:11px;color:#94a3b8;">全局通用</span>'}
-              <span style="font-size:11px;color:#94a3b8;margin-left:auto;">${new Date(m.createdAt || m.updatedAt || Date.now()).toLocaleDateString()}</span>
+              ${m.agentId ? `<span class="prop-chip" style="font-size:11px;">${esc(m.agentId)}</span>` : '<span class="prop-chip" style="font-size:11px;color:var(--text-muted);">全局通用</span>'}
+              <span style="font-size:11px;color:var(--text-muted);margin-left:auto;">${new Date(m.createdAt || m.updatedAt || Date.now()).toLocaleDateString()}</span>
             </div>
             <div style="font-size:13px;color:var(--text-main);line-height:1.5;white-space:pre-wrap;word-break:break-all;">${esc(m.content)}</div>
           </div>
@@ -15354,7 +15377,7 @@ function initDesktopUpdater() {
       } else {
         showToast(`当前已是最新版本 (${state?.currentVersion ? 'v' + state.currentVersion : 'v0.1.16'})`, 'success');
         if (statusEl) {
-          statusEl.innerHTML = `<div>当前状态: <strong style="color:#10b981;">已是最新版</strong></div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">刚刚已检查</div>`;
+          statusEl.innerHTML = `<div>当前状态: <strong style="color:var(--success);">已是最新版</strong></div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">刚刚已检查</div>`;
         }
       }
     } catch (err) {
@@ -15606,8 +15629,8 @@ window.renderGatewayKeys = async () => {
 
       const rpmDisplay = k.rateLimitRpm > 0 ? `${k.rateLimitRpm} 次/分` : '无限制';
       const statusBadge = k.enabled
-        ? `<span style="display:inline-flex;align-items:center;gap:4px;color:#10b981;font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:#10b981;"></span>启用</span>`
-        : `<span style="display:inline-flex;align-items:center;gap:4px;color:#ef4444;font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:#ef4444;"></span>停用</span>`;
+        ? `<span style="display:inline-flex;align-items:center;gap:4px;color:var(--success);font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:var(--success);"></span>启用</span>`
+        : `<span style="display:inline-flex;align-items:center;gap:4px;color:var(--danger);font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:var(--danger);"></span>停用</span>`;
 
       html += `
         <tr style="border-bottom:1px solid var(--border-default);">
@@ -15634,7 +15657,7 @@ window.renderGatewayKeys = async () => {
     html += `</tbody></table>`;
     container.innerHTML = html;
   } catch (err) {
-    container.innerHTML = `<div style="color:#ef4444;padding:16px;">加载密钥列表失败: ${escapeHtml(err.message)}</div>`;
+    container.innerHTML = `<div style="color:var(--danger);padding:16px;">加载密钥列表失败: ${escapeHtml(err.message)}</div>`;
   }
 };
 
@@ -15696,7 +15719,7 @@ window.renderGatewayAliases = async () => {
       html += `
         <tr style="border-bottom:1px solid var(--border-default);">
           <td style="padding:10px 12px;font-family:var(--font-mono);font-weight:700;color:var(--text-main);">${escapeHtml(a.alias)}</td>
-          <td style="padding:10px 12px;color:#10b981;font-weight:600;font-family:var(--font-mono);">${escapeHtml(a.targetModel)}</td>
+          <td style="padding:10px 12px;color:var(--success);font-weight:600;font-family:var(--font-mono);">${escapeHtml(a.targetModel)}</td>
           <td style="padding:10px 12px;color:var(--text-muted);font-family:var(--font-mono);">${escapeHtml(a.fallbackModel || '-')}</td>
           <td style="padding:10px 12px;color:var(--text-muted);">${escapeHtml(a.description || '-')}</td>
           <td style="padding:10px 12px;text-align:right;">
@@ -15709,7 +15732,7 @@ window.renderGatewayAliases = async () => {
     html += `</tbody></table>`;
     container.innerHTML = html;
   } catch (err) {
-    container.innerHTML = `<div style="color:#ef4444;padding:16px;">加载别名规则失败: ${escapeHtml(err.message)}</div>`;
+    container.innerHTML = `<div style="color:var(--danger);padding:16px;">加载别名规则失败: ${escapeHtml(err.message)}</div>`;
   }
 };
 
@@ -15756,7 +15779,7 @@ window.renderGatewayPresets = async () => {
     }
     container.innerHTML = html;
   } catch (err) {
-    container.innerHTML = `<div style="color:#ef4444;padding:16px;">加载客户端预设失败: ${escapeHtml(err.message)}</div>`;
+    container.innerHTML = `<div style="color:var(--danger);padding:16px;">加载客户端预设失败: ${escapeHtml(err.message)}</div>`;
   }
 };
 
@@ -15800,12 +15823,12 @@ window.renderGatewayLogs = async () => {
     for (const log of logs) {
       const timeStr = new Date(log.timestamp).toLocaleTimeString();
       const statusBadge = log.status === 200
-        ? `<span class="badge" style="background:rgba(16,185,129,0.12);color:#10b981;font-weight:700;">200 OK</span>`
-        : `<span class="badge" style="background:rgba(239,68,68,0.12);color:#ef4444;font-weight:700;">${log.status}</span>`;
+        ? `<span class="badge" style="background:rgba(16,185,129,0.12);color:var(--success);font-weight:700;">200 OK</span>`
+        : `<span class="badge" style="background:rgba(239,68,68,0.12);color:var(--danger);font-weight:700;">${log.status}</span>`;
 
       const modelMapping = log.requestedModel === log.targetModel
         ? `<span style="font-family:var(--font-mono);">${escapeHtml(log.requestedModel)}</span>`
-        : `<span style="font-family:var(--font-mono);">${escapeHtml(log.requestedModel)}</span> <span style="color:var(--text-muted);"></span> <span style="font-family:var(--font-mono);color:#10b981;">${escapeHtml(log.targetModel)}</span>`;
+        : `<span style="font-family:var(--font-mono);">${escapeHtml(log.requestedModel)}</span> <span style="color:var(--text-muted);"></span> <span style="font-family:var(--font-mono);color:var(--success);">${escapeHtml(log.targetModel)}</span>`;
 
       html += `
         <tr style="border-bottom:1px solid var(--border-default);">
@@ -15824,7 +15847,7 @@ window.renderGatewayLogs = async () => {
     html += `</tbody></table>`;
     container.innerHTML = html;
   } catch (err) {
-    container.innerHTML = `<div style="color:#ef4444;padding:16px;">加载日志失败: ${escapeHtml(err.message)}</div>`;
+    container.innerHTML = `<div style="color:var(--danger);padding:16px;">加载日志失败: ${escapeHtml(err.message)}</div>`;
   }
 };
 
@@ -16168,7 +16191,7 @@ async function renderHostingMemories() {
       } else if (!m.agentId) {
         geneBadge = '<span class="badge neutral" style="font-size:9.5px;">全局通用</span>';
       } else {
-        geneBadge = `<span class="badge" style="background:#f1f5f9;color:#475569;font-size:9.5px;">${esc(m.agentId)}</span>`;
+        geneBadge = `<span class="badge" style="background:var(--bg-subtle);color:#475569;font-size:9.5px;">${esc(m.agentId)}</span>`;
       }
 
       return `
@@ -16183,7 +16206,7 @@ async function renderHostingMemories() {
               ${content}
             </div>
           </div>
-          <button type="button" class="btn text-btn" style="color:var(--danger,#ef4444);font-size:11px;padding:2px 4px;" onclick="window.deleteHostingMemory('${escJs(m.id)}')">
+          <button type="button" class="btn text-btn" style="color:var(--danger,var(--danger));font-size:11px;padding:2px 4px;" onclick="window.deleteHostingMemory('${escJs(m.id)}')">
             删除
           </button>
         </div>
@@ -16485,7 +16508,7 @@ window.openVisionTestModal = async () => {
   const runTest = async () => {
     container.innerHTML = `
       <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:30px 20px;text-align:center;">
-        <div class="thinking-pulse-dot" style="width:28px;height:28px;background:var(--primary, #2563eb);"></div>
+        <div class="thinking-pulse-dot" style="width:28px;height:28px;background:var(--primary, var(--primary));"></div>
         <div style="font-weight:600;font-size:14px;color:var(--text-main);">正在捕获桌面微信窗口并调用多模态 VLM 分析...</div>
         <div style="font-size:12px;color:var(--text-muted);">正在检查微信客户端状态、截取对话画面并由视觉大模型提取消息...</div>
       </div>
@@ -16496,7 +16519,7 @@ window.openVisionTestModal = async () => {
       const res = await api.testVisionCapture();
       if (!res.ok) {
         container.innerHTML = `
-          <div style="padding:16px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;color:#991b1b;display:flex;flex-direction:column;gap:8px;">
+          <div style="padding:16px;background:var(--danger-soft);border:1px solid var(--danger-border);border-radius:10px;color:var(--danger);display:flex;flex-direction:column;gap:8px;">
             <div style="font-weight:700;display:flex;align-items:center;gap:6px;">
               <span>识屏失败</span>
             </div>
@@ -16512,7 +16535,7 @@ window.openVisionTestModal = async () => {
       const p = res.parsed;
       if (p && !p.ok && p.error) {
         container.innerHTML = `
-          <div style="padding:16px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;color:#991b1b;display:flex;flex-direction:column;gap:8px;">
+          <div style="padding:16px;background:var(--danger-soft);border:1px solid var(--danger-border);border-radius:10px;color:var(--danger);display:flex;flex-direction:column;gap:8px;">
             <div style="font-weight:700;display:flex;align-items:center;gap:6px;">
               <span>识屏分析遇到错误</span>
             </div>
@@ -16594,7 +16617,7 @@ window.openVisionTestModal = async () => {
             <div style="display:flex;align-items:center;justify-content:space-between;">
               <div style="font-size:12.5px;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:6px;">
                 <span>活跃聊天对象：</span>
-                <span style="color:var(--primary, #2563eb);">${esc(p?.chatTarget || '（未锁定具体会话）')}</span>
+                <span style="color:var(--primary, var(--primary));">${esc(p?.chatTarget || '（未锁定具体会话）')}</span>
                 ${p?.isGroup ? '<span class="badge info" style="font-size:10px;">群聊</span>' : ''}
               </div>
               <div>${replyBadge}</div>
@@ -16618,7 +16641,7 @@ window.openVisionTestModal = async () => {
       `;
     } catch (err) {
       container.innerHTML = `
-        <div style="padding:16px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;color:#991b1b;">
+        <div style="padding:16px;background:var(--danger-soft);border:1px solid var(--danger-border);border-radius:10px;color:var(--danger);">
           测试识屏异常: ${esc(err.message)}
         </div>
       `;
@@ -16716,7 +16739,7 @@ async function renderHostingContacts() {
       if (inCooldown) {
         statusBadge = `<span class="badge warning" style="font-size:9.5px;padding:1px 4px;">人工中</span>`;
       } else if (c.hostingMode === 'draft') {
-        statusBadge = `<span class="badge" style="font-size:9.5px;padding:1px 4px;background:#e0f2fe;color:#0284c7;">草稿</span>`;
+        statusBadge = `<span class="badge" style="font-size:9.5px;padding:1px 4px;background:var(--primary-subtle);color:var(--text-main);">草稿</span>`;
       } else if (c.hostingMode === 'off'|| c.autoReply === false) {
         statusBadge = `<span class="badge neutral" style="font-size:9.5px;padding:1px 4px;">关闭</span>`;
       } else {
@@ -16983,7 +17006,7 @@ async function renderHostingMessages(contact) {
               </div>
               <div class="draft-card-body">${esc(m.text)}</div>
               <div class="draft-card-actions">
-                <button type="button" class="btn text-btn discard-draft-btn" data-id="${esc(m.id)}" style="font-size:11.5px;color:var(--danger, #ef4444);">
+                <button type="button" class="btn text-btn discard-draft-btn" data-id="${esc(m.id)}" style="font-size:11.5px;color:var(--danger, var(--danger));">
                   舍弃草稿
                 </button>
                 <button type="button" class="btn primary approve-draft-btn" data-id="${esc(m.id)}" style="font-size:11.5px;padding:4px 12px;">

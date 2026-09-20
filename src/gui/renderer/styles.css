@@ -13,6 +13,11 @@
    ========================================================================== */
 
 /* 字体栈：优先系统中文字体，保证中英文混排基线一致 */
+/* hidden 属性必须能压过组件自身的 display，否则 .xxx { display:flex } 会让隐藏失效 */
+[hidden] {
+  display: none !important;
+}
+
 :root,
 [data-theme="light"] {
   color-scheme: light;
@@ -1111,6 +1116,8 @@ body.has-wallpaper .rail-mac-spacer {
   transition: all 0.15s ease;
   position: relative;
   user-select: none;
+  max-width: 260px;
+  min-width: 0;
 }
 
 .model-switch-pill:hover {
@@ -1119,16 +1126,20 @@ body.has-wallpaper .rail-mac-spacer {
 }
 
 .model-brand-badge {
+  /* 这里展示当前对话模型名，而不是冗余的「HAP」品牌字牌 */
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 1px 5px;
-  border-radius: var(--radius-xs);
-  background: var(--primary-subtle);
-  color: var(--primary);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
+  min-width: 0;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .model-current-label {
@@ -2573,7 +2584,7 @@ body.has-wallpaper .rail-mac-spacer {
   left: -100%;
   width: 200%;
   height: 2px;
-  background: linear-gradient(90deg, transparent 0%, var(--primary) 50%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, var(--text-muted) 50%, transparent 100%);
   animation: pluginShimmer 1.8s infinite ease-in-out;
 }
 
@@ -2713,14 +2724,14 @@ body.has-wallpaper .rail-mac-spacer {
 
 .import-drop-box:hover,
 .import-drop-box.dragover {
-  border-color: var(--primary) !important;
-  background: var(--primary-subtle) !important;
+  border-color: var(--border-hover) !important;
+  background: var(--bg-hover) !important;
 }
 
 .import-skill-tabs .btn.active {
-  background: var(--primary) !important;
-  color: #ffffff !important;
-  border-color: var(--primary) !important;
+  background: var(--bg-active) !important;
+  color: var(--text-main) !important;
+  border-color: var(--border-hover) !important;
 }
 
 .composer-text-area-wrap {
@@ -3297,6 +3308,22 @@ body.has-wallpaper .rail-mac-spacer {
   background: var(--danger-soft);
   color: var(--danger);
   border-color: var(--danger-border);
+}
+
+/* 内联小标签 (说明/提示/同步)：此前无样式定义，只能靠零散内联色，此处统一 */
+.hint-pill,
+.badge-pill-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  white-space: nowrap;
 }
 
 /* ==========================================================================
@@ -4145,8 +4172,9 @@ dialog .toast-container.in-dialog {
   border-color: var(--border-hover);
 }
 .git-badge-pill {
-  background: var(--accent);
-  color: #ffffff;
+  background: var(--bg-active);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
   font-size: 10.5px;
   font-weight: 700;
   padding: 1px 6px;
@@ -4787,10 +4815,10 @@ dialog .toast-container.in-dialog {
 }
 
 .nav.active {
-  background: var(--primary-subtle) !important;
-  color: var(--primary) !important;
-  border: 1px solid var(--primary-border) !important;
-  box-shadow: 0 4px 14px -2px var(--accent-glow, rgba(2, 132, 199, 0.25)) !important;
+  background: var(--bg-active) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-hover) !important;
+  box-shadow: none !important;
 }
 
 .stat-card {
@@ -4957,11 +4985,11 @@ body.sidebar-collapsed .sidebar-bottom-panel.sidebar-settings-only .nav-settings
 }
 
 .nav.active {
-  background: var(--primary-subtle) !important;
-  color: var(--primary) !important;
+  background: var(--bg-active) !important;
+  color: var(--text-main) !important;
   font-weight: 600 !important;
-  border: 1px solid var(--primary-border) !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid var(--border-hover) !important;
+  box-shadow: none !important;
 }
 
 .nav-icon {
@@ -5305,22 +5333,13 @@ body.sidebar-collapsed .sidebar-bottom-panel.sidebar-settings-only .nav-settings
   white-space: nowrap;
 }
 
-.eco-type-tag.mcp {
-  background: #f3e8ff;
-  color: #7e22ce;
-  border: 1px solid #e9d5ff;
-}
-
-.eco-type-tag.skill {
-  background: #fef3c7;
-  color: #b45309;
-  border: 1px solid #fde68a;
-}
-
+/* 生态类型标签：紫/黄/绿三色改为统一中性标签 */
+.eco-type-tag.mcp,
+.eco-type-tag.skill,
 .eco-type-tag.builtin {
-  background: #dcfce7;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
 }
 
 .eco-desc {
@@ -6175,8 +6194,8 @@ body:not(.is-chat-generating) .streaming-cursor,
 }
 
 .disk-metric-card.safe {
-  background: var(--success-subtle);
-  border-color: var(--success-border);
+  background: var(--bg-surface);
+  border-color: var(--border-default);
 }
 
 .disk-metric-card.safe .metric-title {
@@ -6188,7 +6207,7 @@ body:not(.is-chat-generating) .streaming-cursor,
 .disk-metric-card.safe .metric-val {
   font-size: 20px;
   font-weight: 700;
-  color: var(--success);
+  color: var(--text-main);
   font-family: var(--font-mono);
 }
 
@@ -6199,8 +6218,8 @@ body:not(.is-chat-generating) .streaming-cursor,
 }
 
 .disk-metric-card.review {
-  background: var(--warning-subtle);
-  border-color: var(--warning-border);
+  background: var(--bg-surface);
+  border-color: var(--border-default);
 }
 
 .disk-metric-card.review .metric-title {
@@ -6212,7 +6231,7 @@ body:not(.is-chat-generating) .streaming-cursor,
 .disk-metric-card.review .metric-val {
   font-size: 20px;
   font-weight: 700;
-  color: var(--warning);
+  color: var(--text-main);
   font-family: var(--font-mono);
 }
 
@@ -6398,9 +6417,9 @@ body:not(.is-chat-generating) .streaming-cursor,
 
 .git-stash-banner {
   display: flex;
-  background: rgba(245, 158, 11, 0.09);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  color: #d97706;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
   padding: 8px 12px;
   border-radius: var(--radius-sm);
   font-size: 12px;
@@ -7281,11 +7300,11 @@ body:not(.is-chat-generating) .streaming-cursor,
 }
 
 .git-auth-tab-btn.active {
-  background: var(--primary) !important;
-  color: #ffffff !important;
-  border-color: var(--primary) !important;
+  background: var(--bg-active) !important;
+  color: var(--text-main) !important;
+  border-color: var(--border-hover) !important;
   font-weight: 600 !important;
-  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+  box-shadow: none !important;
 }
 
 .git-auth-info-tip {
@@ -7293,8 +7312,8 @@ body:not(.is-chat-generating) .streaming-cursor,
   align-items: flex-start;
   gap: 10px;
   padding: 10px 14px;
-  background: var(--primary-subtle);
-  border: 1px solid var(--primary-border);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);
   font-size: 12px;
   color: var(--text-secondary);
@@ -7786,9 +7805,9 @@ body.has-wallpaper .user-bubble {
 }
 
 .wallpaper-quick-chip.active {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff !important;
+  border-color: var(--border-hover);
+  background: var(--bg-active);
+  color: var(--text-main) !important;
   font-weight: 600;
 }
 
@@ -8303,9 +8322,9 @@ body.has-wallpaper .user-bubble {
 }
 
 .lang-quick-chip.active {
-  background: var(--primary-subtle);
-  color: var(--primary);
-  border-color: var(--primary);
+  background: var(--bg-active);
+  color: var(--text-main);
+  border-color: var(--border-hover);
   font-weight: 600;
 }
 
@@ -8336,9 +8355,9 @@ body.has-wallpaper .user-bubble {
 }
 
 .theme-quick-chip.active {
-  background: var(--primary-subtle);
-  color: var(--primary);
-  border-color: var(--primary);
+  background: var(--bg-active);
+  color: var(--text-main);
+  border-color: var(--border-hover);
   font-weight: 600;
 }
 
@@ -9458,19 +9477,19 @@ body.platform-mac .mini-drag-titlebar {
 }
 
 .hub-tier-badge.tier-best {
-  color: #d97706;
+  color: var(--text-main);
 }
 
 .hub-tier-badge.tier-compatible {
-  color: #059669;
+  color: var(--text-secondary);
 }
 
 .hub-tier-badge.tier-slow {
-  color: #d97706;
+  color: var(--text-secondary);
 }
 
 .hub-tier-badge.tier-insufficient {
-  color: #dc2626;
+  color: var(--danger);
 }
 
 .hub-speed-tag {
@@ -9601,9 +9620,9 @@ body.platform-mac .mini-drag-titlebar {
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: #16a34a;
-  background: rgba(34, 197, 94, 0.08);
-  border: 1px solid rgba(34, 197, 94, 0.25);
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-default);
   padding: 2px 8px;
   border-radius: 12px;
   font-weight: 500;
@@ -9613,7 +9632,7 @@ body.platform-mac .mini-drag-titlebar {
   height: 6px;
   border-radius: 50%;
   background: #22c55e;
-  box-shadow: 0 0 6px #22c55e;
+  box-shadow: none;
   animation: miniPulse 1.8s infinite ease-in-out;
 }
 @keyframes miniPulse {
@@ -9651,22 +9670,22 @@ body.platform-mac .mini-drag-titlebar {
   color: var(--text-muted);
 }
 .hosting-stat-pill strong {
-  color: var(--primary);
+  color: var(--text-main);
   font-weight: 700;
 }
 .hosting-stat-pill.warning {
-  border-color: #f59e0b;
-  background: rgba(245, 158, 11, 0.08);
+  border-color: var(--border-default);
+  background: var(--bg-subtle);
 }
 .hosting-stat-pill.warning strong {
-  color: #d97706;
+  color: var(--text-main);
 }
 .hosting-stat-pill.info {
-  border-color: #0284c7;
-  background: rgba(2, 132, 199, 0.08);
+  border-color: var(--border-default);
+  background: var(--bg-subtle);
 }
 .hosting-stat-pill.info strong {
-  color: #0284c7;
+  color: var(--text-main);
 }
 
 .hosting-btn-group {
@@ -9770,8 +9789,8 @@ body.platform-mac .mini-drag-titlebar {
 }
 
 .hosting-info-banner {
-  background: rgba(59, 130, 246, 0.07);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   padding: 10px 12px;
   display: flex;
@@ -9857,45 +9876,22 @@ body.platform-mac .mini-drag-titlebar {
   font-weight: 700;
   white-space: nowrap;
 }
-.feed-tag.tag-detected {
-  background: rgba(14, 165, 233, 0.15);
-  color: #38bdf8;
-  border: 1px solid rgba(14, 165, 233, 0.3);
-}
-.feed-tag.tag-thinking {
-  background: rgba(168, 85, 247, 0.15);
-  color: #c084fc;
-  border: 1px solid rgba(168, 85, 247, 0.3);
-}
-.feed-tag.tag-generated {
-  background: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
-  border: 1px solid rgba(34, 197, 94, 0.3);
-}
-.feed-tag.tag-executing {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.3);
-}
-.feed-tag.tag-sent {
-  background: rgba(16, 185, 129, 0.2);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.4);
+/* Live Feed 阶段标签：8 种色相 → 统一中性，仅「冷却」保留危险色以示异常 */
+.feed-tag.tag-detected,
+.feed-tag.tag-thinking,
+.feed-tag.tag-generated,
+.feed-tag.tag-executing,
+.feed-tag.tag-sent,
+.feed-tag.tag-draft,
+.feed-tag.tag-system {
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
 }
 .feed-tag.tag-cooldown {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-}
-.feed-tag.tag-draft {
-  background: rgba(234, 179, 8, 0.15);
-  color: #facc15;
-  border: 1px solid rgba(234, 179, 8, 0.3);
-}
-.feed-tag.tag-system {
-  background: rgba(148, 163, 184, 0.15);
-  color: #94a3b8;
-  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid var(--danger-border);
 }
 
 .feed-title {
@@ -10084,9 +10080,9 @@ body.platform-mac .mini-drag-titlebar {
   background: var(--bg-hover);
 }
 .hosting-chip-btn.active {
-  background: var(--primary);
-  color: #fff;
-  border-color: var(--primary);
+  background: var(--bg-active);
+  color: var(--text-main);
+  border-color: var(--border-hover);
 }
 
 .hosting-search-input {
