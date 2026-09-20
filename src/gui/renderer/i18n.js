@@ -70,13 +70,8 @@
       'popover.langZh': '中文 (简体)',
       'popover.langEn': 'English',
       'popover.themeTitle': '色彩主题快速切换',
-      'theme.dark': '曜石深空',
-      'theme.light': '极简冷玉',
-      'theme.cyber': '赛博霓虹',
-      'theme.aurora': '极光松岭',
-      'theme.sunset': '落日熔金',
-      'theme.glass': '流光玻璃',
-      'theme.vibrant': '活力幻彩',
+      'theme.dark': '深色',
+      'theme.light': '浅色',
       'popover.themeDetails': '查看 7 款主题设计详情 ▾',
       'popover.opacityTitle': '半透明与毛玻璃',
       'popover.opacityClear': '40% 通透',
@@ -87,8 +82,8 @@
       'popover.backdropBlur': '启用背景高斯模糊滤镜 (Backdrop Blur)',
 
       // 主题弹窗详情 (Theme Modal)
-      'themeModal.title': '界面色彩、背景壁纸与透明度系统',
-      'themeModal.subtitle': '自由定制视觉色彩主题、桌面背景图片与亚克力毛玻璃特效',
+      'themeModal.title': '外观、背景与透明度',
+      'themeModal.subtitle': '选择浅色或深色主题，并可选配背景图片与透明度',
       'themeModal.done': '完成设置',
 
       // 背景图片与壁纸系统 (Wallpaper)
@@ -143,6 +138,15 @@
       'hero.card1Badge': '11:09 就绪',
       'hero.card1Legend': '100% | P1 | 全模块',
       'hero.card1Chain': '解析拓扑',
+      'hero.cardArchitecture': '分析工程结构',
+      'hero.cardArchitectureDesc': '梳理核心依赖与潜在架构风险',
+      'hero.cardSecurity': '代码与安全审查',
+      'hero.cardSecurityDesc': '排查缺陷、漏洞与性能隐患',
+      'hero.cardTests': '编写单元测试',
+      'hero.cardTestsDesc': '覆盖边界条件与异常分支',
+      'hero.cardGit': 'Git 变更与提交',
+      'hero.cardGitDesc': '生成规范提交并推送远程',
+      'hero.boundProject': '当前绑定的工程：',
 
       // 会话流与建议回复 (Chat Thread & Suggested Replies)
       'chat.suggestedReplies': '建议快捷回复',
@@ -281,13 +285,8 @@
       'popover.langZh': '中文 (简体)',
       'popover.langEn': 'English',
       'popover.themeTitle': 'Theme Presets',
-      'theme.dark': 'Obsidian',
-      'theme.light': 'Frost',
-      'theme.cyber': 'Cyber',
-      'theme.aurora': 'Aurora',
-      'theme.sunset': 'Sunset',
-      'theme.glass': 'Glass',
-      'theme.vibrant': 'Vibrant Pulse',
+      'theme.dark': 'Dark',
+      'theme.light': 'Light',
       'popover.themeDetails': 'View 7 Theme Design Details ▾',
       'popover.opacityTitle': 'Opacity & Backdrop Blur',
       'popover.opacityClear': '40% Clear',
@@ -298,8 +297,8 @@
       'popover.backdropBlur': 'Enable Backdrop Blur Filter',
 
       // 主题弹窗详情 (Theme Modal)
-      'themeModal.title': 'Theme, Wallpaper & Opacity Settings',
-      'themeModal.subtitle': 'Customize color themes, desktop background wallpapers and acrylic glass effects',
+      'themeModal.title': 'Appearance, Background & Opacity',
+      'themeModal.subtitle': 'Choose a light or dark theme, optionally with a background image and opacity',
       'themeModal.done': 'Done',
 
       // 背景图片与壁纸系统 (Wallpaper)
@@ -354,6 +353,15 @@
       'hero.card1Badge': '11:09 Ready',
       'hero.card1Legend': '100% | P1 | All Modules',
       'hero.card1Chain': 'Analyze Topology',
+      'hero.cardArchitecture': 'Analyze Architecture',
+      'hero.cardArchitectureDesc': 'Review core dependencies and structural risks',
+      'hero.cardSecurity': 'Code & Security Review',
+      'hero.cardSecurityDesc': 'Find defects, vulnerabilities and hotspots',
+      'hero.cardTests': 'Write Unit Tests',
+      'hero.cardTestsDesc': 'Cover boundary and failure branches',
+      'hero.cardGit': 'Git Changes & Commit',
+      'hero.cardGitDesc': 'Generate a conventional commit and push',
+      'hero.boundProject': 'Active project: ',
 
       // 会话流与建议回复 (Chat Thread & Suggested Replies)
       'chat.suggestedReplies': 'Suggested Replies',
@@ -442,6 +450,151 @@
 
   const STORAGE_KEY = 'hap_lang';
   let currentLang = 'zh-CN';
+
+  // ==========================================================================
+  // 源文案词典 (Source Text Dictionary)
+  // --------------------------------------------------------------------------
+  // data-i18n 属性只能覆盖静态标记，而本平台的绝大多数文案既包含未标注的静态
+  // 文本，也包含 app.js 运行时注入的模板字符串。这里以「中文原文 -> 英文译文」
+  // 的方式提供第二层翻译：凡是文本节点内容与词典键完全一致，即替换为译文，
+  // 因此静态与动态文案都能被同一份词典覆盖。
+  // 仅在英文模式下生效，中文（默认语言）不产生任何遍历开销。
+  // ==========================================================================
+  const SOURCE_TEXT_EN = (typeof globalThis !== 'undefined' && globalThis.HAP_SOURCE_TEXT_EN) || {};
+
+  // 这些区域承载用户/智能体产出的内容，绝不能被界面词典改写。
+  const TRANSLATE_SKIP_SELECTOR = [
+    '[data-i18n-skip]',
+    '#messagesInner',
+    '.chat-thread-container',
+    '.message-content',
+    'code',
+    'pre',
+    'script',
+    'style',
+    'textarea',
+  ].join(', ');
+
+  function normalizeSourceText(value) {
+    return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
+  }
+
+  function isInsideSkippedRegion(node) {
+    let el = node.parentNode;
+    while (el && el.nodeType === 1) {
+      if (typeof el.matches === 'function' && el.matches(TRANSLATE_SKIP_SELECTOR)) return true;
+      el = el.parentNode;
+    }
+    return false;
+  }
+
+  // 保留原始首尾空白，避免破坏内联排版。
+  function withPreservedWhitespace(original, replacement) {
+    const leading = original.match(/^\s*/)[0];
+    const trailing = original.match(/\s*$/)[0];
+    return leading + replacement + trailing;
+  }
+
+  function translateTextNode(node, lang) {
+    const original = node.nodeValue;
+    if (!original) return;
+    const source = normalizeSourceText(original);
+    if (!source || !/[\u4e00-\u9fa5]/.test(source)) return;
+
+    if (lang === 'en-US') {
+      const translated = SOURCE_TEXT_EN[source];
+      if (translated === undefined) return;
+      if (node.__hapSourceText === undefined) node.__hapSourceText = original;
+      const next = withPreservedWhitespace(node.__hapSourceText, translated);
+      if (node.nodeValue !== next) node.nodeValue = next;
+      return;
+    }
+
+    if (node.__hapSourceText !== undefined) {
+      node.nodeValue = node.__hapSourceText;
+      delete node.__hapSourceText;
+    }
+  }
+
+  function translateSourceAttributes(root, lang) {
+    const attrs = ['placeholder', 'title', 'aria-label'];
+    const targets = root.querySelectorAll
+      ? root.querySelectorAll(attrs.map(a => `[${a}]`).join(','))
+      : [];
+    targets.forEach(el => {
+      if (el.closest && el.closest('[data-i18n-skip]')) return;
+      attrs.forEach(attr => {
+        const current = el.getAttribute(attr);
+        if (!current) return;
+        const storeKey = `hapSource${attr.replace(/(^|-)([a-z])/g, (_, __, c) => c.toUpperCase())}`;
+        const original = el.dataset ? el.dataset[storeKey] : undefined;
+        if (lang === 'en-US') {
+          const translated = SOURCE_TEXT_EN[normalizeSourceText(current)];
+          if (translated === undefined) return;
+          if (original === undefined && el.dataset) el.dataset[storeKey] = current;
+          el.setAttribute(attr, translated);
+        } else if (original !== undefined) {
+          el.setAttribute(attr, original);
+          delete el.dataset[storeKey];
+        }
+      });
+    });
+  }
+
+  function translateSourceTree(lang) {
+    if (typeof document === 'undefined' || !document.body) return;
+    if (lang !== 'en-US') {
+      stopSourceObserver();
+    }
+
+    if (typeof document.createTreeWalker === 'function' && typeof NodeFilter !== 'undefined') {
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+      const nodes = [];
+      let node = walker.nextNode();
+      while (node) {
+        nodes.push(node);
+        node = walker.nextNode();
+      }
+      nodes.forEach(n => {
+        if (!isInsideSkippedRegion(n)) translateTextNode(n, lang);
+      });
+    }
+
+    translateSourceAttributes(document.body, lang);
+
+    if (lang === 'en-US') startSourceObserver();
+  }
+
+  let sourceObserver = null;
+  function startSourceObserver() {
+    if (sourceObserver || typeof MutationObserver === 'undefined' || typeof document === 'undefined' || !document.body) return;
+    let scheduled = false;
+    sourceObserver = new MutationObserver(() => {
+      if (scheduled) return;
+      scheduled = true;
+      const flush = () => {
+        scheduled = false;
+        if (currentLang !== 'en-US') return;
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+        let node = walker.nextNode();
+        while (node) {
+          if (!isInsideSkippedRegion(node)) translateTextNode(node, 'en-US');
+          node = walker.nextNode();
+        }
+        translateSourceAttributes(document.body, 'en-US');
+      };
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(flush);
+      else setTimeout(flush, 16);
+    });
+    sourceObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
+  }
+
+  function stopSourceObserver() {
+    if (sourceObserver) {
+      sourceObserver.disconnect();
+      sourceObserver = null;
+    }
+  }
 
   function getLanguage() {
     try {
@@ -555,6 +708,9 @@
       el.classList.toggle('active', el.getAttribute('data-lang') === lang);
     });
 
+    // 6b. 源文案词典翻译 (覆盖未标注 data-i18n 的静态与动态文案)
+    translateSourceTree(lang);
+
     // 8. 派发自定义全局事件
     if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
       window.dispatchEvent(new CustomEvent('languagechange', { detail: { lang } }));
@@ -595,11 +751,13 @@
 
   return {
     TRANSLATIONS,
+    SOURCE_TEXT_EN,
     STORAGE_KEY,
     getLanguage,
     setLanguage,
     toggleLanguage,
     applyLanguage,
+    translateSourceTree,
     t,
     init
   };

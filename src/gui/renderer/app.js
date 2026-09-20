@@ -1116,217 +1116,57 @@ function renderCurrentSessionMessages() {
   }
 
   if (session.messages.length === 0) {
-    const heroSubtitle = projName ? `当前绑定的工程：<strong>${esc(projName)}</strong>` : '选择或导入工作区项目，开启高效智能编排与自动化修复';
+    // 空会话欢迎页 (Minimal Hero)：文案统一走 i18n，样式保持中性无装饰色块
+    const heroTitle = updateText('hero.title', '今天有什么我可以帮你的？');
+    const heroSubtitle = projName
+      ? `${updateText('hero.boundProject', '当前绑定的工程：')}<strong>${esc(projName)}</strong>`
+      : updateText('hero.subtitle', '选择或导入工作区项目，开启高效智能编排与自动化修复');
+    const HERO_CARDS = [
+      {
+        prompt: '分析当前绑定的项目工程结构并列出关键模块与潜在风险',
+        title: updateText('hero.cardArchitecture', '分析工程结构'),
+        desc: updateText('hero.cardArchitectureDesc', '梳理核心依赖与潜在架构风险'),
+        icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>'
+      },
+      {
+        prompt: '对当前项目进行全面的代码质量、安全漏洞与潜在 Bug 审查',
+        title: updateText('hero.cardSecurity', '代码与安全审查'),
+        desc: updateText('hero.cardSecurityDesc', '排查缺陷、漏洞与性能隐患'),
+        icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'
+      },
+      {
+        prompt: '为当前核心功能模块设计并编写高覆盖率的单元测试用例',
+        title: updateText('hero.cardTests', '编写单元测试'),
+        desc: updateText('hero.cardTestsDesc', '覆盖边界条件与异常分支'),
+        icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>'
+      },
+      {
+        prompt: '审查 Git 变更并协助生成规范的 Commit 提交和推送代码',
+        title: updateText('hero.cardGit', 'Git 变更与提交'),
+        desc: updateText('hero.cardGitDesc', '生成规范提交并推送远程'),
+        icon: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 9v12"/><path d="M18 9a9 9 0 0 0-9 9"/></svg>'
+      }
+    ];
 
     container.innerHTML = `
+
       <div class="hero-welcome" id="heroWelcome">
         <div class="hero-logo">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
           </svg>
         </div>
-        <h1 class="hero-title">今天有什么我可以帮你的？</h1>
+        <h1 class="hero-title">${heroTitle}</h1>
         <p class="hero-subtitle">${heroSubtitle}</p>
         <div class="hero-grid">
-          <div class="cyber-folder-card hero-card" data-hero-prompt="分析当前绑定的项目工程结构并列出关键模块与潜在风险" onclick="triggerHeroPrompt('分析当前绑定的项目工程结构并列出关键模块与潜在风险')">
-            <div class="cyber-tab-header">
-              <span class="cyber-tab-pill"><span class="cyber-tab-dot"></span>ARCH-01</span>
-              <div class="cyber-tab-meta">
-                <span class="cyber-meta-item">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/></svg>
-                  <span>09/15</span>
-                </span>
-              </div>
-            </div>
-            <div class="cyber-card-body">
-              <div class="cyber-card-title">分析工程拓扑结构，自动梳理核心依赖与潜在架构风险</div>
-              <div class="cyber-telemetry-row">
-                <div class="cyber-telemetry-left">
-                  <div class="cyber-timer-text">00:01:28</div>
-                  <div class="cyber-status-chip">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <span>11:09 就绪</span>
-                  </div>
-                </div>
-                <div class="cyber-matrix-wrap">
-                  <div class="cyber-dot-matrix">
-                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span>
-                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span><span class="matrix-dot teal"></span>
-                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
-                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
-                  </div>
-                  <div class="matrix-legend"><span class="highlight">100%</span> | P1 | 全模块</div>
-                </div>
-              </div>
-              <div class="cyber-pipeline-chain">
-                <span class="pipeline-node node-blue"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>解析拓扑</span>
-                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
-                <span class="pipeline-node node-teal"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>依赖扫描</span>
-                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
-                <span class="pipeline-node node-purple"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>风险评估</span>
-                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
-                <span class="pipeline-node node-success"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>架构建议</span>
-              </div>
-              <div class="cyber-card-footer">
-                <div class="cyber-signal-group">
-                  <span class="cyber-lightning-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
-                  <div class="signal-bars"><span class="signal-bar b1 active-amber"></span><span class="signal-bar b2 active-amber"></span><span class="signal-bar b3 active-amber"></span><span class="signal-bar b4"></span></div>
-                  <span class="cyber-pill-tag"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>自动编排</span></span>
-                </div>
-                <span class="cyber-action-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg><span>一键分析</span></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="cyber-folder-card hero-card" data-hero-prompt="对当前项目进行全面的代码质量、安全漏洞与潜在 Bug 审查" onclick="triggerHeroPrompt('对当前项目进行全面的代码质量、安全漏洞与潜在 Bug 审查')">
-            <div class="cyber-tab-header">
-              <span class="cyber-tab-pill"><span class="cyber-tab-dot"></span>SEC-AUDIT</span>
-              <div class="cyber-tab-meta">
-                <span class="cyber-meta-item">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/></svg>
-                  <span>09/15</span>
-                </span>
-              </div>
-            </div>
-            <div class="cyber-card-body">
-              <div class="cyber-card-title">深度安全审计与缺陷漏洞排查，识别性能与注入隐患</div>
-              <div class="cyber-telemetry-row">
-                <div class="cyber-telemetry-left">
-                  <div class="cyber-timer-text">00:03:45</div>
-                  <div class="cyber-status-chip">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <span>11:15 待命</span>
-                  </div>
-                </div>
-                <div class="cyber-matrix-wrap">
-                  <div class="cyber-dot-matrix">
-                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
-                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span><span class="matrix-dot amber"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
-                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
-                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
-                  </div>
-                  <div class="matrix-legend"><span class="highlight">98%</span> | High | 静态扫描</div>
-                </div>
-              </div>
-              <div class="cyber-pipeline-chain">
-                <span class="pipeline-node node-blue"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>规则匹配</span>
-                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
-                <span class="pipeline-node node-teal"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>污点分析</span>
-                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
-                <span class="pipeline-node node-purple"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>漏洞评级</span>
-                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
-                <span class="pipeline-node node-success"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>修复方案</span>
-              </div>
-              <div class="cyber-card-footer">
-                <div class="cyber-signal-group">
-                  <span class="cyber-lightning-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
-                  <div class="signal-bars"><span class="signal-bar b1 active-teal"></span><span class="signal-bar b2 active-teal"></span><span class="signal-bar b3 active-teal"></span><span class="signal-bar b4 active-teal"></span></div>
-                  <span class="cyber-pill-tag"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span>深度扫描</span></span>
-                </div>
-                <span class="cyber-action-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg><span>全面审计</span></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="cyber-folder-card hero-card" data-hero-prompt="为当前核心功能模块设计并编写高覆盖率的单元测试用例" onclick="triggerHeroPrompt('为当前核心功能模块设计并编写高覆盖率的单元测试用例')">
-            <div class="cyber-tab-header">
-              <span class="cyber-tab-pill"><span class="cyber-tab-dot"></span>TEST-GEN</span>
-              <div class="cyber-tab-meta">
-                <span class="cyber-meta-item">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/></svg>
-                  <span>09/15</span>
-                </span>
-              </div>
-            </div>
-            <div class="cyber-card-body">
-              <div class="cyber-card-title">自动化合成高覆盖率单元与集成测试，覆盖边界异常分支</div>
-              <div class="cyber-telemetry-row">
-                <div class="cyber-telemetry-left">
-                  <div class="cyber-timer-text">00:02:10</div>
-                  <div class="cyber-status-chip">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <span>11:20 就绪</span>
-                  </div>
-                </div>
-                <div class="cyber-matrix-wrap">
-                  <div class="cyber-dot-matrix">
-                    <span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
-                    <span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
-                    <span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot teal"></span>
-                    <span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot cyan"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
-                  </div>
-                  <div class="matrix-legend"><span class="highlight">95%</span> | P2 | 全覆盖</div>
-                </div>
-              </div>
-              <div class="cyber-pipeline-chain">
-                <span class="pipeline-node node-blue"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="14 2 18 6 7 17 3 17 3 13 14 2"/></svg>用例设计</span>
-                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
-                <span class="pipeline-node node-teal"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>测试编写</span>
-                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
-                <span class="pipeline-node node-purple"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>沙箱执行</span>
-                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
-                <span class="pipeline-node node-success"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>报告产出</span>
-              </div>
-              <div class="cyber-card-footer">
-                <div class="cyber-signal-group">
-                  <span class="cyber-lightning-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
-                  <div class="signal-bars"><span class="signal-bar b1 active-amber"></span><span class="signal-bar b2 active-amber"></span><span class="signal-bar b3 active-amber"></span><span class="signal-bar b4 active-amber"></span></div>
-                  <span class="cyber-pill-tag"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg><span>自动执行</span></span>
-                </div>
-                <span class="cyber-action-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg><span>生成套件</span></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="cyber-folder-card hero-card" data-hero-prompt="审查 Git 变更并协助生成规范的 Commit 提交和推送代码" onclick="triggerHeroPrompt('审查 Git 变更并协助生成规范的 Commit 提交和推送代码')">
-            <div class="cyber-tab-header">
-              <span class="cyber-tab-pill"><span class="cyber-tab-dot"></span>GIT-OPS</span>
-              <div class="cyber-tab-meta">
-                <span class="cyber-meta-item">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/></svg>
-                  <span>09/15</span>
-                </span>
-              </div>
-            </div>
-            <div class="cyber-card-body">
-              <div class="cyber-card-title">审查 Git 工作区差异变动，自动生成规范提交并推送远程</div>
-              <div class="cyber-telemetry-row">
-                <div class="cyber-telemetry-left">
-                  <div class="cyber-timer-text">00:00:45</div>
-                  <div class="cyber-status-chip">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <span>11:25 就绪</span>
-                  </div>
-                </div>
-                <div class="cyber-matrix-wrap">
-                  <div class="cyber-dot-matrix">
-                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot amber"></span>
-                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
-                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
-                    <span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span><span class="matrix-dot teal"></span>
-                  </div>
-                  <div class="matrix-legend"><span class="highlight">100%</span> | P1 | Clean</div>
-                </div>
-              </div>
-              <div class="cyber-pipeline-chain">
-                <span class="pipeline-node node-blue"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 9v12"/></svg>Diff 差异</span>
-                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
-                <span class="pipeline-node node-teal"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><line x1="1.05" y1="12" x2="7" y2="12"/><line x1="17.01" y1="12" x2="22.96" y2="12"/></svg>生成规范</span>
-                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
-                <span class="pipeline-node node-purple"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>自动提交</span>
-                <span class="pipeline-arrow"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
-                <span class="pipeline-node node-success"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/></svg>同步远程</span>
-              </div>
-              <div class="cyber-card-footer">
-                <div class="cyber-signal-group">
-                  <span class="cyber-lightning-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
-                  <div class="signal-bars"><span class="signal-bar b1 active-teal"></span><span class="signal-bar b2 active-teal"></span><span class="signal-bar b3 active-teal"></span><span class="signal-bar b4"></span></div>
-                  <span class="cyber-pill-tag"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg><span>一键同步</span></span>
-                </div>
-                <span class="cyber-action-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg><span>审查提交</span></span>
-              </div>
-            </div>
-          </div>
+          ${HERO_CARDS.map((card) => `
+          <button type="button" class="hero-card" data-hero-prompt="${esc(card.prompt)}" onclick="triggerHeroPrompt(this.dataset.heroPrompt)">
+            <span class="hero-card-icon">${card.icon}</span>
+            <span class="hero-card-body">
+              <span class="hero-card-title">${esc(card.title)}</span>
+              <span class="hero-card-desc">${esc(card.desc)}</span>
+            </span>
+          </button>`).join('')}
         </div>
       </div>
     `;
@@ -1764,15 +1604,11 @@ $('exportChatMarkdownBtn')?.addEventListener('click', exportCurrentSessionToMark
 // 全局多主题系统 (6 大专业色彩设计主题)
 // ==========================================================================
 
-const AVAILABLE_THEMES = ['dark', 'light', 'cyber', 'aurora', 'sunset', 'glass', 'vibrant'];
+// 仅保留浅色 / 深色两套中性主题，移除历史上的五套高饱和彩虹主题
+const AVAILABLE_THEMES = ['light', 'dark'];
 const THEME_NAMES = {
-  dark: '曜石深空',
-  light: '极简冷玉',
-  cyber: '赛博霓虹',
-  aurora: '极光松岭',
-  sunset: '落日熔金',
-  glass: '流光玻璃',
-  vibrant: '活力幻彩'
+  light: '浅色',
+  dark: '深色'
 };
 
 function initTheme() {
@@ -17742,4 +17578,3 @@ function initChatHostingEvents() {
 initDesktopUpdater();
 initGatewayEvents();
 initChatHostingEvents();
-
