@@ -5162,8 +5162,8 @@
               </svg>
             </div>
             <div>
-              <h2 style="margin:0;font-size:16px;font-weight:600;">界面色彩风格</h2>
-              <p style="margin:2px 0 0;font-size:12px;color:var(--text-muted);">浅色与深色两套中性主题，全站统一色彩语义</p>
+              <h2 style="margin:0;font-size:16px;font-weight:600;" data-i18n="themeModal.title">界面色彩风格</h2>
+              <p style="margin:2px 0 0;font-size:12px;color:var(--text-muted);" data-i18n="themeModal.styleSubtitle">深色与浅色为中性默认，另有 5 套风格主题与自定义强调色</p>
             </div>
           </div>
           <button type="button" class="btn-close" id="closeThemePickerModalBtn" aria-label="关闭" title="关闭"></button>
@@ -5178,10 +5178,10 @@
             </div>
             <div class="theme-card-info">
               <div class="theme-card-header">
-                <span class="theme-name">深色模式</span>
-                <span class="theme-active-tag">使用中</span>
+                <span class="theme-name" data-i18n="themeModal.darkName">深色模式</span>
+                <span class="theme-active-tag" data-i18n="themeModal.inUse">使用中</span>
               </div>
-              <p class="theme-desc">深灰底色配高对比正文，长时间阅读更省力。</p>
+              <p class="theme-desc" data-i18n="themeModal.darkDesc">深灰底色配高对比正文，长时间阅读更省力。</p>
             </div>
           </div>
 
@@ -5193,27 +5193,126 @@
             </div>
             <div class="theme-card-info">
               <div class="theme-card-header">
-                <span class="theme-name">浅色模式</span>
-                <span class="theme-active-tag">使用中</span>
+                <span class="theme-name" data-i18n="themeModal.lightName">浅色模式</span>
+                <span class="theme-active-tag" data-i18n="themeModal.inUse">使用中</span>
               </div>
-              <p class="theme-desc">纯白底色配深色正文，清晰锐利，适合明亮环境。</p>
+              <p class="theme-desc" data-i18n="themeModal.lightDesc">纯白底色配深色正文，清晰锐利，适合明亮环境。</p>
             </div>
           </div>
 
           <!-- 3. 赛博霓虹 -->
+          <div class="theme-select-card" data-theme-id="cyber">
+            <div class="theme-card-preview theme-preview-cyber">
+              <div class="theme-swatch-surface"></div>
+              <div class="theme-swatch-accent"></div>
+            </div>
+            <div class="theme-card-info">
+              <div class="theme-card-header">
+                <span class="theme-name" data-i18n="themeModal.cyber">赛博霓虹</span>
+                <span class="theme-active-tag" data-i18n="themeModal.inUse">使用中</span>
+              </div>
+              <p class="theme-desc" data-i18n="themeModal.cyberDesc">高科技未来感，深邃午夜蓝底搭配极光品红与电波紫辉。</p>
+            </div>
+          </div>
 
           <!-- 4. 极光松岭 -->
+          <div class="theme-select-card" data-theme-id="aurora">
+            <div class="theme-card-preview theme-preview-aurora">
+              <div class="theme-swatch-surface"></div>
+              <div class="theme-swatch-accent"></div>
+            </div>
+            <div class="theme-card-info">
+              <div class="theme-card-header">
+                <span class="theme-name" data-i18n="themeModal.aurora">极光松岭</span>
+                <span class="theme-active-tag" data-i18n="themeModal.inUse">使用中</span>
+              </div>
+              <p class="theme-desc" data-i18n="themeModal.auroraDesc">幽静心流空间，北欧森林暗绿玄武岩与翡翠薄荷流光。</p>
+            </div>
+          </div>
 
           <!-- 5. 落日熔金 -->
+          <div class="theme-select-card" data-theme-id="sunset">
+            <div class="theme-card-preview theme-preview-sunset">
+              <div class="theme-swatch-surface"></div>
+              <div class="theme-swatch-accent"></div>
+            </div>
+            <div class="theme-card-info">
+              <div class="theme-card-header">
+                <span class="theme-name" data-i18n="themeModal.sunset">落日熔金</span>
+                <span class="theme-active-tag" data-i18n="themeModal.inUse">使用中</span>
+              </div>
+              <p class="theme-desc" data-i18n="themeModal.sunsetDesc">奢雅意式浓缩，深邃暖褐黑底色与落日琥珀金光，舒适温润。</p>
+            </div>
+          </div>
 
           <!-- 6. 流光玻璃 -->
+          <div class="theme-select-card" data-theme-id="glass">
+            <div class="theme-card-preview theme-preview-glass">
+              <div class="theme-swatch-surface"></div>
+              <div class="theme-swatch-accent"></div>
+            </div>
+            <div class="theme-card-info">
+              <div class="theme-card-header">
+                <span class="theme-name" data-i18n="themeModal.glass">流光玻璃</span>
+                <span class="theme-active-tag" data-i18n="themeModal.inUse">使用中</span>
+              </div>
+              <p class="theme-desc" data-i18n="themeModal.glassDesc">通透亚克力磨砂，配合半透明模式与背景壁纸，桌面若隐若现。</p>
+            </div>
+          </div>
 
           <!-- 7. 活力幻彩 -->
+          <div class="theme-select-card" data-theme-id="vibrant">
+            <div class="theme-card-preview theme-preview-vibrant">
+              <div class="theme-swatch-surface"></div>
+              <div class="theme-swatch-accent"></div>
+            </div>
+            <div class="theme-card-info">
+              <div class="theme-card-header">
+                <span class="theme-name" data-i18n="themeModal.vibrant">活力幻彩</span>
+                <span class="theme-active-tag" data-i18n="themeModal.inUse">使用中</span>
+              </div>
+              <p class="theme-desc" data-i18n="themeModal.vibrantDesc">跃动生命力，深曜靛蓝底色融合紫罗兰、电光青蓝与晨曦热粉流光。</p>
+            </div>
+          </div>
+
+          <!-- 8. 自定义主题 (用户自选强调色与底色) -->
+          <div class="theme-select-card" data-theme-id="custom">
+            <div class="theme-card-preview theme-preview-custom">
+              <div class="theme-swatch-surface"></div>
+              <div class="theme-swatch-accent"></div>
+            </div>
+            <div class="theme-card-info">
+              <div class="theme-card-header">
+                <span class="theme-name" data-i18n="themeModal.custom">自定义主题</span>
+                <span class="theme-active-tag" data-i18n="themeModal.inUse">使用中</span>
+              </div>
+              <p class="theme-desc" data-i18n="themeModal.customDesc">挑选任意强调色，按钮、选中态与焦点描边会随之联动。</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 自定义主题调色区：仅在选中「自定义主题」时可用 -->
+        <div class="custom-theme-section">
+          <div class="custom-theme-title" data-i18n="themeModal.customSection">自定义强调色</div>
+          <div class="custom-theme-row">
+            <label class="custom-theme-field">
+              <span class="custom-theme-label" data-i18n="themeModal.accentColor">强调色</span>
+              <input type="color" class="custom-theme-color-input" value="#2563eb" aria-label="自定义强调色" />
+            </label>
+            <label class="custom-theme-field">
+              <span class="custom-theme-label" data-i18n="themeModal.hexValue">色值</span>
+              <input type="text" class="custom-theme-hex-input" value="#2563eb" spellcheck="false" aria-label="自定义强调色十六进制值" />
+            </label>
+            <div class="custom-theme-base-group" role="group" aria-label="自定义主题底色">
+              <button type="button" class="custom-theme-base-btn" data-custom-base="dark" data-i18n="themeModal.baseDark">深色底</button>
+              <button type="button" class="custom-theme-base-btn" data-custom-base="light" data-i18n="themeModal.baseLight">浅色底</button>
+            </div>
+          </div>
         </div>
 
         <!-- 背景图片与动态壁纸专区 (Background Wallpaper Gallery)
              企业级界面默认不提供装饰性壁纸，此处保留实现但默认隐藏 -->
-        <div class="theme-wallpaper-section" hidden style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border-default);">
+        <div class="theme-wallpaper-section" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
             <div style="display:flex;align-items:center;gap:8px;">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -5339,7 +5438,7 @@
         </div>
 
         <!-- 半透明与毛玻璃透亮调节（默认隐藏：窗口始终为实色，保证正文对比度） -->
-        <div class="theme-opacity-section" hidden style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border-default);">
+        <div class="theme-opacity-section" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
             <div style="display:flex;align-items:center;gap:8px;">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -5395,14 +5494,20 @@
       <div class="popover-theme-chips">
         <button type="button" class="theme-quick-chip" data-theme-id="light" data-i18n="theme.light">浅色</button>
         <button type="button" class="theme-quick-chip" data-theme-id="dark" data-i18n="theme.dark">深色</button>
+        <button type="button" class="theme-quick-chip" data-theme-id="cyber" data-i18n="theme.cyber">赛博霓虹</button>
+        <button type="button" class="theme-quick-chip" data-theme-id="aurora" data-i18n="theme.aurora">极光松岭</button>
+        <button type="button" class="theme-quick-chip" data-theme-id="sunset" data-i18n="theme.sunset">落日熔金</button>
+        <button type="button" class="theme-quick-chip" data-theme-id="glass" data-i18n="theme.glass">流光玻璃</button>
+        <button type="button" class="theme-quick-chip" data-theme-id="vibrant" data-i18n="theme.vibrant">活力幻彩</button>
+        <button type="button" class="theme-quick-chip" data-theme-id="custom" data-i18n="theme.custom">自定义</button>
       </div>
 
       <button type="button" class="btn text-btn" id="popoverOpenThemeModalBtn" style="width:100%;justify-content:center;font-size:11px;padding:4px;color:var(--text-main);" data-i18n="popover.themeDetails">查看主题与外观详情 ▾</button>
 
-      <div class="popover-divider" hidden></div>
+      <div class="popover-divider"></div>
 
-      <div class="popover-section-title" hidden data-i18n="popover.wallpaperTitle">背景图片与壁纸</div>
-      <div class="popover-theme-chips" id="popoverWallpaperChips" hidden>
+      <div class="popover-section-title" data-i18n="popover.wallpaperTitle">背景图片与壁纸</div>
+      <div class="popover-theme-chips" id="popoverWallpaperChips">
         <button type="button" class="wallpaper-quick-chip active" data-wallpaper-id="none" data-i18n="wallpaper.none">纯净无壁纸</button>
         <button type="button" class="wallpaper-quick-chip" data-wallpaper-id="nebula" data-i18n="wallpaper.nebula">深空星云</button>
         <button type="button" class="wallpaper-quick-chip" data-wallpaper-id="cyber" data-i18n="wallpaper.cyber">赛博霓虹</button>
@@ -5411,11 +5516,11 @@
         <button type="button" class="wallpaper-quick-chip" data-wallpaper-id="custom" data-i18n="wallpaper.custom">自定义图片</button>
       </div>
 
-      <button type="button" class="btn text-btn" id="popoverOpenWallpaperModalBtn" hidden style="width:100%;justify-content:center;font-size:11px;padding:4px;color:var(--text-main);" data-i18n="popover.wallpaperDetails">壁纸与磨砂柔焦详细配置 ▾</button>
+      <button type="button" class="btn text-btn" id="popoverOpenWallpaperModalBtn" style="width:100%;justify-content:center;font-size:11px;padding:4px;color:var(--text-main);" data-i18n="popover.wallpaperDetails">壁纸与磨砂柔焦详细配置 ▾</button>
 
       <div class="popover-divider" hidden></div>
 
-      <div class="popover-header" hidden>
+      <div class="popover-header">
         <div class="popover-title">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="9" cy="12" r="6"/>
@@ -5426,7 +5531,7 @@
         <span class="opacity-value-badge" id="opacityValueText">100%</span>
       </div>
 
-      <div class="opacity-slider-wrap" hidden>
+      <div class="opacity-slider-wrap">
         <input type="range" id="opacityRangeInput" min="40" max="100" step="2" value="100" class="opacity-range-slider" />
         <div class="opacity-slider-labels">
           <span data-i18n="popover.opacityClear">40% 通透</span>
@@ -5435,7 +5540,7 @@
         </div>
       </div>
 
-      <div class="opacity-presets-grid" hidden>
+      <div class="opacity-presets-grid">
         <button type="button" class="opacity-preset-chip" data-opacity="100" data-i18n="popover.opacitySolid">100% 实色</button>
         <button type="button" class="opacity-preset-chip" data-opacity="90" data-i18n="popover.opacitySlight">90% 微透</button>
         <button type="button" class="opacity-preset-chip" data-opacity="80" data-i18n="popover.opacityFrosted">80% 磨砂</button>
@@ -5443,7 +5548,7 @@
         <button type="button" class="opacity-preset-chip" data-opacity="60" data-i18n="popover.opacityAurora">60% 极光</button>
       </div>
 
-      <div class="opacity-options-row" hidden>
+      <div class="opacity-options-row">
         <label class="opacity-checkbox-label">
           <input type="checkbox" id="glassBlurToggle" checked />
           <span data-i18n="popover.backdropBlur">启用背景高斯模糊滤镜 (Backdrop Blur)</span>

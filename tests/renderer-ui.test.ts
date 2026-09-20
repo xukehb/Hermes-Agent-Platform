@@ -52,6 +52,41 @@ describe('Electron renderer UI contracts', () => {
     expect(css).toMatch(/\.btn-close::before\s*{/);
   });
 
+  it('offers style themes plus a custom accent theme', () => {
+    // 用户对风格偏好差异很大：除中性深浅两套外，必须保留多风格主题与自定义强调色
+    const themeIds = ['light', 'dark', 'cyber', 'aurora', 'sunset', 'glass', 'vibrant', 'custom'];
+    const themeList = /const AVAILABLE_THEMES = \[([^\]]*)\]/.exec(app)?.[1] ?? '';
+    for (const id of themeIds) {
+      expect(themeList, `AVAILABLE_THEMES is missing ${id}`).toContain(`'${id}'`);
+      expect(html, `missing quick theme chip for ${id}`).toContain(`data-theme-id="${id}"`);
+      expect(i18n, `missing i18n entry for theme.${id}`).toContain(`'theme.${id}'`);
+    }
+    expect((html.match(/class="theme-select-card"/g) ?? []).length).toBe(themeIds.length);
+
+    // 每套风格主题都必须带自己的真实色板，不能再被兼容层折叠成同一套深色
+    expect(css).toMatch(/\[data-theme="cyber"\]\s*\{[^}]*--bg-app:\s*#070614/);
+    expect(css).toMatch(/\[data-theme="aurora"\]\s*\{[^}]*--bg-app:\s*#061210/);
+    expect(css).toMatch(/\[data-theme="sunset"\]\s*\{[^}]*--bg-app:\s*#120d0b/);
+    expect(css).toMatch(/\[data-theme="vibrant"\]\s*\{[^}]*--bg-app:\s*#080a18/);
+
+    // 自定义主题：底色沿用浅 / 深色板，强调色由运行时注入
+    expect(css).toContain('[data-theme="custom"] {');
+    expect(css).toContain('[data-theme="custom"][data-custom-base="dark"]');
+    for (const token of [
+      'CUSTOM_THEME_STORAGE',
+      'DEFAULT_CUSTOM_ACCENT',
+      'buildCustomAccentVars',
+      'clearCustomThemeVars',
+      'setCustomThemeAccent',
+      'setCustomThemeBase',
+      'initCustomThemeControls',
+    ]) {
+      expect(app).toContain(token);
+    }
+    expect(html).toContain('class="custom-theme-color-input"');
+    expect(html).toContain('class="custom-theme-base-btn"');
+  });
+
   it('pins the settings title bar and scrolls only the settings content', () => {
     // 回归：设置页此前整页滚动，标题栏会被内容推走。现在标题栏固定，
     // 左侧菜单与右侧面板各自独立滚动。
