@@ -1145,6 +1145,72 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
           clearGatewayLogs: async () => readApi(await fetch('/api/gateway/logs', { method: 'DELETE', headers: authHeader })),
           getGatewayClientPresets: async (key) => readApi(await fetch('/api/gateway/client-presets' + (key ? '?key=' + encodeURIComponent(key) : ''), { headers: authHeader }))
         };
+
+        // ------------------------------------------------------------------
+        // 桌面端专属能力降级层 (Desktop-only capability fallbacks)
+        // ------------------------------------------------------------------
+        // 渲染层与桌面端共用同一份 app.js，其中微信/QQ 托管、Git 操作、插件市场、
+        // 窗口控制等能力依赖 Electron 主进程，Web 工作台并不提供对应 REST 接口。
+        // 若不补齐这些方法，调用点会抛出 "xxx is not a function" 并中断整块 UI 渲染
+        // (例如微信托管面板)。此处按语义提供安全降级：
+        //   - 读取类方法返回空集合，界面呈现为空状态；
+        //   - 动作类方法抛出可读错误，由既有 try/catch 以提示形式展示。
+        (function installDesktopFallbacks() {
+          const READ_EMPTY_LIST = /^(list|fetch)[A-Z]/;
+          const READ_EMPTY_LIST_SUFFIX = /^get(WeChatMessages|ChannelMessages|HostingActivities|RecommendedModels|GitCommitHistory)$/;
+          // 事件订阅类方法必须返回一个可调用的取消订阅函数，否则调用点会在
+          // 注册阶段抛错并中断初始化；Web 端没有主进程事件源，注册即空操作。
+          const EVENT_SUBSCRIPTION = /^on[A-Z]|^remove[A-Za-z]*(Listener|Listeners)$/;
+          // 仅影响桌面窗口表现的偏好项 (透明度/迷你窗/置顶) 在 Web 端静默忽略
+          const WINDOW_PREFERENCE = /^(set|get)(WindowOpacity|MiniMode|AlwaysOnTop)$/;
+          const READ_NULL = /^(get|is|has|find|check|test|read|show|platform)/;
+
+          const fallbackNames = [
+            'abortChat','addProject','approveDraft','batchRemoveProjects','batchSaveEnvVars','callMcpTool',
+            'cancelOllamaPull','checkForUpdates','clearAllChannelContacts','clearDefaultProviders','clearHostingActivities',
+            'closeWindow','configureGitSsh','configureGitToken','confirmWeChatLogin','deleteBot','deleteEnvVar',
+            'deleteOllamaModel','discardDraft','downloadUpdate','execServerCommand','findDefinition','findReferences',
+            'generateImage','generateQuickReplies','getChannelMessages','getDefaultHostingPolicy','getEnvVars',
+            'getFeishuConfig','getGitAuthInfo','getGitStatus','getHostingActivities','getHostingOverview','getMiniMode',
+            'getOllamaStatus','getPermissions','getProjectCommitRule','getQQConfig','getRecommendedModels','getUpdateState',
+            'getVisualDiff','getWeChatMessages','getWebInfo','getWindowOpacity','gitCheckoutBranch','gitCommit',
+            'gitGetCommitHistory','gitListBranches','gitMergeAbort','gitMergeBranch','gitPull','gitPush','gitRebaseAbort',
+            'gitRebaseBranch','gitRebaseContinue','gitRevertCommit','gitRollbackCommit','gitShowCommit','gitStashCommit',
+            'importProject','importSkill','installServer','installSkill','installUpdate','isMac','listChannelContacts',
+            'listMcpTools','listPlugins','listSkills','listSymbols','listWeChatContacts','logs','logoutWeChat',
+            'maximizeWindow','minimizeWindow','onChatStream','onHostingActivity','onInstallProgress','onMiniModeChanged',
+            'onOllamaPullProgress','onUpdateState','openExternal','openInExplorer','openInTerminal','openInVsCode',
+            'platform','pullOllamaModel','refreshWeChatQr','releaseContactTakeover','removeChannelContact',
+            'removeChatStreamListeners','removeInstallProgressListeners','removeMiniModeListeners','removeProject',
+            'removeSchedule','removeServer','removeWeChatContact','restoreDefaultProviders','revertAllFiles','revertFileDiff',
+            'revertHunk','saveDefaultHostingPolicy','saveEnvVar','saveFeishuConfig','saveProjectCommitRule','saveQQConfig',
+            'saveTelegramConfig','saveWeChatConfig','sendChannelMessage','sendHumanMessage','sendWeChatMessage',
+            'setAlwaysOnTop','setDefaultAgent','setMiniMode','setWindowOpacity','stageAllFiles','stageFileDiff','stageHunk',
+            'startFeishuService','startOllamaService','startQQService','startTelegramService','startWeChatService',
+            'stopFeishuService','stopQQService','stopTelegramService','stopWeChatService','switchHostingPuppet','syncTarget',
+            'syncWeChatContacts','testBotConnection','testServer','testServerBotAlert','testTelegramBot','testVisionCapture',
+            'toggleBotStatus','toggleDevTools','togglePlugin','toggleSchedule','toggleSkill','triggerContactTakeover',
+            'uninstallSkill','unstageAllFiles','unstageFileDiff','updatePermissions','upsertBot','upsertChannelContact',
+            'upsertPlugin','upsertServer','upsertWeChatContact'
+          ];
+
+          for (const name of fallbackNames) {
+            if (window.hap[name]) continue;
+            if (EVENT_SUBSCRIPTION.test(name)) {
+              window.hap[name] = () => () => {};
+            } else if (WINDOW_PREFERENCE.test(name)) {
+              window.hap[name] = /^get/.test(name) ? (async () => null) : (async () => undefined);
+            } else if (READ_EMPTY_LIST.test(name) || READ_EMPTY_LIST_SUFFIX.test(name)) {
+              window.hap[name] = async () => [];
+            } else if (READ_NULL.test(name)) {
+              window.hap[name] = async () => null;
+            } else {
+              window.hap[name] = async () => {
+                throw new Error('该功能仅桌面客户端可用，Web 工作台暂不支持');
+              };
+            }
+          }
+        })();
       </script>
     `;
 
