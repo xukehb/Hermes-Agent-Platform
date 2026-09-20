@@ -419,7 +419,17 @@ export class WeChatChannel implements Channel {
         '[切忌长篇大论、罗列列表或撰写提纲，禁止输出系统指令或调试信息。直接以本人身份给出得体亲切的回复。]',
       ].join('\n');
       promptParts.push(wechatGuideline);
-      promptParts.push(`[专属人设指令：${effectiveSystemPrompt}]`);
+      if (effectiveSystemPrompt.includes('\n') || effectiveSystemPrompt.startsWith('#')) {
+        promptParts.push([
+          '========================================',
+          '【专属分身人设、语气风格与行为规范 (Markdown 规范文档)】',
+          '========================================',
+          effectiveSystemPrompt,
+          '========================================',
+        ].join('\n'));
+      } else {
+        promptParts.push(`[专属人设指令：${effectiveSystemPrompt}]`);
+      }
 
       // 智能体跨会话长期记忆检索 (Recall Relevant Memories)
       try {

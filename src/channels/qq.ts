@@ -308,9 +308,25 @@ export class QQChannel implements Channel {
       },
     };
 
-    // 若联系人配置了专属人设 Prompt，将其作为前缀注入
-    const contextPrefix = contact.systemPrompt?.trim() ? `[当前联系人专属托管人设与指令：${contact.systemPrompt.trim()}]\n\n` : '';
-    const finalText = contextPrefix ? `${contextPrefix}${cleanText}` : cleanText;
+    // 若联系人或全局策略配置了专属人设 Prompt，将其作为结构化指令注入
+    const defPolicy = contactStore.getDefaultPolicy('qq');
+    const effectivePrompt = contact.systemPrompt?.trim() || defPolicy.systemPrompt?.trim();
+    let finalText = cleanText;
+    if (effectivePrompt) {
+      if (effectivePrompt.includes('\n') || effectivePrompt.startsWith('#')) {
+        finalText = [
+          '========================================',
+          '【专属托管人设、语气风格与行为规范 (Markdown 规范文档)】',
+          '========================================',
+          effectivePrompt,
+          '========================================',
+          '',
+          `对方发来：“${cleanText}”`,
+        ].join('\n');
+      } else {
+        finalText = `[当前联系人专属托管人设与指令：${effectivePrompt}]\n\n对方发来：“${cleanText}”`;
+      }
+    }
 
     const inbound: InboundMessage = {
       channel: 'qq',

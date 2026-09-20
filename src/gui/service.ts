@@ -7,7 +7,14 @@ import { dialog, shell } from 'electron';
 import { execa } from 'execa';
 import { AgentOrchestrator } from '../agent/index.js';
 import { WeChatChannel } from '../channels/wechat.js';
-import { isWeChatRunning, captureWeChatWindow, parseWeChatScreen, type WeChatVisionParseResult } from '../channels/wechat/desktop-vision/index.js';
+import {
+  isWeChatRunning,
+  captureWeChatWindow,
+  parseWeChatScreen,
+  getWeChatWindowBounds,
+  type WeChatVisionParseResult,
+  type WeChatWindowBounds,
+} from '../channels/wechat/desktop-vision/index.js';
 import { ChannelManager, TelegramChannel, createChannelHost, parseCommand, HELP_TEXT, ChannelContactStore, WeChatContactStore, FeishuChannel, QQChannel, type ChannelContact, type ChannelChatMessage, type ChannelDefaultPolicy, type ChannelName, type WeChatContact, type WeChatChatMessage } from '../channels/index.js';
 import { BUILTIN_MODELS, BUILTIN_PROVIDERS, ConfigResolver, ConfigWriter, loadConfig, resolveConfigPath, sanitizeModelRef, type ModelPatch, type ProviderPatch, type ResolvedAgent, type ResolvedProvider } from '../config/index.js';
 import { describeError, type Attachment, type ProtocolName, type WireApi } from '../domain/index.js';
@@ -4258,6 +4265,63 @@ export class GuiService {
     return { ok: true, clearedCount: beforeCount };
   }
 
+  getHostingPersonaTemplates(): Array<{ key: string; title: string; emoji: string; description: string; content: string }> {
+    const templateDir = join(process.cwd(), 'templates', 'hosting-personas');
+    const presets = [
+      { key: 'natural', title: '自然口语', emoji: '💬', description: '真人朋友微信口吻，简短亲和，防借钱套话', file: 'natural.md' },
+      { key: 'business', title: '商务得体', emoji: '💼', description: '专业稳重，需求三要素，记录预约本人', file: 'business.md' },
+      { key: 'tech', title: '技术专家', emoji: '💻', description: '架构严谨，直击要害，代码精炼，务实极客', file: 'tech.md' },
+      { key: 'humor', title: '幽默风趣', emoji: '😄', description: '风趣接梗，高情商四两拨千斤，生动活泼', file: 'humor.md' },
+      { key: 'polite', title: '稍后联系', emoji: '⏳', description: '闭门研发/会议暂离，紧急拨打电话', file: 'polite.md' },
+      { key: 'assistant', title: '贴心秘书', emoji: '👧', description: '以AI助理身份接待，代接留言，分类汇总', file: 'assistant.md' },
+    ];
+
+    return presets.map((p) => {
+      let content = '';
+      const pPath = join(templateDir, p.file);
+      if (existsSync(pPath)) {
+        try {
+          content = readFileSync(pPath, 'utf8');
+        } catch {
+          content = '';
+        }
+      }
+      return {
+        key: p.key,
+        title: p.title,
+        emoji: p.emoji,
+        description: p.description,
+        content: content.trim(),
+      };
+    });
+  }
+
+  loadHostingPersonaMarkdown(filePath?: string): { ok: boolean; content: string; filePath?: string; error?: string } {
+    try {
+      const targetPath = filePath || join(process.cwd(), 'templates', 'hosting-personas', 'natural.md');
+      if (!existsSync(targetPath)) {
+        return { ok: false, content: '', error: `文件未找到: ${targetPath}` };
+      }
+      const content = readFileSync(targetPath, 'utf8');
+      return { ok: true, content, filePath: targetPath };
+    } catch (err: unknown) {
+      return { ok: false, content: '', error: describeError(err) };
+    }
+  }
+
+  exportHostingPersonaMarkdown(filePath: string, content: string): { ok: boolean; filePath: string; error?: string } {
+    try {
+      const dir = dirname(filePath);
+      if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true });
+      }
+      writeFileSync(filePath, content, 'utf8');
+      return { ok: true, filePath };
+    } catch (err: unknown) {
+      return { ok: false, filePath, error: describeError(err) };
+    }
+  }
+
   getChannelDefaultPolicy(channel: ChannelName): ChannelDefaultPolicy {
     return ChannelContactStore.getInstance().getDefaultPolicy(channel);
   }
@@ -4470,7 +4534,9 @@ export class GuiService {
 
   async testVisionCapture(): Promise<{
     ok: boolean;
+    platform: string;
     isWeChatRunning: boolean;
+    windowBounds?: WeChatWindowBounds | undefined;
     sourceType?: string | undefined;
     windowName?: string | undefined;
     dataUrl?: string | undefined;
@@ -4478,11 +4544,14 @@ export class GuiService {
     error?: string | undefined;
   }> {
     const isRunning = await isWeChatRunning();
+    const bounds = await getWeChatWindowBounds();
     const cap = await captureWeChatWindow();
     if (!cap.ok || (!cap.buffer && !cap.base64)) {
       return {
         ok: false,
+        platform: process.platform,
         isWeChatRunning: isRunning,
+        windowBounds: bounds,
         error: cap.error || '未捕获到有效屏幕图像，请检查系统设置中的屏幕录制权限',
       };
     }
@@ -4491,7 +4560,9 @@ export class GuiService {
     if (!parsed.ok) {
       return {
         ok: false,
+        platform: process.platform,
         isWeChatRunning: isRunning,
+        windowBounds: bounds,
         sourceType: cap.sourceType,
         windowName: cap.windowName,
         dataUrl: cap.dataUrl,
@@ -4501,7 +4572,9 @@ export class GuiService {
     }
     return {
       ok: true,
+      platform: process.platform,
       isWeChatRunning: isRunning,
+      windowBounds: bounds,
       sourceType: cap.sourceType,
       windowName: cap.windowName,
       dataUrl: cap.dataUrl,

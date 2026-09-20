@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, screen, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell } from 'electron';
 import electronUpdater from 'electron-updater';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -200,6 +200,25 @@ function registerIpc(): void {
   ipcMain.handle('gui:hosting:switchPuppet', (_event, puppet) => invoke(() => service.switchWeChatHostingPuppet(puppet)));
   ipcMain.handle('gui:hosting:getDefaultPolicy', (_event, channel) => invoke(() => service.getChannelDefaultPolicy(channel)));
   ipcMain.handle('gui:hosting:saveDefaultPolicy', (_event, payload) => invoke(() => service.saveChannelDefaultPolicy(payload.channel, payload.policy)));
+  ipcMain.handle('gui:hosting:getPersonaTemplates', () => invoke(() => service.getHostingPersonaTemplates()));
+  ipcMain.handle('gui:hosting:loadPersonaMarkdown', (_event, filePath) => invoke(() => service.loadHostingPersonaMarkdown(filePath)));
+  ipcMain.handle('gui:hosting:exportPersonaMarkdown', (_event, payload) => invoke(() => service.exportHostingPersonaMarkdown(payload.filePath, payload.content)));
+  ipcMain.handle('gui:hosting:showOpenDialog', async (_event, options) => {
+    const win = BrowserWindow.getFocusedWindow();
+    return dialog.showOpenDialog(win ?? undefined as never, options || {
+      title: '导入分身人设 Markdown 文档',
+      filters: [{ name: 'Markdown 文档', extensions: ['md', 'markdown', 'txt'] }],
+      properties: ['openFile'],
+    });
+  });
+  ipcMain.handle('gui:hosting:showSaveDialog', async (_event, options) => {
+    const win = BrowserWindow.getFocusedWindow();
+    return dialog.showSaveDialog(win ?? undefined as never, options || {
+      title: '导出分身人设为 Markdown 文档',
+      defaultPath: 'hosting-persona.md',
+      filters: [{ name: 'Markdown 文档', extensions: ['md'] }],
+    });
+  });
   ipcMain.handle('gui:hosting:getActivities', (_event, limit) => invoke(() => service.getHostingActivities(limit)));
   ipcMain.handle('gui:hosting:clearActivities', () => invoke(() => service.clearHostingActivities()));
   ipcMain.handle('gui:listBots', () => invoke(() => service.listBots()));
