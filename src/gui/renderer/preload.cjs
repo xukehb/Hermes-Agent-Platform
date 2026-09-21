@@ -48,6 +48,7 @@ const hapApi = {
   batchSaveEnvVars: (entries) => call('gui:batchSaveEnvVars', entries),
   generateImage: (payload) => call('gui:generateImage', payload),
   listSkills: () => call('gui:listSkills'),
+  rescanSkills: () => call('gui:rescanSkills'),
   installSkill: (repoUrl) => call('gui:installSkill', repoUrl),
   importSkill: (skillData) => call('gui:importSkill', skillData),
   toggleSkill: (id, enabled) => call('gui:toggleSkill', { id, enabled }),

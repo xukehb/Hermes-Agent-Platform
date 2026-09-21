@@ -47,6 +47,13 @@ export interface GuiAttachmentInput {
   path?: string; // local absolute path
 }
 
+export interface GuiChatMessageInput {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  reasoning?: string | undefined;
+  timestamp?: string | undefined;
+}
+
 export interface GuiChatInput {
   input: string;
   agentId?: string | undefined;
@@ -54,6 +61,9 @@ export interface GuiChatInput {
   sessionKey?: string | undefined;
   projectPath?: string | undefined;
   attachments?: GuiAttachmentInput[] | undefined;
+  goalMode?: boolean | undefined;
+  planMode?: boolean | undefined;
+  history?: GuiChatMessageInput[] | undefined;
 }
 
 export interface GuiLogEntry {

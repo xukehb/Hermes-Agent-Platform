@@ -1,4 +1,4 @@
-import { MemoryStore } from './store.js';
+import { MemoryStore, isCleanMemoryCandidate } from './store.js';
 
 export async function recallRelevantMemories(prompt: string, workspace?: string, agentId?: string): Promise<string> {
   const store = MemoryStore.getInstance();
@@ -10,17 +10,18 @@ export async function recallRelevantMemories(prompt: string, workspace?: string,
     threshold: 0.25,
   });
 
-  if (results.length === 0) {
+  const cleanResults = results.filter((res) => isCleanMemoryCandidate(res.memory.content));
+  if (cleanResults.length === 0) {
     return '';
   }
 
   const lines: string[] = [
-    '## 💡 智能体跨会话长期记忆与偏好规范 (Recalled Knowledge & Preferences)',
-    '以下是从历史任务与用户偏好库中检索出的高相关上下文，请在生成代码或回答时严格遵守：',
+    '## 🧠 背景知识与用户长期记忆 (Context & Working Memory)',
+    '以下为你沉淀的历史事实与长期偏好。请将其作为内置认知背景，自然融入回答与行动中（无需特意提及「从记忆库检索」等字样，直接顺畅生效）：',
   ];
 
   let totalLength = lines.join('\n').length;
-  for (const res of results) {
+  for (const res of cleanResults) {
     const card = res.memory;
     const catLabels: Record<string, string> = {
       preference: '用户习惯',
@@ -32,13 +33,17 @@ export async function recallRelevantMemories(prompt: string, workspace?: string,
       custom: '自定义知识',
     };
     const catLabel = catLabels[card.category] || card.category;
-
-    lines.push(`- **[${catLabel}] ${card.title}** (相关度: ${(res.score * 100).toFixed(0)}%)`);
-    const content = card.content.replace(/\n/g, '\n  ');
+    const content = card.content.replace(/\n/g, '\n  ').trim();
     if (totalLength + content.length > 4000) break;
-    lines.push(`  ${content}`);
+
+    if (card.title.trim() === card.content.trim() || card.content.startsWith(card.title)) {
+      lines.push(`- 【${catLabel}】${content}`);
+    } else {
+      lines.push(`- 【${catLabel}】${card.title}：${content}`);
+    }
     totalLength += content.length;
   }
 
   return lines.join('\n') + '\n\n';
 }
+

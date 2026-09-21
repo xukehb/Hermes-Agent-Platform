@@ -22,6 +22,12 @@ export interface SystemPromptOptions {
   extra?: string;
   /** 可派生的子智能体清单（含描述），用于让父智能体知道能找谁 */
   subagents?: ReadonlyArray<{ id: string; description: string }>;
+  /** 是否处于目标驱动模式（Goal Mode） */
+  goalMode?: boolean;
+  /** 是否处于规划模式（Plan Mode） */
+  planMode?: boolean;
+  /** 动态发现并可用的技能清单 Prompt 文本 */
+  skillsSnippet?: string;
 }
 
 /** 读取职责段。返回 undefined 表示未配置或读取失败。 */
@@ -72,6 +78,47 @@ function subagentSection(options: SystemPromptOptions): string | undefined {
   return lines.join('\n');
 }
 
+/** 人设与沟通风格段：消除机械 AI 客套感，塑造专业、自然、有主见的资深协作者口吻。 */
+function conversationalPersonaSection(): string {
+  const lines = [
+    '沟通风格与交互准则：',
+    '1. 拒绝机械套话：严禁以「好的，收到」、「明白您的需求」、「作为一名 AI」、「希望以上回答对您有所帮助」等死板客服模板开头或结尾。',
+    '2. 资深专业与平视沟通：以资深工程师或得力合伙人的同侪口吻交流，简明、自信、有判断力。就事论事，直击要害。',
+    '3. 有效推进而非推卸：若信息不明确，基于合理技术推断先给出推荐方案并顺带求证，切忌机械反问「你这条消息信息不完整」或让用户做问卷。',
+    '4. 自然内化记忆：当有长期记忆或背景知识上下文时，将其视为你与生俱来的背景认知自然运用，严禁刻意提及「根据记忆库」等生硬字眼。',
+  ];
+  return lines.join('\n');
+}
+
+/** 目标模式引导段：引导自主规划、拆解里程碑、工具闭环推进与自适应纠偏。 */
+function goalModeSection(): string {
+  const lines = [
+    '🎯 当前处于【目标模式】（Goal Mode / 自主长任务达成模式）：',
+    '1. 目标导向与自主规划：用户的输入是一个高层目标。必须以达成该目标为唯一评判标准，不要仅凭一问一答草率停下。',
+    '2. 里程碑拆解与追踪：任务启动后，首选调用 goal_tracker(action: "init_plan", ...) 将总目标分解为 2~5 个具体、可验证的里程碑（如：环境侦测与定位、方案实施、综合验证与验收）。在每一步取得成果后，必须调用 goal_tracker(action: "update_milestone", ...) 推进状态。',
+    '3. 动手执行与闭环验证：积极利用可用工具（浏览器操控 browser_*、桌面操控 desktop_*、代码与系统命令 shell、文件操作等）开展真实操作，绝不要在未经实际验证前主观宣称任务完成。',
+    '4. 自适应纠错：遇到工具调用报错或测试失败时，自行分析根因并调整方案继续尝试，绝不要直接放弃或无谓地将错误反抛给用户。',
+    '5. 交付总结：当且仅当全部里程碑均达成并经过验证后，调用 goal_tracker(action: "complete_goal", ...) 并向用户输出结构化交付报告。',
+  ];
+  return lines.join('\n');
+}
+
+/** 规划模式引导段：引导只读深入调研、生成方案、等待审批。 */
+function planModeSection(): string {
+  const lines = [
+    '📋 当前处于【规划模式】（Plan Mode / 调研与方案规划模式）：',
+    '1. 只读探索纪律：当前阶段严禁对代码库或工作区做任何修改。严禁调用 write_file、apply_patch、或具有破坏性/修改性质的 shell 命令。',
+    '2. 深度调研：充分调用只读工具（read_file、search、list_dir、web_search 等）全面阅读与理解上下文、依赖关系、架构影响。',
+    '3. 结构化输出实施方案：必须向用户产出详尽的 Markdown 实施方案，包含：',
+    '   - 🎯 目标与问题背景分析',
+    '   - ⚠️ 需用户审阅与决策的关键技术选型或疑问（Open Questions）',
+    '   - 📝 涉及修改的文件清单（以 [NEW]、[MODIFY]、[DELETE] 明确标出）及具体改动思路',
+    '   - 🧪 自动化测试与手动验证方案',
+    '4. 等待审批：生成方案后明确停下并提示用户「请审阅上述方案，确认批准后我将开始实施」。',
+  ];
+  return lines.join('\n');
+}
+
 /** 组装完整 system 提示正文。 */
 export function composeSystemPrompt(agent: ResolvedAgent, options: SystemPromptOptions = {}): string {
   const now = options.now ?? new Date();
@@ -87,6 +134,16 @@ export function composeSystemPrompt(agent: ResolvedAgent, options: SystemPromptO
   if (subagents !== undefined) sections.push(subagents);
 
   sections.push(environmentSection(agent, now));
+  if (options.goalMode) {
+    sections.push(goalModeSection());
+  }
+  if (options.planMode) {
+    sections.push(planModeSection());
+  }
+  if (options.skillsSnippet) {
+    sections.push(options.skillsSnippet);
+  }
+  sections.push(conversationalPersonaSection());
   if (options.extra !== undefined && options.extra.trim() !== '') sections.push(options.extra.trim());
 
   return sections.join('\n\n');

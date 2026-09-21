@@ -235,7 +235,7 @@ describe('模型计划', () => {
     const plan = planModel(resolver, resolver.resolveAgent('alpha'), 'mockp/unlisted-model');
     expect(plan.providerId).toBe('mockp');
     expect(plan.model).toBe('unlisted-model');
-    expect(plan.contextWindow).toBe(32000);
+    expect(plan.contextWindow).toBe(131072);
   });
 
   it('无斜杠且非别名的引用抛出 MODEL_NOT_FOUND', () => {

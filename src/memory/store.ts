@@ -50,6 +50,129 @@ function isLegacyJson(filePath: string): boolean {
   try { return ['{', '[', ''].includes(readFileSync(filePath, 'utf8').trimStart().slice(0, 1)); } catch { return true; }
 }
 
+/**
+ * 判断一段文本是否属于已知的废弃、被污染或机械套话记忆记录。
+ */
+export function isCorruptedMemory(text: string): boolean {
+  if (!text || typeof text !== 'string') return true;
+  const trimmed = text.trim();
+  if (trimmed === '') return true;
+
+  // 1. 系统提示词、通道指引与注入信标
+  const promptKeywords = [
+    '微信聊天规范',
+    '专属人设指令',
+    '长期记忆与偏好规范',
+    '背景知识与用户长期记忆',
+    'Recalled Knowledge',
+    'Working Memory',
+    '对方发来',
+    '文件工作目录',
+    '系统能力与最高权限',
+    '回复语言：',
+    '岗位职责：',
+    '当前时间：',
+    'spawn_subagent',
+    '工具纪律',
+    '对话历史压缩器',
+    '任务标题生成器',
+    'Markdown 规范文档',
+    'Conventional Commits',
+    '像真人朋友微信聊天一样',
+    '禁止输出系统指令或调试信息',
+  ];
+  if (promptKeywords.some((kw) => trimmed.includes(kw))) return true;
+
+  // 2. 机器人死板客服客套、反问反刍与机械报错
+  const roboticPhrases = [
+    '信息不完整',
+    '确认一下你的意图',
+    '确认一下您的意图',
+    '需要你明确',
+    '需要您明确',
+    '请告诉我你需要',
+    '请告诉我您需要',
+    '我立刻开始',
+    '我立刻开工',
+    '作为一名AI',
+    '作为一个AI',
+    '作为人工智能',
+    '大语言模型',
+    '希望以上回答',
+    '如果您有其他问题',
+    '随时告诉我',
+    '随时喊我',
+    '有什么需要我帮忙',
+    '需要哪个直接说',
+    '好的，收到',
+    '收到您的需求',
+    '明白您的需求',
+    '很高兴为您服务',
+    '摸鱼搭子',
+    '待命，需要了吱一声',
+    '请提供关键词',
+    '涉及的模块',
+    '光有 ID 我查不到',
+  ];
+  if (roboticPhrases.some((phrase) => trimmed.includes(phrase))) return true;
+
+  // 3. 运行监控指标、日志堆栈与代码占位符
+  const telemetryKeywords = [
+    'CPU 使用率',
+    '内存使用率',
+    '磁盘使用率',
+    '系统负载',
+    'HTTP/1.',
+    'HTTP/2',
+    'TypeError',
+    'SyntaxError',
+    'ReferenceError',
+    'Error: ',
+    'at process.',
+    'at Module.',
+  ];
+  if (telemetryKeywords.some((kw) => trimmed.includes(kw))) return true;
+
+  // 4. 会话对话前缀、数字加粗列表与模板占位符
+  if (/^(我|对方|用户|助理|AI|Bot)\s*[：:]/i.test(trimmed)) return true;
+  if (/^===|===$/.test(trimmed)) return true;
+  if (/^#+\s/.test(trimmed)) return true;
+  if (/^\d+[\.、]\s*\*\*/.test(trimmed)) return true;
+  if (/<(改动细节|参数|占位符|说明).*?>/.test(trimmed)) return true;
+
+  return false;
+}
+
+/**
+ * 校验一段文本是否适合作为长期记忆候选入库。
+ */
+export function isCleanMemoryCandidate(text: string): boolean {
+  if (!text || typeof text !== 'string') return false;
+  const trimmed = text.trim();
+  if (trimmed.length < 6 || trimmed.length > 300) return false;
+  if (isCorruptedMemory(trimmed)) return false;
+  if (/[？\?]$/.test(trimmed)) return false;
+  if (/^(请问|你能否|能否|是否需要|怎么|为什么|何时|如何)/.test(trimmed)) return false;
+  if (trimmed.includes('```')) return false;
+  return true;
+}
+
+/**
+ * 从可能包装了通道前缀（如微信即时通讯规范等）的原始输入中提炼真实用户提问。
+ */
+export function extractCleanUserInput(input: string): string {
+  if (!input) return '';
+  let text = input;
+  const match = text.match(/对方发来[：:]\s*[“"']([\s\S]*?)[”"']/);
+  if (match && match[1]?.trim()) {
+    text = match[1].trim();
+  }
+  text = text.replace(/\[(?:微信聊天规范|专属人设指令|系统提示|提示)[^\]]*\]/gs, '');
+  text = text.replace(/##\s*[💡🧠].*?(?=\n\n|\n[^\s-]|$)/gs, '');
+  text = text.replace(/^项目路径[：:].*$/gm, '');
+  return text.trim();
+}
+
 export class MemoryStore {
   private static instance: MemoryStore | undefined;
   private readonly filePath: string;
@@ -75,6 +198,7 @@ export class MemoryStore {
       access_count INTEGER NOT NULL DEFAULT 0, last_accessed_at INTEGER
     ); CREATE INDEX IF NOT EXISTS idx_memories_filter ON memories(category, layer, agent_id, workspace); CREATE INDEX IF NOT EXISTS idx_memories_dedupe ON memories(dedupe_key);`);
     if (this.legacyPath) this.migrateLegacy(this.legacyPath);
+    this.cleanCorruptedMemories();
   }
 
   static getInstance(filePath?: string): MemoryStore { if (!MemoryStore.instance) MemoryStore.instance = new MemoryStore(filePath); return MemoryStore.instance; }
@@ -160,10 +284,79 @@ export class MemoryStore {
     return results;
   }
 
+  cleanCorruptedMemories(): number {
+    const cards = this.listMemories();
+    let purged = 0;
+    const deleteStmt = this.db.prepare('DELETE FROM memories WHERE id = ?');
+    const tx = this.db.transaction(() => {
+      for (const card of cards) {
+        if (isCorruptedMemory(card.content) || isCorruptedMemory(card.title)) {
+          deleteStmt.run(card.id);
+          purged++;
+        }
+      }
+    });
+    tx();
+    return purged;
+  }
+
   async extractTaskMemory(input: TaskMemoryInput): Promise<MemoryCard[]> {
-    const source = `${input.userInput}\n${input.assistantOutput}\n${input.toolSummary || ''}`.trim(); if (!source) return [];
-    const sentences = source.split(/[\n。！？!?]+/).map((line) => line.trim()).filter((line) => line.length >= 12 && /(必须|需要|统一|规范|约定|决定|修复|偏好|使用|禁止|always|must|prefer)/i.test(line));
-    const cards: MemoryCard[] = []; for (const sentence of [...new Set(sentences)].slice(0, 5)) { const category: MemoryCategory = /(修复|决定|案例)/.test(sentence) ? 'case' : /(架构|接口|数据库)/.test(sentence) ? 'architecture' : /(偏好|喜欢|风格|规范|使用|必须|禁止)/.test(sentence) ? 'preference' : 'fact'; const title = sentence.length > 40 ? `${sentence.slice(0, 40)}…` : sentence; cards.push(await this.addMemory({ title, content: sentence, category, layer: category === 'case' ? 'episodic' : 'semantic', agentId: input.agentId, workspace: input.workspace, sourceTaskId: input.taskId, importance: category === 'case' ? 0.7 : 0.6, confidence: 0.65, dedupeKey: `${input.agentId}:${input.workspace || ''}:${sentence.toLowerCase()}` })); }
+    const cleanUser = extractCleanUserInput(input.userInput);
+    const candidateTexts: Array<{ text: string; source: 'user' | 'assistant' }> = [];
+
+    if (cleanUser) {
+      const userSentences = cleanUser
+        .split(/[\n。！？!?]+/)
+        .map((line) => line.replace(/^[-*•\d\.]+\s*/, '').trim())
+        .filter((line) => line.length >= 6 && /(必须|建议|统一|规范|约定|偏好|习惯|以后|优先|禁止|切记|不要使用|记得|遵守|always|must|prefer)/i.test(line));
+      for (const s of userSentences) {
+        if (isCleanMemoryCandidate(s)) {
+          candidateTexts.push({ text: s, source: 'user' });
+          if (candidateTexts.length >= 3) break;
+        }
+      }
+    }
+
+    if (input.assistantOutput && candidateTexts.length < 3) {
+      const assistantSentences = input.assistantOutput
+        .split(/[\n。！？!?]+/)
+        .map((line) => line.replace(/^[-*•\d\.]+\s*/, '').trim())
+        .filter((line) => line.length >= 8 && /(已修复|根因是|决定采用|重构为|架构设计为|规范约定为|必须统一|统一使用|规范要求|约定使用)/.test(line));
+      for (const s of assistantSentences) {
+        if (isCleanMemoryCandidate(s)) {
+          candidateTexts.push({ text: s, source: 'assistant' });
+          if (candidateTexts.length >= 3) break;
+        }
+      }
+    }
+
+    const cards: MemoryCard[] = [];
+    for (const { text, source } of candidateTexts) {
+      const category: MemoryCategory = /(已修复|根因|案例)/.test(text)
+        ? 'case'
+        : /(架构|接口|数据库|目录|路径|模块|服务)/.test(text)
+        ? 'architecture'
+        : /(规范|约定|风格|格式|命名)/.test(text)
+        ? 'convention'
+        : 'preference';
+
+      const title = text.length > 30 ? `${text.slice(0, 30)}…` : text;
+      cards.push(
+        await this.addMemory({
+          title,
+          content: text,
+          category,
+          layer: category === 'case' ? 'episodic' : 'semantic',
+          agentId: input.agentId,
+          workspace: input.workspace,
+          sourceTaskId: input.taskId,
+          importance: source === 'user' ? 0.8 : 0.6,
+          confidence: source === 'user' ? 0.9 : 0.7,
+          dedupeKey: `${input.agentId}:${input.workspace || ''}:${text.toLowerCase()}`,
+        }),
+      );
+    }
     return cards;
   }
 }
+

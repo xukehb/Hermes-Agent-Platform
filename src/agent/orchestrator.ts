@@ -36,7 +36,9 @@ import { AgentRegistry } from './registry.js';
 import { AgentRouter, planModelChain } from './router.js';
 import { composeSystemPrompt } from './system-prompt.js';
 import { createSubagentSpawner } from './subagent.js';
-import { MemoryStore, recallRelevantMemories } from '../memory/index.js';
+import { MemoryStore, recallRelevantMemories, extractCleanUserInput } from '../memory/index.js';
+import { SkillManager } from '../skills/skill-manager.js';
+import { HookManager } from './hooks/hook-manager.js';
 import type {
   LoopRequest,
   RunTaskRequest,
@@ -381,26 +383,43 @@ export class AgentOrchestrator {
       resumeCount: request.resumeCount ?? 0,
     };
 
+    await HookManager.getInstance().triggerPreTask({
+      taskId,
+      agentId: agent.id,
+      input: decision.input,
+      ...(request.workspace !== undefined ? { workspace: request.workspace } : {}),
+    });
+
     try {
       this.assertWithinDailyBudget(agent, store);
       store.beginTask(row);
       store.appendMessages(sessionKey, agent.id, [userMessage]);
 
-      const history = [
-        ...this.readHistory(store, sessionKey).filter((message) => message !== userMessage),
-      ];
-      // readHistory 已含刚写入的用户消息（同一 SQLite 事务已提交），无需重复追加；
-      // 内存实现同理。这里再兜一层：历史为空说明存储未回读成功，则手工补上。
-      if (history.length === 0) history.push(userMessage);
+      let history: AgentMessage[];
+      if (request.history && request.history.length > 0) {
+        const explicitHistory = sanitizeHistorySlice(request.history);
+        const hasLatest = explicitHistory.some((m) => m === userMessage || (m.role === 'user' && m.content === userMessage.content));
+        history = hasLatest ? explicitHistory : [...explicitHistory, userMessage];
+      } else {
+        history = [
+          ...this.readHistory(store, sessionKey).filter((message) => message !== userMessage),
+        ];
+        if (history.length === 0) history.push(userMessage);
+      }
 
-      let basePrompt = this.systemPromptFor(effectiveAgent);
+      let basePrompt = this.systemPromptFor(effectiveAgent, request.goalMode, request.planMode);
       try {
-        const memoryPrompt = await recallRelevantMemories(request.input, request.workspace, agent.id);
+        const queryText = extractCleanUserInput(request.input) || request.input;
+        const memoryPrompt = await recallRelevantMemories(queryText, request.workspace, agent.id);
         if (memoryPrompt) {
           basePrompt = `${memoryPrompt}\n${basePrompt}`;
         }
       } catch {
         // 记忆检索失败不阻断主流程
+      }
+
+      if (request.systemPrompt && request.systemPrompt.trim().length > 0) {
+        basePrompt = `${request.systemPrompt.trim()}\n\n---\n[能力基底与环境参考]\n${basePrompt}`;
       }
 
       let recordedLiveUsage = false;
@@ -415,6 +434,8 @@ export class AgentOrchestrator {
         env: this.env,
         spawn: this.spawner(),
         onTrace,
+        goalMode: request.goalMode,
+        planMode: request.planMode,
       };
       if (request.onEvent !== undefined) loopRequest.onEvent = request.onEvent;
       loopRequest.executionContext = request.executionContext ?? { serverId: 'local' };
@@ -442,8 +463,11 @@ export class AgentOrchestrator {
         assistantOutput: result.messages.filter((message) => message.role === 'assistant').map((message) => message.content).join('\n'),
       }).catch(() => undefined);
       const finishedAt = new Date().toISOString();
-
-      store.appendMessages(sessionKey, agent.id, result.messages);
+      if (result.compacted && result.fullHistory) {
+        store.replaceHistory(sessionKey, agent.id, result.fullHistory);
+      } else {
+        store.appendMessages(sessionKey, agent.id, result.messages);
+      }
       if (!recordedLiveUsage) {
         this.recordUsage(store, effectiveAgent, taskId, sessionKey, result.model, result.usage, finishedAt, loopRequest.executionContext);
       }
@@ -457,8 +481,22 @@ export class AgentOrchestrator {
         tracePath,
       });
 
+      const durationMs = Date.now() - new Date(startedAt).getTime();
+      void HookManager.getInstance().triggerPostTask({
+        taskId,
+        agentId: agent.id,
+        durationMs,
+        status: 'done',
+      }, request.workspace);
+
       return { ...result, taskId, agentId: agent.id, sessionKey, status: 'done', tracePath };
     } catch (error) {
+      void HookManager.getInstance().triggerOnError({
+        taskId,
+        error: error instanceof Error ? error : new Error(String(error)),
+        phase: 'orchestrator',
+      }, request.workspace);
+
       const finishedAt = new Date().toISOString();
       const aborted = error instanceof HapError && error.code === 'TASK_ABORTED';
       const status: TaskStatus = aborted ? 'aborted' : 'failed';
@@ -510,8 +548,8 @@ export class AgentOrchestrator {
     return input;
   }
 
-  /** 组装 system 提示：身份段 + 职责段 + 子智能体段 + 环境段（FR-AGT-007）。 */
-  private systemPromptFor(agent: ResolvedAgent): string {
+  /** 组装 system 提示：身份段 + 职责段 + 子智能体段 + 环境段 + 技能段（FR-AGT-007）。 */
+  private systemPromptFor(agent: ResolvedAgent, goalMode?: boolean, planMode?: boolean): string {
     const subagents: Array<{ id: string; description: string }> = [];
     for (const id of agent.subagentAllow) {
       try {
@@ -522,8 +560,17 @@ export class AgentOrchestrator {
         continue;
       }
     }
-    const options: { subagents?: Array<{ id: string; description: string }> } = {};
+    const options: {
+      subagents?: Array<{ id: string; description: string }>;
+      goalMode?: boolean;
+      planMode?: boolean;
+      skillsSnippet?: string;
+    } = {};
     if (subagents.length > 0) options.subagents = subagents;
+    if (goalMode) options.goalMode = true;
+    if (planMode) options.planMode = true;
+    const skillsSnippet = SkillManager.getInstance().buildSkillsPromptSnippet(agent.workspace);
+    if (skillsSnippet) options.skillsSnippet = skillsSnippet;
     return composeSystemPrompt(agent, options);
   }
 

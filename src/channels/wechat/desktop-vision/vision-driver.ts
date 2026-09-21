@@ -5,6 +5,7 @@ import { type CapturedWindow, captureWeChatWindow, isWeChatRunning } from './cap
 import { type SendReplyOptions, type ActionDriverResult, sendWeChatReply } from './action-driver.js';
 import { type WeChatVisionParseResult, type VisionParserOptions, parseWeChatScreen } from './vision-parser.js';
 import { checkImagesDiff, isTextSentByMe, type ImageDiffResult } from './ocr-parser.js';
+import { normalizeContactName } from '../../contacts-store.js';
 
 export interface DesktopVisionActivityEvent {
   stage: 'detected' | 'thinking' | 'generated' | 'executing' | 'sent' | 'cooldown' | 'draft' | 'system' | 'scan';
@@ -188,11 +189,13 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
       }
 
       if (parsed.chatTarget) {
+        const normTarget = normalizeContactName(parsed.chatTarget) || parsed.chatTarget;
         if (parsed.chatTargetCoords) {
           this.targetCoordsMap.set(parsed.chatTarget, parsed.chatTargetCoords);
+          this.targetCoordsMap.set(normTarget, parsed.chatTargetCoords);
         }
         if (!parsed.chatTargetCoords) {
-          this.lastActiveTarget = parsed.chatTarget;
+          this.lastActiveTarget = normTarget;
         }
       }
 
@@ -223,7 +226,8 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
       }
 
       // 消息去重指纹计算（目标:发送者:消息内容，以及纯内容指纹）
-      const chatTarget = parsed.chatTarget || msg.sender;
+      const rawTarget = parsed.chatTarget || msg.sender;
+      const chatTarget = normalizeContactName(rawTarget) || rawTarget;
       const fingerprints = [
         `${chatTarget}:${msg.sender}:${cleanText}`,
         `${chatTarget}:${cleanText}`,
@@ -332,7 +336,7 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
     this.addFingerprint(myReplyFp3);
     this.addFingerprint(myReplyFp4);
 
-    const targetCoords = this.targetCoordsMap.get(targetId);
+    const targetCoords = this.targetCoordsMap.get(targetId) || this.targetCoordsMap.get(normalizeContactName(targetId));
     const switchToTarget = Boolean(targetCoords || (this.lastActiveTarget && this.lastActiveTarget !== targetId));
 
     const result = await this.sendFn({

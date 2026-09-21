@@ -28,6 +28,8 @@ export type ChannelCommand =
   | { kind: 'agent'; agentId?: string }
   | { kind: 'agents' }
   | { kind: 'usage'; days: number }
+  | { kind: 'goal'; target?: string }
+  | { kind: 'plan'; instruction?: string }
   | { kind: 'new' }
   | { kind: 'help' }
   | { kind: 'unknown'; name: string };
@@ -122,6 +124,16 @@ export function parseCommand(raw: string): ChannelCommand {
     case 'trace': {
       const taskId = args[0];
       return taskId === undefined ? { kind: 'trace' } : { kind: 'trace', taskId };
+    }
+    case 'goal':
+    case 'objective': {
+      const target = args.join(' ').trim();
+      return target === '' ? { kind: 'goal' } : { kind: 'goal', target };
+    }
+    case 'plan':
+    case 'planning': {
+      const instruction = args.join(' ').trim();
+      return instruction === '' ? { kind: 'plan' } : { kind: 'plan', instruction };
     }
     case 'agent': {
       const agentId = args[0];

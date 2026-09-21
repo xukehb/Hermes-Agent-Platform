@@ -137,4 +137,14 @@ export function registerMemoryCommands(root: Command, globals: () => GlobalOptio
       const cards = await store.extractTaskMemory({ taskId, agentId: opts.agentId, workspace: opts.workspace, userInput: opts.input, assistantOutput: opts.output });
       emit(ctx, `✓ 已提炼 ${cards.length} 条长期记忆`, cards);
     });
+
+  mem
+    .command('clean')
+    .description('清理被污染或机械套话的废弃记忆')
+    .action(() => {
+      const ctx = new CliContext(globals());
+      const purged = store.cleanCorruptedMemories();
+      emit(ctx, `✓ 已成功清理 ${purged} 条被污染的废弃记忆`, { purged });
+    });
 }
+

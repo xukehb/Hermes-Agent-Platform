@@ -11746,3 +11746,122 @@ html {
 .metric-value {
   font-variant-numeric: tabular-nums;
 }
+
+/* ==========================================================================
+   目标模式 (Goal Mode) 界面与卡片样式
+   ========================================================================== */
+.quick-chip.goal-mode-chip {
+  background: rgba(234, 179, 8, 0.12);
+  color: #eab308;
+  border-color: rgba(234, 179, 8, 0.35);
+  font-weight: 500;
+}
+.quick-chip.goal-mode-chip:hover {
+  background: rgba(234, 179, 8, 0.22);
+  border-color: rgba(234, 179, 8, 0.6);
+}
+
+.goal-toggle-btn {
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+.goal-toggle-btn.active {
+  background: rgba(234, 179, 8, 0.18) !important;
+  color: #eab308 !important;
+  border-color: rgba(234, 179, 8, 0.5) !important;
+  box-shadow: 0 0 10px rgba(234, 179, 8, 0.25);
+}
+
+.plan-toggle-btn {
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+.plan-toggle-btn.active {
+  background: rgba(59, 130, 246, 0.18) !important;
+  color: #3b82f6 !important;
+  border-color: rgba(59, 130, 246, 0.5) !important;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.25);
+}
+
+.goal-progress-card {
+  margin: 12px 0;
+  padding: 14px 16px;
+  background: var(--bg-card, rgba(255, 255, 255, 0.03));
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.goal-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.goal-card-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.goal-card-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: rgba(234, 179, 8, 0.15);
+  color: #eab308;
+  font-weight: 500;
+}
+.goal-card-badge.completed {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.goal-progress-track {
+  height: 6px;
+  background: rgba(128, 128, 128, 0.2);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.goal-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #eab308, #22c55e);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.goal-milestones-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.goal-milestone-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(128, 128, 128, 0.05);
+}
+.goal-milestone-item.active {
+  background: rgba(234, 179, 8, 0.1);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+.goal-milestone-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+.goal-milestone-title {
+  flex: 1;
+  color: var(--text-main);
+}
+.goal-milestone-result {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}

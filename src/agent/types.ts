@@ -45,6 +45,7 @@ export type TaskEvent =
   | { type: 'model_switch'; from: string; to: string; reason: string }
   | { type: 'notice'; message: string }
   | { type: 'usage'; usage: TokenUsage }
+  | { type: 'goal_event'; action: string; data: Record<string, unknown> }
   | { type: 'stream_end' };
 
 export type TaskEventSink = (event: TaskEvent) => void;
@@ -63,6 +64,10 @@ export interface LoopResult {
   reasoning: string;
   /** 本次新增的消息序列：assistant 与 tool 交替 */
   messages: AgentMessage[];
+  /** 是否触发了上下文压缩（FR-LOOP-013） */
+  compacted?: boolean | undefined;
+  /** 发生压缩时的整段新会话历史，供编排层原子替换持久化 */
+  fullHistory?: AgentMessage[] | undefined;
   usage: TokenUsage;
   /** 实际使用的工具调用轮数 */
   iterations: number;
@@ -93,6 +98,10 @@ export interface LoopRequest {
   onUsage?: UsageEventSink;
   onTrace?: (event: TraceEvent) => void;
   executionContext?: TaskExecutionContext | undefined;
+  /** 是否以目标模式（Goal Mode）执行 */
+  goalMode?: boolean | undefined;
+  /** 是否以规划模式（Planning Mode）执行 */
+  planMode?: boolean | undefined;
 }
 
 /** 任务运行请求（编排层入口）。 */
@@ -113,6 +122,8 @@ export interface RunTaskRequest {
   /** 会话键：Telegram 用 chat:<id>，CLI 用 cli:<agent>，子智能体用 sub:<父任务> */
   sessionKey?: string | undefined;
   attachments?: AgentMessage['attachments'] | undefined;
+  /** 显式注入的上下文历史消息（GUI 或外部会话管理传入，保证多轮连贯性） */
+  history?: AgentMessage[] | undefined;
   /** 通道绑定的默认智能体，路由第二优先级 */
   channelDefaultAgent?: string | undefined;
   depth?: number | undefined;
@@ -120,9 +131,15 @@ export interface RunTaskRequest {
   signal?: AbortSignal | undefined;
   onEvent?: TaskEventSink | undefined;
   executionContext?: TaskExecutionContext | undefined;
+  /** 是否以目标模式（Goal Mode）执行 */
+  goalMode?: boolean | undefined;
+  /** 是否以规划模式（Planning Mode）执行 */
+  planMode?: boolean | undefined;
   /** 内部恢复链元数据；外部调用方通常无需传入。 */
   parentTaskId?: string | undefined;
   resumeCount?: number | undefined;
+  /** 外部通道或上下文注入的最高优先级 System Prompt（如代管分身人设） */
+  systemPrompt?: string | undefined;
 }
 
 /** 恢复任务时允许覆盖的瞬态执行选项。 */

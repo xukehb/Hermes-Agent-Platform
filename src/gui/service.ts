@@ -66,6 +66,7 @@ import {
   type RemoteProcessKillResult,
   type ServerBotConfig,
 } from '../remote/index.js';
+import { SkillManager } from '../skills/index.js';
 import { BotControlFacade } from './bot-control.js';
 import { removeAgent as removeGuiAgent, upsertAgent as upsertGuiAgent, type GuiAgentInput } from './agent-operations.js';
 import type {
@@ -1604,7 +1605,45 @@ export class GuiService {
 
   listSkills(): GuiSkill[] {
     const state = readState();
-    return state.skills || DEFAULT_SKILLS;
+    const skills: GuiSkill[] = [...(state.skills || DEFAULT_SKILLS)];
+
+    try {
+      const discovered = SkillManager.getInstance().getSkills();
+      const existingIds = new Set(skills.map((s) => s.id));
+      for (const ds of discovered) {
+        if (!existingIds.has(ds.id)) {
+          skills.push({
+            id: ds.id,
+            name: ds.name,
+            description: ds.description || '本地自动探测加载的技能',
+            repo: ds.dirPath,
+            author: ds.source === 'agents_skills' ? 'User (~/.agents)' :
+                    ds.source === 'codex_skills' ? 'Codex (~/.codex)' :
+                    ds.source === 'workspace_skills' ? 'Workspace' : 'Local',
+            stars: 999,
+            tags: [ds.source],
+            installed: true,
+            enabled: ds.enabled,
+            version: '1.0.0',
+            category: 'dev',
+          });
+          existingIds.add(ds.id);
+        }
+      }
+    } catch {
+      // 容错处理，避免扫描异常影响整个服务
+    }
+
+    return skills;
+  }
+
+  rescanSkills(): GuiSkill[] {
+    try {
+      SkillManager.getInstance().rescan();
+    } catch {
+      // ignore
+    }
+    return this.listSkills();
   }
 
   installSkill(repoUrl: string): GuiSkill {
@@ -1645,6 +1684,11 @@ export class GuiService {
   }
 
   toggleSkill(id: string, enabled: boolean): object {
+    try {
+      SkillManager.getInstance().setEnabled(id, enabled);
+    } catch {
+      // ignore
+    }
     const state = readState();
     const skill = (state.skills || []).find((s) => s.id === id);
     if (skill) {
@@ -3020,7 +3064,7 @@ export class GuiService {
 
     // 优先拦截斜杠系统指令，由本地引擎极速响应，无需调用远端大模型
     const command = parseCommand(rawInput);
-    if (command.kind !== 'prompt') {
+    if (command.kind !== 'prompt' && command.kind !== 'goal' && command.kind !== 'plan') {
       const projectPath = input.projectPath?.trim() || process.cwd();
       let reply = '';
 
@@ -3245,12 +3289,21 @@ export class GuiService {
           }
         }
       }
+      const isGoalMode = Boolean(input.goalMode) || command.kind === 'goal';
+      const isPlanMode = Boolean(input.planMode) || command.kind === 'plan';
+      const actualInput = command.kind === 'goal'
+        ? (command.target || rawInput.replace(/^\/(?:goal|objective)\s*/i, '').trim() || '请以目标模式协助我分析并推进当前项目的核心目标')
+        : command.kind === 'plan'
+        ? (command.instruction || rawInput.replace(/^\/plan\s*/i, '').trim() || '请以规划模式为我制定详细的分步实施方案与验证计划')
+        : input.input;
 
       const request: Parameters<AgentOrchestrator['runTask']>[0] = {
-        input: prefix + input.input,
+        input: prefix + actualInput,
         sessionKey: input.sessionKey ?? 'gui:default',
         tools: toolsForPermissions(permissions),
         signal: chatController.signal,
+        goalMode: isGoalMode,
+        planMode: isPlanMode,
         onEvent: (event) => {
           const evRecord = event as unknown as Record<string, unknown>;
           events.push(evRecord);
@@ -3263,6 +3316,14 @@ export class GuiService {
           }
         },
       };
+      if (input.history && Array.isArray(input.history) && input.history.length > 0) {
+        request.history = input.history.map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+          ...(msg.reasoning ? { reasoning: msg.reasoning } : {}),
+          ...(msg.timestamp ? { createdAt: msg.timestamp } : {}),
+        }));
+      }
       if (attachments.length > 0) {
         request.attachments = attachments;
       }

@@ -48,6 +48,7 @@ export function buildProgram(): Command {
   registerInit(program, globals);
   registerServe(program, globals);
   registerRun(program, globals);
+  registerGoal(program, globals);
   registerChat(program, globals);
   registerConfig(program, globals);
   registerOps(program, globals);
@@ -217,6 +218,7 @@ function registerRun(program: Command, globals: () => GlobalOptions): void {
     .option('-a, --agent <id>', '指定智能体')
     .option('-s, --session <key>', '会话键；缺省 cli:<agent>')
     .option('--quiet', '只输出最终结果，不打印过程')
+    .option('--goal', '启用目标模式（自主规划、分解里程碑并推进）')
     .option('--no-persist', '不落 SQLite，本次会话用内存存储')
     .action(async (parts: string[], options: RunOptions) => {
       const ctx = new CliContext(globals());
@@ -233,6 +235,9 @@ function registerRun(program: Command, globals: () => GlobalOptions): void {
         }
         if (options.session !== undefined) {
           request.sessionKey = options.session;
+        }
+        if (options.goal !== undefined) {
+          request.goalMode = options.goal;
         }
         if (!quiet) {
           request.onEvent = (event: TaskEvent) => printEvent(event);
@@ -265,10 +270,71 @@ function registerRun(program: Command, globals: () => GlobalOptions): void {
     });
 }
 
+// ── goal ──
+
+function registerGoal(program: Command, globals: () => GlobalOptions): void {
+  program
+    .command('goal <target...>')
+    .description('目标模式：基于长期目标进行自主规划与多步闭环推进')
+    .option('-a, --agent <id>', '指定智能体')
+    .option('-s, --session <key>', '会话键；缺省 cli:goal:<agent>')
+    .option('--quiet', '只输出最终结果，不打印过程')
+    .option('--no-persist', '不落 SQLite，本次会话用内存存储')
+    .action(async (parts: string[], options: RunOptions) => {
+      const ctx = new CliContext(globals());
+      const prompt = parts.join(' ');
+      const orchestrator = options.persist === false
+        ? ctx.orchestratorWith({ memoryStore: true })
+        : ctx.orchestrator();
+      await orchestrator.loadMcpTools();
+      const quiet = options.quiet === true || ctx.json;
+      try {
+        const request: Parameters<typeof orchestrator.runTask>[0] = {
+          input: prompt,
+          goalMode: true,
+        };
+        if (options.agent !== undefined) {
+          request.agentId = options.agent;
+        }
+        if (options.session !== undefined) {
+          request.sessionKey = options.session;
+        }
+        if (!quiet) {
+          request.onEvent = (event: TaskEvent) => printEvent(event);
+        }
+        const outcome = await orchestrator.runTask(request);
+        const summary = [
+          '',
+          '── 目标达成结果 ──',
+          outcome.text.length === 0 ? '（模型未产出正文）' : outcome.text,
+          '',
+          renderPairs([
+            ['任务', outcome.taskId],
+            ['智能体', outcome.agentId],
+            ['模型', outcome.model],
+            ['协议', outcome.protocol],
+            ['轮数', String(outcome.iterations)],
+            ['停止原因', outcome.stopReason],
+            ['token', String(outcome.usage.totalTokens)],
+            ['trace', outcome.tracePath],
+            ['错误', orDash(outcome.error)],
+          ]),
+        ].join('\n');
+        emit(ctx, quiet ? outcome.text : summary, outcome);
+        if (outcome.status === 'failed') {
+          process.exitCode = 1;
+        }
+      } finally {
+        await ctx.close();
+      }
+    });
+}
+
 interface RunOptions {
   agent?: string;
   session?: string;
   quiet?: boolean;
+  goal?: boolean;
   /** commander 的 --no-persist 会把 persist 置为 false */
   persist?: boolean;
 }
@@ -285,6 +351,26 @@ function printEvent(event: TaskEvent): void {
     case 'reasoning':
       process.stdout.write('\u001b[2m' + event.text + '\u001b[0m');
       break;
+    case 'goal_event': {
+      const data = event.data as {
+        target?: string;
+        progressPercent?: number;
+        milestones?: Array<{
+          id: string;
+          title: string;
+          status: 'pending' | 'in_progress' | 'completed' | 'failed';
+        }>;
+      };
+      const percent = data.progressPercent ?? 0;
+      const target = data.target ?? '';
+      const percentStr = `[🎯 目标进度 ${String(percent)}%]`;
+      const msList = (data.milestones ?? []).map((m) => {
+        const icon = m.status === 'completed' ? '✅' : m.status === 'in_progress' ? '🔄' : m.status === 'failed' ? '❌' : '⏳';
+        return `  ${icon} ${m.title}`;
+      }).join('\n');
+      process.stdout.write(`\n${percentStr} 目标: ${target}\n${msList}\n`);
+      break;
+    }
     case 'tool_start':
       process.stdout.write('\n→ ' + event.name + ' ' + briefArgs(event.args) + '\n');
       break;

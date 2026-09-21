@@ -187,11 +187,12 @@ describe('Hosting Persona Markdown Specification & Service (托管人设与语�
       });
 
       expect(host.requests.length).toBe(1);
-      const submittedPrompt = host.requests[0]!.input;
+      const req = host.requests[0]!;
+      const submittedPrompt = req.systemPrompt ?? req.input;
       expect(submittedPrompt).toContain('【专属分身人设、语气风格与行为规范 (Markdown 规范文档)】');
       expect(submittedPrompt).toContain(markdownPersona);
       expect(submittedPrompt).toContain('微信聊天规范：当前为微信好友即时通讯');
-      expect(submittedPrompt).toContain('对方发来：“这个高并发架构怎么设计？”');
+      expect(req.input).toBe('这个高并发架构怎么设计？');
     });
 
     it('WeChatChannel 遇到传统单行人设时保持向后兼容格式', async () => {
@@ -238,9 +239,11 @@ describe('Hosting Persona Markdown Specification & Service (托管人设与语�
       });
 
       expect(host.requests.length).toBe(1);
-      const submittedPrompt = host.requests[0]!.input;
-      expect(submittedPrompt).toContain(`[专属人设指令：${singleLinePersona}]`);
-      expect(submittedPrompt).not.toContain('【专属分身人设、语气风格与行为规范 (Markdown 规范文档)】');
+      const req2 = host.requests[0]!;
+      const submittedPrompt2 = req2.systemPrompt ?? req2.input;
+      expect(submittedPrompt2).toContain(`[专属人设指令：${singleLinePersona}]`);
+      expect(submittedPrompt2).not.toContain('【专属分身人设、语气风格与行为规范 (Markdown 规范文档)】');
+      expect(req2.input).toBe('晚上去吃火锅吗？');
     });
 
     it('QQChannel 支持全局默认策略与单联系人 Markdown 人设注入', async () => {

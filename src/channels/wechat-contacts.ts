@@ -1,4 +1,5 @@
 import { ChannelContactStore, type ChannelContact, type ChannelChatMessage, type ChannelDefaultPolicy } from './contacts-store.js';
+import type { AgentMessage } from '../domain/index.js';
 
 export type WeChatContact = ChannelContact;
 export type WeChatChatMessage = ChannelChatMessage;
@@ -90,6 +91,27 @@ export class WeChatContactStore {
 
   saveDefaultPolicy(policy: Partial<WeChatDefaultPolicy>): WeChatDefaultPolicy {
     return this.store.saveDefaultPolicy('wechat', policy);
+  }
+
+  findContact(identifier: string): WeChatContact | undefined {
+    return this.store.findContact(identifier, 'wechat');
+  }
+
+  getRecentConversationHistory(contactId: string, _channel?: string, limit: number = 15): AgentMessage[] {
+    return this.store.getRecentConversationHistory(contactId, 'wechat', limit);
+  }
+
+  extractContactFacts(contactId: string, channelOrText: string, maybeText?: string): string[] {
+    const text = maybeText !== undefined ? maybeText : channelOrText;
+    return this.store.extractContactFacts(contactId, 'wechat', text);
+  }
+
+  appendContactFact(contactId: string, fact: string): boolean {
+    return this.store.appendContactFact(contactId, 'wechat', fact);
+  }
+
+  updateContactFacts(contactId: string, facts: string[]): boolean {
+    return this.store.updateContactFacts(contactId, 'wechat', facts);
   }
 }
 

@@ -535,4 +535,28 @@ describe('AgentOrchestrator 观测接口', () => {
     expect(sanitized.map((m) => m.role)).toEqual(['user', 'assistant', 'tool', 'assistant']);
     expect(sanitized[2]?.toolResult?.callId).toBe('c1');
   });
+
+  it('当上下文压缩触发时，编排器持久化压缩后的紧凑历史', async () => {
+    const h = harness(['compact_threshold = 0.01']);
+    const store = h.orchestrator.store('alpha');
+    const initialMessages = [];
+    for (let i = 0; i < 6; i += 1) {
+      initialMessages.push(
+        { role: 'user' as const, content: '这是较长的用户历史问题 ' + i },
+        { role: 'assistant' as const, content: '这是较长的助手历史回答 ' + i },
+      );
+    }
+    store.appendMessages('tg:compact-test', 'alpha', initialMessages);
+
+    h.primary.push(textTurn('已将历史压缩为摘要。'));
+    h.primary.push(textTurn('你好，当前任务回答。'));
+
+    const outcome = await h.orchestrator.runTask({ input: '新任务', sessionKey: 'tg:compact-test' });
+    expect(outcome.compacted).toBe(true);
+
+    const storedHistory = store.history('tg:compact-test');
+    expect(storedHistory[0]?.role).toBe('system');
+    expect(storedHistory[0]?.content).toContain('早期对话摘要');
+    expect(storedHistory.length).toBeLessThan(14);
+  });
 });

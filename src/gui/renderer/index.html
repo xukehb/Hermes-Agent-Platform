@@ -308,6 +308,10 @@
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg>
                 <span data-i18n="composer.quickModels">/models 列表</span>
               </button>
+              <button type="button" class="quick-chip goal-mode-chip" data-quick-prefix="/goal " onclick="insertPromptPrefix('/goal ')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                <span data-i18n="composer.quickGoal">/goal 目标模式</span>
+              </button>
             </div>
 
             <!-- 主输入框卡片 (Floating Island & Multimodal) -->
@@ -344,6 +348,16 @@
                   <button type="button" class="composer-attach-btn ai-gen-btn" id="aiGenImageBtn" title="一键生成 AI 图像 (插画、架构概念图、UI 设计图、壁纸等)" data-i18n-title="composer.aiGenTooltip">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"></circle><circle cx="17.5" cy="10.5" r=".5"></circle><circle cx="8.5" cy="7.5" r=".5"></circle><circle cx="6.5" cy="12.5" r=".5"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path></svg>
                     <span data-i18n="composer.aiGenBtn">AI 生图</span>
+                  </button>
+
+                  <button type="button" class="composer-attach-btn goal-toggle-btn" id="goalModeToggleBtn" title="切换目标驱动自主执行模式 (Goal Mode)" data-i18n-title="composer.goalModeTooltip">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                    <span data-i18n="composer.goalMode">目标模式</span>
+                  </button>
+
+                  <button type="button" class="composer-attach-btn plan-toggle-btn" id="planModeToggleBtn" title="切换规划模式 (Plan Mode)：只读规划、分步设计与验证方案" data-i18n-title="composer.planModeTooltip">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    <span data-i18n="composer.planMode">规划模式</span>
                   </button>
 
                   <span class="composer-hint-tag">
@@ -2962,7 +2976,7 @@
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px;align-items:center;margin-bottom:8px;">
             <input spellcheck="false" type="text" id="manualModelNameInput" placeholder="真实模型名 (如 deepseek-chat)" style="font-size:12px;padding:6px 8px;border-radius:6px;min-width:0;" />
             <input spellcheck="false" type="text" id="manualModelAliasInput" placeholder="显示别名 (可选)" style="font-size:12px;padding:6px 8px;border-radius:6px;min-width:0;" />
-            <input type="number" id="manualModelContextInput" placeholder="上下文 (64000)" style="font-size:12px;padding:6px 8px;border-radius:6px;min-width:0;" />
+            <input type="number" id="manualModelContextInput" placeholder="上下文 (131072)" style="font-size:12px;padding:6px 8px;border-radius:6px;min-width:0;" />
             <button type="button" class="btn primary" id="addManualModelBtn" style="justify-self:start;font-size:11.5px;padding:6px 12px;white-space:nowrap;">+ 手动添加</button>
           </div>
 

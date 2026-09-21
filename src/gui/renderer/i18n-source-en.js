@@ -553,7 +553,7 @@
     '一键部署 Redis Server 内存数据库，开启 systemd 服务守护并验证 PING 连通响应': 'Deploy Redis, enable it under systemd, and verify connectivity with PING',
     '一键部署安装': 'Deploy and install',
     '一键配置 SSH 并切换远程地址': 'Configure SSH and switch the remote URL',
-    '上下文 (64000)': 'Context (64000)',
+    '上下文 (131072)': 'Context (131072)',
     '上下文 / 输出': 'Context / output',
     '上下文窗口': 'Context window',
     '下发 HAP 守护进程脚本与配置': 'Deploy the HAP daemon script and configuration',

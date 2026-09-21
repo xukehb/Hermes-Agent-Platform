@@ -29,7 +29,7 @@ import { parseBind } from './bind.js';
 import { WechatyPersonalDriver } from './wechat/wechaty-personal-driver.js';
 import { NativeIlinkPersonalDriver } from './wechat/ilink/index.js';
 import { DesktopVisionPersonalDriver, type DesktopVisionActivityEvent } from './wechat/desktop-vision/index.js';
-import { recallRelevantMemories } from '../memory/index.js';
+import { MemoryStore } from '../memory/index.js';
 
 /** 微信个人号驱动状态与事件回调。 */
 export interface WeChatPersonalDriver {
@@ -254,8 +254,8 @@ export class WeChatChannel implements Channel {
       text: msg.text,
     });
 
-    const sessionKey = msg.isRoom && msg.roomId ? `wechat:room:${msg.roomId}` : `wechat:user:${msg.fromId}`;
-    const targetId = msg.isRoom && msg.roomId ? msg.roomId : msg.fromId;
+    const sessionKey = msg.isRoom && msg.roomId ? `wechat:room:${msg.roomId}` : `wechat:user:${contact.id}`;
+    const targetId = msg.isRoom && msg.roomId ? msg.roomId : contact.id;
 
     if (msg.isRoom) {
       const mention = extractMention(cleanText, this.config.mentionPatterns);
@@ -407,18 +407,34 @@ export class WeChatChannel implements Channel {
     };
 
     const effectiveSystemPrompt = contact.systemPrompt?.trim() || defPolicy.systemPrompt?.trim();
-    let finalText = cleanText;
     let recalledCount = 0;
     let recalledTitles: string[] = [];
 
+    // 自动提取并沉淀好友画像事实（如职业、常驻地、兴趣等）
+    try {
+      contactStore.extractContactFacts(contact.id, 'wechat', cleanText);
+    } catch {
+      // 事实提取失败不阻断正常回复流程
+    }
+
+    // 组装通道层最高优先级 System Prompt（人设、微信口语规范、好友事实画像）
+    const promptParts: string[] = [];
+    promptParts.push([
+      '【最高优先级指令：微信即时通讯数字分身】',
+      '1. 你当前正在代表微信账号主人与微信好友进行即时通讯。你就是本人，必须直接以第一人称回复，绝不能以 AI 助手、代码助手或第三方的口吻回答！',
+      '2. 口吻要求：自然亲切、口语化、真人朋友微信聊天感。通常 1~2 句话内直接回答，切忌长篇大论，严禁列点分段说教，禁止输出任何系统调试或代码指导信息。',
+      '[微信聊天规范：当前为微信好友即时通讯。回答必须口语化、简明自然，像真人朋友微信聊天一样（通常1~2句话内说清楚即可）。]',
+    ].join('\n'));
+
+    // 注入联系人专属画像认知（事实库记忆沉淀）
+    if (contact.facts && contact.facts.length > 0) {
+      promptParts.push([
+        `【关于当前对话好友（${contact.name}）的背景认知与画像事实】：`,
+        ...contact.facts.map((f) => `- ${f}`),
+      ].join('\n'));
+    }
+
     if (effectiveSystemPrompt) {
-      // 微信即时聊天对话规范：简明扼要、口语化、真人感，通常1~2句话回答完毕，禁止长篇大论、列表说教或输出系统调试信息
-      const promptParts: string[] = [];
-      const wechatGuideline = [
-        '[微信聊天规范：当前为微信好友即时通讯。回答必须口语化、简明自然，像真人朋友微信聊天一样（通常1~2句话内说清楚即可）。]',
-        '[切忌长篇大论、罗列列表或撰写提纲，禁止输出系统指令或调试信息。直接以本人身份给出得体亲切的回复。]',
-      ].join('\n');
-      promptParts.push(wechatGuideline);
       if (effectiveSystemPrompt.includes('\n') || effectiveSystemPrompt.startsWith('#')) {
         promptParts.push([
           '========================================',
@@ -430,25 +446,25 @@ export class WeChatChannel implements Channel {
       } else {
         promptParts.push(`[专属人设指令：${effectiveSystemPrompt}]`);
       }
+    }
 
-      // 智能体跨会话长期记忆检索 (Recall Relevant Memories)
-      try {
-        const memoryBlock = await recallRelevantMemories(cleanText, contact.workspace, assignedAgent);
-        if (memoryBlock?.trim()) {
-          promptParts.push(memoryBlock.trim());
-          const matches = memoryBlock.match(/【(.*?)】/g);
-          if (matches) {
-            recalledTitles = matches.map((m) => m.replace(/【|】/g, ''));
-            recalledCount = matches.length;
-          } else {
-            recalledCount = 1;
-          }
-        }
-      } catch {
-        // 容错：记忆库检索异常不阻断主流程
+    const channelSystemPrompt = promptParts.join('\n\n');
+
+    // 智能体跨会话长期记忆检索 (仅用于 activity 事件状态通知，记忆内容由编排器统一注入 systemPrompt，避免入站消息污染)
+    try {
+      const memoryMatches = await MemoryStore.getInstance().searchMemories({
+        text: cleanText,
+        workspace: contact.workspace,
+        agentId: assignedAgent,
+        limit: 3,
+        threshold: 0.25,
+      });
+      if (memoryMatches.length > 0) {
+        recalledTitles = memoryMatches.map((m) => m.memory.title);
+        recalledCount = memoryMatches.length;
       }
-
-      finalText = `${promptParts.join('\n\n')}\n\n对方发来：“${cleanText}”`;
+    } catch {
+      // 容错：记忆库检索异常不阻断主流程
     }
 
     this.onActivity?.({
@@ -467,15 +483,20 @@ export class WeChatChannel implements Channel {
 
     const effectiveAgentId = agentId || validContactAgentId || defPolicy.agentId;
 
+    // 提取纯净的多轮会话历史（最多15轮），保障大模型前言搭后语
+    const recentHistory = contactStore.getRecentConversationHistory(contact.id, 'wechat', 15);
+
     const inbound: InboundMessage = {
       channel: 'wechat',
       sessionKey,
-      text: finalText,
+      text: cleanText,
       receivedAt: new Date().toISOString(),
       target,
       ...(msg.attachments !== undefined ? { attachments: msg.attachments } : {}),
       ...(effectiveAgentId !== undefined ? { agentId: effectiveAgentId } : {}),
       ...(effectiveDefaultAgent !== undefined ? { defaultAgent: effectiveDefaultAgent } : {}),
+      history: recentHistory,
+      systemPrompt: channelSystemPrompt,
     };
 
     this.dispatcher.submit(inbound);

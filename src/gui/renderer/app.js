@@ -1149,6 +1149,61 @@ document.addEventListener('click', (e) => {
   }
 });
 
+function renderGoalCardHtml(plan) {
+  if (!plan) return '';
+  const statusBadge = {
+    planning: '🎯 规划中',
+    in_progress: '⚡ 执行中',
+    evaluating: '🔍 验收中',
+    completed: '🎉 已达成',
+    failed: '❌ 未完成',
+    aborted: '🛑 已中止',
+  }[plan.status] || '🎯 目标';
+
+  const isComplete = plan.status === 'completed';
+  const progress = typeof plan.progress === 'number' ? plan.progress : (isComplete ? 100 : 0);
+
+  const statusEmoji = {
+    pending: '⏳',
+    in_progress: '🔄',
+    completed: '✅',
+    failed: '❌',
+  };
+
+  const milestonesHtml = (plan.milestones || []).map((m) => {
+    const isCur = m.id === plan.currentMilestoneId;
+    const emoji = statusEmoji[m.status] || '⏳';
+    return `
+      <div class="goal-milestone-item ${isCur ? 'active' : ''}">
+        <span class="goal-milestone-icon">${emoji}</span>
+        <div style="flex:1;">
+          <div class="goal-milestone-title"><code>${esc(m.id)}</code> ${esc(m.title)}</div>
+          ${m.result ? `<div class="goal-milestone-result">💡 ${esc(m.result)}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="goal-progress-card">
+      <div class="goal-card-header">
+        <div class="goal-card-title">
+          <span>🎯</span>
+          <span>目标：${esc(plan.title || '自主任务')}</span>
+        </div>
+        <span class="goal-card-badge ${isComplete ? 'completed' : ''}">${statusBadge}</span>
+      </div>
+      <div class="goal-progress-track">
+        <div class="goal-progress-bar" style="width: ${progress}%"></div>
+      </div>
+      <div class="goal-milestones-list">
+        ${milestonesHtml}
+      </div>
+      ${plan.summary ? `<div style="margin-top:10px;font-size:12.5px;color:var(--text-main);padding:6px 10px;background:rgba(234,179,8,0.08);border-radius:6px;"><strong>产物与总结：</strong>${esc(plan.summary)}</div>` : ''}
+    </div>
+  `;
+}
+
 function renderCurrentSessionMessages() {
   const container = $('messagesInner');
   if (!container) return;
@@ -1332,6 +1387,7 @@ function renderCurrentSessionMessages() {
           </div>
           <div class="assistant-content">
             ${reasoningHtml}
+            ${m.goalPlan ? renderGoalCardHtml(m.goalPlan) : ''}
             ${renderMarkdownContent(content)}
             <div class="assistant-footer-actions">
               <button type="button" class="msg-action-btn" onclick="copyMessageText('${encodedAnswer}')" title="复制完整回答">
@@ -1399,6 +1455,9 @@ function renderCurrentSessionMessages() {
               </svg>
             </div>
             <div class="assistant-content">
+              <div id="streamingGoalCardBox">
+                ${session.currentGoalPlan ? renderGoalCardHtml(session.currentGoalPlan) : ''}
+              </div>
               <div id="streamingReasoningBox" style="${hasLiveThinking ? '' : 'display:none;'}">
                 <details class="thinking-box" open>
                   <summary class="thinking-header">
@@ -7743,6 +7802,17 @@ $('toggleApiKeyVisibilityBtn')?.addEventListener('click', () => {
   $('toggleApiKeyVisibilityBtn').textContent = isApiKeyVisible ? '隐藏明文' : '显示明文';
 });
 
+function inferDefaultContextWindow(modelName) {
+  const lower = String(modelName || '').toLowerCase();
+  if (lower.includes('gemini')) return 1048576;
+  if (lower.includes('claude')) return 200000;
+  if (lower.includes('gpt-5') || lower.includes('codex')) return 200000;
+  if (lower.includes('gpt-4o') || lower.includes('o1') || lower.includes('o3') || lower.includes('o4')) return 128000;
+  if (lower.includes('deepseek')) return 131072;
+  if (lower.includes('qwen') || lower.includes('glm') || lower.includes('kimi') || lower.includes('doubao') || lower.includes('minimax') || lower.includes('moonshot') || lower.includes('hermes')) return 131072;
+  return 131072;
+}
+
 window.openProviderDialog = async (id) => {
   const dialog = $('providerDialog');
   const form = $('providerForm');
@@ -7794,7 +7864,7 @@ window.openProviderDialog = async (id) => {
       .filter(m => (m.providerId || m.provider) === p.id);
     originalDialogModelAliases = new Set(providerModels.map(m => m.alias));
     currentDialogModels = providerModels
-      .map(m => ({ alias: m.alias, model: m.model || m.modelName || m.alias, contextWindow: m.contextWindow || 64000 }));
+      .map(m => ({ alias: m.alias, model: m.model || m.modelName || m.alias, contextWindow: m.contextWindow || inferDefaultContextWindow(m.model || m.modelName || m.alias) }));
   } else {
     $('providerDialogTitle').textContent = '新增 AI 服务商与模型';
     $('providerPresetRow').style.display = 'block';
@@ -7845,7 +7915,7 @@ $('providerForm')?.addEventListener('submit', async (e) => {
         alias: m.alias,
         provider: providerId,
         model: m.model || m.alias,
-        contextWindow: m.contextWindow || 64000,
+        contextWindow: m.contextWindow || inferDefaultContextWindow(m.model || m.alias),
       }).catch(err => console.warn('保存模型警告:', err));
     }
 
@@ -9067,34 +9137,95 @@ let activeComposerPlugin = null;
 let mentionMatches = [];
 let mentionSelectedIndex = 0;
 
+const SLASH_COMMANDS = [
+  {
+    type: 'slash',
+    command: '/plan',
+    name: '/plan',
+    title: '/plan <任务描述>',
+    badge: '规划模式',
+    icon: '📋',
+    desc: '开启只读规划模式：制定详细架构实施方案与验证计划，不直接修改代码',
+    aliases: ['/plan', 'plan', '规划', '方案'],
+  },
+  {
+    type: 'slash',
+    command: '/goal',
+    name: '/goal',
+    title: '/goal <核心目标>',
+    badge: '目标模式',
+    icon: '🎯',
+    desc: '开启目标驱动模式：多轮自主拆解里程碑推进任务闭环',
+    aliases: ['/goal', 'goal', '目标'],
+  },
+  {
+    type: 'slash',
+    command: '/models',
+    name: '/models',
+    title: '/models',
+    badge: '模型目录',
+    icon: '🤖',
+    desc: '查看当前所有可用的大模型、就绪状态及 API 配置',
+    aliases: ['/models', 'models', '模型'],
+  },
+  {
+    type: 'slash',
+    command: '/model',
+    name: '/model',
+    title: '/model <别名或模型名>',
+    badge: '切换模型',
+    icon: '⚡',
+    desc: '极速切换当前生效的大模型（如 /model gpt-4o 或 /model claude-3-5-sonnet）',
+    aliases: ['/model', 'model'],
+  },
+  {
+    type: 'slash',
+    command: '/browser',
+    name: '/browser',
+    title: '/browser <url或任务>',
+    badge: '网页浏览',
+    icon: '🌐',
+    desc: '启动浏览器控制引擎，浏览网页或自动化采集交互',
+    aliases: ['/browser', 'browser', '浏览器'],
+  },
+  {
+    type: 'slash',
+    command: '/desktop',
+    name: '/desktop',
+    title: '/desktop <指令>',
+    badge: '桌面控制',
+    icon: '🖥️',
+    desc: '调用桌面自动化控制与屏幕视像交互能力',
+    aliases: ['/desktop', 'desktop', '桌面'],
+  },
+  {
+    type: 'slash',
+    command: '/clear',
+    name: '/clear',
+    title: '/clear',
+    badge: '清空会话',
+    icon: '🧹',
+    desc: '清空当前会话的消息流上下文',
+    aliases: ['/clear', 'clear', '清空'],
+  },
+  {
+    type: 'slash',
+    command: '/help',
+    name: '/help',
+    title: '/help',
+    badge: '使用帮助',
+    icon: '💡',
+    desc: '查看系统所有支持的斜杠指令与快捷键',
+    aliases: ['/help', 'help', '帮助'],
+  },
+];
+
+let activeMentionMode = 'mention'; // 'mention' | 'slash'
+
 function getAllMentionCandidates() {
-  const list = [...COMPOSER_PLUGINS];
+  const list = [];
 
-  // 1. 添加可直接通过 @ 选用的生图技能 (Image Skills)
-  if (Array.isArray(state?.skills)) {
-    for (const skill of state.skills) {
-      if (!skill || !skill.id) continue;
-      if (skill.category === 'image' || (skill.tags && skill.tags.includes('生图'))) {
-        const shortName = (skill.name || '').split(/[\s·(（]/)[0] || skill.name;
-        list.push({
-          id: `skill:${skill.id}`,
-          name: `${skill.name}`,
-          mention: `@${shortName}`,
-          aliases: [`@${skill.id}`, `@${skill.name}`, `@${shortName}`],
-          icon: 'Stream',
-          title: `${skill.name} (生图技能)`,
-          badge: '生图 Skill',
-          desc: skill.description || '视觉风格微调与提示词增强',
-          placeholder: `[技能: ${skill.name}] 输入画面主体与细节描述...`,
-          action: 'image-skill',
-          skillId: skill.id,
-          skill: skill,
-        });
-      }
-    }
-  }
-
-  // 2. 添加智能体角色
+  // 1. 智能体角色 (Agents)
   if (Array.isArray(state?.agents)) {
     for (const agent of state.agents) {
       if (!agent || !agent.id) continue;
@@ -9103,7 +9234,7 @@ function getAllMentionCandidates() {
         name: agent.name || agent.id,
         mention: `@${agent.name || agent.id}`,
         aliases: [`@${agent.id}`, `@${agent.name}`],
-        icon: '',
+        icon: '🤖',
         title: `${agent.name || agent.id} (智能体)`,
         badge: 'Agent 角色',
         desc: agent.description || agent.systemPrompt?.slice(0, 50) || '专业智能体角色分工协作',
@@ -9113,6 +9244,53 @@ function getAllMentionCandidates() {
       });
     }
   }
+
+  // 2. 插件市场与内置插件 (Plugins & MCP)
+  for (const p of COMPOSER_PLUGINS) {
+    list.push(p);
+  }
+  if (Array.isArray(state?.plugins)) {
+    for (const plugin of state.plugins) {
+      if (!plugin || !plugin.id) continue;
+      if (list.some((item) => item.id === plugin.id || item.id === `plugin:${plugin.id}`)) continue;
+      list.push({
+        id: `plugin:${plugin.id}`,
+        name: plugin.name || plugin.id,
+        mention: `@${plugin.name || plugin.id}`,
+        aliases: [`@${plugin.id}`, `@${plugin.name}`],
+        icon: '🧩',
+        title: `${plugin.name} (插件)`,
+        badge: plugin.type === 'mcp' ? 'MCP 插件' : '内置插件',
+        desc: plugin.description || '功能扩展插件',
+        action: 'plugin',
+        plugin,
+      });
+    }
+  }
+
+  // 3. 技能库 (Skills - 包括本地发现的 ~/.agents/skills 等)
+  if (Array.isArray(state?.skills)) {
+    for (const skill of state.skills) {
+      if (!skill || !skill.id) continue;
+      const shortName = (skill.name || '').split(/[\s·(（]/)[0] || skill.name;
+      const isImg = skill.category === 'image' || (skill.tags && skill.tags.includes('生图'));
+      list.push({
+        id: `skill:${skill.id}`,
+        name: skill.name,
+        mention: `@${shortName}`,
+        aliases: [`@${skill.id}`, `@${skill.name}`, `@${shortName}`],
+        icon: isImg ? '🎨' : '⚡',
+        title: `${skill.name} (${isImg ? '生图技能' : '技能'})`,
+        badge: isImg ? '生图 Skill' : 'Skill 技能',
+        desc: skill.description || (skill.tags ? skill.tags.join(', ') : '技能扩展'),
+        placeholder: `[技能: ${skill.name}] 输入任务需求与细节描述...`,
+        action: isImg ? 'image-skill' : 'skill',
+        skillId: skill.id,
+        skill: skill,
+      });
+    }
+  }
+
   return list;
 }
 
@@ -9124,7 +9302,7 @@ function setActiveComposerPlugin(plugin) {
     if (plugin) {
       input.placeholder = plugin.placeholder || '给智能体下发任务...';
     } else {
-      input.placeholder = '给智能体下发开发、修复或审查任务... (支持输入 @ 选择插件/智能体, Enter 发送)';
+      input.placeholder = '给智能体下发开发、修复或审查任务... (支持输入 @ 选智能体/技能/插件, / 选指令, Enter 发送)';
     }
   }
 }
@@ -9182,16 +9360,19 @@ function closeMentionMenu() {
   mentionSelectedIndex = 0;
 }
 
-function renderMentionMenu(query = '') {
+function renderMentionMenu(query = '', mode = activeMentionMode) {
+  activeMentionMode = mode;
   const menu = $('composerMentionMenu');
   if (!menu) return;
-  const candidates = getAllMentionCandidates();
+
+  const candidates = mode === 'slash' ? SLASH_COMMANDS : getAllMentionCandidates();
   const q = query.toLowerCase().trim();
 
   mentionMatches = candidates.filter(item => {
     if (!q) return true;
-    return item.name.toLowerCase().includes(q)
-      || item.mention.toLowerCase().includes(q)
+    return (item.name && item.name.toLowerCase().includes(q))
+      || (item.command && item.command.toLowerCase().includes(q))
+      || (item.mention && item.mention.toLowerCase().includes(q))
       || (item.title && item.title.toLowerCase().includes(q))
       || (item.desc && item.desc.toLowerCase().includes(q))
       || (item.aliases && item.aliases.some(a => a.toLowerCase().includes(q)));
@@ -9207,20 +9388,24 @@ function renderMentionMenu(query = '') {
   }
 
   menu.style.display = 'flex';
+  const headerText = mode === 'slash'
+    ? '⚡ 选择斜杠指令 (键入筛选, ↑↓ 导航, Enter 选中)'
+    : '@ 选择智能体、技能或插件 (键入筛选, ↑↓ 导航, Enter 选中)';
+
   menu.innerHTML = `
     <div class="composer-mention-header">
-      <span> 选择插件或智能体 (键入筛选, ↑↓ 导航, Enter 选中)</span>
+      <span>${headerText}</span>
       <span>${mentionMatches.length} 项可选</span>
     </div>
     <div class="composer-mention-list" id="composerMentionList">
       ${mentionMatches.map((item, idx) => `
         <div class="composer-mention-item ${idx === mentionSelectedIndex ? 'active' : ''}" data-index="${idx}">
-          <div class="composer-mention-item-icon">${item.icon || ''}</div>
+          <div class="composer-mention-item-icon">${item.icon || (mode === 'slash' ? '⚡' : '✨')}</div>
           <div class="composer-mention-item-info">
             <div class="composer-mention-item-top">
-              <span class="composer-mention-item-name">${esc(item.name)}</span>
-              <span class="composer-mention-item-badge">${esc(item.badge || '插件')}</span>
-              <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">${esc(item.mention)}</span>
+              <span class="composer-mention-item-name">${esc(item.name || item.command)}</span>
+              <span class="composer-mention-item-badge">${esc(item.badge || (mode === 'slash' ? '指令' : '插件'))}</span>
+              <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">${esc(item.command || item.mention || '')}</span>
             </div>
             <div class="composer-mention-item-desc">${esc(item.desc || '')}</div>
           </div>
@@ -9249,7 +9434,17 @@ function chooseMentionCandidate(candidate) {
   const input = $('chatInput');
   if (!input) return;
 
-  if (candidate.id === 'image-gen') {
+  if (candidate.type === 'slash' || activeMentionMode === 'slash') {
+    const beforeSlash = input.value.replace(/(?:^|\s)\/[^\s]*$/, (m) => m.startsWith(' ') ? ' ' : '');
+    const cmd = candidate.command || candidate.name;
+    input.value = beforeSlash + `${cmd} `;
+    if (cmd === '/plan') {
+      togglePlanMode(true);
+    } else if (cmd === '/goal') {
+      toggleGoalMode(true);
+    }
+    showToast(`已选用指令：${cmd}`, 'info');
+  } else if (candidate.id === 'image-gen') {
     setActiveComposerPlugin(candidate);
     input.value = input.value.replace(/(?:^|\s)@[^\s]*$/, '').trim();
     showToast('已激活  AI 生图插件', 'info');
@@ -9257,7 +9452,7 @@ function chooseMentionCandidate(candidate) {
     setActiveComposerPlugin({
       id: 'image-gen',
       name: `AI 生图 · ${candidate.skill.name}`,
-      icon: '',
+      icon: '🎨',
       badge: '生图 Skill',
       skillId: candidate.skill.id,
       skill: candidate.skill,
@@ -9273,6 +9468,14 @@ function chooseMentionCandidate(candidate) {
     }
     input.value = input.value.replace(/(?:^|\s)@[^\s]*$/, '').trim();
     showToast(`已切换至智能体：${candidate.name}`, 'info');
+  } else if (candidate.action === 'skill') {
+    const beforeAt = input.value.replace(/(?:^|\s)@[^\s]*$/, (m) => m.startsWith(' ') ? ' ' : '');
+    input.value = beforeAt + `${candidate.mention} `;
+    showToast(`已引用技能：${candidate.name}`, 'info');
+  } else if (candidate.action === 'plugin') {
+    const beforeAt = input.value.replace(/(?:^|\s)@[^\s]*$/, (m) => m.startsWith(' ') ? ' ' : '');
+    input.value = beforeAt + `${candidate.mention} `;
+    showToast(`已引用插件：${candidate.name}`, 'info');
   } else {
     const beforeAt = input.value.replace(/(?:^|\s)@[^\s]*$/, (m) => m.startsWith(' ') ? ' ' : '');
     input.value = beforeAt + `${candidate.mention} `;
@@ -9291,11 +9494,13 @@ function initComposerMentionSystem() {
     const val = input.value;
     const caretPos = input.selectionStart || val.length;
     const textBeforeCaret = val.slice(0, caretPos);
+    const slashMatch = textBeforeCaret.match(/(?:^|\s)\/([^\s]*)$/);
     const atMatch = textBeforeCaret.match(/(?:^|\s)@([^\s]*)$/);
 
-    if (atMatch) {
-      const query = atMatch[1] || '';
-      renderMentionMenu(query);
+    if (slashMatch) {
+      renderMentionMenu(slashMatch[1] || '', 'slash');
+    } else if (atMatch) {
+      renderMentionMenu(atMatch[1] || '', 'mention');
     } else {
       closeMentionMenu();
     }
@@ -9309,8 +9514,10 @@ function initComposerMentionSystem() {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         mentionSelectedIndex = (mentionSelectedIndex + 1) % mentionMatches.length;
-        const currentQuery = $('chatInput')?.value?.match(/(?:^|\s)@([^\s]*)$/)?.[1] || '';
-        renderMentionMenu(currentQuery);
+        const currentQuery = activeMentionMode === 'slash'
+          ? (input.value?.match(/(?:^|\s)\/([^\s]*)$/)?.[1] || '')
+          : (input.value?.match(/(?:^|\s)@([^\s]*)$/)?.[1] || '');
+        renderMentionMenu(currentQuery, activeMentionMode);
         const activeItem = menu.querySelector(`.composer-mention-item[data-index="${mentionSelectedIndex}"]`);
         activeItem?.scrollIntoView({ block: 'nearest' });
         return;
@@ -9318,8 +9525,10 @@ function initComposerMentionSystem() {
       if (e.key === 'ArrowUp') {
         e.preventDefault();
         mentionSelectedIndex = (mentionSelectedIndex - 1 + mentionMatches.length) % mentionMatches.length;
-        const currentQuery = $('chatInput')?.value?.match(/(?:^|\s)@([^\s]*)$/)?.[1] || '';
-        renderMentionMenu(currentQuery);
+        const currentQuery = activeMentionMode === 'slash'
+          ? (input.value?.match(/(?:^|\s)\/([^\s]*)$/)?.[1] || '')
+          : (input.value?.match(/(?:^|\s)@([^\s]*)$/)?.[1] || '');
+        renderMentionMenu(currentQuery, activeMentionMode);
         const activeItem = menu.querySelector(`.composer-mention-item[data-index="${mentionSelectedIndex}"]`);
         activeItem?.scrollIntoView({ block: 'nearest' });
         return;
@@ -9697,7 +9906,10 @@ window.hap?.onChatStream?.((data) => {
     }, 600);
   } else if (data.type === 'notice') {
     if (data.message) {
-      showToast(data.message, 'warning');
+      const isCompactionNotice = data.message.includes('压缩') || data.message.toLowerCase().includes('compact');
+      if (!isCompactionNotice) {
+        showToast(data.message, 'warning');
+      }
       const contentText = $('streamingContentText');
       if (contentText && !session.liveContent) {
         const pillText = contentText.querySelector('.thinking-loading-pill span:not(.thinking-pulse-dot)');
@@ -9729,6 +9941,15 @@ window.hap?.onChatStream?.((data) => {
     }
     document.querySelectorAll('.streaming-cursor').forEach((el) => el.remove());
     requestStreamAutoScroll();
+  } else if (data.type === 'goal_event') {
+    if (data.data) {
+      session.currentGoalPlan = data.data;
+      const box = $('streamingGoalCardBox');
+      if (box) {
+        box.innerHTML = renderGoalCardHtml(data.data);
+      }
+      requestStreamAutoScroll();
+    }
   }
 });
 
@@ -9758,6 +9979,46 @@ $('stopChatBtn')?.addEventListener('click', async () => {
     saveSessionsToStorage();
     renderCurrentSessionMessages();
   }
+});
+
+let isGoalModeEnabled = false;
+
+function toggleGoalMode(forceState) {
+  isGoalModeEnabled = forceState !== undefined ? forceState : !isGoalModeEnabled;
+  const btn = $('goalModeToggleBtn');
+  if (btn) {
+    if (isGoalModeEnabled) {
+      btn.classList.add('active');
+      showToast('🎯 已开启【目标模式】：智能体将以达成最终目标为导向，自主多轮规划与执行，直至里程碑闭环。', 'info');
+    } else {
+      btn.classList.remove('active');
+      showToast('已切回常规交互模式。', 'info');
+    }
+  }
+}
+
+$('goalModeToggleBtn')?.addEventListener('click', () => {
+  toggleGoalMode();
+});
+
+let isPlanModeEnabled = false;
+
+function togglePlanMode(forceState) {
+  isPlanModeEnabled = forceState !== undefined ? forceState : !isPlanModeEnabled;
+  const btn = $('planModeToggleBtn');
+  if (btn) {
+    if (isPlanModeEnabled) {
+      btn.classList.add('active');
+      showToast('📋 已开启【规划模式】：智能体将遵循只读分析，制定详细架构方案与分步实施计划，不直接改动代码。', 'info');
+    } else {
+      btn.classList.remove('active');
+      showToast('已切回常规执行模式。', 'info');
+    }
+  }
+}
+
+$('planModeToggleBtn')?.addEventListener('click', () => {
+  togglePlanMode();
 });
 
 document.addEventListener('keydown', (e) => {
@@ -9938,6 +10199,17 @@ $('chatForm')?.addEventListener('submit', async (event) => {
 
   try {
     const selectedModel = $('chatModelPickerSelect')?.value || undefined;
+    const isGoal = Boolean(isGoalModeEnabled) || text.startsWith('/goal');
+    const isPlan = Boolean(isPlanModeEnabled) || text.startsWith('/plan');
+
+    // 组装历史消息上下文（提取当前输入之前的所有消息，最多保留近 30 条），杜绝多轮会话丢失上下文
+    const historyPayload = session.messages.slice(0, -1).slice(-30).map((m) => ({
+      role: m.role,
+      content: m.content || '',
+      reasoning: m.reasoning || undefined,
+      timestamp: m.timestamp || undefined,
+    }));
+
     const result = await window.hap.chat({
       input: text || '（请分析和审查上方附加的文件或图片）',
       agentId: $('chatAgentSelect')?.value || undefined,
@@ -9945,6 +10217,9 @@ $('chatForm')?.addEventListener('submit', async (event) => {
       projectPath: currentActiveProject || undefined,
       attachments: attachmentsToSend.length > 0 ? attachmentsToSend : undefined,
       sessionKey: 'gui:' + targetSessionId,
+      goalMode: isGoal ? true : undefined,
+      planMode: isPlan ? true : undefined,
+      history: historyPayload.length > 0 ? historyPayload : undefined,
     });
 
     let reply = '';
@@ -10015,8 +10290,10 @@ $('chatForm')?.addEventListener('submit', async (event) => {
       role: 'assistant',
       content: reply,
       reasoning: reasoningText || undefined,
+      goalPlan: session.currentGoalPlan || undefined,
       timestamp: new Date().toISOString(),
     });
+    session.currentGoalPlan = null;
     session.updatedAt = new Date().toISOString();
     saveSessionsToStorage();
     document.querySelectorAll('.streaming-cursor').forEach((el) => el.remove());
@@ -10034,8 +10311,10 @@ $('chatForm')?.addEventListener('submit', async (event) => {
     session.messages.push({
       role: 'assistant',
       content: `${partialReply}**执行提示：** ${error.message}`,
+      goalPlan: session.currentGoalPlan || undefined,
       timestamp: new Date().toISOString(),
     });
+    session.currentGoalPlan = null;
     session.updatedAt = new Date().toISOString();
     saveSessionsToStorage();
     document.querySelectorAll('.streaming-cursor').forEach((el) => el.remove());
@@ -12453,7 +12732,7 @@ window.fetchAndSyncModelsForProvider = async (providerId, clickBtn) => {
           alias,
           provider: providerId,
           model: modelName,
-          contextWindow: 64000,
+          contextWindow: inferDefaultContextWindow(modelName),
         }).catch(() => {});
       }
       showToast(`成功从 ${providerId} 导入并生效 ${selectedCbs.length} 个模型！`, 'success');
@@ -12526,7 +12805,7 @@ $('fetchRemoteModelsInDialogBtn')?.addEventListener('click', async () => {
           const toAdd = kw ? res.models.filter(name => name.toLowerCase().includes(kw)) : res.models;
           toAdd.forEach(name => {
             if (!currentDialogModels.some(m => m.model === name || m.alias === name)) {
-              currentDialogModels.push({ alias: name.split('/').pop(), model: name, contextWindow: 64000 });
+              currentDialogModels.push({ alias: name.split('/').pop(), model: name, contextWindow: inferDefaultContextWindow(name) });
             }
           });
           renderCurrentDialogModels();
@@ -12547,7 +12826,7 @@ $('fetchRemoteModelsInDialogBtn')?.addEventListener('click', async () => {
 
 window.addModelToDialogFromRemote = (name) => {
   if (!currentDialogModels.some(m => m.model === name || m.alias === name)) {
-    currentDialogModels.push({ alias: name.split('/').pop(), model: name, contextWindow: 64000 });
+    currentDialogModels.push({ alias: name.split('/').pop(), model: name, contextWindow: inferDefaultContextWindow(name) });
     renderCurrentDialogModels();
     showToast(`已添加模型 ${name}`, 'info');
   }
@@ -12564,7 +12843,7 @@ $('addManualModelBtn')?.addEventListener('click', () => {
     return;
   }
   const alias = aliasInput?.value.trim() || model.split('/').pop() || model;
-  const contextWindow = parseInt(contextInput?.value, 10) || 64000;
+  const contextWindow = parseInt(contextInput?.value, 10) || inferDefaultContextWindow(model);
 
   currentDialogModels.push({ alias, model, contextWindow });
   renderCurrentDialogModels();

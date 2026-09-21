@@ -500,6 +500,12 @@ export class ChannelDispatcher {
     if (message.executionContext !== undefined) {
       request.executionContext = message.executionContext;
     }
+    if (message.history !== undefined && message.history.length > 0) {
+      request.history = message.history;
+    }
+    if (message.systemPrompt !== undefined) {
+      request.systemPrompt = message.systemPrompt;
+    }
 
     let outcome: TaskOutcome | undefined;
     let failure: unknown;

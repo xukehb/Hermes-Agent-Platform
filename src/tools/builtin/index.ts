@@ -21,6 +21,31 @@ import { hostSysinfoTool } from './host-tools.js';
 import { diskCleanupTool, ipLookupTool } from './cleanup-tools.js';
 import { generateImageTool } from './image-tools.js';
 import { webSearchTool } from './web-search.js';
+import { goalTrackerTool } from './goal-tracker-tool.js';
+import { activateSkillTool } from './skill-tool.js';
+import {
+  browserOpenTool,
+  browserNavigateTool,
+  browserScreenshotTool,
+  browserClickTool,
+  browserTypeTool,
+  browserGetContentTool,
+  browserEvaluateTool,
+  browserScrollTool,
+  browserCloseTool,
+} from './browser-tools.js';
+import {
+  desktopScreenshotTool,
+  desktopScreenSizeTool,
+  desktopMouseMoveTool,
+  desktopMouseClickTool,
+  desktopMouseDragTool,
+  desktopMouseScrollTool,
+  desktopKeyboardTypeTool,
+  desktopKeyboardPressTool,
+  desktopWindowListTool,
+  desktopWindowFocusTool,
+} from './desktop-tools.js';
 
 export const BUILTIN_TOOL_MODULES: readonly ToolModule[] = [
   shellTool,
@@ -44,6 +69,27 @@ export const BUILTIN_TOOL_MODULES: readonly ToolModule[] = [
   ipLookupTool,
   generateImageTool,
   webSearchTool,
+  goalTrackerTool,
+  activateSkillTool,
+  browserOpenTool,
+  browserNavigateTool,
+  browserScreenshotTool,
+  browserClickTool,
+  browserTypeTool,
+  browserGetContentTool,
+  browserEvaluateTool,
+  browserScrollTool,
+  browserCloseTool,
+  desktopScreenshotTool,
+  desktopScreenSizeTool,
+  desktopMouseMoveTool,
+  desktopMouseClickTool,
+  desktopMouseDragTool,
+  desktopMouseScrollTool,
+  desktopKeyboardTypeTool,
+  desktopKeyboardPressTool,
+  desktopWindowListTool,
+  desktopWindowFocusTool,
 ];
 
 /** 返回内置工具的新数组，避免调用方改动共享常量。 */
@@ -73,6 +119,27 @@ export {
   ipLookupTool,
   generateImageTool,
   webSearchTool,
+  goalTrackerTool,
+  activateSkillTool,
+  browserOpenTool,
+  browserNavigateTool,
+  browserScreenshotTool,
+  browserClickTool,
+  browserTypeTool,
+  browserGetContentTool,
+  browserEvaluateTool,
+  browserScrollTool,
+  browserCloseTool,
+  desktopScreenshotTool,
+  desktopScreenSizeTool,
+  desktopMouseMoveTool,
+  desktopMouseClickTool,
+  desktopMouseDragTool,
+  desktopMouseScrollTool,
+  desktopKeyboardTypeTool,
+  desktopKeyboardPressTool,
+  desktopWindowListTool,
+  desktopWindowFocusTool,
 };
 export { applyHunks, parsePatch } from './patch-envelope.js';
 export type { PatchHunk, PatchLine, PatchOperation } from './patch-envelope.js';

@@ -43,6 +43,28 @@ import { assertFitsContext, compactHistory, shouldCompact } from './compactor.js
 import type { ModelPlan } from './router.js';
 import { planModelChain, planUtilityModel } from './router.js';
 import type { LoopRequest, LoopResult, StopReason, TaskEvent } from './types.js';
+import { getTracker } from '../tools/builtin/goal-tracker-tool.js';
+import { HookManager } from './hooks/hook-manager.js';
+
+const PLAN_MODE_READ_ONLY_TOOLS = new Set([
+  'read_file',
+  'list_dir',
+  'search',
+  'http_fetch',
+  'find_definition',
+  'find_references',
+  'list_symbols',
+  'host_sysinfo',
+  'remote_sysinfo',
+  'remote_list_servers',
+  'ip_lookup',
+  'web_search',
+  'activate_skill',
+  'browser_get_content',
+  'desktop_screen_size',
+  'desktop_screenshot',
+  'desktop_window_list',
+]);
 
 /** 单轮请求的解析产物。 */
 interface TurnOutcome {
@@ -142,6 +164,7 @@ export class AgentLoop {
     let finishReason: FinishReason = 'stop';
     let finalText = '';
     let finalReasoning = '';
+    let hasCompacted = false;
 
     this.emitProtocolTrace(request, plan);
 
@@ -152,9 +175,13 @@ export class AgentLoop {
 
       // 压缩判断放在每轮请求前：工具输出是上下文膨胀的主因，
       // 上一轮回灌完就可能越线，等到发请求被拒再处理已经浪费一次往返。
-      history = await this.ensureContextFits(request, plan, history, usage, (extra) => {
+      const contextFit = await this.ensureContextFits(request, plan, history, usage, (extra) => {
         usage = addUsage(usage, extra);
       });
+      history = contextFit.history;
+      if (contextFit.compacted) {
+        hasCompacted = true;
+      }
 
       const turn = await this.requestTurn(request, chain, planIndex, history, definitions, {
         onSwitch: (from, to, reason) => {
@@ -216,6 +243,31 @@ export class AgentLoop {
       if (outcome.calls.length === 0) {
         finalText = outcome.text;
         if (outcome.text !== '') request.onEvent?.({ type: 'text', text: outcome.text });
+
+        // 目标模式支持：若当前任务处于 goalMode，且尚有未完成里程碑，且未达到最大轮数，则自动引导继续推进
+        if (request.goalMode && iterations < agent.limits.maxIterations) {
+          const tracker = getTracker(request.taskId);
+          const plan = tracker?.getPlan();
+          const hasIncomplete = plan && plan.status !== 'completed' && plan.status !== 'failed' && plan.milestones.some((m) => m.status !== 'completed');
+          if (hasIncomplete) {
+            const currentM = plan.milestones.find((m) => m.status === 'in_progress') || plan.milestones.find((m) => m.status === 'pending');
+            const promptHint = '【目标模式自动推进】检测到总目标尚未达成，当前进行中里程碑：[' + (currentM?.title || '下一阶段')
+              + ']。请继续使用相关工具执行动作以推进该里程碑，或在所有里程碑完成后调用 goal_tracker(action: "complete_goal") 总结交付。';
+            const followUpMessage: AgentMessage = {
+              role: 'user',
+              content: promptHint,
+              createdAt: new Date().toISOString(),
+            };
+            history.push(followUpMessage);
+            produced.push(followUpMessage);
+            request.onEvent?.({
+              type: 'notice',
+              message: '目标模式推进中：正在执行里程碑 [' + (currentM?.title || '下一阶段') + ']...',
+            });
+            continue;
+          }
+        }
+
         stopReason = 'stop';
         break;
       }
@@ -256,6 +308,7 @@ export class AgentLoop {
       text: finalText,
       reasoning: finalReasoning,
       messages: produced,
+      ...(hasCompacted ? { compacted: true, fullHistory: history } : {}),
       usage,
       iterations,
       model: plan.fullName,
@@ -328,14 +381,14 @@ export class AgentLoop {
     history: AgentMessage[],
     _usage: TokenUsage,
     addExtraUsage: (usage: TokenUsage) => void,
-  ): Promise<AgentMessage[]> {
+  ): Promise<{ history: AgentMessage[]; compacted: boolean }> {
     const decision = shouldCompact(
       history,
       request.systemPrompt,
       plan.contextWindow,
       request.agent.limits.compactThreshold,
     );
-    if (!decision.needed) return history;
+    if (!decision.needed) return { history, compacted: false };
 
     const utility = planUtilityModel(this.deps.resolver, request.agent);
     request.onEvent?.({
@@ -362,7 +415,7 @@ export class AgentLoop {
       },
     });
     assertFitsContext(compacted.estimated, plan.contextWindow, plan.fullName);
-    return compacted.history;
+    return { history: compacted.history, compacted: true };
   }
 
   /** 执行一轮里的全部工具调用，并把参数非法的调用直接短路回灌。 */
@@ -407,9 +460,62 @@ export class AgentLoop {
         results.push(failed);
         continue;
       }
+
+      // 规划模式拦截非只读工具
+      if (request.planMode && !PLAN_MODE_READ_ONLY_TOOLS.has(call.name)) {
+        const blockedPlanResult: ToolResult = {
+          callId: call.id,
+          name: call.name,
+          content: `【规划模式拦截】当前处于只读规划模式（Plan Mode），严禁调用写操作或系统变更工具 "${call.name}"。请使用只读工具深入调研，并向用户输出包含实施计划与验证方案的 Markdown 报告。`,
+          isError: true,
+        };
+        request.onEvent?.({ type: 'tool_start', name: call.name, args: call.args });
+        request.onEvent?.({ type: 'tool_end', result: blockedPlanResult });
+        results.push(blockedPlanResult);
+        continue;
+      }
+
+      // 触发 pre_tool 钩子（含沙箱越界与高危指令防护）
+      const hookCheck = await HookManager.getInstance().triggerPreTool({
+        taskId: request.taskId,
+        call: { name: call.name, args: call.args },
+        workspace: request.agent.workspace || process.cwd(),
+      });
+      if (!hookCheck.allow) {
+        const blockedHookResult: ToolResult = {
+          callId: call.id,
+          name: call.name,
+          content: `【安全沙箱/钩子拦截】${hookCheck.reason || '该工具调用未通过安全审查已被拒绝'}`,
+          isError: true,
+        };
+        request.onEvent?.({ type: 'tool_start', name: call.name, args: call.args });
+        request.onEvent?.({ type: 'tool_end', result: blockedHookResult });
+        results.push(blockedHookResult);
+        continue;
+      }
+
       request.onEvent?.({ type: 'tool_start', name: call.name, args: call.args });
       const result = await executor.execute(call, ctx);
       request.onEvent?.({ type: 'tool_end', result });
+      void HookManager.getInstance().triggerPostTool(
+        {
+          taskId: request.taskId,
+          name: call.name,
+          isError: Boolean(result.isError),
+          contentLength: result.content.length,
+        },
+        request.agent.workspace,
+      );
+      if (call.name === 'goal_tracker') {
+        const tracker = getTracker(request.taskId);
+        if (tracker) {
+          request.onEvent?.({
+            type: 'goal_event',
+            action: typeof call.args?.action === 'string' ? call.args.action : 'update',
+            data: tracker.getPlan() as unknown as Record<string, unknown>,
+          });
+        }
+      }
       results.push(result);
     }
     return results;

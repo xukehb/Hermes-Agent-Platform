@@ -40,6 +40,27 @@ export const BUILTIN_TOOL_NAMES = [
   'ip_lookup',
   'generate_image',
   'web_search',
+  'goal_tracker',
+  'activate_skill',
+  'browser_open',
+  'browser_navigate',
+  'browser_screenshot',
+  'browser_click',
+  'browser_type',
+  'browser_get_content',
+  'browser_evaluate',
+  'browser_scroll',
+  'browser_close',
+  'desktop_screenshot',
+  'desktop_screen_size',
+  'desktop_mouse_move',
+  'desktop_mouse_click',
+  'desktop_mouse_drag',
+  'desktop_mouse_scroll',
+  'desktop_keyboard_type',
+  'desktop_keyboard_press',
+  'desktop_window_list',
+  'desktop_window_focus',
 ] as const;
 
 export type BuiltinToolName = (typeof BUILTIN_TOOL_NAMES)[number];
@@ -50,9 +71,28 @@ export type BuiltinToolName = (typeof BUILTIN_TOOL_NAMES)[number];
  */
 export const TOOL_PROFILES: Record<ToolProfileName, readonly BuiltinToolName[]> = {
   minimal: ['read_file', 'list_dir'],
-  standard: ['read_file', 'write_file', 'list_dir', 'search', 'http_fetch', 'web_search', 'open_external', 'remote_list_servers', 'find_definition', 'find_references', 'list_symbols', 'host_sysinfo', 'disk_cleanup', 'ip_lookup', 'generate_image'],
-  coding: ['read_file', 'write_file', 'list_dir', 'search', 'shell', 'open_external', 'apply_patch', 'spawn_subagent', 'remote_exec', 'remote_sysinfo', 'remote_list_servers', 'remote_upgrade_daemon', 'find_definition', 'find_references', 'list_symbols', 'host_sysinfo', 'disk_cleanup', 'ip_lookup', 'generate_image'],
-  research: ['read_file', 'write_file', 'list_dir', 'search', 'http_fetch', 'web_search', 'open_external', 'spawn_subagent', 'remote_list_servers', 'find_definition', 'find_references', 'list_symbols', 'host_sysinfo', 'disk_cleanup', 'ip_lookup', 'generate_image'],
+  standard: [
+    'read_file', 'write_file', 'list_dir', 'search', 'http_fetch', 'web_search', 'open_external',
+    'remote_list_servers', 'find_definition', 'find_references', 'list_symbols', 'host_sysinfo',
+    'disk_cleanup', 'ip_lookup', 'generate_image', 'goal_tracker', 'activate_skill', 'browser_open', 'browser_navigate',
+    'browser_screenshot', 'browser_get_content', 'desktop_screenshot', 'desktop_screen_size',
+  ],
+  coding: [
+    'read_file', 'write_file', 'list_dir', 'search', 'shell', 'open_external', 'apply_patch',
+    'spawn_subagent', 'remote_exec', 'remote_sysinfo', 'remote_list_servers', 'remote_upgrade_daemon',
+    'find_definition', 'find_references', 'list_symbols', 'host_sysinfo', 'disk_cleanup', 'ip_lookup',
+    'generate_image', 'goal_tracker', 'activate_skill', 'browser_open', 'browser_navigate', 'browser_screenshot',
+    'browser_click', 'browser_type', 'browser_get_content', 'browser_evaluate', 'browser_scroll',
+    'browser_close', 'desktop_screenshot', 'desktop_screen_size', 'desktop_mouse_move', 'desktop_mouse_click',
+    'desktop_mouse_drag', 'desktop_mouse_scroll', 'desktop_keyboard_type', 'desktop_keyboard_press',
+    'desktop_window_list', 'desktop_window_focus',
+  ],
+  research: [
+    'read_file', 'write_file', 'list_dir', 'search', 'http_fetch', 'web_search', 'open_external',
+    'spawn_subagent', 'remote_list_servers', 'find_definition', 'find_references', 'list_symbols',
+    'host_sysinfo', 'disk_cleanup', 'ip_lookup', 'generate_image', 'goal_tracker', 'activate_skill', 'browser_open',
+    'browser_navigate', 'browser_screenshot', 'browser_get_content', 'desktop_screenshot',
+  ],
   full: [...BUILTIN_TOOL_NAMES],
 };
 
@@ -363,6 +403,16 @@ export const AGENT_TEMPLATES: Record<string, AgentEntryConfig> = {
     capabilities: ['vision', 'research'],
     tools: { profile: 'standard', allow: ['read_file', 'write_file', 'http_fetch'] },
     identity: { emoji: 'IMG' },
+  },
+  automator: {
+    name: '自动化操控智能体',
+    description: '通过浏览器与桌面键鼠全套操控能力，自主执行长任务、自动化测试与跨软件协作',
+    model: { primary: 'anthropic/claude-sonnet-4-5', fallbacks: ['openai/gpt-5-codex', 'deepseek/deepseek-chat'] },
+    protocol: 'anthropic',
+    capabilities: ['tools', 'vision', 'shell', 'code'],
+    tools: { profile: 'full' },
+    runtime: { mode: 'persistent' },
+    identity: { emoji: 'BOT' },
   },
 };
 

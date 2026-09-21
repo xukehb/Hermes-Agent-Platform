@@ -56,6 +56,10 @@ export interface InboundMessage {
   defaultAgent?: string | undefined;
   /** 已认证 Bot 操作者对应的可信执行上下文。 */
   executionContext?: TaskExecutionContext | undefined;
+  /** 通道或联系人上下文多轮历史，避免依赖可能漂移的 sessionKey */
+  history?: AgentMessage[] | undefined;
+  /** 通道或联系人专属注入的最高优先级 System Prompt（如代管分身人设） */
+  systemPrompt?: string | undefined;
 }
 
 /**
