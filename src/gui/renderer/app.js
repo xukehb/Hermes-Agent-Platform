@@ -6,11 +6,54 @@
    - 深度集成 Git 版本协同：分支探测、未提交文件审查、AI Commit、Push 推送与 Pull 拉取
    ========================================================================== */
 
+// --- 背景智能取色的全局状态 ---
+// 这些声明必须位于文件顶部：主题初始化会回调 refreshWallpaperDerivedTheme，
+// 若放在文件中后段会触发 let/const 的暂时性死区错误并中断整个脚本初始化。
+const WALLPAPER_ADAPTIVE_KEY = 'hap_wallpaper_adaptive';
+const WALLPAPER_ACCENT_CACHE = new Map();
+let wallpaperDeriveToken = 0;
+
+// 预设壁纸没有可采样图片，以其渐变主色作为取色基准
+const WALLPAPER_PRESET_ACCENTS = {
+  nebula: '#7c6cff',
+  cyber: '#22a7e8',
+  aurora: '#10b981',
+  sunset: '#f59e0b',
+  mesh: '#8b7cf6',
+  carbon: '#64748b',
+};
+
+const WALLPAPER_DERIVED_VARS = [
+  '--wp-accent',
+  '--wp-accent-hover',
+  '--wp-accent-active',
+  '--wp-accent-subtle',
+  '--wp-accent-border',
+  '--wp-accent-glow',
+  '--wp-on-accent',
+  '--wp-on-wallpaper',
+  '--wp-on-wallpaper-muted',
+];
+
 const $ = (id) => document.getElementById(id);
 
 if (window.hap?.isMac || (typeof navigator !== 'undefined' && (navigator.userAgent.includes('Mac') || navigator.platform?.includes('Mac')))) {
   document.documentElement.classList.add('platform-mac');
   if (document.body) document.body.classList.add('platform-mac');
+}
+
+// 用户若开启系统「减弱动态效果」，滚动等动效应直接跳到终点
+function prefersReducedMotion() {
+  return typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function scrollToElementSmooth(el, options) {
+  if (!el || typeof el.scrollIntoView !== 'function') return;
+  const opts = Object.assign({}, options || {});
+  opts.behavior = prefersReducedMotion() ? 'auto' : 'smooth';
+  el.scrollIntoView(opts);
 }
 
 function esc(val) {
@@ -1610,21 +1653,235 @@ function exportCurrentSessionToMarkdown() {
 $('exportChatMarkdownBtn')?.addEventListener('click', exportCurrentSessionToMarkdown);
 
 // ==========================================================================
-// 全局多主题系统 (6 大专业色彩设计主题)
+// 全局多主题系统 (风格主题 + 自定义强调色)
 // ==========================================================================
 
-// 仅保留浅色 / 深色两套中性主题，移除历史上的五套高饱和彩虹主题
-const AVAILABLE_THEMES = ['light', 'dark'];
+// 用户对界面风格的偏好差异很大：企业级中性主题作为默认，同时保留深色 / 浅色
+// 以及 5 套高辨识度风格主题；再提供一个「自定义主题」，由用户挑选强调色与底色。
+const AVAILABLE_THEMES = ['light', 'dark', 'cyber', 'aurora', 'sunset', 'glass', 'vibrant', 'custom'];
 const THEME_NAMES = {
   light: '浅色',
-  dark: '深色'
+  dark: '深色',
+  cyber: '赛博霓虹',
+  aurora: '极光松岭',
+  sunset: '落日熔金',
+  glass: '流光玻璃',
+  vibrant: '活力幻彩',
+  custom: '自定义主题'
 };
+
+const CUSTOM_THEME_STORAGE = {
+  accent: 'hap_theme_custom_accent',
+  base: 'hap_theme_custom_base'
+};
+const DEFAULT_CUSTOM_ACCENT = '#2563eb';
+// 自定义主题会覆盖这些由强调色派生的令牌；切回内置主题时必须全部清除，
+// 否则内联变量会一直盖住主题自带的色板。
+const CUSTOM_ACCENT_VARS = [
+  '--primary',
+  '--primary-hover',
+  '--primary-active',
+  '--primary-subtle',
+  '--primary-border',
+  '--primary-black',
+  '--primary-black-hover',
+  '--accent',
+  '--accent-hover',
+  '--accent-soft',
+  '--accent-border',
+  '--accent-glow',
+  '--border-focus',
+  '--blue-badge'
+];
+
+function normalizeHexColor(value) {
+  const match = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(value == null ? '' : value).trim());
+  if (!match) return null;
+  let hex = match[1];
+  if (hex.length === 3) hex = hex.split('').map((c) => c + c).join('');
+  return '#' + hex.toLowerCase();
+}
+
+function hexToRgb(hex) {
+  const normalized = normalizeHexColor(hex) || DEFAULT_CUSTOM_ACCENT;
+  return [
+    parseInt(normalized.slice(1, 3), 16),
+    parseInt(normalized.slice(3, 5), 16),
+    parseInt(normalized.slice(5, 7), 16)
+  ];
+}
+
+function rgbToHsl(r, g, b) {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h;
+  if (max === rn) h = ((gn - bn) / d + (gn < bn ? 6 : 0)) / 6;
+  else if (max === gn) h = ((bn - rn) / d + 2) / 6;
+  else h = ((rn - gn) / d + 4) / 6;
+  return [h, s, l];
+}
+
+function hslToHex(h, s, l) {
+  const hue2rgb = (p, q, t) => {
+    let tt = t;
+    if (tt < 0) tt += 1;
+    if (tt > 1) tt -= 1;
+    if (tt < 1 / 6) return p + (q - p) * 6 * tt;
+    if (tt < 1 / 2) return q;
+    if (tt < 2 / 3) return p + (q - p) * (2 / 3 - tt) * 6;
+    return p;
+  };
+  let r;
+  let g;
+  let b;
+  if (s === 0) {
+    r = l;
+    g = l;
+    b = l;
+  } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
+  }
+  const toHex = (v) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, '0');
+  return '#' + toHex(r) + toHex(g) + toHex(b);
+}
+
+// 亮度平移：用于由单一强调色派生 hover / active 变体，保证同色系且对比度可控。
+function shiftColorLightness(hex, deltaPercent) {
+  const [r, g, b] = hexToRgb(hex);
+  const [h, s, l] = rgbToHsl(r, g, b);
+  const nextL = Math.min(1, Math.max(0, l + deltaPercent / 100));
+  return hslToHex(h, s, nextL);
+}
+
+function colorWithAlpha(hex, alpha) {
+  const [r, g, b] = hexToRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function getCustomThemeAccent() {
+  const saved = normalizeHexColor(localStorage.getItem(CUSTOM_THEME_STORAGE.accent));
+  return saved || DEFAULT_CUSTOM_ACCENT;
+}
+
+function getCustomThemeBase() {
+  return localStorage.getItem(CUSTOM_THEME_STORAGE.base) === 'light' ? 'light' : 'dark';
+}
+
+// 由基础色 + 底色推导整套强调色令牌，使按钮、选中态、焦点描边等组件
+// 自动换上用户挑选的颜色，而不是各自硬编码。
+function buildCustomAccentVars(accent, base) {
+  const isDark = base !== 'light';
+  const hover = shiftColorLightness(accent, isDark ? 9 : -9);
+  const active = shiftColorLightness(accent, isDark ? -9 : 7);
+  return {
+    '--primary': accent,
+    '--primary-hover': hover,
+    '--primary-active': active,
+    '--primary-subtle': colorWithAlpha(accent, isDark ? 0.18 : 0.10),
+    '--primary-border': colorWithAlpha(accent, isDark ? 0.40 : 0.32),
+    '--primary-black': accent,
+    '--primary-black-hover': hover,
+    '--accent': accent,
+    '--accent-hover': hover,
+    '--accent-soft': colorWithAlpha(accent, isDark ? 0.18 : 0.10),
+    '--accent-border': colorWithAlpha(accent, isDark ? 0.40 : 0.32),
+    '--accent-glow': colorWithAlpha(accent, 0.26),
+    '--border-focus': accent,
+    '--blue-badge': accent
+  };
+}
+
+function clearCustomThemeVars() {
+  CUSTOM_ACCENT_VARS.forEach((name) => document.documentElement.style.removeProperty(name));
+}
+
+function syncCustomThemeControls() {
+  const accent = getCustomThemeAccent();
+  const base = getCustomThemeBase();
+  document.querySelectorAll('.custom-theme-color-input').forEach((input) => {
+    if (normalizeHexColor(input.value) !== accent) input.value = accent;
+  });
+  document.querySelectorAll('.custom-theme-hex-input').forEach((input) => {
+    if (document.activeElement !== input) input.value = accent;
+  });
+  document.querySelectorAll('.custom-theme-base-btn').forEach((btn) => {
+    const isActive = btn.getAttribute('data-custom-base') === base;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-pressed', String(isActive));
+  });
+}
+
+function setCustomThemeAccent(value, { apply = true } = {}) {
+  const normalized = normalizeHexColor(value);
+  if (!normalized) return false;
+  localStorage.setItem(CUSTOM_THEME_STORAGE.accent, normalized);
+  syncCustomThemeControls();
+  if (apply) applyTheme('custom', false);
+  return true;
+}
+
+function setCustomThemeBase(base) {
+  localStorage.setItem(CUSTOM_THEME_STORAGE.base, base === 'light' ? 'light' : 'dark');
+  syncCustomThemeControls();
+  if ((document.documentElement.getAttribute('data-theme') || '') === 'custom') {
+    applyTheme('custom', false);
+  }
+  // 自定义主题自带中性底色变化，需要与背景适配层重新对账
+  if (typeof refreshWallpaperDerivedTheme === 'function') refreshWallpaperDerivedTheme();
+}
+
+function initCustomThemeControls() {
+  document.querySelectorAll('.custom-theme-color-input').forEach((input) => {
+    input.addEventListener('input', (e) => setCustomThemeAccent(e.target.value, { apply: true }));
+    input.addEventListener('change', (e) => setCustomThemeAccent(e.target.value, { apply: true }));
+  });
+  document.querySelectorAll('.custom-theme-hex-input').forEach((input) => {
+    input.addEventListener('change', (e) => {
+      if (!setCustomThemeAccent(e.target.value, { apply: true })) {
+        e.target.value = getCustomThemeAccent();
+      }
+    });
+  });
+  document.querySelectorAll('.custom-theme-base-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setCustomThemeBase(btn.getAttribute('data-custom-base'));
+      showToast(
+        updateText(
+          btn.getAttribute('data-custom-base') === 'light' ? 'themeModal.baseLightToast' : 'themeModal.baseDarkToast',
+          btn.getAttribute('data-custom-base') === 'light' ? '自定义主题底色：浅色' : '自定义主题底色：深色'
+        ),
+        'info'
+      );
+    });
+  });
+  syncCustomThemeControls();
+}
+
+// 主题名称与切换提示需要跟随当前界面语言，直接拼接中文字符串会让英文界面里
+// 混进中文提示。
+function themeSwitchedMessage(themeId) {
+  const label = updateText('theme.' + themeId, THEME_NAMES[themeId] || themeId);
+  const template = updateText('theme.switchedTo', '已切换至 {theme} 主题');
+  return template.replace('{theme}', label);
+}
 
 function initTheme() {
   const saved = localStorage.getItem('hap_theme');
   const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const theme = saved || (prefersDark ? 'dark' : 'light');
+  const theme = AVAILABLE_THEMES.includes(saved) ? saved : (prefersDark ? 'dark' : 'light');
   applyTheme(theme, false);
+  initCustomThemeControls();
 
   try {
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
@@ -1665,10 +1922,40 @@ function initTheme() {
   });
 }
 
+// 切换主题时临时禁用过渡：否则整页元素会一起做补间动画，切换显得拖沓且有闪烁感
+function suppressThemeTransitions() {
+  const root = document.documentElement;
+  root.classList.add('theme-switching');
+  // 读取布局属性强制回流，确保禁用过渡的规则在本次主题改写之前生效
+  void root.offsetHeight;
+  const release = () => root.classList.remove('theme-switching');
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(() => requestAnimationFrame(release));
+  } else {
+    setTimeout(release, 32);
+  }
+}
+
 function applyTheme(theme, showNotice = false) {
   const finalTheme = AVAILABLE_THEMES.includes(theme) ? theme : 'dark';
-  document.documentElement.setAttribute('data-theme', finalTheme);
+  const root = document.documentElement;
+  suppressThemeTransitions();
+
+  if (finalTheme === 'custom') {
+    const base = getCustomThemeBase();
+    const vars = buildCustomAccentVars(getCustomThemeAccent(), base);
+    Object.keys(vars).forEach((name) => root.style.setProperty(name, vars[name]));
+    root.setAttribute('data-custom-base', base);
+  } else {
+    clearCustomThemeVars();
+    root.removeAttribute('data-custom-base');
+  }
+
+  root.setAttribute('data-theme', finalTheme);
   localStorage.setItem('hap_theme', finalTheme);
+
+  // 自定义主题色板可编辑，选中态需要实时同步输入控件
+  syncCustomThemeControls();
 
   // 更新所有主题卡片的高亮状态
   document.querySelectorAll('.theme-select-card').forEach((card) => {
@@ -1685,8 +1972,11 @@ function applyTheme(theme, showNotice = false) {
   updateThemeIcons(finalTheme);
 
   if (showNotice) {
-    showToast('已切换至 ' + (THEME_NAMES[finalTheme] || finalTheme) + ' 主题', 'info');
+    showToast(themeSwitchedMessage(finalTheme), 'info');
   }
+
+  // 背景自动取色可能派生出 «背景-主题» 联动变量，主题变化后需重新对账
+  if (typeof refreshWallpaperDerivedTheme === 'function') refreshWallpaperDerivedTheme();
 }
 
 function cycleNextTheme() {
@@ -1772,7 +2062,7 @@ function initOpacityAndGlass() {
       if (typeof modal.showModal === 'function') modal.showModal();
       else modal.style.display = 'block';
       setTimeout(() => {
-        document.querySelector('.theme-wallpaper-section')?.scrollIntoView({ behavior: 'smooth'});
+        scrollToElementSmooth(document.querySelector('.theme-wallpaper-section'));
       }, 50);
     }
   });
@@ -1844,6 +2134,19 @@ function initOpacityAndGlass() {
       } catch (err) {
         console.warn('[i18n] 重新渲染欢迎页失败:', err);
       }
+    }
+
+    // 下拉框文案由代码拼装（模型名 + 服务商 + 状态），词典无法整串匹配，
+    // 必须在语言切换后重新拼装，否则会停留在上一次的语言。
+    try {
+      if (typeof fillSelects === 'function') fillSelects();
+    } catch (err) {
+      console.warn('[i18n] 重新渲染模型下拉框失败:', err);
+    }
+    try {
+      if (typeof initPresetSelect === 'function') initPresetSelect();
+    } catch (err) {
+      console.warn('[i18n] 重新渲染预置模板下拉框失败:', err);
     }
   });
 }
@@ -1950,7 +2253,7 @@ function initWallpaperSystem() {
           if (typeof modal.showModal === 'function') modal.showModal();
           else modal.style.display = 'block';
           setTimeout(() => {
-            document.querySelector('.theme-wallpaper-section')?.scrollIntoView({ behavior: 'smooth'});
+            scrollToElementSmooth(document.querySelector('.theme-wallpaper-section'));
           }, 50);
         }
       } else {
@@ -1970,6 +2273,7 @@ function initWallpaperSystem() {
     try {
       showToast('正在优化并加载背景图片...', 'info');
       const dataUrl = await compressImageForWallpaper(file);
+      WALLPAPER_ACCENT_CACHE.clear();
       localStorage.setItem('hap_wallpaper_custom', dataUrl);
       const customPreview = $('customWallpaperPreview');
       if (customPreview) {
@@ -1993,6 +2297,7 @@ function initWallpaperSystem() {
       showToast('请输入有效的图片链接地址', 'warning');
       return;
     }
+    WALLPAPER_ACCENT_CACHE.clear();
     localStorage.setItem('hap_wallpaper_custom', url);
     const customPreview = $('customWallpaperPreview');
     if (customPreview) {
@@ -2010,6 +2315,22 @@ function initWallpaperSystem() {
       $('applyWallpaperUrlBtn')?.click();
     }
   });
+
+  // 背景智能取色开关
+  const adaptiveToggle = $('wallpaperAdaptiveToggle');
+  if (adaptiveToggle) {
+    adaptiveToggle.checked = isWallpaperAdaptiveEnabled();
+    adaptiveToggle.addEventListener('change', (e) => {
+      localStorage.setItem(WALLPAPER_ADAPTIVE_KEY, e.target.checked ? '1' : '0');
+      refreshWallpaperDerivedTheme();
+      showToast(
+        e.target.checked
+          ? updateText('wallpaper.adaptiveOnToast', '已开启背景智能取色，组件配色将跟随背景主色')
+          : updateText('wallpaper.adaptiveOffToast', '已关闭背景智能取色，组件配色恢复主题默认'),
+        'info'
+      );
+    });
+  }
 
   // 清除壁纸按钮
   $('clearWallpaperBtn')?.addEventListener('click', () => {
@@ -2092,6 +2413,9 @@ function applyWallpaper(wallpaperId, save = true) {
   if (save) {
     localStorage.setItem('hap_wallpaper_id', validId);
   }
+
+  // 壁纸变化后重新提取主色，驱动组件强调色与冲突文本色
+  refreshWallpaperDerivedTheme();
 }
 
 function setWallpaperOpacity(val, save = true) {
@@ -2102,6 +2426,7 @@ function setWallpaperOpacity(val, save = true) {
   const range = $('wallpaperOpacityRange');
   if (range && range.value !== String(num)) range.value = String(num);
   if (save) localStorage.setItem('hap_wallpaper_opacity', String(num));
+  refreshWallpaperDerivedTheme();
 }
 
 function setWallpaperBlur(val, save = true) {
@@ -2122,6 +2447,7 @@ function setWallpaperDim(val, save = true) {
   const range = $('wallpaperDimRange');
   if (range && range.value !== String(num)) range.value = String(num);
   if (save) localStorage.setItem('hap_wallpaper_dim', String(num));
+  refreshWallpaperDerivedTheme();
 }
 
 function setWallpaperFit(val, save = true) {
@@ -2189,6 +2515,277 @@ function compressImageForWallpaper(file) {
       img.src = reader.result;
     };
     reader.readAsDataURL(file);
+  });
+}
+
+// ==========================================================================
+// 背景智能取色 (Wallpaper Adaptive Accent)
+// 上传/选择背景后自动提取主色，派生按钮等组件强调色，
+// 并按背景明暗自动选择白色或黑色冲突文本色，保证可读性。
+// ==========================================================================
+
+function isWallpaperAdaptiveEnabled() {
+  return localStorage.getItem(WALLPAPER_ADAPTIVE_KEY) !== '0';
+}
+
+function wpRelativeLuminance(r, g, b) {
+  const channel = (v) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}
+
+function wpHexToRgb(hex) {
+  const normalized = normalizeHexColor(hex);
+  if (!normalized) return null;
+  return {
+    r: parseInt(normalized.slice(1, 3), 16),
+    g: parseInt(normalized.slice(3, 5), 16),
+    b: parseInt(normalized.slice(5, 7), 16),
+  };
+}
+
+function wpRgbToHsl(r, g, b) {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h;
+  if (max === rn) h = ((gn - bn) / d) % 6;
+  else if (max === gn) h = (bn - rn) / d + 2;
+  else h = (rn - gn) / d + 4;
+  h *= 60;
+  if (h < 0) h += 360;
+  return [h, s, l];
+}
+
+function wpHslToRgb(h, s, l) {
+  const hn = ((h % 360) + 360) % 360 / 360;
+  if (s === 0) {
+    const v = Math.round(l * 255);
+    return { r: v, g: v, b: v };
+  }
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const hue2rgb = (t) => {
+    let tn = t;
+    if (tn < 0) tn += 1;
+    if (tn > 1) tn -= 1;
+    if (tn < 1 / 6) return p + (q - p) * 6 * tn;
+    if (tn < 1 / 2) return q;
+    if (tn < 2 / 3) return p + (q - p) * (2 / 3 - tn) * 6;
+    return p;
+  };
+  return {
+    r: Math.round(hue2rgb(hn + 1 / 3) * 255),
+    g: Math.round(hue2rgb(hn) * 255),
+    b: Math.round(hue2rgb(hn - 1 / 3) * 255),
+  };
+}
+
+function wpRgbToHex(r, g, b) {
+  const toHex = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+  return '#' + toHex(r) + toHex(g) + toHex(b);
+}
+
+// 白字与黑字谁的实际对比度更高就用谁（对比度交叉点约在相对亮度 0.179）
+function wpContrastTextForLuminance(luminance) {
+  const whiteContrast = 1.05 / (luminance + 0.05);
+  const blackContrast = (luminance + 0.05) / 0.05;
+  return whiteContrast >= blackContrast ? '#ffffff' : '#09090b';
+}
+
+function wpRgba(rgb, alpha) {
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+}
+
+// 从缩略图像素中提取主色（按饱和度与中间调加权聚类），并统计整体亮度
+function analyzeWallpaperPixels(data) {
+  const buckets = new Map();
+  let luminanceSum = 0;
+  let pixelCount = 0;
+
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 128) continue;
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const luma = wpRelativeLuminance(r, g, b);
+    luminanceSum += luma;
+    pixelCount += 1;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    // 跳过死黑与死白，它们几乎不携带"主题色"信息
+    if (max < 26 || min > 236) continue;
+
+    const sat = max === 0 ? 0 : (max - min) / max;
+    const toneWeight = Math.max(0.08, 1 - Math.abs(luma - 0.5) * 1.7);
+    const weight = (0.18 + sat * 1.7) * toneWeight;
+    const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
+    const bucket = buckets.get(key) || { r: 0, g: 0, b: 0, count: 0, score: 0 };
+    bucket.r += r;
+    bucket.g += g;
+    bucket.b += b;
+    bucket.count += 1;
+    bucket.score += weight;
+    buckets.set(key, bucket);
+  }
+
+  const averageLuminance = pixelCount ? luminanceSum / pixelCount : 0.1;
+  if (!buckets.size) return { accent: null, averageLuminance, saturation: 0 };
+
+  // 取得分最高的若干色簇加权平均，避免单个噪点决定整站配色
+  const top = [...buckets.values()].sort((a, b) => b.score - a.score).slice(0, 4);
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  let total = 0;
+  top.forEach((bucket) => {
+    const avg = { r: bucket.r / bucket.count, g: bucket.g / bucket.count, b: bucket.b / bucket.count };
+    r += avg.r * bucket.score;
+    g += avg.g * bucket.score;
+    b += avg.b * bucket.score;
+    total += bucket.score;
+  });
+  const accent = { r: r / total, g: g / total, b: b / total };
+  const hsl = wpRgbToHsl(accent.r, accent.g, accent.b);
+  return { accent, averageLuminance, saturation: hsl[1] };
+}
+
+function sampleWallpaperImage(url) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const done = (result) => resolve(result);
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const size = 40;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, size, size);
+        const { data } = ctx.getImageData(0, 0, size, size);
+        done(analyzeWallpaperPixels(data));
+      } catch {
+        // 跨域图片会污染画布，无法读取像素时退回主题默认色
+        done(null);
+      }
+    };
+    img.onerror = () => done(null);
+    img.src = url;
+  });
+}
+
+// 依据当前主题底色与壁纸质感，生成整套派生变量
+function buildWallpaperDerivedVars(analysis, baseIsDark) {
+  const { accent, averageLuminance, saturation = 0 } = analysis;
+  const vars = {};
+
+  const opacity = Math.max(10, Math.min(100, Number(localStorage.getItem('hap_wallpaper_opacity')) || 45)) / 100;
+  const dim = Math.max(0, Math.min(90, Number(localStorage.getItem('hap_wallpaper_dim')) || 40)) / 100;
+  const backdropLuminance = baseIsDark ? 0.02 : 0.98;
+  const overlayLuminance = baseIsDark ? 0.05 : 0.95;
+  // 壁纸是半透明图层，需要先与底层背景合成，再叠加暗化遮罩，才能得到真实观感亮度
+  const compositeLuminance = averageLuminance * opacity + backdropLuminance * (1 - opacity);
+  const effectiveLuminance = compositeLuminance * (1 - dim) + overlayLuminance * dim;
+  const wallText = wpContrastTextForLuminance(effectiveLuminance);
+  vars['--wp-on-wallpaper'] = wallText;
+  vars['--wp-on-wallpaper-muted'] = wallText === '#ffffff' ? 'rgba(255, 255, 255, 0.78)' : 'rgba(9, 9, 11, 0.72)';
+
+  // 背景本身接近中性灰时，保留主题的中性强调色，不做无谓的染色
+  if (!accent || saturation < 0.12) return vars;
+
+  const [hue] = wpRgbToHsl(accent.r, accent.g, accent.b);
+  let [rawHue, rawSat, rawLight] = wpRgbToHsl(accent.r, accent.g, accent.b);
+  const sat = Math.min(0.86, Math.max(rawSat, 0.32));
+  const light = baseIsDark
+    ? Math.min(0.74, Math.max(rawLight, 0.54))
+    : Math.min(0.56, Math.max(rawLight, 0.34));
+  const main = wpHslToRgb(rawHue, sat, light);
+  const hover = wpHslToRgb(rawHue, sat, baseIsDark ? Math.min(0.84, light + 0.08) : Math.max(0.24, light - 0.06));
+  const active = wpHslToRgb(rawHue, sat, baseIsDark ? Math.max(0.3, light - 0.07) : Math.max(0.18, light - 0.1));
+  const onAccent = wpContrastTextForLuminance(wpRelativeLuminance(main.r, main.g, main.b));
+
+  vars['--wp-accent'] = wpRgbToHex(main.r, main.g, main.b);
+  vars['--wp-accent-hover'] = wpRgbToHex(hover.r, hover.g, hover.b);
+  vars['--wp-accent-active'] = wpRgbToHex(active.r, active.g, active.b);
+  vars['--wp-accent-subtle'] = wpRgba(main, baseIsDark ? 0.2 : 0.14);
+  vars['--wp-accent-border'] = wpRgba(main, baseIsDark ? 0.46 : 0.36);
+  vars['--wp-accent-glow'] = wpRgba(main, baseIsDark ? 0.32 : 0.18);
+  vars['--wp-on-accent'] = onAccent;
+  return vars;
+}
+
+function applyWallpaperDerivedVars(vars) {
+  const root = document.documentElement;
+  WALLPAPER_DERIVED_VARS.forEach((name) => {
+    if (vars && vars[name]) root.style.setProperty(name, vars[name]);
+    else root.style.removeProperty(name);
+  });
+  // 该标记是 CSS 派生规则的唯一开关，关闭取色时保证零视觉影响
+  if (vars) root.setAttribute('data-wp-adaptive', 'on');
+  else root.removeAttribute('data-wp-adaptive');
+}
+
+function getWallpaperColorSource(wallpaperId) {
+  if (wallpaperId === 'custom') {
+    const custom = localStorage.getItem('hap_wallpaper_custom');
+    return custom ? { kind: 'image', key: 'custom:' + custom.slice(0, 96) + ':' + custom.length, url: custom } : null;
+  }
+  const preset = WALLPAPER_PRESET_ACCENTS[wallpaperId];
+  return preset ? { kind: 'preset', key: 'preset:' + wallpaperId, hex: preset } : null;
+}
+
+// 主题切换、壁纸切换、透明度/遮罩调整后都需要重新对账派生色
+function refreshWallpaperDerivedTheme() {
+  const wallpaperId = localStorage.getItem('hap_wallpaper_id') || 'none';
+  const hasWallpaper = wallpaperId !== 'none' && !!document.body && document.body.classList.contains('has-wallpaper');
+  if (!hasWallpaper || !isWallpaperAdaptiveEnabled()) {
+    wallpaperDeriveToken += 1;
+    applyWallpaperDerivedVars(null);
+    return;
+  }
+
+  const baseIsDark = (document.documentElement.getAttribute('data-theme') || 'dark') !== 'light';
+  const source = getWallpaperColorSource(wallpaperId);
+  if (!source) {
+    applyWallpaperDerivedVars(null);
+    return;
+  }
+
+  const token = (wallpaperDeriveToken += 1);
+  const commit = (analysis) => {
+    if (token !== wallpaperDeriveToken) return;
+    applyWallpaperDerivedVars(buildWallpaperDerivedVars(analysis, baseIsDark));
+  };
+
+  if (source.kind === 'preset') {
+    const rgb = wpHexToRgb(source.hex);
+    commit({ accent: rgb, averageLuminance: wpRelativeLuminance(rgb.r, rgb.g, rgb.b) * 0.7, saturation: 0.6 });
+    return;
+  }
+
+  const cached = WALLPAPER_ACCENT_CACHE.get(source.key);
+  if (cached) {
+    commit(cached);
+    return;
+  }
+
+  sampleWallpaperImage(source.url).then((analysis) => {
+    if (!analysis) {
+      commit(null);
+      return;
+    }
+    WALLPAPER_ACCENT_CACHE.set(source.key, analysis);
+    commit(analysis);
   });
 }
 
@@ -4600,7 +5197,9 @@ function renderTelemetry() {
   }
   if (pill) {
     pill.classList.toggle('is-degraded', telemetry.status !== 'ok');
-    pill.title = telemetry.status === 'ok' ? '今日实时 Token 消耗' : 'Token 遥测降级，正在使用最近可用数据';
+    pill.title = telemetry.status === 'ok'
+      ? updateText('more.tokenTooltip', '今日实时 Token 消耗')
+      : updateText('more.tokenTooltipDegraded', 'Token 遥测降级，正在使用最近可用数据');
   }
 }
 
@@ -6102,7 +6701,8 @@ function fillSelects() {
       const p = providersMap.get(m.providerId);
       const isReady = p && p.healthStatus === 'ok';
       const statusText = isReady ? '就绪' : (p?.healthStatus === 'missing_credentials' ? '需配置 Key' : '需连通测试');
-      return `<option value="${esc(m.fullName || m.alias)}">${esc(m.alias)} (${esc(p?.name || m.providerId)} · ${statusText})</option>`;
+      const providerLabel = trSourceText(p?.name || m.providerId);
+      return `<option value="${esc(m.fullName || m.alias)}">${esc(m.alias)} (${esc(providerLabel)} · ${trSourceText(statusText)})</option>`;
     }).join('');
 
     if (previousModel && state.models.some((m) => (m.fullName || m.alias) === previousModel)) {
@@ -7110,9 +7710,9 @@ function initPresetSelect() {
   const options = ['<option value="">-- 选择预置模板（如 DeepSeek、Qwen、OpenAI、Anthropic、Ollama 等） --</option>'];
   Object.entries(categories).forEach(([categoryName, list]) => {
     if (list.length === 0) return;
-    options.push(`<optgroup label="${categoryName}">`);
+    options.push(`<optgroup label="${esc(trSourceText(categoryName))}">`);
     list.forEach(t => {
-      options.push(`<option value="${t.key}">${t.name} (${t.key})</option>`);
+      options.push(`<option value="${t.key}">${esc(trSourceText(t.name))} (${t.key})</option>`);
     });
     options.push(`</optgroup>`);
   });
@@ -10839,9 +11439,11 @@ function renderLocalHostView(info) {
             : 'color:var(--text-muted); background:var(--bg-subtle); border-color:var(--border-default); font-weight:600;';
           const rankBadge = `<span style="font-size:11px; ${rankTone} border:1px solid; border-radius:var(--radius-sm); min-width:24px; height:20px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">#${idx + 1}</span>`;
 
+          // 标题单独成串，源文案词典才能为「一键强制结束此进程 (PID: N)」生成插值规则
+          const killTitle = `一键强制结束此进程 (PID: ${p.pid})`;
           const actionBtn = isSelf
             ? '<span class="badge neutral" style="font-size:10.5px;padding:2px 8px;flex-shrink:0;" title="当前平台控制台运行主进程">当前平台</span>'
-            : `<button type="button" class="btn danger local-process-kill-btn" onclick="window.requestLocalProcessKill(${p.pid}, '${escJs(parsed.title)}', '${escJs(p.memoryFormatted)}')" style="font-size:11px;padding:3px 9px;font-weight:600;display:inline-flex;align-items:center;gap:3px;flex-shrink:0;cursor:pointer;" title="一键强制结束此进程 (PID: ${p.pid})">结束进程</button>`;
+            : `<button type="button" class="btn danger local-process-kill-btn" onclick="window.requestLocalProcessKill(${p.pid}, '${escJs(parsed.title)}', '${escJs(p.memoryFormatted)}')" style="font-size:11px;padding:3px 9px;font-weight:600;display:inline-flex;align-items:center;gap:3px;flex-shrink:0;cursor:pointer;" title="${esc(killTitle)}">结束进程</button>`;
 
           return `
             <div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg-surface);padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-default);gap:12px;box-shadow:var(--shadow-sm);">
@@ -15272,6 +15874,19 @@ function updateText(key, fallback) {
   return window.I18N ? window.I18N.t(key, fallback) : fallback;
 }
 
+/**
+ * 翻译由代码拼装出来的文案（如「模型名 (服务商 · 状态)」）。
+ * 这类文本节点在运行时无法与词典键整串匹配，只能在拼装阶段逐段翻译。
+ * 中文模式下必须原样返回，否则切回中文时会残留英文。
+ */
+function trSourceText(text) {
+  const value = String(text == null ? '' : text);
+  if (!window.I18N || typeof window.I18N.lookupSourceTranslation !== 'function') return value;
+  if (window.I18N.getLanguage() !== 'en-US') return value;
+  const translated = window.I18N.lookupSourceTranslation(value.replace(/\s+/g, ' ').trim());
+  return translated === undefined ? value : translated;
+}
+
 function formatUpdateBytes(value) {
   const bytes = Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
   if (bytes < 1024) return `${Math.round(bytes)} B`;
@@ -15355,7 +15970,7 @@ function initDesktopUpdater() {
   if (!window.hap?.onUpdateState || !window.hap?.getUpdateState) return;
 
   const updateVersionUI = (version) => {
-    const ver = version ? `v${version}` : 'v0.1.16';
+    const ver = version ? `v${version}` : 'v0.1.17';
     const badge = $('appCurrentVersionBadge');
     if (badge) badge.textContent = ver;
     const sideTag = $('sidebarVersionTag');
@@ -15396,7 +16011,7 @@ function initDesktopUpdater() {
       if (state && (state.status === 'available' || state.status === 'downloading' || state.status === 'downloaded')) {
         renderDesktopUpdateState(state);
       } else {
-        showToast(`当前已是最新版本 (${state?.currentVersion ? 'v' + state.currentVersion : 'v0.1.16'})`, 'success');
+        showToast(`当前已是最新版本 (${state?.currentVersion ? 'v' + state.currentVersion : 'v0.1.17'})`, 'success');
         if (statusEl) {
           statusEl.innerHTML = `<div>当前状态: <strong style="color:var(--success);">已是最新版</strong></div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">刚刚已检查</div>`;
         }
@@ -15423,13 +16038,13 @@ function initDesktopUpdater() {
   $('sidebarVersionTag')?.addEventListener('click', (e) => {
     e.stopPropagation();
     show('system');
-    $('aboutSoftwareCard')?.scrollIntoView({ behavior: 'smooth' });
+    scrollToElementSmooth($('aboutSoftwareCard'));
   });
   $('aboutVersionMoreBtn')?.addEventListener('click', () => {
     const headerMoreMenu = $('headerMoreMenu');
     if (headerMoreMenu) headerMoreMenu.style.display = 'none';
     show('system');
-    $('aboutSoftwareCard')?.scrollIntoView({ behavior: 'smooth' });
+    scrollToElementSmooth($('aboutSoftwareCard'));
   });
 
   $('desktopUpdateLaterBtn')?.addEventListener('click', () => $('desktopUpdateDialog')?.close());

@@ -41,7 +41,8 @@ describe('Provider & Model GUI & Config Optimizations', () => {
     expect(app).toContain("'国内主流大模型'");
     expect(app).toContain("'国际前沿大模型'");
     expect(app).toContain("'本地与私有化部署'");
-    expect(app).toContain('<optgroup label="${categoryName}">');
+    // 分组名与预置名在英文模式下需要就地翻译，因此统一走 trSourceText
+    expect(app).toContain('<optgroup label="${esc(trSourceText(categoryName))}">');
   });
 
   it('provides metrics dashboard, dual-view mode switcher, search, and capability filters in HTML', () => {

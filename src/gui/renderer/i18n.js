@@ -52,6 +52,7 @@
       'more.agentTooltip': '切换处理智能体',
       'more.tokenConsumption': 'Token 消耗:',
       'more.tokenTooltip': '今日实时 Token 消耗',
+      'more.tokenTooltipDegraded': 'Token 遥测降级，正在使用最近可用数据',
       'more.openVsCode': '在 VS Code 中打开',
       'more.openVsCodeTooltip': '在 VS Code 中打开当前绑定的项目',
       'more.exportMarkdown': '导出 Markdown',
@@ -72,6 +73,41 @@
       'popover.themeTitle': '色彩主题快速切换',
       'theme.dark': '深色',
       'theme.light': '浅色',
+      'theme.cyber': '赛博霓虹',
+      'theme.aurora': '极光松岭',
+      'theme.sunset': '落日熔金',
+      'theme.glass': '流光玻璃',
+      'theme.vibrant': '活力幻彩',
+      'theme.custom': '自定义',
+      'theme.switchedTo': '已切换至 {theme} 主题',
+      'themeModal.baseDarkToast': '自定义主题底色：深色',
+      'themeModal.baseLightToast': '自定义主题底色：浅色',
+      'themeModal.styleSubtitle': '深色与浅色为中性默认，另有 5 套风格主题与自定义强调色',
+      'themeModal.darkName': '深色模式',
+      'themeModal.darkDesc': '深灰底色配高对比正文，长时间阅读更省力。',
+      'themeModal.lightName': '浅色模式',
+      'themeModal.lightDesc': '纯白底色配深色正文，清晰锐利，适合明亮环境。',
+      'themeModal.cyber': '赛博霓虹',
+      'themeModal.cyberDesc': '高科技未来感，深邃午夜蓝底搭配极光品红与电波紫辉。',
+      'themeModal.aurora': '极光松岭',
+      'themeModal.auroraDesc': '幽静心流空间，北欧森林暗绿玄武岩与翡翠薄荷流光。',
+      'themeModal.sunset': '落日熔金',
+      'themeModal.sunsetDesc': '奢雅意式浓缩，深邃暖褐黑底色与落日琥珀金光，舒适温润。',
+      'themeModal.glass': '流光玻璃',
+      'themeModal.glassDesc': '通透亚克力磨砂，配合半透明模式与背景壁纸，桌面若隐若现。',
+      'themeModal.vibrant': '活力幻彩',
+      'themeModal.vibrantDesc': '跃动生命力，深曜靛蓝底色融合紫罗兰、电光青蓝与晨曦热粉流光。',
+      'themeModal.custom': '自定义主题',
+      'themeModal.customDesc': '挑选任意强调色，按钮、选中态与焦点描边会随之联动。',
+      'themeModal.customSection': '自定义强调色',
+      'themeModal.accentColor': '强调色',
+      'themeModal.accentColorAria': '自定义强调色',
+      'themeModal.hexValueAria': '自定义强调色十六进制值',
+      'themeModal.baseGroupAria': '自定义主题底色',
+      'themeModal.hexValue': '色值',
+      'themeModal.baseDark': '深色底',
+      'themeModal.baseLight': '浅色底',
+      'themeModal.inUse': '使用中',
       'popover.themeDetails': '查看主题与外观详情 ▾',
       'popover.opacityTitle': '半透明与毛玻璃',
       'popover.opacityClear': '40% 通透',
@@ -82,7 +118,7 @@
       'popover.backdropBlur': '启用背景高斯模糊滤镜 (Backdrop Blur)',
 
       // 主题弹窗详情 (Theme Modal)
-      'themeModal.title': '外观、背景与透明度',
+      'themeModal.title': '界面色彩风格',
       'themeModal.subtitle': '选择浅色或深色主题，并可选配背景图片与透明度',
       'themeModal.done': '完成设置',
 
@@ -111,6 +147,17 @@
       'wallpaper.fitCover': '撑满铺满 (Cover)',
       'wallpaper.fitContain': '等比完整 (Contain)',
       'wallpaper.fitTile': '平铺纹理 (Tile)',
+      'wallpaper.adaptiveTitle': '背景智能取色',
+      'wallpaper.adaptiveDesc': '自动提取背景主色，联动按钮/开关/选中态配色，并按背景明暗自动选择白色或黑色文字',
+      'wallpaper.adaptiveOnToast': '已开启背景智能取色，组件配色跟随背景主色',
+      'wallpaper.adaptiveOffToast': '已关闭背景智能取色，组件配色恢复主题默认',
+      'telegram.botTokenLabel': '机器人 API Token *',
+      'bot.telegramTokenLabel': 'Telegram 机器人 Token *',
+      'bot.discordTokenLabel': 'Discord 机器人 Token *',
+      'bot.slackTokenLabel': 'Slack 机器人 Token (xoxb-...) *',
+      'gitAuth.patClassicLabel': '个人访问令牌 (classic)：',
+      'serverDetails.uptimeBadge': '运行中',
+      'script.terminalConsoleTitle': '终端流式控制台',
 
       // 输入悬浮岛 (Composer)
       'composer.quickGit': '/git 状态',
@@ -172,6 +219,9 @@
       'mini.pinTooltip': '置顶窗口',
       'mini.minimizeTooltip': '最小化窗口',
       'mini.closeTooltip': '关闭窗口',
+      'mini.modelLabel': '模型:',
+      'mini.agentLabel': '智能体:',
+      'mini.tokensLabel': 'Token 用量:',
 
       // 设置中心 (Settings Center)
       'settings.title': '系统设置中心',
@@ -189,6 +239,10 @@
       'settings.tabPermissions': '权限与安全策略',
       'settings.tabGateway': 'API 分发网关',
       'settings.tabSystem': '版本更新与系统日志',
+      'settings.statProviders': '已配置服务商',
+      'settings.statHealthy': '连通正常服务商',
+      'settings.statModels': '已收录模型总数',
+      'settings.statDefaultModel': '全局默认主模型',
 
       // 任务与历史弹窗 (Modals)
       'modal.historyTitle': '全局会话历史记录 (Conversation History)',
@@ -268,6 +322,7 @@
       'more.agentTooltip': 'Switch Processing Agent',
       'more.tokenConsumption': 'Token Usage:',
       'more.tokenTooltip': "Today's Real-time Token Usage",
+      'more.tokenTooltipDegraded': 'Token telemetry degraded; showing the most recent available data',
       'more.openVsCode': 'Open in VS Code',
       'more.openVsCodeTooltip': 'Open bound project in VS Code',
       'more.exportMarkdown': 'Export Markdown',
@@ -288,6 +343,41 @@
       'popover.themeTitle': 'Theme Presets',
       'theme.dark': 'Dark',
       'theme.light': 'Light',
+      'theme.cyber': 'Cyber Neon',
+      'theme.aurora': 'Nordic Aurora',
+      'theme.sunset': 'Sunset Amber',
+      'theme.glass': 'Acrylic Glass',
+      'theme.vibrant': 'Vibrant Pulse',
+      'theme.custom': 'Custom',
+      'theme.switchedTo': 'Switched to the {theme} theme',
+      'themeModal.baseDarkToast': 'Custom theme base: dark',
+      'themeModal.baseLightToast': 'Custom theme base: light',
+      'themeModal.styleSubtitle': 'Dark and light stay neutral by default, plus 5 style themes and a custom accent color',
+      'themeModal.darkName': 'Dark Mode',
+      'themeModal.darkDesc': 'Dark grey surfaces with high-contrast text for long reading sessions.',
+      'themeModal.lightName': 'Light Mode',
+      'themeModal.lightDesc': 'Crisp white surfaces with dark text, ideal for bright rooms.',
+      'themeModal.cyber': 'Cyber Neon',
+      'themeModal.cyberDesc': 'High-tech futuristic: deep midnight blue with magenta and violet glow.',
+      'themeModal.aurora': 'Nordic Aurora',
+      'themeModal.auroraDesc': 'Quiet flow state: Nordic forest basalt green with emerald mint highlights.',
+      'themeModal.sunset': 'Sunset Amber',
+      'themeModal.sunsetDesc': 'Warm espresso elegance: deep warm brown with sunset amber gold.',
+      'themeModal.glass': 'Acrylic Glass',
+      'themeModal.glassDesc': 'Translucent frosted acrylic, pairs with translucency mode and wallpapers.',
+      'themeModal.vibrant': 'Vibrant Pulse',
+      'themeModal.vibrantDesc': 'Vivid energy: deep indigo with violet, electric cyan and sunrise pink.',
+      'themeModal.custom': 'Custom Theme',
+      'themeModal.customDesc': 'Pick any accent color; buttons, selection and focus rings follow it.',
+      'themeModal.customSection': 'Custom Accent Color',
+      'themeModal.accentColor': 'Accent',
+      'themeModal.accentColorAria': 'Custom accent color',
+      'themeModal.hexValueAria': 'Custom accent color hex value',
+      'themeModal.baseGroupAria': 'Custom theme base color',
+      'themeModal.hexValue': 'Hex',
+      'themeModal.baseDark': 'Dark base',
+      'themeModal.baseLight': 'Light base',
+      'themeModal.inUse': 'In use',
       'popover.themeDetails': 'View Theme & Appearance ▾',
       'popover.opacityTitle': 'Opacity & Backdrop Blur',
       'popover.opacityClear': '40% Clear',
@@ -298,7 +388,7 @@
       'popover.backdropBlur': 'Enable Backdrop Blur Filter',
 
       // 主题弹窗详情 (Theme Modal)
-      'themeModal.title': 'Appearance, Background & Opacity',
+      'themeModal.title': 'Interface Color Style',
       'themeModal.subtitle': 'Choose a light or dark theme, optionally with a background image and opacity',
       'themeModal.done': 'Done',
 
@@ -327,6 +417,17 @@
       'wallpaper.fitCover': 'Cover',
       'wallpaper.fitContain': 'Contain',
       'wallpaper.fitTile': 'Tile Pattern',
+      'wallpaper.adaptiveTitle': 'Adaptive Colors from Wallpaper',
+      'wallpaper.adaptiveDesc': 'Extract the wallpaper accent color to tint buttons, switches and active states, and auto-pick white or black text for contrast',
+      'wallpaper.adaptiveOnToast': 'Adaptive wallpaper colors enabled',
+      'wallpaper.adaptiveOffToast': 'Adaptive wallpaper colors disabled',
+      'telegram.botTokenLabel': 'Bot API Token *',
+      'bot.telegramTokenLabel': 'Telegram Bot Token *',
+      'bot.discordTokenLabel': 'Discord Bot Token *',
+      'bot.slackTokenLabel': 'Slack Bot Token (xoxb-...) *',
+      'gitAuth.patClassicLabel': 'Personal Access Token (classic):',
+      'serverDetails.uptimeBadge': 'Uptime',
+      'script.terminalConsoleTitle': 'Terminal Stream Console',
 
       // 输入悬浮岛 (Composer)
       'composer.quickGit': '/git Status',
@@ -388,6 +489,9 @@
       'mini.pinTooltip': 'Always on Top',
       'mini.minimizeTooltip': 'Minimize Window',
       'mini.closeTooltip': 'Close Window',
+      'mini.modelLabel': 'Model:',
+      'mini.agentLabel': 'Agent:',
+      'mini.tokensLabel': 'Tokens:',
 
       // 设置中心 (Settings Center)
       'settings.title': 'Settings Center',
@@ -405,6 +509,10 @@
       'settings.tabPermissions': 'Security & Permissions',
       'settings.tabGateway': 'API Gateway',
       'settings.tabSystem': 'Version Updates & Logs',
+      'settings.statProviders': 'Providers configured',
+      'settings.statHealthy': 'Providers online',
+      'settings.statModels': 'Models catalogued',
+      'settings.statDefaultModel': 'Global default model',
 
       // 任务与历史弹窗 (Modals)
       'modal.historyTitle': 'Conversation History',
@@ -470,6 +578,13 @@
   function lookupSourceTranslation(source) {
     const exact = SOURCE_TEXT_EN[source];
     if (exact !== undefined) return exact;
+    // 渲染层常把标签拼成「标签:」，词典里存的是不带冒号的标签。
+    // 这里补一次「去掉尾随冒号再查」的回退，避免为每个标签维护两份词条。
+    const trimmedColon = /[:：]$/.test(source) ? source.slice(0, -1).trim() : '';
+    if (trimmedColon) {
+      const withoutColon = SOURCE_TEXT_EN[trimmedColon];
+      if (withoutColon !== undefined) return withoutColon + source.slice(-1);
+    }
     for (let i = 0; i < SOURCE_TEXT_PATTERNS.length; i++) {
       const rule = SOURCE_TEXT_PATTERNS[i];
       if (!rule[0].test(source)) continue;
@@ -532,23 +647,25 @@
 
   function translateTextNode(node, lang) {
     const original = node.nodeValue;
+    // 回切中文时必须先无条件还原：被词典翻译过的节点此时正文是纯英文，
+    // 若先做「必须含中文」的判定就会提前 return，导致弹窗/设置页再也回不到中文，
+    // 用户只有刷新页面才能恢复。还原分支因此必须放在中文判定之前。
+    if (lang !== 'en-US') {
+      if (node.__hapSourceText === undefined) return;
+      node.nodeValue = node.__hapSourceText;
+      delete node.__hapSourceText;
+      return;
+    }
+
     if (!original) return;
     const source = normalizeSourceText(original);
     if (!source || !/[\u4e00-\u9fa5]/.test(source)) return;
 
-    if (lang === 'en-US') {
-      const translated = lookupSourceTranslation(source);
-      if (translated === undefined) return;
-      if (node.__hapSourceText === undefined) node.__hapSourceText = original;
-      const next = withPreservedWhitespace(node.__hapSourceText, translated);
-      if (node.nodeValue !== next) node.nodeValue = next;
-      return;
-    }
-
-    if (node.__hapSourceText !== undefined) {
-      node.nodeValue = node.__hapSourceText;
-      delete node.__hapSourceText;
-    }
+    const translated = lookupSourceTranslation(source);
+    if (translated === undefined) return;
+    if (node.__hapSourceText === undefined) node.__hapSourceText = original;
+    const next = withPreservedWhitespace(node.__hapSourceText, translated);
+    if (node.nodeValue !== next) node.nodeValue = next;
   }
 
   function translateSourceAttributes(root, lang) {

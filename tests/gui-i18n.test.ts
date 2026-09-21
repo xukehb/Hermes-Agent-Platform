@@ -140,6 +140,65 @@ describe('GUI Internationalization (i18n)', () => {
     expect(I18N.t('non.existent.key', 'default_fallback')).toBe('default_fallback');
   });
 
+  it('restores dictionary-translated nodes when switching back to Chinese', () => {
+    // 回归：源文案词典把「已配置服务商」译成 "Providers configured" 后，
+    // 回切中文时旧实现会因「文本不含中文」提前 return，页面永久停留在英文，
+    // 用户必须刷新才能恢复。还原分支必须优先于中文判定。
+    const textNode: any = {
+      nodeType: 3,
+      nodeValue: 'Providers configured',
+      __hapSourceText: '已配置服务商',
+      parentNode: null,
+    };
+    const body: any = { nodeType: 1, matches: () => false, querySelectorAll: () => [] };
+    textNode.parentNode = body;
+
+    const originalDoc = (globalThis as any).document;
+    const originalFilter = (globalThis as any).NodeFilter;
+    (globalThis as any).NodeFilter = { SHOW_TEXT: 4 };
+    (globalThis as any).document = {
+      documentElement: { lang: 'zh-CN' },
+      body,
+      createTreeWalker: () => {
+        let consumed = false;
+        return {
+          nextNode: () => {
+            if (consumed) return null;
+            consumed = true;
+            return textNode;
+          },
+        };
+      },
+      querySelectorAll: () => [],
+      getElementById: () => null,
+    };
+
+    try {
+      I18N.translateSourceTree('zh-CN');
+      expect(textNode.nodeValue).toBe('已配置服务商');
+      expect(textNode.__hapSourceText).toBeUndefined();
+    } finally {
+      (globalThis as any).document = originalDoc;
+      if (originalFilter === undefined) delete (globalThis as any).NodeFilter;
+      else (globalThis as any).NodeFilter = originalFilter;
+    }
+  });
+
+  it('keeps settings stat-card labels translatable in both directions', () => {
+    for (const key of [
+      'settings.statProviders',
+      'settings.statHealthy',
+      'settings.statModels',
+      'settings.statDefaultModel',
+    ]) {
+      expect(I18N.TRANSLATIONS['zh-CN'][key]).toBeTruthy();
+      expect(I18N.TRANSLATIONS['en-US'][key]).toBeTruthy();
+      // 中文文案必须含中文，英文文案必须不含中文，避免「伪翻译」再次出现
+      expect(/[\u4e00-\u9fff]/.test(I18N.TRANSLATIONS['zh-CN'][key])).toBe(true);
+      expect(/[\u4e00-\u9fff]/.test(I18N.TRANSLATIONS['en-US'][key])).toBe(false);
+    }
+  });
+
   it('updates mock DOM attributes during applyLanguage', () => {
     // Set up mock DOM elements
     const elements: any[] = [];

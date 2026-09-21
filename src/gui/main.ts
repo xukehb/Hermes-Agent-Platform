@@ -3,6 +3,7 @@ import electronUpdater from 'electron-updater';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DesktopUpdateController, type DesktopUpdaterAdapter } from './desktop-updater.js';
+import { installMacUpdateInPlace } from './mac-updater.js';
 import { GuiService } from './service.js';
 
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
@@ -34,6 +35,21 @@ const desktopUpdater = new DesktopUpdateController({
   isPackaged: app.isPackaged,
   currentVersion: app.getVersion(),
   onCheckError: (error) => service.error(`检查 GitHub 更新失败：${error.message}`),
+  customInstall: async () => {
+    if (process.platform === 'darwin' && app.isPackaged) {
+      try {
+        const ok = await installMacUpdateInPlace({
+          appExit: () => app.exit(0),
+        });
+        if (ok) return true;
+      } catch (error) {
+        service.error(
+          `macOS 原生平滑更新执行失败: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    }
+    return false;
+  },
 });
 
 let mainWindow: BrowserWindow | null = null;

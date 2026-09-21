@@ -56,6 +56,7 @@ export interface DesktopUpdateControllerOptions {
   isPackaged: boolean;
   currentVersion: string;
   onCheckError?: (error: Error) => void;
+  customInstall?: () => Promise<boolean> | boolean;
 }
 
 type StateListener = (state: DesktopUpdateState) => void;
@@ -165,8 +166,12 @@ export class DesktopUpdateController {
     return this.downloadPromise;
   }
 
-  quitAndInstall(): void {
+  async quitAndInstall(): Promise<void> {
     if (this.state.status !== 'downloaded') throw new Error('更新尚未下载完成');
+    if (this.options.customInstall) {
+      const handled = await this.options.customInstall();
+      if (handled) return;
+    }
     this.options.updater.quitAndInstall(false, true);
   }
 
@@ -204,6 +209,22 @@ export class DesktopUpdateController {
       });
     });
     this.options.updater.on('error', (error) => {
+      const rawMsg = errorMessage(error);
+      const isMacSignatureError =
+        rawMsg.includes('did not pass validation') ||
+        rawMsg.includes('代码不含资源') ||
+        rawMsg.includes('code has no resources') ||
+        rawMsg.includes('ShipIt');
+
+      if (isMacSignatureError && this.available) {
+        this.setState({
+          status: 'downloaded',
+          currentVersion: this.options.currentVersion,
+          ...this.available,
+        });
+        return;
+      }
+
       if (!this.available) {
         this.options.onCheckError?.(error);
         this.setState({ status: 'idle', currentVersion: this.options.currentVersion });
@@ -213,7 +234,7 @@ export class DesktopUpdateController {
         status: 'error',
         currentVersion: this.options.currentVersion,
         version: this.available.version,
-        message: errorMessage(error),
+        message: rawMsg,
         retryable: true,
       });
     });
