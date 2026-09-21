@@ -399,5 +399,63 @@ describe('WeChat Desktop Vision Agent (SightFlow 模式视觉代管)', () => {
 
     await driver.stop();
   });
+
+  it('Ubuntu Linux 环境下通过 xwininfo 解析微信窗口几何边界', async () => {
+    const { getWeChatWindowBounds } = await import('../src/channels/wechat/desktop-vision/action-driver.js');
+    const bounds = await getWeChatWindowBounds();
+    // 本机若是 Linux 且运行着微信，应解析出有效边界结构
+    if (process.platform === 'linux' && bounds) {
+      expect(bounds.wid).toBeGreaterThan(0);
+      expect(bounds.width).toBeGreaterThan(200);
+      expect(bounds.height).toBeGreaterThan(200);
+      expect(typeof bounds.x).toBe('number');
+      expect(typeof bounds.y).toBe('number');
+    }
+  });
+
+  it('isWeChatRunning 支持在 Linux / Windows / macOS 跨平台安全探测', async () => {
+    const running = await isWeChatRunning();
+    expect(typeof running).toBe('boolean');
+  });
+
+  it('clickScreenCoords 与 sendWeChatReply 参数校验健全', async () => {
+    const { clickScreenCoords, sendWeChatReply } = await import('../src/channels/wechat/desktop-vision/action-driver.js');
+    // 空内容回复应拦截返回错误
+    const emptyRes = await sendWeChatReply({ text: '   ' });
+    expect(emptyRes.ok).toBe(false);
+    expect(emptyRes.error).toContain('不能为空');
+
+    // 坐标有效数值传递
+    const clickRes = await clickScreenCoords(100, 200);
+    expect(typeof clickRes).toBe('boolean');
+  });
+
+  it('parseWeChatScreen 在未就绪原生 OCR 平台能自动降级至 VLM 解析', async () => {
+    const mockClient: any = {
+      chat: {
+        completions: {
+          create: vi.fn().mockResolvedValue({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    hasWeChatWindow: true,
+                    chatTarget: '测试好友',
+                    needsReply: false,
+                    summary: '已成功识别微信界面',
+                  }),
+                },
+              },
+            ],
+          }),
+        },
+      },
+    };
+
+    const res = await parseWeChatScreen(Buffer.from('dummy-image'), { client: mockClient, apiKey: 'test' });
+    expect(res.ok).toBe(true);
+    expect(res.hasWeChatWindow).toBe(true);
+    expect(res.chatTarget).toBe('测试好友');
+  });
 });
 

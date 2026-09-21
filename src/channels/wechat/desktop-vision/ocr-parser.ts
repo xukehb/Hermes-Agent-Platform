@@ -382,52 +382,187 @@ export function parseWeChatOcrItems(
 }
 
 /**
- * 使用 macOS 苹果原生高精度 Vision OCR（零 Token 消耗、~50ms 极速、纯本地隐私无泄漏）
+ * 使用本地原生系统 OCR（macOS Apple Vision / Windows UWP OCR / Linux Tesseract）解析微信界面
  */
 export async function parseWeChatScreenViaOcr(
   imageInput: Buffer | string,
   knownSentTexts?: Set<string>
 ): Promise<WeChatVisionParseResult> {
-  const ocrBin = ensureMacOcrBinary();
-  if (!ocrBin) {
-    return {
-      ok: false,
-      hasWeChatWindow: false,
-      needsReply: false,
-      error: '本地原生 macOS OCR 引擎未就绪 (仅支持 macOS 系统)',
-    };
-  }
-
-  let tempPath: string | undefined;
-  try {
-    let filePath: string;
-    if (typeof imageInput === 'string' && existsSync(imageInput)) {
-      filePath = imageInput;
-    } else {
-      tempPath = join(tmpdir(), `hap_ocr_${Date.now()}_${randomUUID().slice(0, 6)}.png`);
-      const buffer = typeof imageInput === 'string'
-        ? Buffer.from(imageInput.replace(/^data:image\/\w+;base64,/, ''), 'base64')
-        : imageInput;
-      writeFileSync(tempPath, buffer);
-      filePath = tempPath;
+  // 1. macOS 苹果原生 Vision OCR (零 Token 消耗、~50ms 极速)
+  if (process.platform === 'darwin') {
+    const ocrBin = ensureMacOcrBinary();
+    if (!ocrBin) {
+      return {
+        ok: false,
+        hasWeChatWindow: false,
+        needsReply: false,
+        error: '本地原生 macOS OCR 引擎未就绪',
+      };
     }
 
-    const { stdout } = await runCmd(ocrBin, [filePath]);
-    const items = JSON.parse(stdout.trim() || '[]') as OcrRecognizedItem[];
-    return parseWeChatOcrItems(items, knownSentTexts);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return {
-      ok: false,
-      hasWeChatWindow: false,
-      needsReply: false,
-      error: `本地原生 OCR 解析失败: ${msg}`,
-    };
-  } finally {
-    if (tempPath && existsSync(tempPath)) {
-      try { unlinkSync(tempPath); } catch {}
+    let tempPath: string | undefined;
+    try {
+      let filePath: string;
+      if (typeof imageInput === 'string' && existsSync(imageInput)) {
+        filePath = imageInput;
+      } else {
+        tempPath = join(tmpdir(), `hap_ocr_${Date.now()}_${randomUUID().slice(0, 6)}.png`);
+        const buffer = typeof imageInput === 'string'
+          ? Buffer.from(imageInput.replace(/^data:image\/\w+;base64,/, ''), 'base64')
+          : imageInput;
+        writeFileSync(tempPath, buffer);
+        filePath = tempPath;
+      }
+
+      const { stdout } = await runCmd(ocrBin, [filePath]);
+      const items = JSON.parse(stdout.trim() || '[]') as OcrRecognizedItem[];
+      return parseWeChatOcrItems(items, knownSentTexts);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return {
+        ok: false,
+        hasWeChatWindow: false,
+        needsReply: false,
+        error: `本地原生 OCR 解析失败: ${msg}`,
+      };
+    } finally {
+      if (tempPath && existsSync(tempPath)) {
+        try { unlinkSync(tempPath); } catch {}
+      }
     }
   }
+
+  // 2. Windows 10/11 原生 WinRT UWP OCR
+  if (process.platform === 'win32') {
+    let tempPath: string | undefined;
+    try {
+      let filePath: string;
+      if (typeof imageInput === 'string' && existsSync(imageInput)) {
+        filePath = imageInput;
+      } else {
+        tempPath = join(tmpdir(), `hap_ocr_${Date.now()}_${randomUUID().slice(0, 6)}.png`);
+        const buffer = typeof imageInput === 'string'
+          ? Buffer.from(imageInput.replace(/^data:image\/\w+;base64,/, ''), 'base64')
+          : imageInput;
+        writeFileSync(tempPath, buffer);
+        filePath = tempPath;
+      }
+
+      const escaped = filePath.replace(/\\/g, '\\\\');
+      const psOcr = `
+        Add-Type -AssemblyName System.Drawing
+        [Windows.Media.Ocr.OcrEngine, Windows.Foundation.UniversalApiContract, ContentType = WindowsRuntime] | Out-Null
+        [Windows.Graphics.Imaging.BitmapDecoder, Windows.Foundation.UniversalApiContract, ContentType = WindowsRuntime] | Out-Null
+        [Windows.Storage.StorageFile, Windows.Foundation.UniversalApiContract, ContentType = WindowsRuntime] | Out-Null
+
+        async function Run-Ocr {
+          $file = [Windows.Storage.StorageFile]::GetFileFromPathAsync('${escaped}').GetAwaiter().GetResult()
+          $stream = $file.OpenAsync([Windows.Storage.FileAccessMode]::Read).GetAwaiter().GetResult()
+          $decoder = [Windows.Graphics.Imaging.BitmapDecoder]::CreateAsync($stream).GetAwaiter().GetResult()
+          $softwareBitmap = $decoder.GetSoftwareBitmapAsync().GetAwaiter().GetResult()
+          $engine = [Windows.Media.Ocr.OcrEngine]::TryCreateFromUserProfileLanguages()
+          $result = $engine.RecognizeAsync($softwareBitmap).GetAwaiter().GetResult()
+          $items = @()
+          $imgW = $softwareBitmap.PixelWidth
+          $imgH = $softwareBitmap.PixelHeight
+          foreach ($line in $result.Lines) {
+            foreach ($word in $line.Words) {
+              $r = $word.BoundingRect
+              $normX = $r.X / $imgW
+              $normW = $r.Width / $imgW
+              $normH = $r.Height / $imgH
+              $normY = 1.0 - (($r.Y + $r.Height) / $imgH)
+              $items += @{
+                text = $word.Text
+                x = [Math]::Round($normX, 4)
+                y = [Math]::Round($normY, 4)
+                width = [Math]::Round($normW, 4)
+                height = [Math]::Round($normH, 4)
+              }
+            }
+          }
+          ConvertTo-Json -InputObject $items -Compress
+        }
+        Run-Ocr
+      `.trim();
+
+      const { stdout } = await runCmd('powershell', ['-NoProfile', '-NonInteractive', '-Command', psOcr]);
+      const items = JSON.parse(stdout.trim() || '[]') as OcrRecognizedItem[];
+      if (Array.isArray(items) && items.length > 0) {
+        return parseWeChatOcrItems(items, knownSentTexts);
+      }
+    } catch {
+      // 降级使用 VLM
+    } finally {
+      if (tempPath && existsSync(tempPath)) {
+        try { unlinkSync(tempPath); } catch {}
+      }
+    }
+  }
+
+  // 3. Ubuntu / Linux 尝试系统 Tesseract (若已安装)
+  if (process.platform === 'linux') {
+    let tempPath: string | undefined;
+    try {
+      let filePath: string;
+      if (typeof imageInput === 'string' && existsSync(imageInput)) {
+        filePath = imageInput;
+      } else {
+        tempPath = join(tmpdir(), `hap_ocr_${Date.now()}_${randomUUID().slice(0, 6)}.png`);
+        const buffer = typeof imageInput === 'string'
+          ? Buffer.from(imageInput.replace(/^data:image\/\w+;base64,/, ''), 'base64')
+          : imageInput;
+        writeFileSync(tempPath, buffer);
+        filePath = tempPath;
+      }
+
+      const { stdout } = await runCmd('tesseract', [filePath, 'stdout', '-l', 'chi_sim+eng', 'tsv']);
+      const lines = stdout.split('\n');
+      const items: OcrRecognizedItem[] = [];
+      let imgW = 1920;
+      let imgH = 1080;
+
+      for (let i = 1; i < lines.length; i++) {
+        const row = lines[i]?.split('\t');
+        if (row && row.length >= 12) {
+          const level = row[0];
+          const left = parseInt(row[6] || '0', 10);
+          const top = parseInt(row[7] || '0', 10);
+          const width = parseInt(row[8] || '0', 10);
+          const height = parseInt(row[9] || '0', 10);
+          const text = (row[11] || '').trim();
+          if (level === '1') {
+            imgW = width || imgW;
+            imgH = height || imgH;
+          } else if (text && width > 0 && height > 0) {
+            items.push({
+              text,
+              x: left / imgW,
+              y: 1.0 - (top + height) / imgH,
+              width: width / imgW,
+              height: height / imgH,
+            });
+          }
+        }
+      }
+      if (items.length > 0) {
+        return parseWeChatOcrItems(items, knownSentTexts);
+      }
+    } catch {
+      // 降级使用 VLM
+    } finally {
+      if (tempPath && existsSync(tempPath)) {
+        try { unlinkSync(tempPath); } catch {}
+      }
+    }
+  }
+
+  return {
+    ok: false,
+    hasWeChatWindow: false,
+    needsReply: false,
+    error: `本地系统 OCR 引擎在 ${process.platform} 未就绪，将自动降级至云端多模态大模型 VLM`,
+  };
 }
 
 export interface ImageDiffResult {

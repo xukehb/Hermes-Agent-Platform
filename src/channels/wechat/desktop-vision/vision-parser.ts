@@ -294,8 +294,8 @@ export async function parseWeChatScreen(
   imageInput: Buffer | string,
   options: VisionParserOptions = {}
 ): Promise<WeChatVisionParseResult> {
-  // 1. 在 macOS 桌面环境下，若未显式指定自定义测试客户端，优先使用毫秒级本地原生 OCR
-  if (process.platform === 'darwin' && !options.client) {
+  // 1. 在桌面环境下，若未显式指定自定义测试客户端，优先尝试毫秒级本地原生 OCR (macOS / Windows / Linux)
+  if (!options.client) {
     try {
       const ocrResult = await parseWeChatScreenViaOcr(imageInput, options.knownSentTexts);
       if (ocrResult.ok && ocrResult.hasWeChatWindow) {
@@ -306,7 +306,7 @@ export async function parseWeChatScreen(
     }
   }
 
-  // 2. 云端多模态大模型深度识别
+  // 2. 云端多模态大模型深度识别 (支持 Qwen-VL / GPT-4o / Claude 等)
   return await parseWeChatScreenViaVlm(imageInput, options);
 }
 
