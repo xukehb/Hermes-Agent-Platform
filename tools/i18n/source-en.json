@@ -738,6 +738,7 @@
   "例如：open-skills/code-auditor 或 https://github.com/...": "e.g. open-skills/code-auditor or https://github.com/...",
   "例如：openai, deepseek": "e.g. openai, deepseek",
   "例如：postgres-mcp": "e.g. postgres-mcp",
+  "例如：puppet_padlocal_xxx / puppet_service_xxx": "e.g. puppet_padlocal_xxx / puppet_service_xxx",
   "例如：qwen2.5-coder:7b, deepseek-chat": "e.g. qwen2.5-coder:7b, deepseek-chat",
   "例如：tg-server-1, qq-ops-bot": "e.g. tg-server-1, qq-ops-bot",
   "例如：ws://127.0.0.1:3001 或 http://127.0.0.1:3000": "e.g. ws://127.0.0.1:3001 or http://127.0.0.1:3000",

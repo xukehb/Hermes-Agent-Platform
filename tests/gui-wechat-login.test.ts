@@ -65,4 +65,42 @@ ilink_account_id = "bot-local"
     expect(await service.refreshWeChatQr()).toMatchObject({ ok: true, qrCodeText: 'https://example.test/qr' });
     expect(await service.getWeChatConfig()).toMatchObject({ running: true, status: 'waiting_qr' });
   });
+
+  it('rejects personal wechaty mode if puppet token is not configured', async () => {
+    delete process.env.WECHATY_PUPPET_SERVICE_TOKEN;
+    await service.saveWeChatConfig({ mode: 'personal', puppet: 'service' });
+    const cfg = await service.getWeChatConfig();
+    expect(cfg.puppet).toBe('service');
+    expect(cfg.puppetTokenConfigured).toBe(false);
+
+    await expect(service.startWeChatService()).rejects.toThrow('未配置凭据环境变量【WECHATY_PUPPET_SERVICE_TOKEN】');
+    const errCfg = await service.getWeChatConfig();
+    expect(errCfg.status).toBe('error');
+    expect(errCfg.error).toContain('桌面视觉代管');
+  });
+
+  it('allows saving puppetToken and populates puppetTokenConfigured', async () => {
+    await service.saveWeChatConfig({ puppetToken: 'puppet_test_123456' });
+    expect(process.env.WECHATY_PUPPET_SERVICE_TOKEN).toBe('puppet_test_123456');
+    const cfg = await service.getWeChatConfig();
+    expect(cfg.puppetTokenConfigured).toBe(true);
+    expect(cfg.puppetToken).toBe('******');
+    delete process.env.WECHATY_PUPPET_SERVICE_TOKEN;
+  });
+
+  it('defaults personal mode to desktop_vision when puppet is not specified', async () => {
+    const configPath = join(root, 'config_dv.toml');
+    writeFileSync(configPath, `
+default_agent = "helper"
+[paths]
+data_dir = "${root}/data"
+[channels.wechat]
+enabled = true
+mode = "personal"
+`);
+    const dvService = new GuiService(configPath);
+    const cfg = await dvService.getWeChatConfig();
+    expect(cfg.puppet).toBe('desktop_vision');
+  });
 });
+

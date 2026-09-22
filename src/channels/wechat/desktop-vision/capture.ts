@@ -68,7 +68,8 @@ async function captureViaElectron(): Promise<CapturedWindow | undefined> {
 
     const wechatSource = sources.find((s) => {
       const name = (s.name || '').toLowerCase();
-      return name.includes('wechat') || name.includes('微信');
+      const isDevTools = name.includes('devtools') || name.includes('开发') || name.includes('tool');
+      return !isDevTools && (name.includes('wechat') || name.includes('微信'));
     });
 
     if (wechatSource && wechatSource.thumbnail && !wechatSource.thumbnail.isEmpty()) {

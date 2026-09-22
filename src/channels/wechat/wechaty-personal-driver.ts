@@ -15,7 +15,9 @@ export class WechatyPersonalDriver implements WeChatPersonalDriver {
   onMessage?: (msg: { id: string; fromId: string; fromName: string; isRoom: boolean; roomId?: string; roomName?: string; text: string }) => Promise<void> | void;
   async start(): Promise<void> {
     const token = (this.options.env ?? process.env)[this.options.tokenEnv];
-    if (!token) throw new Error(`缺少个人微信 Puppet 凭据环境变量：${this.options.tokenEnv}`);
+    if (!token) {
+      throw new Error(`缺少个人微信 Puppet 凭据环境变量：${this.options.tokenEnv}。如需免 Token 开箱即用，请在通道设置中切换为【桌面视觉代管】或【个人微信扫码绑定 iLink Bot】模式。`);
+    }
     const puppetOptions: { token: string; endpoint?: string } = { token };
     if (this.options.endpoint) {
       puppetOptions.endpoint = this.options.endpoint;

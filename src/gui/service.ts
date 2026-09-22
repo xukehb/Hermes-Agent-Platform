@@ -1030,7 +1030,7 @@ export class GuiService {
     const patch: ModelPatch = {
       provider,
       model,
-      context_window: input.contextWindow,
+      context_window: input.contextWindow !== undefined ? input.contextWindow : 1048576,
       max_output_tokens: input.maxOutputTokens,
       protocol: input.protocol,
       capabilities: input.capabilities,
@@ -3733,10 +3733,18 @@ export class GuiService {
       agentWorkspace = resolver.resolveAgent(defaultAgentId)?.workspace;
     } catch {}
 
+    const puppetTokenEnv = wx.personal?.puppetServiceTokenEnv || 'WECHATY_PUPPET_SERVICE_TOKEN';
+    const puppetTokenVal = process.env[puppetTokenEnv] || '';
+    let rawPuppet: 'ilink' | 'service' | 'desktop_vision' | undefined;
+    try {
+      rawPuppet = new ConfigWriter(this.configPath).read().config.channels?.wechat?.personal?.puppet;
+    } catch {}
+    const effectivePuppet = rawPuppet || (wx.mode === 'personal' ? 'desktop_vision' : (wx.personal?.puppet || (wx.mode === 'ilink_bot' ? 'ilink' : 'service')));
+
     return {
       enabled: !!wx.enabled,
       mode: wx.mode || 'personal',
-      puppet: wx.personal?.puppet || (wx.mode === 'ilink_bot' ? 'ilink' : 'service'),
+      puppet: effectivePuppet,
       visionPollIntervalMs: wx.personal?.visionPollIntervalMs,
       visionModel: wx.personal?.visionModel,
       defaultAgent: defaultAgentId,
@@ -3750,10 +3758,13 @@ export class GuiService {
       wecomAgentId: wx.wecom?.agentId,
       wecomSecret: wx.wecom?.corpSecretEnv ? process.env[wx.wecom.corpSecretEnv] || '' : '',
       wecomWebhookUrl: wx.wecom?.webhookUrlEnv ? process.env[wx.wecom.webhookUrlEnv] || '' : '',
+      puppetToken: puppetTokenVal ? '******' : '',
+      puppetTokenConfigured: Boolean(puppetTokenVal),
     };
   }
 
   async saveWeChatConfig(config: Partial<GuiWeChatConfig>): Promise<GuiWeChatConfig> {
+    const wxCurrent = this.resolver().resolveChannels().wechat;
     if (config.wecomSecret !== undefined && config.wecomSecret.trim()) {
       process.env.WECHAT_WECOM_CORP_SECRET = config.wecomSecret.trim();
       const env = readSavedEnv();
@@ -3764,6 +3775,13 @@ export class GuiService {
       process.env.WECHAT_WECOM_WEBHOOK_URL = config.wecomWebhookUrl.trim();
       const env = readSavedEnv();
       env.WECHAT_WECOM_WEBHOOK_URL = config.wecomWebhookUrl.trim();
+      writeSavedEnv(env);
+    }
+    if (config.puppetToken !== undefined && config.puppetToken.trim()) {
+      const puppetTokenEnv = wxCurrent.personal?.puppetServiceTokenEnv || 'WECHATY_PUPPET_SERVICE_TOKEN';
+      process.env[puppetTokenEnv] = config.puppetToken.trim();
+      const env = readSavedEnv();
+      env[puppetTokenEnv] = config.puppetToken.trim();
       writeSavedEnv(env);
     }
 
@@ -3931,6 +3949,31 @@ export class GuiService {
 
     this.wechatManager = manager;
     this.wechatRunning = true;
+
+    const wxChannels = orchestrator.config.resolveChannels().wechat;
+    if (wxChannels.mode === 'personal' && wxChannels.personal?.puppet === 'service') {
+      const tokenEnv = wxChannels.personal.puppetServiceTokenEnv || 'WECHATY_PUPPET_SERVICE_TOKEN';
+      if (!process.env[tokenEnv]) {
+        this.wechatManager = undefined;
+        this.wechatOrchestrator = undefined;
+        this.wechatRunning = false;
+        this.wechatStatus = 'error';
+        this.wechatError = `当前选择了 Wechaty Puppet 商业服务模式，但未配置凭据环境变量【${tokenEnv}】。若需免 Token 快速接入，请在接入模式中切换为【桌面视觉代管】或【个人微信扫码绑定 iLink Bot】。`;
+        throw new Error(this.wechatError);
+      }
+    }
+    if (wxChannels.mode === 'wecom') {
+      const secretEnv = wxChannels.wecom?.corpSecretEnv || 'WECHAT_WECOM_CORP_SECRET';
+      if (!wxChannels.wecom?.corpId || !process.env[secretEnv]) {
+        this.wechatManager = undefined;
+        this.wechatOrchestrator = undefined;
+        this.wechatRunning = false;
+        this.wechatStatus = 'error';
+        this.wechatError = '当前选择了企业微信模式，但缺少企业 ID (CorpID) 或 Secret。若需个人微信使用，请切换为【桌面视觉代管】或【个人微信扫码绑定 iLink Bot】模式。';
+        throw new Error(this.wechatError);
+      }
+    }
+
     try {
       await manager.start();
     } catch (error) {

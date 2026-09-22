@@ -7023,10 +7023,16 @@ async function renderWeChatView() {
     if (!wxConfig) return;
 
     if ($('wxModeSelect')) {
-      if (wxConfig.puppet === 'desktop_vision') {
+      if (wxConfig.mode === 'wecom') {
+        $('wxModeSelect').value = 'wecom';
+      } else if (wxConfig.puppet === 'desktop_vision') {
         $('wxModeSelect').value = 'desktop_vision';
+      } else if (wxConfig.puppet === 'ilink' || wxConfig.mode === 'ilink_bot') {
+        $('wxModeSelect').value = 'ilink_bot';
+      } else if (wxConfig.puppet === 'service') {
+        $('wxModeSelect').value = 'personal';
       } else {
-        $('wxModeSelect').value = wxConfig.mode || 'ilink_bot';
+        $('wxModeSelect').value = 'desktop_vision';
       }
     }
     if ($('wxAgentSelect')) {
@@ -7055,11 +7061,22 @@ async function renderWeChatView() {
       $('wxApprovalCardEnabled').checked = wxConfig.approvalCard !== false;
     }
 
-    // 根据当前模式切换企微字段显示
-    const isWeCom = ($('wxModeSelect')?.value || wxConfig.mode) === 'wecom';
+    // 根据当前模式切换字段显示
+    const curWxMode = $('wxModeSelect')?.value || 'desktop_vision';
+    const isWeCom = curWxMode === 'wecom';
+    const isWechaty = curWxMode === 'personal';
     const wecomBox = $('wxWeComFields');
     if (wecomBox) {
       wecomBox.style.display = isWeCom ? 'flex' : 'none';
+    }
+    const wechatyBox = $('wxWechatyFields');
+    if (wechatyBox) {
+      wechatyBox.style.display = isWechaty ? 'flex' : 'none';
+    }
+    if ($('wxPuppetTokenInput')) {
+      if (wxConfig.puppetTokenConfigured && !$('wxPuppetTokenInput').value) {
+        $('wxPuppetTokenInput').placeholder = '已配置 Token (******)，如需修改请输入新 Token';
+      }
     }
 
     const badge = $('wxStatusBadge');
@@ -7071,18 +7088,30 @@ async function renderWeChatView() {
 
     if (wxConfig.running) {
       if (badge) {
-        badge.className = wxConfig.status === 'connected' ? 'badge success' : 'badge warning';
-        badge.textContent = wxConfig.status === 'connected' ? '微信已连接' : '等待手机扫码确认';
+        if (wxConfig.status === 'connected') {
+          badge.className = 'badge success';
+          badge.textContent = '微信已连接';
+        } else if (wxConfig.puppet === 'desktop_vision') {
+          badge.className = 'badge info';
+          badge.textContent = '桌面微信接管中';
+        } else {
+          badge.className = 'badge warning';
+          badge.textContent = '等待手机扫码确认';
+        }
       }
       if (toggleBtn) {
         toggleBtn.className = 'btn danger';
         toggleBtn.textContent = '断开连接';
       }
-      if (nameEl) nameEl.textContent = wxConfig.loginUser ? `微信用户：${wxConfig.loginUser}` : '微信智能体通道（服务中）';
+      if (nameEl) nameEl.textContent = wxConfig.loginUser ? `微信用户：${wxConfig.loginUser}` : (wxConfig.puppet === 'desktop_vision' ? '桌面微信智能体通道（运行中）' : '微信智能体通道（服务中）');
       if (descEl) {
-        descEl.textContent = wxConfig.status === 'connected'
-          ? '已成功连接！您可以在手机微信中随时向智能体发送任何编程与审查需求。'
-          : '服务已在本地监听，请使用手机微信扫描下方二维码并在手机端点击确认登录。';
+        if (wxConfig.status === 'connected') {
+          descEl.textContent = '已成功连接！您可以在手机微信中随时向智能体发送任何编程与审查需求。';
+        } else if (wxConfig.puppet === 'desktop_vision') {
+          descEl.textContent = '服务已在本地运行，桌面端 SightFlow 正在后台静默巡检微信聊天窗口。';
+        } else {
+          descEl.textContent = '服务已在本地监听，请使用手机微信扫描下方二维码并在手机端点击确认登录。';
+        }
       }
 
       if (qrBox && qrPlaceholder) {
@@ -7129,6 +7158,16 @@ async function renderWeChatView() {
               </div>
             </div>
           `;
+        } else if (wxConfig.puppet === 'desktop_vision') {
+          qrBox.innerHTML = `
+            <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px 16px;background:var(--bg-subtle);border:1px solid var(--border-default);border-radius:12px;text-align:center;width:100%;max-width:280px;">
+              <div style="width:40px;height:40px;border-radius:50%;background:var(--bg-active);color:var(--primary);display:grid;place-items:center;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              </div>
+              <div style="font-weight:600;font-size:14px;color:var(--text-main);">桌面微信视觉代管中</div>
+              <div style="font-size:11.5px;color:var(--text-muted);max-width:240px;line-height:1.4;">SightFlow 正在后台静默巡检微信聊天窗口，免扫码即开即用</div>
+            </div>
+          `;
         } else {
           qrBox.innerHTML = `
             <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:32px 16px;text-align:center;">
@@ -7158,7 +7197,7 @@ async function renderWeChatView() {
     }
     const confirmBox = $('wxConfirmActionBox');
     if (confirmBox) {
-      confirmBox.style.display = (wxConfig.running && wxConfig.status !== 'connected') ? 'block' : 'none';
+      confirmBox.style.display = (wxConfig.running && wxConfig.status !== 'connected' && wxConfig.puppet !== 'desktop_vision') ? 'block' : 'none';
     }
 
     await renderWeChatContactsList();
@@ -7347,19 +7386,27 @@ $('confirmWxLoginBtn')?.addEventListener('click', async () => {
 });
 
 $('wxModeSelect')?.addEventListener('change', (e) => {
-  const isWeCom = e.target.value === 'wecom';
+  const val = e.target.value;
+  const isWeCom = val === 'wecom';
+  const isWechaty = val === 'personal';
   const wecomBox = $('wxWeComFields');
   if (wecomBox) {
     wecomBox.style.display = isWeCom ? 'flex' : 'none';
+  }
+  const wechatyBox = $('wxWechatyFields');
+  if (wechatyBox) {
+    wechatyBox.style.display = isWechaty ? 'flex' : 'none';
   }
 });
 
 $('wxConfigForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const selectedMode = $('wxModeSelect')?.value || 'ilink_bot';
+  const selectedMode = $('wxModeSelect')?.value || 'desktop_vision';
   const isDesktopVision = selectedMode === 'desktop_vision';
-  const mode = isDesktopVision ? 'personal' : selectedMode;
+  const isWechaty = selectedMode === 'personal';
+  const mode = (isDesktopVision || isWechaty) ? 'personal' : selectedMode;
   const puppet = isDesktopVision ? 'desktop_vision' : (selectedMode === 'ilink_bot' ? 'ilink' : 'service');
+  const puppetToken = $('wxPuppetTokenInput')?.value.trim();
   const defaultAgent = $('wxAgentSelect')?.value || 'coder';
   const workspace = $('wxWorkspaceInput')?.value.trim();
   const wecomCorpId = $('wxCorpIdInput')?.value.trim();
@@ -7372,6 +7419,7 @@ $('wxConfigForm')?.addEventListener('submit', async (e) => {
     await window.hap.saveWeChatConfig({
       mode,
       puppet,
+      puppetToken: puppetToken || undefined,
       defaultAgent,
       workspace,
       wecomCorpId,
@@ -7408,16 +7456,29 @@ $('toggleWxServiceBtn')?.addEventListener('click', async () => {
       showToast('停止失败：' + err.message, 'error');
     }
   } else {
-    showToast('正在启动微信服务...', 'info');
     try {
-      const selectedMode = $('wxModeSelect')?.value || 'ilink_bot';
+      const selectedMode = $('wxModeSelect')?.value || 'desktop_vision';
       const isDesktopVision = selectedMode === 'desktop_vision';
-      const mode = isDesktopVision ? 'personal' : selectedMode;
+      const isWechaty = selectedMode === 'personal';
+      const mode = (isDesktopVision || isWechaty) ? 'personal' : selectedMode;
       const puppet = isDesktopVision ? 'desktop_vision' : (selectedMode === 'ilink_bot' ? 'ilink' : 'service');
+      const puppetToken = $('wxPuppetTokenInput')?.value.trim();
+
+      if (selectedMode === 'personal' && !puppetToken && !wxConfig.puppetTokenConfigured) {
+        showToast('Wechaty Puppet 商业服务模式需要配置 Token。若无 Token，请选择【桌面视觉代管】或【iLink Bot】模式。', 'warning');
+        return;
+      }
+      if (selectedMode === 'wecom' && !$('wxCorpIdInput')?.value.trim() && !wxConfig.wecomCorpId) {
+        showToast('企业微信模式需要填写企业 ID (CorpID)。若为个人使用，请选择【桌面视觉代管】或【iLink Bot】模式。', 'warning');
+        return;
+      }
+
+      showToast('正在启动微信服务...', 'info');
 
       await window.hap.saveWeChatConfig({
         mode,
         puppet,
+        puppetToken: puppetToken || undefined,
         defaultAgent: $('wxAgentSelect')?.value || 'coder',
         workspace: $('wxWorkspaceInput')?.value.trim(),
         wecomCorpId: $('wxCorpIdInput')?.value.trim(),
@@ -7804,13 +7865,10 @@ $('toggleApiKeyVisibilityBtn')?.addEventListener('click', () => {
 
 function inferDefaultContextWindow(modelName) {
   const lower = String(modelName || '').toLowerCase();
-  if (lower.includes('gemini')) return 1048576;
   if (lower.includes('claude')) return 200000;
-  if (lower.includes('gpt-5') || lower.includes('codex')) return 200000;
   if (lower.includes('gpt-4o') || lower.includes('o1') || lower.includes('o3') || lower.includes('o4')) return 128000;
-  if (lower.includes('deepseek')) return 131072;
-  if (lower.includes('qwen') || lower.includes('glm') || lower.includes('kimi') || lower.includes('doubao') || lower.includes('minimax') || lower.includes('moonshot') || lower.includes('hermes')) return 131072;
-  return 131072;
+  // 从服务商拉取的模型（包括 DeepSeek、Qwen、GLM、Gemini、Kimi 及各私有部署大模型）默认统一为 1024k (1,048,576 tokens)
+  return 1048576;
 }
 
 window.openProviderDialog = async (id) => {

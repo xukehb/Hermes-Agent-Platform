@@ -205,8 +205,8 @@ export interface ModelPlan {
   contextWindow: number;
 }
 
-/** 未登记模型的上下文窗口保守估计（默认 128k）。宁可提前压缩，也不要撞上下文上限。 */
-const FALLBACK_CONTEXT_WINDOW = 131072;
+/** 未登记模型的上下文窗口保守估计（默认 1024k / 1048576）。 */
+const FALLBACK_CONTEXT_WINDOW = 1048576;
 
 /** 把一个模型引用解析为可执行计划。 */
 export function planModel(

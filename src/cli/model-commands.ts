@@ -134,9 +134,7 @@ export function registerModelCommands(root: Command, globals: () => GlobalOption
       for (const name of filtered) {
         const alias = providerId + '-' + name.replace(/[^A-Za-z0-9._-]/g, '-');
         const patch: ModelPatch = { provider: providerId, model: name };
-        if (options.contextWindow !== undefined) {
-          patch.context_window = options.contextWindow;
-        }
+        patch.context_window = options.contextWindow !== undefined ? options.contextWindow : 1048576;
         writer.upsertModel(alias, patch);
         imported.push(alias);
       }
@@ -214,8 +212,8 @@ async function askModel(alias: string, ctx: CliContext): Promise<ModelPatch | un
     return undefined;
   }
   const contextWindow = await promptText({
-    message: '上下文窗口（token 数，留空表示不声明）',
-    initialValue: '128000',
+    message: '上下文窗口（token 数，默认 1024k / 1048576）',
+    initialValue: '1048576',
   });
   if (isCancel(contextWindow)) {
     cancel('已取消');

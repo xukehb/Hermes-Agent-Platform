@@ -16,7 +16,8 @@ int main(int argc, const char * argv[]) {
             for (int i = 0; i < CFArrayGetCount(list); i++) {
                 NSDictionary *dict = (__bridge NSDictionary *)CFArrayGetValueAtIndex(list, i);
                 NSString *owner = dict[(id)kCGWindowOwnerName];
-                if ([owner containsString:@"WeChat"] || [owner containsString:@"微信"]) {
+                BOOL isDevTools = [owner containsString:@"开发"] || [owner containsString:@"devtools"] || [owner containsString:@"DevTools"] || [owner containsString:@"Tool"];
+                if (!isDevTools && ([owner isEqualToString:@"微信"] || [owner isEqualToString:@"WeChat"] || [owner containsString:@"WeChat"] || [owner containsString:@"微信"])) {
                     NSNumber *wid = dict[(id)kCGWindowNumber];
                     NSDictionary *bounds = dict[(id)kCGWindowBounds];
                     CGFloat width = [bounds[@"Width"] doubleValue];

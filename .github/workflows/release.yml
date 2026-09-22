@@ -156,9 +156,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: Hermes Agent Platform ${{ github.ref_name }}
-          body: |
-            Hermes Agent Platform ${{ github.ref_name }} desktop installers with startup GitHub update support.
-
-            These packages are not code-signed. Windows SmartScreen or macOS Gatekeeper may display a warning on first launch.
+          body_path: RELEASE_NOTES.md
           files: artifacts/**/*
           fail_on_unmatched_files: true

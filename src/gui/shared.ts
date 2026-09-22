@@ -262,6 +262,8 @@ export interface GuiWeChatConfig {
   wecomAgentId?: number | undefined;
   wecomSecret?: string | undefined;
   wecomWebhookUrl?: string | undefined;
+  puppetToken?: string | undefined;
+  puppetTokenConfigured?: boolean | undefined;
   voiceTranscribe?: boolean | undefined;
   approvalCard?: boolean | undefined;
 }
