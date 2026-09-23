@@ -21,4 +21,4 @@
 
 ## 验证限制
 
-当前环境通过运行时路径可执行 TypeScript 编译；完整 `tsc -p tsconfig.json --noEmit` 与调度/构建契约测试已通过。完整 Vitest 仍受 pnpm 安装策略跳过 `better-sqlite3` 等原生构建脚本影响，相关失败属于运行时原生绑定缺失；Release workflow 会在标准依赖安装环境中执行完整检查。
+当前环境通过运行时路径可执行 TypeScript 编译；完整 `tsc -p tsconfig.json --noEmit`、ESLint 和调度/构建契约测试已通过。完整 Vitest 仍受 pnpm 安装策略跳过 `better-sqlite3` 等原生构建脚本影响，相关失败属于运行时原生绑定缺失；Release workflow 会在标准依赖安装环境中执行完整检查。
