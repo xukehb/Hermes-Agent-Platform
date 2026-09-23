@@ -102,5 +102,31 @@ mode = "personal"
     const cfg = await dvService.getWeChatConfig();
     expect(cfg.puppet).toBe('desktop_vision');
   });
+
+  it('detects saved credentials, allows logout to clear them, and supports relogin to get fresh QR', async () => {
+    // 启动并完成确认
+    await service.startWeChatService();
+    status({ status: 'confirmed', bot_token: 'test-token', ilink_bot_id: 'remote-bot-id', baseurl: 'https://ilinkai.weixin.qq.com' });
+    await vi.waitFor(async () => expect(await service.confirmWeChatLogin()).toMatchObject({ ok: true, status: 'connected' }));
+
+    // 确认已保存凭据
+    const loggedInCfg = await service.getWeChatConfig();
+    expect(loggedInCfg.hasSavedCredentials).toBe(true);
+
+    // 登出并清除凭据
+    const logoutRes = await service.logoutWeChat();
+    expect(logoutRes.ok).toBe(true);
+    const loggedOutCfg = await service.getWeChatConfig();
+    expect(loggedOutCfg.hasSavedCredentials).toBe(false);
+    expect(loggedOutCfg.status).toBe('idle');
+
+    // 重新登录 (reloginWeChat) 自动获取新二维码
+    const reloginRes = await service.reloginWeChat();
+    expect(reloginRes.ok).toBe(true);
+    expect(reloginRes.qrCodeText).toBe('https://example.test/qr');
+    const freshCfg = await service.getWeChatConfig();
+    expect(freshCfg.status).toBe('waiting_qr');
+    expect(freshCfg.running).toBe(true);
+  });
 });
 

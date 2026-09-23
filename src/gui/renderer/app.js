@@ -7086,14 +7086,16 @@ async function renderWeChatView() {
     const qrPlaceholder = $('wxQrPlaceholder');
     const qrBox = $('wxQrBox');
 
+    const isVision = wxConfig.puppet === 'desktop_vision';
+
     if (wxConfig.running) {
       if (badge) {
-        if (wxConfig.status === 'connected') {
+        if (isVision) {
+          badge.className = wxConfig.desktopRunning ? 'badge success' : 'badge warning';
+          badge.textContent = wxConfig.desktopRunning ? '桌面微信已接管' : '等待打开桌面微信';
+        } else if (wxConfig.status === 'connected') {
           badge.className = 'badge success';
           badge.textContent = '微信已连接';
-        } else if (wxConfig.puppet === 'desktop_vision') {
-          badge.className = 'badge info';
-          badge.textContent = '桌面微信接管中';
         } else {
           badge.className = 'badge warning';
           badge.textContent = '等待手机扫码确认';
@@ -7103,12 +7105,20 @@ async function renderWeChatView() {
         toggleBtn.className = 'btn danger';
         toggleBtn.textContent = '断开连接';
       }
-      if (nameEl) nameEl.textContent = wxConfig.loginUser ? `微信用户：${wxConfig.loginUser}` : (wxConfig.puppet === 'desktop_vision' ? '桌面微信智能体通道（运行中）' : '微信智能体通道（服务中）');
+      if (nameEl) {
+        if (isVision) {
+          nameEl.textContent = wxConfig.desktopRunning ? '桌面微信视觉代管 (SightFlow 运行中)' : '桌面微信视觉代管 (等待打开电脑微信客户端)';
+        } else {
+          nameEl.textContent = wxConfig.loginUser ? `微信用户：${wxConfig.loginUser}` : '微信智能体通道（服务中）';
+        }
+      }
       if (descEl) {
-        if (wxConfig.status === 'connected') {
+        if (isVision) {
+          descEl.textContent = wxConfig.desktopRunning
+            ? '已接管电脑桌面微信，SightFlow 正在后台静默巡检聊天视窗并代答好友发来的消息（免手机扫码）。'
+            : '视觉代管服务已在后台监听，但未检测到电脑微信客户端。请在电脑上打开并登录桌面微信。';
+        } else if (wxConfig.status === 'connected') {
           descEl.textContent = '已成功连接！您可以在手机微信中随时向智能体发送任何编程与审查需求。';
-        } else if (wxConfig.puppet === 'desktop_vision') {
-          descEl.textContent = '服务已在本地运行，桌面端 SightFlow 正在后台静默巡检微信聊天窗口。';
         } else {
           descEl.textContent = '服务已在本地监听，请使用手机微信扫描下方二维码并在手机端点击确认登录。';
         }
@@ -7121,16 +7131,48 @@ async function renderWeChatView() {
         qrBox.style.alignItems = 'center';
 
         if (wxConfig.status === 'connected') {
-          qrBox.innerHTML = `
-            <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:24px 16px;background:var(--bg-subtle);border:1px solid var(--border-default);border-radius:12px;text-align:center;width:100%;max-width:280px;">
-              <div style="width:40px;height:40px;border-radius:50%;background:var(--bg-active);color:var(--success);display:grid;place-items:center;">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><polyline points="20 6 9 17 4 12"/></svg>
+          const isVision = wxConfig.puppet === 'desktop_vision';
+          if (isVision) {
+            const runningStatusHtml = wxConfig.desktopRunning
+              ? `<div style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--success);font-weight:600;"><span style="width:7px;height:7px;border-radius:50%;background:var(--success);"></span>桌面微信运行中（已自动接管）</div>`
+              : `<div style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--warning, #f59e0b);font-weight:600;"><span style="width:7px;height:7px;border-radius:50%;background:var(--warning, #f59e0b);"></span>未检测到桌面微信，请打开电脑端微信</div>`;
+
+            qrBox.innerHTML = `
+              <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px 16px;background:var(--bg-subtle);border:1px solid var(--border-default);border-radius:12px;text-align:center;width:100%;max-width:300px;">
+                <div style="width:40px;height:40px;border-radius:50%;background:var(--bg-active);color:var(--primary);display:grid;place-items:center;">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </div>
+                <div style="font-weight:600;color:var(--text-main);font-size:14.5px;">桌面微信视觉代管中 (SightFlow)</div>
+                ${runningStatusHtml}
+                <div style="font-size:11.5px;color:var(--text-muted);line-height:1.4;">
+                  当前为<b>免扫码模式</b>，后台静默巡检电脑微信窗口。好友发来消息时自动代答。
+                </div>
+                <div style="margin-top:6px;display:flex;flex-direction:column;gap:6px;width:100%;">
+                  <button type="button" class="btn secondary" id="switchToIlinkScanBtn" style="font-size:11.5px;padding:5px 10px;display:flex;align-items:center;justify-content:center;gap:6px;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                    <span>切换为手机微信扫码登录 (iLink)</span>
+                  </button>
+                </div>
               </div>
-              <div style="font-weight:600;color:var(--text-main);font-size:15px;">微信已成功连接就绪</div>
-              <div style="font-size:12.5px;color:var(--text-secondary);">当前账号：${esc(wxConfig.loginUser || 'WeChat User')}</div>
-              <div style="font-size:11.5px;color:var(--text-muted);line-height:1.4;">现在拿起手机在微信中发送需求，AI 将实时自动响应并处理任务！</div>
-            </div>
-          `;
+            `;
+          } else {
+            qrBox.innerHTML = `
+              <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px 16px;background:var(--bg-subtle);border:1px solid var(--border-default);border-radius:12px;text-align:center;width:100%;max-width:300px;">
+                <div style="width:40px;height:40px;border-radius:50%;background:var(--bg-active);color:var(--success);display:grid;place-items:center;">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div style="font-weight:600;color:var(--text-main);font-size:14.5px;">微信 iLink Bot 已就绪</div>
+                <div style="font-size:12px;color:var(--text-secondary);">账号：${esc(wxConfig.loginUser || 'WeChat Bot')}</div>
+                <div style="font-size:11.5px;color:var(--text-muted);line-height:1.4;">已自动复用本地有效会话凭据。手机微信向此 Bot 发送消息将实时响应。</div>
+                <div style="margin-top:6px;display:flex;gap:6px;width:100%;justify-content:center;">
+                  <button type="button" class="btn secondary" id="forceRescanWxBtn" style="font-size:11.5px;padding:5px 10px;display:flex;align-items:center;gap:4px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+                    <span>重新扫码 / 切换微信号</span>
+                  </button>
+                </div>
+              </div>
+            `;
+          }
         } else if (wxConfig.qrCodeText) {
           let qrSvgHtml = '';
           if (window.QRCodeSvg && typeof window.QRCodeSvg.generate === 'function') {
@@ -7188,17 +7230,97 @@ async function renderWeChatView() {
         toggleBtn.textContent = '启动微信服务';
       }
       if (nameEl) nameEl.textContent = '微信未连接';
-      if (descEl) descEl.textContent = wxConfig.error || '启动服务后，可在手机微信中直接给智能体发送需求与指令';
+      if (descEl) {
+        if (curWxMode === 'desktop_vision' || wxConfig.puppet === 'desktop_vision') {
+          descEl.textContent = '【桌面视觉代管模式】：直接接管电脑微信窗口免扫码。点击【启动微信服务】即可在后台巡检代答。若需手机微信扫码交互，请切换模式为 iLink Bot。';
+        } else if (wxConfig.hasSavedCredentials && (wxConfig.puppet === 'ilink' || wxConfig.mode === 'ilink_bot')) {
+          descEl.textContent = '【手机扫码 iLink 模式】：检测到上次登录凭据有效，启动将免扫码自动恢复连接。若需更换账号请点击【清除凭据并重新扫码】。';
+        } else {
+          descEl.textContent = wxConfig.error || '启动服务后，可在手机微信中直接给智能体发送需求与指令。';
+        }
+      }
 
       if (qrPlaceholder && qrBox) {
         qrPlaceholder.style.display = 'block';
         qrBox.style.display = 'none';
+
+        if (wxConfig.hasSavedCredentials && (wxConfig.puppet === 'ilink' || wxConfig.mode === 'ilink_bot')) {
+          qrPlaceholder.innerHTML = `
+            <div style="text-align:center;padding:12px 8px;">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--success);margin-bottom:6px;"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+              <div style="font-weight:600;font-size:13px;color:var(--text-main);margin-bottom:4px;">检测到已保存的微信登录凭据</div>
+              <div style="color:var(--text-muted);font-size:11.5px;line-height:1.4;margin-bottom:10px;">
+                上次登录凭据依然有效。启动服务将<b>免扫码自动恢复连接</b>。<br>若需更换微信账号，可点击下方重新扫码。
+              </div>
+              <button type="button" class="btn secondary" id="clearAndRescanBtn" style="font-size:11.5px;padding:4px 12px;display:inline-flex;align-items:center;gap:4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+                <span>清除凭据并重新扫码</span>
+              </button>
+            </div>
+          `;
+        } else if (wxConfig.puppet === 'desktop_vision') {
+          qrPlaceholder.innerHTML = `
+            <div style="text-align:center;padding:12px 8px;">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);margin-bottom:6px;"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              <div style="font-weight:600;font-size:13px;color:var(--text-main);margin-bottom:4px;">桌面微信视觉代管模式</div>
+              <div style="color:var(--text-muted);font-size:11.5px;line-height:1.4;margin-bottom:10px;">
+                该模式直接接管电脑桌面端已登录的微信，<b>无需手机扫码</b>。<br>点击上方【启动微信服务】即可开始静默代答。
+              </div>
+              <button type="button" class="btn secondary" id="switchToIlinkBtn" style="font-size:11.5px;padding:4px 10px;">
+                需要手机微信扫码？切换为 iLink 模式
+              </button>
+            </div>
+          `;
+        } else {
+          qrPlaceholder.innerHTML = `
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);margin-bottom:6px;"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+            <div>点击上方【启动微信服务】后，将在此实时生成微信登录二维码</div>
+          `;
+        }
       }
     }
     const confirmBox = $('wxConfirmActionBox');
     if (confirmBox) {
       confirmBox.style.display = (wxConfig.running && wxConfig.status !== 'connected' && wxConfig.puppet !== 'desktop_vision') ? 'block' : 'none';
     }
+
+    $('switchToIlinkScanBtn')?.addEventListener('click', async () => {
+      try {
+        showToast('正在切换为扫码模式并申请新二维码...', 'info');
+        await window.hap.reloginWeChat();
+        await renderWeChatView();
+      } catch (e) {
+        showToast('切换失败：' + e.message, 'error');
+      }
+    });
+
+    $('forceRescanWxBtn')?.addEventListener('click', async () => {
+      if (!window.confirm('确定要清除当前微信登录凭据并重新扫码登录吗？')) return;
+      try {
+        showToast('正在清除凭据并申请新二维码...', 'info');
+        await window.hap.reloginWeChat();
+        await renderWeChatView();
+      } catch (e) {
+        showToast('操作失败：' + e.message, 'error');
+      }
+    });
+
+    $('clearAndRescanBtn')?.addEventListener('click', async () => {
+      try {
+        showToast('正在清除凭据并申请二维码...', 'info');
+        await window.hap.reloginWeChat();
+        await renderWeChatView();
+      } catch (e) {
+        showToast('操作失败：' + e.message, 'error');
+      }
+    });
+
+    $('switchToIlinkBtn')?.addEventListener('click', async () => {
+      if ($('wxModeSelect')) {
+        $('wxModeSelect').value = 'ilink_bot';
+        $('wxModeSelect').dispatchEvent(new Event('change'));
+      }
+    });
 
     await renderWeChatContactsList();
   } catch (err) {
@@ -7385,7 +7507,7 @@ $('confirmWxLoginBtn')?.addEventListener('click', async () => {
   }
 });
 
-$('wxModeSelect')?.addEventListener('change', (e) => {
+$('wxModeSelect')?.addEventListener('change', async (e) => {
   const val = e.target.value;
   const isWeCom = val === 'wecom';
   const isWechaty = val === 'personal';
@@ -7397,6 +7519,16 @@ $('wxModeSelect')?.addEventListener('change', (e) => {
   if (wechatyBox) {
     wechatyBox.style.display = isWechaty ? 'flex' : 'none';
   }
+  const isDesktopVision = val === 'desktop_vision';
+  const mode = (isDesktopVision || isWechaty) ? 'personal' : val;
+  const puppet = isDesktopVision ? 'desktop_vision' : (val === 'ilink_bot' ? 'ilink' : 'service');
+  try {
+    const wxConfig = await window.hap.getWeChatConfig();
+    if (!wxConfig?.running) {
+      await window.hap.saveWeChatConfig({ mode, puppet });
+      await renderWeChatView();
+    }
+  } catch {}
 });
 
 $('wxConfigForm')?.addEventListener('submit', async (e) => {

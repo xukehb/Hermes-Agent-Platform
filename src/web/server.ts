@@ -1180,7 +1180,7 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
             'listMcpTools','listPlugins','listSkills','listSymbols','listWeChatContacts','logs','logoutWeChat',
             'maximizeWindow','minimizeWindow','onChatStream','onHostingActivity','onInstallProgress','onMiniModeChanged',
             'onOllamaPullProgress','onUpdateState','openExternal','openInExplorer','openInTerminal','openInVsCode',
-            'platform','pullOllamaModel','refreshWeChatQr','releaseContactTakeover','removeChannelContact',
+            'platform','pullOllamaModel','refreshWeChatQr','releaseContactTakeover','reloginWeChat','removeChannelContact',
             'removeChatStreamListeners','removeInstallProgressListeners','removeMiniModeListeners','removeProject',
             'removeSchedule','removeServer','removeWeChatContact','restoreDefaultProviders','revertAllFiles','revertFileDiff',
             'revertHunk','saveDefaultHostingPolicy','saveEnvVar','saveFeishuConfig','saveProjectCommitRule','saveQQConfig',

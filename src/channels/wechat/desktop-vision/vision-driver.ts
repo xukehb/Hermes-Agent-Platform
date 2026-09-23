@@ -112,7 +112,10 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
     }
 
     // SightFlow 模式无需重新扫码，直接接管本地桌面已登录微信
-    const loginUser = { id: 'desktop_wechat_host', name: '桌面微信代管 (SightFlow模式)' };
+    const loginUser = {
+      id: 'desktop_wechat_host',
+      name: isRunning ? '桌面微信 (SightFlow 已接管桌面客户端)' : '桌面微信 (SightFlow 等待打开客户端)',
+    };
     this.onLogin?.(loginUser);
 
     // 启动视觉巡检轮询循环

@@ -118,6 +118,7 @@ const hapApi = {
   saveWeChatConfig: (config) => call('gui:saveWeChatConfig', config),
   startWeChatService: () => call('gui:startWeChatService'),
   logoutWeChat: () => call('gui:logoutWeChat'),
+  reloginWeChat: () => call('gui:reloginWeChat'),
   stopWeChatService: () => call('gui:stopWeChatService'),
   refreshWeChatQr: () => call('gui:refreshWeChatQr'),
   confirmWeChatLogin: () => call('gui:confirmWeChatLogin'),

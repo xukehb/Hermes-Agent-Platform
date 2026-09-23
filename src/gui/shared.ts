@@ -266,6 +266,9 @@ export interface GuiWeChatConfig {
   puppetTokenConfigured?: boolean | undefined;
   voiceTranscribe?: boolean | undefined;
   approvalCard?: boolean | undefined;
+  hasSavedCredentials?: boolean | undefined;
+  savedLoginUserId?: string | undefined;
+  desktopRunning?: boolean | undefined;
 }
 
 // 飞书机器人通道可视化配置

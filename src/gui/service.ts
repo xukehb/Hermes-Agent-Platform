@@ -3741,6 +3741,24 @@ export class GuiService {
     } catch {}
     const effectivePuppet = rawPuppet || (wx.mode === 'personal' ? 'desktop_vision' : (wx.personal?.puppet || (wx.mode === 'ilink_bot' ? 'ilink' : 'service')));
 
+    let hasSavedCredentials = false;
+    let savedLoginUserId: string | undefined;
+    try {
+      const ilinkStore = new IlinkAccountStore(wx.authDir, wx.personal?.ilinkAccountId || 'bot-local');
+      const account = ilinkStore.loadAccount();
+      if (account) {
+        hasSavedCredentials = true;
+        savedLoginUserId = account.loginUserId;
+      }
+    } catch {}
+
+    let desktopRunning: boolean | undefined;
+    if (effectivePuppet === 'desktop_vision') {
+      try {
+        desktopRunning = await isWeChatRunning();
+      } catch {}
+    }
+
     return {
       enabled: !!wx.enabled,
       mode: wx.mode || 'personal',
@@ -3754,6 +3772,9 @@ export class GuiService {
       qrCodeText: this.wechatStatus === 'error' ? undefined : this.wechatManager?.qrCodeText ?? this.wechatQrCode,
       loginUser: this.wechatLoginUser,
       error: this.wechatError,
+      hasSavedCredentials,
+      savedLoginUserId,
+      desktopRunning,
       wecomCorpId: wx.wecom?.corpId,
       wecomAgentId: wx.wecom?.agentId,
       wecomSecret: wx.wecom?.corpSecretEnv ? process.env[wx.wecom.corpSecretEnv] || '' : '',
@@ -4030,14 +4051,42 @@ export class GuiService {
 
   async logoutWeChat(): Promise<{ ok: boolean; message: string }> {
     const wx = this.resolver().resolveChannels().wechat;
-    if (!['personal', 'ilink_bot'].includes(wx.mode) || wx.personal.puppet !== 'ilink') {
-      throw new Error('当前仅支持 iLink 模式清除登录；其他模式请在对应服务商撤销授权');
-    }
     let warning = '';
-    try { await this.stopWeChatService(); }
-    catch (error) { warning = '（' + describeError(error) + '）'; }
-    new IlinkAccountStore(wx.authDir, wx.personal.ilinkAccountId).clearSession();
-    return { ok: true, message: '已清除本地微信登录，下次连接需扫码；远端绑定未撤销' + warning };
+    try {
+      await this.stopWeChatService();
+    } catch (error) {
+      warning = '（' + describeError(error) + '）';
+    }
+    try {
+      new IlinkAccountStore(wx.authDir, wx.personal?.ilinkAccountId || 'bot-local').clearSession();
+    } catch {}
+    this.wechatStatus = 'idle';
+    this.wechatLoginUser = undefined;
+    this.wechatQrCode = undefined;
+    return { ok: true, message: '已断开连接并清除本地微信登录凭据，下次连接需重新扫码' + warning };
+  }
+
+  async reloginWeChat(): Promise<{ ok: boolean; message: string; qrCodeText?: string | undefined }> {
+    const wx = this.resolver().resolveChannels().wechat;
+    await this.stopWeChatService();
+    try {
+      new IlinkAccountStore(wx.authDir, wx.personal?.ilinkAccountId || 'bot-local').clearSession();
+    } catch {}
+    await this.saveWeChatConfig({
+      mode: 'ilink_bot',
+      puppet: 'ilink',
+      enabled: true,
+    });
+    this.wechatQrCode = undefined;
+    this.wechatLoginUser = undefined;
+    this.wechatStatus = 'waiting_qr';
+    await this.startWeChatService();
+    const cfg = await this.getWeChatConfig();
+    return {
+      ok: true,
+      message: '已切换为扫码模式并清除历史凭据，请使用手机微信扫码授权登录！',
+      qrCodeText: cfg.qrCodeText,
+    };
   }
 
   async syncWeChatContacts(): Promise<{ contacts: number; rooms: number; syncedAt: number }> {
