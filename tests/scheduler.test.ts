@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { isCronMatch, describeCron } from '../src/scheduler/cron-parser.js';
-import { getSchedulerMinuteKey, shouldRunSchedulerTick } from '../src/scheduler/engine.js';
+import { getSchedulerMinuteKey, shouldRunSchedulerTick, shouldStartScheduledJob } from '../src/scheduler/engine.js';
 import { ScheduleStore } from '../src/scheduler/storage.js';
 import { existsSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
@@ -14,6 +14,8 @@ describe('Scheduler Module & Cron Parser', () => {
 
       expect(getSchedulerMinuteKey(first)).not.toBe(getSchedulerMinuteKey(nextDay));
       expect(shouldRunSchedulerTick(getSchedulerMinuteKey(first), nextDay)).toBe(true);
+      expect(shouldStartScheduledJob(undefined, first, true)).toBe(false);
+      expect(shouldStartScheduledJob(undefined, first, false)).toBe(true);
     });
   });
 

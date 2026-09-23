@@ -20,6 +20,11 @@ export function shouldRunSchedulerTick(lastKey: string | undefined, now: Date): 
   return lastKey !== getSchedulerMinuteKey(now);
 }
 
+/** 调度层在同一分钟内拒绝正在执行的任务，避免长任务重叠。 */
+export function shouldStartScheduledJob(lastKey: string | undefined, now: Date, isRunning: boolean): boolean {
+  return !isRunning && shouldRunSchedulerTick(lastKey, now);
+}
+
 export class SchedulerEngine {
   private static instance: SchedulerEngine;
   private readonly store: ScheduleStore;
@@ -76,12 +81,8 @@ export class SchedulerEngine {
       const currentMinuteKey = getSchedulerMinuteKey(now);
       const persistedMinuteKey = job.lastRunAt ? getSchedulerMinuteKey(new Date(job.lastRunAt)) : undefined;
       const lastMinuteKey = this.lastExecutedMinuteByJob.get(job.id) || persistedMinuteKey;
-      if (!shouldRunSchedulerTick(lastMinuteKey, now)) continue;
+      if (!shouldStartScheduledJob(lastMinuteKey, now, this.runningJobIds.has(job.id))) continue;
       if (isCronMatch(job.cron, now)) {
-        if (this.runningJobIds.has(job.id)) {
-          this.log(`[Scheduler] 跳过重叠任务 [${job.name}]：上一次执行仍在运行`);
-          continue;
-        }
         this.lastExecutedMinuteByJob.set(job.id, currentMinuteKey);
         this.log(`[Scheduler] 触发定时任务 [${job.name}] (${job.cron}) -> 智能体 [${job.agent}]`);
         // 异步执行，不阻塞调度循环
