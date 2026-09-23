@@ -26,10 +26,14 @@ describe('package scripts', () => {
     };
   };
 
-  it.each(['gui', 'gui:dev'])('%s rebuilds native modules before Electron starts', (scriptName) => {
+  it.each(['gui', 'gui:dev:rebuild'])('%s rebuilds native modules before Electron starts', (scriptName) => {
     const script = packageJson.scripts?.[scriptName] ?? '';
 
     expect(script).toMatch(/npm run rebuild:electron.*electron dist\/src\/gui\/main\.js/);
+  });
+
+  it('keeps the normal GUI development loop free of native rebuilds', () => {
+    expect(packageJson.scripts?.['gui:dev']).toBe('npm run build && electron dist/src/gui/main.js');
   });
 
   it('forces a source rebuild when switching native modules back to Node.js', () => {
