@@ -107,6 +107,7 @@ describe('package scripts', () => {
   });
 
   it('uses a production TypeScript project that excludes tests from dist', () => {
+    expect(packageJson.scripts?.build).toContain('node scripts/clean-dist.mjs');
     expect(packageJson.scripts?.build).toContain('tsc -p tsconfig.build.json');
     const buildConfig = JSON.parse(readFileSync(join(process.cwd(), 'tsconfig.build.json'), 'utf8')) as {
       include?: string[];
