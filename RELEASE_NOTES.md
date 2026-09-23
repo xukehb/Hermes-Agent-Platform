@@ -1,25 +1,25 @@
-# Hermes Agent Platform v0.1.19 发布说明 / Release Notes
+# Hermes Agent Platform v0.1.20 发布说明 / Release Notes
 
 ## 🌟 核心更新亮点 (Highlights)
 
-### 1. 🧠 模型默认上下文窗口扩展至 1024k
-- 从各服务商拉取的模型配置默认上下文窗口统一升级为 **1024k (1,048,576 tokens)**。
-- 彻底解除长文本问答、海量代码分析与复杂逻辑链处理的窗口限制。
+### 1. 🖥️ 跨平台桌面视窗与屏幕捕获增强
+- **全平台屏幕截屏捕获**：增强 Windows、macOS 与 Linux 下的屏幕截屏能力，保障视觉代管与桌面控制的跨平台一致性。
+- **进程探测与类型安全**：增强微信等应用进程探测的跨平台安全性与健壮性，防止非预期崩溃。
 
-### 2. 💬 微信托管与多轮长记忆解耦架构
-- **会话与代管深度解耦**：微信托管的上下文与应用内常规对话隔离存储，防止人设与代管 System Prompt 相互污染。
-- **多轮上下文连贯性优化**：彻底解决微信代管多轮后出现的“前言不搭后语”与历史丢失问题，增加滑动剪裁与关键记忆摘要机制。
-- **稳定重连与桌面识别**：优化微信 OCR 视觉代管与多协议支持，增强心跳检测与异常自愈能力。
+### 2. ⏱️ 任务调度引擎深度优化 (Scheduler Engine)
+- **精确时间戳与日期级 Tick 去重**：引入包含日期的精确周期去重，杜绝定时任务同一分钟内重复触发。
+- **服务重启状态保护**：全面优化重启恢复逻辑，避免系统重启后对已调度任务进行重复执行。
+- **并发重叠守卫机制 (Overlapping Job Guard)**：针对执行时间长于调度间隔的复杂任务，自动防止重叠并发执行，杜绝任务互相踩踏与内存占用飙升。
 
-### 3. 🛠️ 智能体交互与生态扩展全面增强
-- **用户目录技能自动发现**：自动扫描加载 `~/.agents/.skills` 目录下的用户自定义 Skill 技能包。
-- **全局唤起与命令补全**：
-  - 输入 `@` 快速唤起智能体、插件与会话上下文；
-  - 输入 `/` 快速唤起斜杠命令与技能菜单。
-- **规划模式 (Planning Mode) 与目标模式 (Goal Mode)**：支持长时间攻坚与多步复杂研发规划。
-- **生命周期 Hooks 机制**：内置前后置拦截器，支持自定义请求校验与中间件扩展。
-- **沙箱环境与敏感操作守卫**：支持命令执行安全审计与敏感操作自动化/手动多级审批。
-- **电脑控制与浏览器自动化**：支持系统级桌面操控与无头浏览器智能操控。
+### 3. ⚡ 生产打包精简与研发效率提升
+- **构建体积轻量化**：生产编译配置自动剥离所有测试用例文件，构建前自动清理过时的 `dist` 产物。
+- **GUI 研发启动提速**：优化本地调试启动循环，避免常规代码热重载时不必要的原生模块重复编译。
+- **CI 发版流水线质量加固**：发版自动化矩阵严格接入 `npm run lint` 与 `npm run build` 生产构建完整性校验。
+
+### 4. 🧠 平台核心能力延续 (v0.1.19+ 架构特性)
+- **模型上下文升级**：拉取的云端/本地模型默认窗口统一扩展至 **1024k (1,048,576 tokens)**。
+- **微信代管多轮记忆解耦**：彻底隔离代管记忆与普通会话，防止人设污染；智能滑动修剪与好友事实画像沉淀，根治“前言不搭后语”。
+- **智能体生态**：自动加载 `~/.agents/.skills` 本地技能、`@` / `/` 快速补全菜单、规划模式 (Plan Mode)、生命周期 Hooks 机制、工作区沙箱守卫。
 
 ---
 
@@ -30,7 +30,7 @@
 
 ### 🪟 Windows (x64)
 - **安装文件**：
-  - `Hermes-Agent-Platform-0.1.19-Windows-Setup-x64.exe` (或 `Hermes-Agent-Platform-0.1.19-Setup.exe`)
+  - `Hermes-Agent-Platform-0.1.20-Windows-Setup-x64.exe` (或 `Hermes-Agent-Platform-0.1.20-Setup.exe`)
 - **安装与运行说明**：
   1. 下载后双击运行安装向导，按照提示完成安装并自动创建桌面快捷方式。
   2. 若遇到 **Windows Defender SmartScreen** 弹出“Windows 已保护你的电脑 / 未知发布者”拦截提示：
@@ -39,12 +39,12 @@
 
 ### 🐧 Ubuntu / Debian Linux (x64)
 - **安装文件**：
-  - `Hermes-Agent-Platform-0.1.19-Ubuntu-x64.deb`
+  - `Hermes-Agent-Platform-0.1.20-Ubuntu-x64.deb`
 - **安装与运行说明**：
   1. 下载 `.deb` 安装包至本地。
   2. 打开终端运行以下命令安装：
      ```bash
-     sudo dpkg -i Hermes-Agent-Platform-0.1.19-Ubuntu-x64.deb
+     sudo dpkg -i Hermes-Agent-Platform-0.1.20-Ubuntu-x64.deb
      sudo apt-get install -f  # 若缺少依赖项，执行此命令自动修复并完成安装
      ```
   3. 安装完成后可在系统应用程序列表启动，或在终端输入 `hermes-agent-platform` 运行。
@@ -52,11 +52,11 @@
 ### 🍎 macOS (Apple Silicon & Intel)
 - **安装文件**：
   - **Apple Silicon (M1 / M2 / M3 / M4 / M系列芯片)**：
-    - DMG 安装镜像：`Hermes-Agent-Platform-0.1.19-macOS-arm64.dmg`
-    - 免安装压缩包：`Hermes-Agent-Platform-0.1.19-macOS-arm64.zip`
+    - DMG 安装镜像：`Hermes-Agent-Platform-0.1.20-macOS-arm64.dmg`
+    - 免安装压缩包：`Hermes-Agent-Platform-0.1.20-macOS-arm64.zip`
   - **Intel (x64 处理器)**：
-    - DMG 安装镜像：`Hermes-Agent-Platform-0.1.19-macOS-x64.dmg`
-    - 免安装压缩包：`Hermes-Agent-Platform-0.1.19-macOS-x64.zip`
+    - DMG 安装镜像：`Hermes-Agent-Platform-0.1.20-macOS-x64.dmg`
+    - 免安装压缩包：`Hermes-Agent-Platform-0.1.20-macOS-x64.zip`
 - **安装与 Gatekeeper 安全放行说明**：
   1. 双击打开 `.dmg` 镜像，将 `Hermes Agent Platform` 拖动至 `Applications`（应用程序）文件夹。
   2. 首次启动时若弹出 **“无法打开，因为 Apple 无法检查其是否包含恶意软件”** 或 **“来自未识别的开发者”**：
