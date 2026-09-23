@@ -47,6 +47,9 @@ jobs:
       - name: Run lint
         run: npm run lint
 
+      - name: Verify production build
+        run: npm run build
+
   package:
     name: Package ${{ matrix.artifact }}
     needs: validate
