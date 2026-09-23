@@ -29,6 +29,7 @@ export class SchedulerEngine {
   private timer: NodeJS.Timeout | null = null;
   private running = false;
   private lastExecutedMinuteKey: string | undefined;
+  private readonly runningJobIds = new Set<string>();
 
   constructor(options: SchedulerEngineOptions = {}) {
     this.store = ScheduleStore.getInstance();
@@ -80,6 +81,10 @@ export class SchedulerEngine {
 
     for (const job of jobs) {
       if (isCronMatch(job.cron, now)) {
+        if (this.runningJobIds.has(job.id)) {
+          this.log(`[Scheduler] 跳过重叠任务 [${job.name}]：上一次执行仍在运行`);
+          continue;
+        }
         triggeredCount++;
         this.log(`[Scheduler] 触发定时任务 [${job.name}] (${job.cron}) -> 智能体 [${job.agent}]`);
         // 异步执行，不阻塞调度循环
@@ -95,6 +100,10 @@ export class SchedulerEngine {
   }
 
   async executeJob(job: ScheduleJobConfig): Promise<ScheduleExecutionRecord> {
+    if (this.runningJobIds.has(job.id)) {
+      throw new Error(`任务 [${job.name}] 正在执行中，拒绝重叠运行`);
+    }
+    this.runningJobIds.add(job.id);
     const startTime = Date.now();
     this.log(`[Scheduler] 正在执行任务 [${job.name}] (智能体: ${job.agent})...`);
 
@@ -158,6 +167,8 @@ export class SchedulerEngine {
       await this.dispatchNotifications(job, `任务执行失败：${errorMsg}`, 'failed');
 
       return record;
+    } finally {
+      this.runningJobIds.delete(job.id);
     }
   }
 
