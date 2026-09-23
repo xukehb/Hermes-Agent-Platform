@@ -9,6 +9,17 @@ export interface SchedulerEngineOptions {
   onNotify?: ((channel: 'wechat' | 'telegram' | 'logs', title: string, content: string) => Promise<void> | void) | undefined;
 }
 
+/** 生成本地时区的调度分钟键，包含日期以避免跨天误去重。 */
+export function getSchedulerMinuteKey(date: Date): string {
+  const pad = (value: number): string => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** 判断当前 tick 是否已经在同一分钟执行过。 */
+export function shouldRunSchedulerTick(lastKey: string | undefined, now: Date): boolean {
+  return lastKey !== getSchedulerMinuteKey(now);
+}
+
 export class SchedulerEngine {
   private static instance: SchedulerEngine;
   private readonly store: ScheduleStore;
@@ -17,7 +28,7 @@ export class SchedulerEngine {
   private readonly configPath?: string | undefined;
   private timer: NodeJS.Timeout | null = null;
   private running = false;
-  private lastExecutedMinute = -1;
+  private lastExecutedMinuteKey: string | undefined;
 
   constructor(options: SchedulerEngineOptions = {}) {
     this.store = ScheduleStore.getInstance();
@@ -59,8 +70,8 @@ export class SchedulerEngine {
     if (!this.running) return;
 
     const now = new Date();
-    const currentMinute = now.getHours() * 60 + now.getMinutes();
-    if (this.lastExecutedMinute === currentMinute) {
+    const currentMinuteKey = getSchedulerMinuteKey(now);
+    if (!shouldRunSchedulerTick(this.lastExecutedMinuteKey, now)) {
       return; // 同一分钟内不重复触发
     }
 
@@ -79,7 +90,7 @@ export class SchedulerEngine {
     }
 
     if (triggeredCount > 0) {
-      this.lastExecutedMinute = currentMinute;
+      this.lastExecutedMinuteKey = currentMinuteKey;
     }
   }
 

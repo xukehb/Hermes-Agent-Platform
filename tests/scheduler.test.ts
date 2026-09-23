@@ -1,11 +1,22 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { isCronMatch, describeCron } from '../src/scheduler/cron-parser.js';
+import { getSchedulerMinuteKey, shouldRunSchedulerTick } from '../src/scheduler/engine.js';
 import { ScheduleStore } from '../src/scheduler/storage.js';
 import { existsSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 describe('Scheduler Module & Cron Parser', () => {
+  describe('Scheduler tick deduplication', () => {
+    it('includes the calendar date so the same minute on different days is not skipped', () => {
+      const first = new Date(2026, 7, 28, 9, 30, 0);
+      const nextDay = new Date(2026, 7, 29, 9, 30, 0);
+
+      expect(getSchedulerMinuteKey(first)).not.toBe(getSchedulerMinuteKey(nextDay));
+      expect(shouldRunSchedulerTick(getSchedulerMinuteKey(first), nextDay)).toBe(true);
+    });
+  });
+
   describe('Cron Parser Matcher', () => {
     it('matches exact minute and hour', () => {
       const d = new Date(2026, 7, 28, 9, 30, 0); // 2026-08-28 09:30 (Friday)
