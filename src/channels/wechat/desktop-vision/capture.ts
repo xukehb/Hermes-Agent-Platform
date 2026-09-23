@@ -19,7 +19,7 @@ export interface CapturedWindow {
   base64?: string | undefined;
   dataUrl?: string | undefined;
   windowName?: string | undefined;
-  sourceType: 'electron_capturer' | 'screencapture' | 'none';
+  sourceType: 'electron_capturer' | 'screencapture' | 'system_capture' | 'none';
   error?: string | undefined;
 }
 
@@ -48,7 +48,12 @@ export async function isWeChatRunning(): Promise<boolean> {
     }
   }
 
-  return false;
+  try {
+    const { stdout } = await runCmd(process.platform === 'win32' ? 'tasklist' : 'pgrep', process.platform === 'win32' ? ['/FI', 'IMAGENAME eq WeChat.exe'] : ['-f', '微信|WeChat']);
+    return process.platform === 'win32' ? stdout.includes('WeChat.exe') : stdout.trim().length > 0;
+  } catch {
+    return false;
+  }
 }
 
 /** 尝试使用 Electron 的 desktopCapturer 抓取微信窗口 */
@@ -159,6 +164,29 @@ async function captureViaMacScreencapture(): Promise<CapturedWindow> {
   }
 }
 
+/** 使用 Windows/Linux 系统工具截取当前桌面，保证非 Electron 环境也能识屏。 */
+async function captureViaSystemScreen(): Promise<CapturedWindow> {
+  if (process.platform === 'darwin') return captureViaMacScreencapture();
+  const tempPath = join(tmpdir(), `hap_wechat_cap_${Date.now()}_${randomUUID().slice(0, 6)}.png`);
+  try {
+    if (process.platform === 'win32') {
+      const escaped = tempPath.replace(/'/g, "''");
+      const script = `Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing; $s=[Windows.Forms.Screen]::PrimaryScreen.Bounds; $b=New-Object Drawing.Bitmap $s.Width,$s.Height; $g=[Drawing.Graphics]::FromImage($b); $g.CopyFromScreen($s.Location,[Drawing.Point]::Empty,$s.Size); $b.Save('${escaped}',[Drawing.Imaging.ImageFormat]::Png); $g.Dispose(); $b.Dispose()`;
+      await runCmd('powershell', ['-NoProfile', '-NonInteractive', '-Command', script]);
+    } else {
+      try { await runCmd('scrot', [tempPath]); } catch { await runCmd('import', ['-window', 'root', tempPath]); }
+    }
+    if (!existsSync(tempPath)) throw new Error('截图文件未生成');
+    const buffer = readFileSync(tempPath);
+    try { unlinkSync(tempPath); } catch {}
+    const base64 = buffer.toString('base64');
+    return { ok: true, buffer, base64, dataUrl: `data:image/png;base64,${base64}`, windowName: 'WeChat Desktop Screen', sourceType: 'system_capture' };
+  } catch (err) {
+    try { if (existsSync(tempPath)) unlinkSync(tempPath); } catch {}
+    return { ok: false, sourceType: 'system_capture', error: `系统截屏失败: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
+
 /** 抓取微信客户端窗口（macOS 优先系统级原生高精度截屏，其他平台/降级使用 Electron desktopCapturer） */
 export async function captureWeChatWindow(): Promise<CapturedWindow> {
   if (process.platform === 'darwin') {
@@ -173,6 +201,5 @@ export async function captureWeChatWindow(): Promise<CapturedWindow> {
     return electronRes;
   }
 
-  return await captureViaMacScreencapture();
+  return await captureViaSystemScreen();
 }
-
