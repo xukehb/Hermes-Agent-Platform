@@ -44,6 +44,9 @@ jobs:
       - name: Run type checking
         run: npm run typecheck
 
+      - name: Run lint
+        run: npm run lint
+
   package:
     name: Package ${{ matrix.artifact }}
     needs: validate
