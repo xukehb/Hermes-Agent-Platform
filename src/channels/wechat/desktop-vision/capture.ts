@@ -48,12 +48,16 @@ export async function isWeChatRunning(): Promise<boolean> {
     }
   }
 
-  try {
-    const { stdout } = await runCmd(process.platform === 'win32' ? 'tasklist' : 'pgrep', process.platform === 'win32' ? ['/FI', 'IMAGENAME eq WeChat.exe'] : ['-f', '微信|WeChat']);
-    return process.platform === 'win32' ? stdout.includes('WeChat.exe') : stdout.trim().length > 0;
-  } catch {
-    return false;
+  if (process.platform === 'linux') {
+    try {
+      const { stdout } = await runCmd('pgrep', ['-f', '微信|WeChat']);
+      return stdout.trim().length > 0;
+    } catch {
+      return false;
+    }
   }
+
+  return false;
 }
 
 /** 尝试使用 Electron 的 desktopCapturer 抓取微信窗口 */
