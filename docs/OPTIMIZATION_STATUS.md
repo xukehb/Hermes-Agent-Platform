@@ -20,4 +20,4 @@
 
 ## 验证限制
 
-当前工作环境没有 `node`/`npm` 命令，无法在本机执行 Vitest、TypeScript 编译或 Electron 打包；对应检查已加入 GitHub Release workflow，由 CI 在安装依赖后执行。
+当前环境通过运行时路径可执行 TypeScript 编译；完整 `tsc -p tsconfig.json --noEmit` 与调度/构建契约测试已通过。完整 Vitest 仍受 pnpm 安装策略跳过 `better-sqlite3` 等原生构建脚本影响，相关失败属于运行时原生绑定缺失；Release workflow 会在标准依赖安装环境中执行完整检查。
