@@ -9,6 +9,7 @@
 - 微信屏幕截图在 macOS、Windows、Linux 和非 Electron 环境提供系统级降级路径。
 - 生产构建使用 `tsconfig.build.json`，排除测试文件，并在构建前清理旧 `dist` 内容。
 - Release 校验增加 lint 和生产构建步骤。
+- 普通 `gui:dev` 启动不再每次重建原生模块，需重建时使用 `gui:dev:rebuild`。
 - 记忆存储当前使用 SQLite WAL 和写入队列，已有并发添加回归测试。
 
 ## 仍需继续处理
