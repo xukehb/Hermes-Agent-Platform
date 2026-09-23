@@ -11,7 +11,7 @@
   },
   "main": "dist/src/gui/main.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json && tsx src/gui/copy-assets.ts",
+    "build": "tsc -p tsconfig.build.json && tsx src/gui/copy-assets.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run tests/",
     "lint": "eslint .",

@@ -106,6 +106,16 @@ describe('package scripts', () => {
     expect(workflow).toContain('Clean release directory');
   });
 
+  it('uses a production TypeScript project that excludes tests from dist', () => {
+    expect(packageJson.scripts?.build).toContain('tsc -p tsconfig.build.json');
+    const buildConfig = JSON.parse(readFileSync(join(process.cwd(), 'tsconfig.build.json'), 'utf8')) as {
+      include?: string[];
+      exclude?: string[];
+    };
+    expect(buildConfig.include).toEqual(['src/**/*.ts']);
+    expect(buildConfig.exclude).toContain('tests');
+  });
+
   it('does not expose legacy desktop product names at runtime', () => {
     const runtimeFiles = [
       'src/cli/ip-commands.ts',
