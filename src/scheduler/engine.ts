@@ -28,7 +28,7 @@ export class SchedulerEngine {
   private readonly configPath?: string | undefined;
   private timer: NodeJS.Timeout | null = null;
   private running = false;
-  private lastExecutedMinuteKey: string | undefined;
+  private readonly lastExecutedMinuteByJob = new Map<string, string>();
   private readonly runningJobIds = new Set<string>();
 
   constructor(options: SchedulerEngineOptions = {}) {
@@ -71,21 +71,18 @@ export class SchedulerEngine {
     if (!this.running) return;
 
     const now = new Date();
-    const currentMinuteKey = getSchedulerMinuteKey(now);
-    if (!shouldRunSchedulerTick(this.lastExecutedMinuteKey, now)) {
-      return; // 同一分钟内不重复触发
-    }
-
     const jobs = this.store.listJobs().filter((j) => j.enabled);
-    let triggeredCount = 0;
-
     for (const job of jobs) {
+      const currentMinuteKey = getSchedulerMinuteKey(now);
+      const persistedMinuteKey = job.lastRunAt ? getSchedulerMinuteKey(new Date(job.lastRunAt)) : undefined;
+      const lastMinuteKey = this.lastExecutedMinuteByJob.get(job.id) || persistedMinuteKey;
+      if (!shouldRunSchedulerTick(lastMinuteKey, now)) continue;
       if (isCronMatch(job.cron, now)) {
         if (this.runningJobIds.has(job.id)) {
           this.log(`[Scheduler] 跳过重叠任务 [${job.name}]：上一次执行仍在运行`);
           continue;
         }
-        triggeredCount++;
+        this.lastExecutedMinuteByJob.set(job.id, currentMinuteKey);
         this.log(`[Scheduler] 触发定时任务 [${job.name}] (${job.cron}) -> 智能体 [${job.agent}]`);
         // 异步执行，不阻塞调度循环
         this.executeJob(job).catch((err) => {
@@ -94,9 +91,6 @@ export class SchedulerEngine {
       }
     }
 
-    if (triggeredCount > 0) {
-      this.lastExecutedMinuteKey = currentMinuteKey;
-    }
   }
 
   async executeJob(job: ScheduleJobConfig): Promise<ScheduleExecutionRecord> {
