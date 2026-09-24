@@ -79,6 +79,7 @@ export class ScheduleStore {
       createdAt: existing ? existing.createdAt : now,
       updatedAt: now,
       lastRunAt: existing?.lastRunAt,
+      lastTriggeredAt: existing?.lastTriggeredAt,
       lastStatus: existing?.lastStatus,
       lastOutput: existing?.lastOutput,
       lastDurationMs: existing?.lastDurationMs,
@@ -114,6 +115,15 @@ export class ScheduleStore {
     job.updatedAt = Date.now();
     this.save(state);
     return job;
+  }
+
+  markTriggered(id: string, triggeredAt: number): boolean {
+    const state = this.load();
+    const job = state.jobs.find((item) => item.id === id);
+    if (!job) return false;
+    job.lastTriggeredAt = triggeredAt;
+    this.save(state);
+    return true;
   }
 
   recordExecution(record: Omit<ScheduleExecutionRecord, 'id'>): ScheduleExecutionRecord {

@@ -15,6 +15,7 @@ export interface ScheduleJobConfig {
   createdAt: number;
   updatedAt: number;
   lastRunAt?: number | undefined;
+  lastTriggeredAt?: number | undefined;
   lastStatus?: ('success' | 'failed' | 'running') | undefined;
   lastOutput?: string | undefined;
   lastDurationMs?: number | undefined;

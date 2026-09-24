@@ -74,6 +74,9 @@ describe('Scheduler Module & Cron Parser', () => {
       expect(job.name).toBe('测试每日代码审查');
       expect(job.enabled).toBe(true);
 
+      expect(store.markTriggered(job.id, Date.UTC(2026, 7, 28, 9, 30))).toBe(true);
+      expect(store.getJob(job.id)?.lastTriggeredAt).toBe(Date.UTC(2026, 7, 28, 9, 30));
+
       const list = store.listJobs();
       expect(list.some(j => j.id === job.id)).toBe(true);
 

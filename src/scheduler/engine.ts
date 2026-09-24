@@ -79,11 +79,12 @@ export class SchedulerEngine {
     const jobs = this.store.listJobs().filter((j) => j.enabled);
     for (const job of jobs) {
       const currentMinuteKey = getSchedulerMinuteKey(now);
-      const persistedMinuteKey = job.lastRunAt ? getSchedulerMinuteKey(new Date(job.lastRunAt)) : undefined;
+      const persistedMinuteKey = job.lastTriggeredAt ? getSchedulerMinuteKey(new Date(job.lastTriggeredAt)) : undefined;
       const lastMinuteKey = this.lastExecutedMinuteByJob.get(job.id) || persistedMinuteKey;
       if (!shouldStartScheduledJob(lastMinuteKey, now, this.runningJobIds.has(job.id))) continue;
       if (isCronMatch(job.cron, now)) {
         this.lastExecutedMinuteByJob.set(job.id, currentMinuteKey);
+        this.store.markTriggered(job.id, now.getTime());
         this.log(`[Scheduler] 触发定时任务 [${job.name}] (${job.cron}) -> 智能体 [${job.agent}]`);
         // 异步执行，不阻塞调度循环
         this.executeJob(job).catch((err) => {
