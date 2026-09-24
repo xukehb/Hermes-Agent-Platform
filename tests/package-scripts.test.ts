@@ -36,6 +36,11 @@ describe('package scripts', () => {
     expect(packageJson.scripts?.['gui:dev']).toBe('npm run build && electron dist/src/gui/main.js');
   });
 
+  it('makes lint include the TypeScript type safety gate', () => {
+    expect(packageJson.scripts?.lint).toContain('eslint .');
+    expect(packageJson.scripts?.lint).toContain('npm run typecheck');
+  });
+
   it('forces a source rebuild when switching native modules back to Node.js', () => {
     expect(packageJson.scripts?.['rebuild:node']).toContain('--build-from-source');
     const nativeHelper = readFileSync(

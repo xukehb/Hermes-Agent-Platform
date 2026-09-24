@@ -14,7 +14,7 @@
     "build": "node scripts/clean-dist.mjs && tsc -p tsconfig.build.json && tsx src/gui/copy-assets.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run tests/",
-    "lint": "eslint .",
+    "lint": "eslint . && npm run typecheck",
     "hap": "tsx src/cli/bin.ts",
     "rebuild": "npm run rebuild:electron && npm run rebuild:node",
     "rebuild:electron": "tsx scripts/ensure-native-addons.ts --electron",
