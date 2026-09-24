@@ -279,7 +279,7 @@ export class MemoryStore {
     const text = query.text.trim(); if (!text) return []; const now = Date.now();
     const candidates = this.listMemories().filter((card) => !card.expiresAt || card.expiresAt > now).filter((card) => !query.category || card.category === query.category).filter((card) => !query.layer || card.layer === query.layer).filter((card) => !query.agentId || !card.agentId || card.agentId === query.agentId).filter((card) => !query.workspace || !card.workspace || card.workspace === query.workspace);
     const queryVec = await this.embedder.embed(text); const terms = text.toLowerCase().split(/\s+|[,，。.!！？；;]+/).filter(Boolean);
-    const scored = candidates.map((memory) => { const haystack = `${memory.title} ${memory.content} ${memory.tags.join(' ')}`.toLowerCase(); const keyword = terms.length ? terms.filter((term) => haystack.includes(term)).length / terms.length : 0; const vector = memory.embedding ? Math.max(0, cosineSimilarity(queryVec, memory.embedding)) : 0; const freshness = memory.lastAccessedAt ? Math.max(0, 1 - (now - memory.lastAccessedAt) / (1000 * 60 * 60 * 24 * 30)) : 0; return { memory, score: vector * 0.65 + keyword * 0.25 + memory.importance * 0.06 + memory.confidence * 0.03 + freshness * 0.01 }; }).filter((result) => result.score >= (query.threshold ?? 0.15)).sort((a, b) => b.score - a.score);
+    const scored = candidates.map((memory) => { const haystack = `${memory.title} ${memory.content} ${memory.tags.join(' ')}`.toLowerCase(); const keyword = terms.length ? terms.filter((term) => haystack.includes(term)).length / terms.length : 0; const vector = memory.embedding && memory.embeddingVersion === EMBEDDING_VERSION ? Math.max(0, cosineSimilarity(queryVec, memory.embedding)) : 0; const freshness = memory.lastAccessedAt ? Math.max(0, 1 - (now - memory.lastAccessedAt) / (1000 * 60 * 60 * 24 * 30)) : 0; return { memory, score: vector * 0.65 + keyword * 0.25 + memory.importance * 0.06 + memory.confidence * 0.03 + freshness * 0.01 }; }).filter((result) => result.score >= (query.threshold ?? 0.15)).sort((a, b) => b.score - a.score);
     const results = scored.slice(0, Math.max(0, query.limit ?? 5)); if (results.length) { const update = this.db.prepare('UPDATE memories SET access_count=access_count+1,last_accessed_at=? WHERE id=?'); const tx = this.db.transaction(() => results.forEach((result) => update.run(now, result.memory.id))); tx(); results.forEach((result) => { result.memory.accessCount += 1; result.memory.lastAccessedAt = now; }); }
     return results;
   }
@@ -359,4 +359,3 @@ export class MemoryStore {
     return cards;
   }
 }
-

@@ -145,5 +145,18 @@ describe('Vector Memory & RAG Engine', () => {
       expect(second.id).toBe(first.id);
       expect(store.listMemories()).toHaveLength(1);
     });
+
+    it('does not mix embeddings from an older model version into vector ranking', async () => {
+      const legacy = join(tmpdir(), `legacy-embedding-${Date.now()}.json`);
+      writeFileSync(legacy, JSON.stringify({ memories: [{
+        id: 'old-vector', category: 'fact', title: '旧向量', content: '旧模型记录',
+        embedding: new Array(64).fill(1), embeddingVersion: 'old-model-v0', tags: [], createdAt: 1, updatedAt: 1,
+      }] }));
+      const migrated = new MemoryStore(legacy);
+      const results = await migrated.searchMemories({ text: '完全不同的查询', threshold: 0 });
+      expect(results[0]?.score ?? 0).toBeLessThan(0.2);
+      migrated.close();
+      for (const file of [legacy, `${legacy}.db`, `${legacy}.migrated`]) if (existsSync(file)) unlinkSync(file);
+    });
   });
 });
