@@ -15,7 +15,7 @@
 ## 仍需继续处理
 
 - GUI 交互测试仍以静态契约为主，需要补充 Electron/DOM 端到端覆盖。
-- TypeScript 尚未纳入 ESLint 规则，当前依赖 `tsc --noEmit` 做类型门禁。
+- ESLint 当前通过 `npm run typecheck` 纳入 TypeScript 类型门禁；更细粒度的 TypeScript ESLint 规则仍需额外依赖。
 - GUI renderer 和 GUI service 仍需按职责拆分，属于较大范围重构。
 - 长期记忆仍以本地 N-gram embedding 为离线实现，语义 embedding 接入和评测集尚未完成。
 
