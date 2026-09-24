@@ -122,6 +122,7 @@ export class ScheduleStore {
     const job = state.jobs.find((item) => item.id === id);
     if (!job) return false;
     job.lastTriggeredAt = triggeredAt;
+    job.updatedAt = Date.now();
     this.save(state);
     return true;
   }
