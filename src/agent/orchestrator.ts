@@ -26,7 +26,7 @@ import { FatalError, HapError, describeError, emptyUsage } from '../domain/index
 import type { AgentMessage, TokenUsage, TraceEvent } from '../domain/index.js';
 import { ConfigResolver, loadConfig } from '../config/index.js';
 import type { LoadedConfig, ResolvedAgent, ResolvedPaths } from '../config/index.js';
-import { ProviderRegistry, providerGateRegistry } from '../providers/index.js';
+import { ProviderRegistry, providerGateRegistry, loadLocalJsonEnv } from '../providers/index.js';
 import type { EnvLike, ProviderFactory } from '../providers/index.js';
 import { McpManager, ToolRegistry, resolveMcpServers } from '../tools/index.js';
 import type { McpLoadResult, SubagentSpawner } from '../tools/index.js';
@@ -180,7 +180,8 @@ export class AgentOrchestrator {
 
   constructor(options: OrchestratorOptions = {}) {
     this.options = options;
-    this.env = options.env ?? process.env;
+    const localJsonEnv = loadLocalJsonEnv();
+    this.env = options.env ?? { ...localJsonEnv, ...process.env };
     const loadArgs: { path?: string } = {};
     if (options.configPath !== undefined) loadArgs.path = options.configPath;
     this.loaded = loadConfig(loadArgs);
@@ -272,9 +273,11 @@ export class AgentOrchestrator {
       env: EnvLike;
       gates: ReturnType<typeof providerGateRegistry>;
       factory?: ProviderFactory;
+      useLocalJsonEnv?: boolean;
     } = {
       env: this.env,
       gates: providerGateRegistry(limits),
+      useLocalJsonEnv: this.options.env === undefined,
     };
     if (this.options.factory !== undefined) registryOptions.factory = this.options.factory;
     return new ProviderRegistry(this.resolver.resolveProviders(), registryOptions);

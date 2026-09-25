@@ -241,7 +241,6 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
       const fingerprints = [
         `${chatTarget}:${msg.sender}:${cleanText}`,
         `${chatTarget}:${cleanText}`,
-        `${cleanText}`,
       ];
 
       if (fingerprints.some((fp) => this.processedFingerprints.has(fp))) {
@@ -340,11 +339,9 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
     const myReplyFp1 = `${targetId}:me:${cleanSent}`;
     const myReplyFp2 = `${targetId}:${targetId}:${cleanSent}`;
     const myReplyFp3 = `${targetId}:${cleanSent}`;
-    const myReplyFp4 = `${cleanSent}`;
     this.addFingerprint(myReplyFp1);
     this.addFingerprint(myReplyFp2);
     this.addFingerprint(myReplyFp3);
-    this.addFingerprint(myReplyFp4);
 
     const targetCoords = this.targetCoordsMap.get(targetId) || this.targetCoordsMap.get(normalizeContactName(targetId));
     const switchToTarget = Boolean(targetCoords || (this.lastActiveTarget && this.lastActiveTarget !== targetId));

@@ -13,28 +13,62 @@ int main(int argc, const char * argv[]) {
         // 模式 1：查找微信客户端的主窗口 ID 或 Bounds 详细坐标
         if (strcmp(argv[1], "--wechat-wid") == 0 || strcmp(argv[1], "--wechat-bounds") == 0) {
             CFArrayRef list = CGWindowListCopyWindowInfo(kCGWindowListOptionOnScreenOnly | kCGWindowListExcludeDesktopElements, kCGNullWindowID);
+            NSDictionary *bestMatch = nil;
+            int bestScore = -1;
+
             for (int i = 0; i < CFArrayGetCount(list); i++) {
                 NSDictionary *dict = (__bridge NSDictionary *)CFArrayGetValueAtIndex(list, i);
                 NSString *owner = dict[(id)kCGWindowOwnerName];
+                NSString *name = dict[(id)kCGWindowName];
+                NSNumber *layer = dict[(id)kCGWindowLayer];
+
+                if ([layer intValue] != 0) continue; // 仅普通应用主视窗层级
+
                 BOOL isDevTools = [owner containsString:@"开发"] || [owner containsString:@"devtools"] || [owner containsString:@"DevTools"] || [owner containsString:@"Tool"];
-                if (!isDevTools && ([owner isEqualToString:@"微信"] || [owner isEqualToString:@"WeChat"] || [owner containsString:@"WeChat"] || [owner containsString:@"微信"])) {
-                    NSNumber *wid = dict[(id)kCGWindowNumber];
+                if (isDevTools) continue;
+
+                if ([owner isEqualToString:@"微信"] || [owner isEqualToString:@"WeChat"] || [owner containsString:@"WeChat"] || [owner containsString:@"微信"]) {
                     NSDictionary *bounds = dict[(id)kCGWindowBounds];
                     CGFloat width = [bounds[@"Width"] doubleValue];
                     CGFloat height = [bounds[@"Height"] doubleValue];
-                    // 过滤托盘微图标或微小弹窗，锁定主聊天视窗
-                    if (width > 300 && height > 300) {
-                        if (strcmp(argv[1], "--wechat-wid") == 0) {
-                            printf("%d\n", [wid intValue]);
-                        } else {
-                            CGFloat x = [bounds[@"X"] doubleValue];
-                            CGFloat y = [bounds[@"Y"] doubleValue];
-                            printf("{\"wid\":%d,\"x\":%.1f,\"y\":%.1f,\"width\":%.1f,\"height\":%.1f}\n", [wid intValue], x, y, width, height);
-                        }
-                        return 0;
+                    if (width < 320 || height < 320) continue;
+
+                    int score = 100;
+                    // 核心权重：主聊天视窗标题通常严格等于 "微信" 或 "WeChat"
+                    if ([name isEqualToString:@"微信"] || [name isEqualToString:@"WeChat"]) {
+                        score += 2000;
+                    }
+                    // 彻底避开文档、图片、音视频播放、聊天记录历史等辅助视窗
+                    if ([name containsString:@".docx"] || [name containsString:@".doc"] || [name containsString:@".pdf"] ||
+                        [name containsString:@".xlsx"] || [name containsString:@".xls"] || [name containsString:@".pptx"] ||
+                        [name containsString:@".png"] || [name containsString:@".jpg"] || [name containsString:@".jpeg"] ||
+                        [name containsString:@"聊天记录"] || [name containsString:@"图片浏览"] || [name containsString:@"视频播放"] ||
+                        [name containsString:@"小程序"] || [name containsString:@"Item-0"]) {
+                        score -= 1500;
+                    }
+
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMatch = dict;
                     }
                 }
             }
+
+            if (bestMatch != nil && bestScore > 0) {
+                NSNumber *wid = bestMatch[(id)kCGWindowNumber];
+                NSDictionary *bounds = bestMatch[(id)kCGWindowBounds];
+                CGFloat width = [bounds[@"Width"] doubleValue];
+                CGFloat height = [bounds[@"Height"] doubleValue];
+                if (strcmp(argv[1], "--wechat-wid") == 0) {
+                    printf("%d\n", [wid intValue]);
+                } else {
+                    CGFloat x = [bounds[@"X"] doubleValue];
+                    CGFloat y = [bounds[@"Y"] doubleValue];
+                    printf("{\"wid\":%d,\"x\":%.1f,\"y\":%.1f,\"width\":%.1f,\"height\":%.1f}\n", [wid intValue], x, y, width, height);
+                }
+                return 0;
+            }
+
             if (strcmp(argv[1], "--wechat-wid") == 0) {
                 printf("0\n");
             } else {

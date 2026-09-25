@@ -48,12 +48,12 @@ export function isGarbageContactName(nameOrId: string): boolean {
   const s = nameOrId.trim();
   if (s.length <= 1) return true;
 
-  // 1. 绝对文件路径、主目录路径或 IDE 窗口标题/插件状态/文件扩展名
+  // 1. 绝对文件路径、主目录路径或 IDE 窗口标题/插件状态/文件扩展名与文档预览
   if (/^(\/|~|[a-zA-Z]:[\\/])/.test(s)) return true;
-  if (/manifest\.json|HBuilder|VS Code|node_modules|macos_ocr|\.json|\.ts|\.js|\.md|\.exe|\.vue|\.html|\.css|Worked for|Working|reasonix|deepseek/i.test(s)) return true;
+  if (/manifest\.json|HBuilder|VS Code|node_modules|macos_ocr|\.docx?|\.xlsx?|\.pptx?|\.pdf|\.zip|\.rar|\.dmg|\.pkg|\.json|\.ts|\.js|\.md|\.exe|\.vue|\.html|\.css|Worked for|Working|reasonix|deepseek|需求文档|个人中心|接口文档|设计稿|原型图/i.test(s)) return true;
 
-  // 2. 非联系人界面系统占位符与官方系统号
-  if (/^(?:公众号|微信团队|文件传输助手|我|Q 搜終|搜索|消息|通讯录|订阅号|微信支付)$/.test(s)) return true;
+  // 2. 非联系人界面系统占位符与官方系统号/预览窗口
+  if (/^(?:公众号|微信团队|文件传输助手|我|Q 搜終|搜索|消息|通讯录|订阅号|微信支付|页面|图片浏览|视频播放)$/.test(s)) return true;
 
   // 3. 编号清单行或日志行末尾（如 "1.底层引擎升级："，冒号结尾）
   if (/^\d+[\.、]/.test(s) || /[:：]$/.test(s)) return true;
@@ -95,7 +95,13 @@ export function isErrorMessage(text: string): boolean {
     text.includes('尚未配置 API Key') ||
     text.includes('HTTP 403') ||
     text.includes('HTTP 401') ||
-    text.includes('HTTP 500')
+    text.includes('HTTP 500') ||
+    text.includes('token quota is not enough') ||
+    text.includes('insufficient_quota') ||
+    text.includes('RateLimitError') ||
+    text.includes('AuthenticationError') ||
+    text.includes('降级链全部失败') ||
+    text.includes('模型调用失败')
   );
 }
 

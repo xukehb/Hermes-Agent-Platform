@@ -122,9 +122,13 @@ export function isTextSentByMe(text: string, knownSentTexts?: Set<string>): bool
     if (!normSent) continue;
     if (normSent === normTarget) return true;
 
-    // 核心防护：我方长文本回复的尾行短句（如“定～”、“至更直接，我也能顶住～”、“我随时准备执行～”）
-    if (normTarget.length >= 2 && normSent.includes(normTarget)) return true;
-    if (normSent.length >= 3 && normTarget.includes(normSent)) return true;
+    // 核心防护：我方长文本回复被 OCR 切行时的片段比对
+    // 1) 首尾行断句比对（末尾断句长度 >= 2 如“出题～”、“定～”，头部断句长度 >= 3）
+    if (normTarget.length >= 2 && normSent.endsWith(normTarget)) return true;
+    if (normTarget.length >= 3 && normSent.startsWith(normTarget)) return true;
+    // 2) 中间片段比对：必须要求片段足够长（>= 6 字符），防止把“好的”、“在吗”等 2~3 字通用短语在整句中误杀
+    if (normTarget.length >= 6 && normSent.includes(normTarget)) return true;
+    if (normSent.length >= 6 && normTarget.includes(normSent)) return true;
   }
 
   return false;

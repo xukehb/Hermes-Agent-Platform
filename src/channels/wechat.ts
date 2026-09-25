@@ -21,6 +21,7 @@ import { extractMention, stripWakeWord } from './command-parser.js';
 import { OutboundSender } from './outbound.js';
 import { WeChatContactStore } from './wechat-contacts.js';
 import { formatWeChatText, formatWeComMarkdown } from './wechat-formatter.js';
+import { isErrorMessage } from './contacts-store.js';
 import type { Channel, ChannelAttachments, ChannelHost, InboundMessage, OutboundTarget } from './types.js';
 import type { AttachmentKind } from '../domain/index.js';
 import type { ResolvedChannels, ResolvedLimits, ResolvedPaths, ResolvedWeChatChannel } from '../config/index.js';
@@ -249,7 +250,6 @@ export class WeChatChannel implements Channel {
     text: string;
     attachments?: ChannelAttachments | undefined;
   }): Promise<void> {
-    const isHosting = this.isHostingMode;
     let cleanText = msg.text.trim();
     let agentId: string | undefined;
 
@@ -262,6 +262,7 @@ export class WeChatChannel implements Channel {
       roomName: msg.roomName,
       text: msg.text,
     });
+    const isHosting = this.isHostingMode;
 
     const sessionKey = msg.isRoom && msg.roomId ? `wechat:room:${msg.roomId}` : `wechat:user:${contact.id}`;
     const targetId = msg.isRoom && msg.roomId ? msg.roomId : contact.id;
@@ -347,6 +348,26 @@ export class WeChatChannel implements Channel {
         const formatted = formatWeChatText(text);
         const elapsedMs = Date.now() - startTime;
         const elapsedSec = (elapsedMs / 1000).toFixed(1);
+
+        // 核心安全拦截：若大模型执行异常或报错（如额度不足、任务失败等），绝对不能发给好友，也不能记录为正常回复或草稿！
+        if (isErrorMessage(text)) {
+          this.log(`[WeChat${isHosting ? ' Hosting' : ''}] 拦截到系统/模型执行异常信息，静默阻断出站发送: "${text.slice(0, 120)}..."`);
+          if (isHosting) {
+            this.onActivity?.({
+              stage: 'system',
+              level: 'error',
+              tag: '生成失败',
+              title: `分身【${agentName}】模型执行失败 (耗时 ${elapsedSec}s)`,
+              detail: `大模型报错或未产出回复: ${text.slice(0, 200)}...`,
+              target: contact.name,
+              agentId: assignedAgent,
+              agentName,
+              model: modelName,
+              elapsedMs,
+            });
+          }
+          return undefined;
+        }
 
         // 仅在托管模式且开启草稿时才走半托管草稿审批流程；机器人模式直接对外发送
         if (isHosting && contact.hostingMode === 'draft') {

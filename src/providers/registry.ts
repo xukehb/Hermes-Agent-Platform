@@ -26,7 +26,7 @@ import { GateRegistry, GatedProviderClient } from './gate.js';
 import { OpenAiCompatibleClient } from './openai-compatible.js';
 
 /** 从本地 JSON 凭据持久化文件读取已保存的 API Key 凭据 */
-function loadLocalJsonEnv(): Record<string, string> {
+export function loadLocalJsonEnv(): Record<string, string> {
   const map: Record<string, string> = {};
   try {
     const candidates = [
@@ -74,6 +74,8 @@ export const defaultProviderFactory: ProviderFactory = (context) => {
 /** 注册表构造参数。 */
 export interface ProviderRegistryOptions {
   env?: EnvLike;
+  /** 显式控制是否允许读取本地 JSON 凭据文件（默认在未传自定义 env 或使用 process.env 时开启） */
+  useLocalJsonEnv?: boolean;
   /** 缺省时不套闸门（CLI 单次调用场景无需排队） */
   gates?: GateRegistry;
   factory?: ProviderFactory;
@@ -90,7 +92,7 @@ export class ProviderRegistry {
   constructor(providers: Map<string, ResolvedProvider>, options: ProviderRegistryOptions = {}) {
     this.providers = providers;
     this.env = options.env ?? process.env;
-    this.useLocalJsonEnv = options.env === undefined;
+    this.useLocalJsonEnv = options.useLocalJsonEnv ?? (options.env === undefined || options.env === process.env);
     this.gates = options.gates;
     this.factory = options.factory ?? defaultProviderFactory;
   }

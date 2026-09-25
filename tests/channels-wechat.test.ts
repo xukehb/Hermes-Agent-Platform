@@ -378,11 +378,17 @@ describe('WeChatChannel 基础测试', () => {
         puppet: 'desktop_vision',
       },
     });
+    const mockDriverFactory = () => ({
+      start: async () => undefined,
+      stop: async () => undefined,
+      sendMessage: async () => undefined,
+    });
     const hostingChannel = new WeChatChannel({
       host,
       channels: hostingChannels,
       limits,
       paths,
+      personalDriverFactory: mockDriverFactory,
     });
     await hostingChannel.start();
 
@@ -411,6 +417,7 @@ describe('WeChatChannel 基础测试', () => {
       channels: botChannels,
       limits,
       paths,
+      personalDriverFactory: mockDriverFactory,
     });
     await botChannel.start();
 
