@@ -230,6 +230,14 @@ export class WeChatChannel implements Channel {
     return this.personalDriver.syncContacts();
   }
 
+  get isHostingMode(): boolean {
+    return (
+      (this.config.mode as string) === 'desktop_vision' ||
+      (this.config.mode === 'personal' &&
+        (!this.config.personal?.puppet || this.config.personal.puppet === 'desktop_vision'))
+    );
+  }
+
   /** 处理个人微信入站消息。 */
   async handlePersonalMessage(msg: {
     id: string;
@@ -241,6 +249,7 @@ export class WeChatChannel implements Channel {
     text: string;
     attachments?: ChannelAttachments | undefined;
   }): Promise<void> {
+    const isHosting = this.isHostingMode;
     let cleanText = msg.text.trim();
     let agentId: string | undefined;
 
@@ -289,35 +298,37 @@ export class WeChatChannel implements Channel {
       ? contact.agentId
       : undefined;
 
-    // 人工防撞车冷却检测
-    const now = Date.now();
-    const inCooldown = (contact.cooldownUntil && contact.cooldownUntil > now) || contact.humanTakenOver;
-    if (inCooldown) {
-      const remainingSec = contact.cooldownUntil ? Math.max(0, Math.ceil((contact.cooldownUntil - now) / 1000)) : 0;
-      this.log(`[WeChat] 联系人 [${contact.name}] 处于人工接管冷却期（剩余 ${remainingSec} 秒），AI 暂不抢话。`);
-      this.onActivity?.({
-        stage: 'cooldown',
-        level: 'warning',
-        tag: '人工防撞车',
-        title: `联系人【${contact.name}】处于人工接管保护期 (剩余 ${remainingSec}s)`,
-        detail: '检测到用户近期正在微信与对方沟通，AI 自动静默避让以防撞车抢答。',
-        target: contact.name,
-      });
-      return;
-    }
+    // 人工防撞车冷却检测（仅在聊天托管模式生效；机器人模式下用户主动找机器人，绝不被冷却静默拦截）
+    if (isHosting) {
+      const now = Date.now();
+      const inCooldown = (contact.cooldownUntil && contact.cooldownUntil > now) || contact.humanTakenOver;
+      if (inCooldown) {
+        const remainingSec = contact.cooldownUntil ? Math.max(0, Math.ceil((contact.cooldownUntil - now) / 1000)) : 0;
+        this.log(`[WeChat Hosting] 联系人 [${contact.name}] 处于人工接管冷却期（剩余 ${remainingSec} 秒），AI 暂不抢话。`);
+        this.onActivity?.({
+          stage: 'cooldown',
+          level: 'warning',
+          tag: '人工防撞车',
+          title: `联系人【${contact.name}】处于人工接管保护期 (剩余 ${remainingSec}s)`,
+          detail: '检测到用户近期正在微信与对方沟通，AI 自动静默避让以防撞车抢答。',
+          target: contact.name,
+        });
+        return;
+      }
 
-    // 若联系人关闭了自动回复或处于仅手动监听
-    if (contact.hostingMode === 'off' || contact.hostingMode === 'manual' || !contact.autoReply || contact.replyMode === 'manual') {
-      this.log(`[WeChat] 联系人 [${contact.name}] 已暂停自动回复，仅记录消息。`);
-      this.onActivity?.({
-        stage: 'system',
-        level: 'info',
-        tag: '静默归档',
-        title: `联系人【${contact.name}】已暂停自动代答，仅记录消息`,
-        detail: `收到的文本: “${cleanText}”`,
-        target: contact.name,
-      });
-      return;
+      // 若联系人关闭了自动回复或处于仅手动监听
+      if (contact.hostingMode === 'off' || contact.hostingMode === 'manual' || !contact.autoReply || contact.replyMode === 'manual') {
+        this.log(`[WeChat Hosting] 联系人 [${contact.name}] 已暂停自动代答，仅记录消息。`);
+        this.onActivity?.({
+          stage: 'system',
+          level: 'info',
+          tag: '静默归档',
+          title: `联系人【${contact.name}】已暂停自动代答，仅记录消息`,
+          detail: `收到的文本: “${cleanText}”`,
+          target: contact.name,
+        });
+        return;
+      }
     }
 
     const defPolicy = contactStore.getDefaultPolicy('wechat');
@@ -337,8 +348,8 @@ export class WeChatChannel implements Channel {
         const elapsedMs = Date.now() - startTime;
         const elapsedSec = (elapsedMs / 1000).toFixed(1);
 
-        // 半托管草稿模式：生成回复草稿，不直接对外发送，等待人工审批
-        if (contact.hostingMode === 'draft') {
+        // 仅在托管模式且开启草稿时才走半托管草稿审批流程；机器人模式直接对外发送
+        if (isHosting && contact.hostingMode === 'draft') {
           contactStore.recordOutgoingMessage({
             contactId: targetId,
             agentId: assignedAgent,
@@ -347,7 +358,7 @@ export class WeChatChannel implements Channel {
             draftStatus: 'pending',
             elapsedMs,
           });
-          this.log(`[WeChat] 联系人 [${contact.name}] 处于草稿待审模式，回复草稿已记录，待确认后再发。`);
+          this.log(`[WeChat Hosting] 联系人 [${contact.name}] 处于草稿待审模式，回复草稿已记录，待确认后再发。`);
           this.onActivity?.({
             stage: 'draft',
             level: 'warning',
@@ -363,24 +374,26 @@ export class WeChatChannel implements Channel {
           return 'draft_pending';
         }
 
-        // 拟人化打字思考延迟模拟
-        const delay = contact.delayMs ?? 2000;
-        if (delay > 0) {
-          await new Promise((resolve) => setTimeout(resolve, Math.min(delay, 8000)));
-        }
+        // 托管模式下模拟拟人化打字思考延迟
+        if (isHosting) {
+          const delay = contact.delayMs ?? 2000;
+          if (delay > 0) {
+            await new Promise((resolve) => setTimeout(resolve, Math.min(delay, 8000)));
+          }
 
-        this.onActivity?.({
-          stage: 'generated',
-          level: 'success',
-          tag: '大模型生成',
-          title: `大模型回复生成完毕 (耗时 ${elapsedSec}s) | 准备模拟键鼠发送`,
-          detail: `回复内容：“${formatted}” | 响应分身: 【${agentName}】 | 模型: ${modelName}`,
-          target: contact.name,
-          agentId: assignedAgent,
-          agentName,
-          model: modelName,
-          elapsedMs,
-        });
+          this.onActivity?.({
+            stage: 'generated',
+            level: 'success',
+            tag: '大模型生成',
+            title: `大模型回复生成完毕 (耗时 ${elapsedSec}s) | 准备模拟键鼠发送`,
+            detail: `回复内容：“${formatted}” | 响应分身: 【${agentName}】 | 模型: ${modelName}`,
+            target: contact.name,
+            agentId: assignedAgent,
+            agentName,
+            model: modelName,
+            elapsedMs,
+          });
+        }
 
         contactStore.recordOutgoingMessage({
           contactId: targetId,
@@ -394,13 +407,15 @@ export class WeChatChannel implements Channel {
           return await this.personalDriver.sendMessage(targetId, formatted);
         } catch (err) {
           this.log(`[WeChat] 出站消息发送至 [${targetId}] 失败: ${describeError(err)}`);
-          this.onActivity?.({
-            stage: 'system',
-            level: 'error',
-            tag: '发送失败',
-            title: `模拟键鼠发送至【${contact.name}】失败: ${describeError(err)}`,
-            target: contact.name,
-          });
+          if (isHosting) {
+            this.onActivity?.({
+              stage: 'system',
+              level: 'error',
+              tag: '发送失败',
+              title: `模拟键鼠发送至【${contact.name}】失败: ${describeError(err)}`,
+              target: contact.name,
+            });
+          }
           throw err;
         }
       },
@@ -409,78 +424,86 @@ export class WeChatChannel implements Channel {
     const effectiveSystemPrompt = contact.systemPrompt?.trim() || defPolicy.systemPrompt?.trim();
     let recalledCount = 0;
     let recalledTitles: string[] = [];
+    let channelSystemPrompt: string | undefined;
 
-    // 自动提取并沉淀好友画像事实（如职业、常驻地、兴趣等）
-    try {
-      contactStore.extractContactFacts(contact.id, 'wechat', cleanText);
-    } catch {
-      // 事实提取失败不阻断正常回复流程
-    }
+    if (isHosting) {
+      // 聊天托管模式 (SightFlow 桌面视觉代管)：
+      // 提取好友画像事实并组装通道层最高优先级 System Prompt（数字分身第一人称口吻、微信聊天规范）
+      try {
+        contactStore.extractContactFacts(contact.id, 'wechat', cleanText);
+      } catch {
+        // 事实提取失败不阻断正常回复流程
+      }
 
-    // 组装通道层最高优先级 System Prompt（人设、微信口语规范、好友事实画像）
-    const promptParts: string[] = [];
-    promptParts.push([
-      '【最高优先级指令：微信即时通讯数字分身】',
-      '1. 你当前正在代表微信账号主人与微信好友进行即时通讯。你就是本人，必须直接以第一人称回复，绝不能以 AI 助手、代码助手或第三方的口吻回答！',
-      '2. 口吻要求：自然亲切、口语化、真人朋友微信聊天感。通常 1~2 句话内直接回答，切忌长篇大论，严禁列点分段说教，禁止输出任何系统调试或代码指导信息。',
-      '[微信聊天规范：当前为微信好友即时通讯。回答必须口语化、简明自然，像真人朋友微信聊天一样（通常1~2句话内说清楚即可）。]',
-    ].join('\n'));
-
-    // 注入联系人专属画像认知（事实库记忆沉淀）
-    if (contact.facts && contact.facts.length > 0) {
+      const promptParts: string[] = [];
       promptParts.push([
-        `【关于当前对话好友（${contact.name}）的背景认知与画像事实】：`,
-        ...contact.facts.map((f) => `- ${f}`),
+        '【最高优先级指令：微信即时通讯数字分身】',
+        '1. 你当前正在代表微信账号主人与微信好友进行即时通讯。你就是本人，必须直接以第一人称回复，绝不能以 AI 助手、代码助手或第三方的口吻回答！',
+        '2. 口吻要求：自然亲切、口语化、真人朋友微信聊天感。通常 1~2 句话内直接回答，切忌长篇大论，严禁列点分段说教，禁止输出任何系统调试或代码指导信息。',
+        '[微信聊天规范：当前为微信好友即时通讯。回答必须口语化、简明自然，像真人朋友微信聊天一样（通常1~2句话内说清楚即可）。]',
       ].join('\n'));
-    }
 
-    if (effectiveSystemPrompt) {
-      if (effectiveSystemPrompt.includes('\n') || effectiveSystemPrompt.startsWith('#')) {
+      // 注入联系人专属画像认知（事实库记忆沉淀）
+      if (contact.facts && contact.facts.length > 0) {
         promptParts.push([
-          '========================================',
-          '【专属分身人设、语气风格与行为规范 (Markdown 规范文档)】',
-          '========================================',
-          effectiveSystemPrompt,
-          '========================================',
+          `【关于当前对话好友（${contact.name}）的背景认知与画像事实】：`,
+          ...contact.facts.map((f) => `- ${f}`),
         ].join('\n'));
-      } else {
-        promptParts.push(`[专属人设指令：${effectiveSystemPrompt}]`);
       }
-    }
 
-    const channelSystemPrompt = promptParts.join('\n\n');
+      if (effectiveSystemPrompt) {
+        if (effectiveSystemPrompt.includes('\n') || effectiveSystemPrompt.startsWith('#')) {
+          promptParts.push([
+            '========================================',
+            '【专属分身人设、语气风格与行为规范 (Markdown 规范文档)】',
+            '========================================',
+            effectiveSystemPrompt,
+            '========================================',
+          ].join('\n'));
+        } else {
+          promptParts.push(`[专属人设指令：${effectiveSystemPrompt}]`);
+        }
+      }
 
-    // 智能体跨会话长期记忆检索 (仅用于 activity 事件状态通知，记忆内容由编排器统一注入 systemPrompt，避免入站消息污染)
-    try {
-      const memoryMatches = await MemoryStore.getInstance().searchMemories({
-        text: cleanText,
-        workspace: contact.workspace,
+      channelSystemPrompt = promptParts.join('\n\n');
+
+      // 智能体跨会话长期记忆检索 (仅用于 activity 事件状态通知，记忆内容由编排器统一注入 systemPrompt，避免入站消息污染)
+      try {
+        const memoryMatches = await MemoryStore.getInstance().searchMemories({
+          text: cleanText,
+          workspace: contact.workspace,
+          agentId: assignedAgent,
+          limit: 3,
+          threshold: 0.25,
+        });
+        if (memoryMatches.length > 0) {
+          recalledTitles = memoryMatches.map((m) => m.memory.title);
+          recalledCount = memoryMatches.length;
+        }
+      } catch {
+        // 容错：记忆库检索异常不阻断主流程
+      }
+
+      this.onActivity?.({
+        stage: 'thinking',
+        level: 'info',
+        tag: '大模型调用',
+        title: `调起分身【${agentName}】思考回复 | 模型: ${modelName}`,
+        detail: `目标会话: 【${contact.name}】 | 基因库: ${recalledCount > 0 ? `已召回 ${recalledCount} 条专属记忆 (${recalledTitles.join(', ')})` : '暂无特定匹配记忆'} | 人设: ${effectiveSystemPrompt ? '已注入专属分身口吻' : '自然口语模板'}`,
+        target: contact.name,
         agentId: assignedAgent,
-        limit: 3,
-        threshold: 0.25,
+        agentName,
+        model: modelName,
       });
-      if (memoryMatches.length > 0) {
-        recalledTitles = memoryMatches.map((m) => m.memory.title);
-        recalledCount = memoryMatches.length;
+    } else {
+      // 机器人模式 (iLink Bot / WeCom / Wechaty Puppet)：
+      // 严格作为专业 AI 智能体助手（Coder, Ops, Reviewer 等）运行，支持代码输出、Markdown 格式化与工具调用，绝不注入第一人称分身指令！
+      if (effectiveSystemPrompt) {
+        channelSystemPrompt = effectiveSystemPrompt;
       }
-    } catch {
-      // 容错：记忆库检索异常不阻断主流程
     }
-
-    this.onActivity?.({
-      stage: 'thinking',
-      level: 'info',
-      tag: '大模型调用',
-      title: `调起分身【${agentName}】思考回复 | 模型: ${modelName}`,
-      detail: `目标会话: 【${contact.name}】 | 基因库: ${recalledCount > 0 ? `已召回 ${recalledCount} 条专属记忆 (${recalledTitles.join(', ')})` : '暂无特定匹配记忆'} | 人设: ${effectiveSystemPrompt ? '已注入专属分身口吻' : '自然口语模板'}`,
-      target: contact.name,
-      agentId: assignedAgent,
-      agentName,
-      model: modelName,
-    });
 
     const effectiveDefaultAgent = validContactAgentId || defPolicy.agentId || this.config.defaultAgent || fallbackAgent;
-
     const effectiveAgentId = agentId || validContactAgentId || defPolicy.agentId;
 
     // 提取纯净的多轮会话历史（最多15轮），保障大模型前言搭后语
@@ -496,7 +519,7 @@ export class WeChatChannel implements Channel {
       ...(effectiveAgentId !== undefined ? { agentId: effectiveAgentId } : {}),
       ...(effectiveDefaultAgent !== undefined ? { defaultAgent: effectiveDefaultAgent } : {}),
       history: recentHistory,
-      systemPrompt: channelSystemPrompt,
+      ...(channelSystemPrompt !== undefined ? { systemPrompt: channelSystemPrompt } : {}),
     };
 
     this.dispatcher.submit(inbound);

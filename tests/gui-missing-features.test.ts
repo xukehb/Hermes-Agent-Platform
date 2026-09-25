@@ -49,6 +49,40 @@ describe('GUI Advanced Features (Task Abort, Hunk Staging, MCP Playground)', () 
       expect(res.ok).toBe(false);
       expect(res.message).toContain('没有正在执行');
     });
+
+    it('supports per-session task abort and batch abort across concurrent sessions', () => {
+      const tasks = (service as any).activeChatTasks;
+      const ctrl1 = new AbortController();
+      const ctrl2 = new AbortController();
+      let aborted1 = false;
+      let aborted2 = false;
+      const orch1 = { abort: () => { aborted1 = true; } };
+      const orch2 = { abort: () => { aborted2 = true; } };
+
+      tasks.set('gui:session_1', { taskId: 'task_1', controller: ctrl1, orchestrator: orch1, sessionKey: 'gui:session_1' });
+      tasks.set('gui:session_2', { taskId: 'task_2', controller: ctrl2, orchestrator: orch2, sessionKey: 'gui:session_2' });
+
+      expect(tasks.size).toBe(2);
+
+      // 仅中止 session_1
+      const res1 = service.abortChat('gui:session_1');
+      expect(res1.ok).toBe(true);
+      expect(res1.aborted).toBe(1);
+      expect(ctrl1.signal.aborted).toBe(true);
+      expect(aborted1).toBe(true);
+      expect(ctrl2.signal.aborted).toBe(false);
+      expect(aborted2).toBe(false);
+      expect(tasks.size).toBe(1);
+      expect(tasks.has('gui:session_2')).toBe(true);
+
+      // 中止剩余全部并发会话
+      const resAll = service.abortChat();
+      expect(resAll.ok).toBe(true);
+      expect(resAll.aborted).toBe(1);
+      expect(ctrl2.signal.aborted).toBe(true);
+      expect(aborted2).toBe(true);
+      expect(tasks.size).toBe(0);
+    });
   });
 
   describe('MCP Playground', () => {

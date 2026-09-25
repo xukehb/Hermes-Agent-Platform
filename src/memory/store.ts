@@ -180,6 +180,8 @@ export class MemoryStore {
   private readonly embedder: EmbeddingProvider;
   private readonly db: Database.Database;
   private writeQueue: Promise<void> = Promise.resolve();
+  private queryCache = new Map<string, { time: number; results: MemorySearchResult[] }>();
+  private readonly QUERY_CACHE_TTL_MS = 6000;
 
   constructor(filePath: string = DATA_PATH, embedder?: EmbeddingProvider) {
     ensureDir(filePath);
@@ -246,6 +248,7 @@ export class MemoryStore {
       }
       if (existing) { savedId = existing.id; this.db.prepare('UPDATE memories SET category=?,layer=?,title=?,content=?,tags=?,embedding=?,embedding_version=?,agent_id=?,source_task_id=?,workspace=?,importance=?,confidence=?,expires_at=?,updated_at=? WHERE id=?').run(category, layerFor(category, input.layer), title, content, JSON.stringify(tags), JSON.stringify(embedding), EMBEDDING_VERSION, input.agentId || null, input.sourceTaskId || null, input.workspace?.trim() || null, finiteScore(input.importance, 0.5), finiteScore(input.confidence, 0.7), input.expiresAt ?? null, now, existing.id); }
       else this.db.prepare(`INSERT INTO memories (id,category,layer,title,content,tags,embedding,embedding_version,agent_id,source_task_id,workspace,importance,confidence,expires_at,dedupe_key,created_at,updated_at,access_count) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0)`).run(id, category, layerFor(category, input.layer), title, content, JSON.stringify(tags), JSON.stringify(embedding), EMBEDDING_VERSION, input.agentId || null, input.sourceTaskId || null, input.workspace?.trim() || null, finiteScore(input.importance, 0.5), finiteScore(input.confidence, 0.7), input.expiresAt ?? null, input.dedupeKey || null, now, now);
+      this.queryCache.clear();
     });
     return this.getMemory(savedId) as MemoryCard;
   }
@@ -258,6 +261,7 @@ export class MemoryStore {
     const category = patch.category === undefined ? current.category : normalizeCategory(patch.category); const tags = patch.tags === undefined ? current.tags : patch.tags.map((tag) => tag.trim()).filter(Boolean);
     const expiresAt = Object.prototype.hasOwnProperty.call(patch, 'expiresAt') ? (patch.expiresAt ?? null) : (current.expiresAt ?? null);
     this.db.prepare('UPDATE memories SET category=?,layer=?,title=?,content=?,tags=?,embedding=?,embedding_version=?,agent_id=?,workspace=?,source_task_id=?,importance=?,confidence=?,expires_at=?,dedupe_key=?,updated_at=? WHERE id=?').run(category, layerFor(category, patch.layer || current.layer), title, content, JSON.stringify(tags), current.embedding ? JSON.stringify(current.embedding) : null, current.embeddingVersion || EMBEDDING_VERSION, patch.agentId === undefined ? current.agentId || null : patch.agentId || null, patch.workspace === undefined ? current.workspace || null : patch.workspace || null, patch.sourceTaskId === undefined ? current.sourceTaskId || null : patch.sourceTaskId || null, finiteScore(patch.importance, current.importance), finiteScore(patch.confidence, current.confidence), expiresAt, patch.dedupeKey === undefined ? current.dedupeKey || null : patch.dedupeKey || null, Date.now(), id);
+    this.queryCache.clear();
     return this.getMemory(id);
   }
 
@@ -267,20 +271,77 @@ export class MemoryStore {
     const embedding = await this.embedder.embed(`${updated.title}\n${updated.content}\n${updated.tags.join(' ')}`);
     await this.enqueueWrite(() => {
       this.db.prepare('UPDATE memories SET embedding=?, embedding_version=?, updated_at=? WHERE id=?').run(JSON.stringify(embedding), EMBEDDING_VERSION, Date.now(), id);
+      this.queryCache.clear();
     });
     return this.getMemory(id);
   }
 
-  removeMemory(id: string): boolean { return this.db.prepare('DELETE FROM memories WHERE id = ?').run(id).changes > 0; }
+  removeMemory(id: string): boolean {
+    const ok = this.db.prepare('DELETE FROM memories WHERE id = ?').run(id).changes > 0;
+    if (ok) this.queryCache.clear();
+    return ok;
+  }
 
-  async rebuildEmbeddings(): Promise<number> { const cards = this.listMemories(); const vectors = await this.embedder.embedBatch(cards.map((card) => `${card.title}\n${card.content}\n${card.tags.join(' ')}`)); const update = this.db.prepare('UPDATE memories SET embedding=?,embedding_version=?,updated_at=? WHERE id=?'); const tx = this.db.transaction(() => cards.forEach((card, index) => update.run(JSON.stringify(vectors[index]), EMBEDDING_VERSION, Date.now(), card.id))); tx(); return cards.length; }
+  async rebuildEmbeddings(): Promise<number> {
+    const cards = this.listMemories();
+    const vectors = await this.embedder.embedBatch(cards.map((card) => `${card.title}\n${card.content}\n${card.tags.join(' ')}`));
+    const update = this.db.prepare('UPDATE memories SET embedding=?,embedding_version=?,updated_at=? WHERE id=?');
+    const tx = this.db.transaction(() => cards.forEach((card, index) => update.run(JSON.stringify(vectors[index]), EMBEDDING_VERSION, Date.now(), card.id)));
+    tx();
+    this.queryCache.clear();
+    return cards.length;
+  }
 
   async searchMemories(query: MemoryQuery): Promise<MemorySearchResult[]> {
     const text = query.text.trim(); if (!text) return []; const now = Date.now();
-    const candidates = this.listMemories().filter((card) => !card.expiresAt || card.expiresAt > now).filter((card) => !query.category || card.category === query.category).filter((card) => !query.layer || card.layer === query.layer).filter((card) => !query.agentId || !card.agentId || card.agentId === query.agentId).filter((card) => !query.workspace || !card.workspace || card.workspace === query.workspace);
-    const queryVec = await this.embedder.embed(text); const terms = text.toLowerCase().split(/\s+|[,，。.!！？；;]+/).filter(Boolean);
-    const scored = candidates.map((memory) => { const haystack = `${memory.title} ${memory.content} ${memory.tags.join(' ')}`.toLowerCase(); const keyword = terms.length ? terms.filter((term) => haystack.includes(term)).length / terms.length : 0; const vector = memory.embedding && memory.embeddingVersion === EMBEDDING_VERSION ? Math.max(0, cosineSimilarity(queryVec, memory.embedding)) : 0; const freshness = memory.lastAccessedAt ? Math.max(0, 1 - (now - memory.lastAccessedAt) / (1000 * 60 * 60 * 24 * 30)) : 0; return { memory, score: vector * 0.65 + keyword * 0.25 + memory.importance * 0.06 + memory.confidence * 0.03 + freshness * 0.01 }; }).filter((result) => result.score >= (query.threshold ?? 0.15)).sort((a, b) => b.score - a.score);
-    const results = scored.slice(0, Math.max(0, query.limit ?? 5)); if (results.length) { const update = this.db.prepare('UPDATE memories SET access_count=access_count+1,last_accessed_at=? WHERE id=?'); const tx = this.db.transaction(() => results.forEach((result) => update.run(now, result.memory.id))); tx(); results.forEach((result) => { result.memory.accessCount += 1; result.memory.lastAccessedAt = now; }); }
+    const cacheKey = `${text}:${query.category || ''}:${query.layer || ''}:${query.agentId || ''}:${query.workspace || ''}:${query.limit || 5}:${query.threshold || 0.15}`;
+    const cached = this.queryCache.get(cacheKey);
+    if (cached && (now - cached.time) < this.QUERY_CACHE_TTL_MS) {
+      return cached.results;
+    }
+
+    let sql = 'SELECT * FROM memories WHERE (expires_at IS NULL OR expires_at > ?)';
+    const params: unknown[] = [now];
+    if (query.category) {
+      sql += ' AND category = ?';
+      params.push(query.category);
+    }
+    if (query.layer) {
+      sql += ' AND layer = ?';
+      params.push(query.layer);
+    }
+    if (query.agentId) {
+      sql += ' AND (agent_id IS NULL OR agent_id = ?)';
+      params.push(query.agentId);
+    }
+    if (query.workspace) {
+      sql += ' AND (workspace IS NULL OR workspace = ?)';
+      params.push(query.workspace);
+    }
+    sql += ' ORDER BY updated_at DESC';
+    const rows = this.db.prepare(sql).all(...params) as Record<string, unknown>[];
+    const candidates = rows.map((r) => this.rowToCard(r));
+
+    const queryVec = await this.embedder.embed(text);
+    const terms = text.toLowerCase().split(/\s+|[,，。.!！？；;]+/).filter(Boolean);
+    const scored = candidates.map((memory) => {
+      const haystack = `${memory.title} ${memory.content} ${memory.tags.join(' ')}`.toLowerCase();
+      const keyword = terms.length ? terms.filter((term) => haystack.includes(term)).length / terms.length : 0;
+      const vector = memory.embedding && memory.embeddingVersion === EMBEDDING_VERSION ? Math.max(0, cosineSimilarity(queryVec, memory.embedding)) : 0;
+      const freshness = memory.lastAccessedAt ? Math.max(0, 1 - (now - memory.lastAccessedAt) / (1000 * 60 * 60 * 24 * 30)) : 0;
+      return { memory, score: vector * 0.65 + keyword * 0.25 + memory.importance * 0.06 + memory.confidence * 0.03 + freshness * 0.01 };
+    }).filter((result) => result.score >= (query.threshold ?? 0.15)).sort((a, b) => b.score - a.score);
+
+    const results = scored.slice(0, Math.max(0, query.limit ?? 5));
+    if (results.length) {
+      const update = this.db.prepare('UPDATE memories SET access_count=access_count+1,last_accessed_at=? WHERE id=?');
+      const tx = this.db.transaction(() => results.forEach((result) => update.run(now, result.memory.id)));
+      tx();
+      results.forEach((result) => { result.memory.accessCount += 1; result.memory.lastAccessedAt = now; });
+    }
+
+    if (this.queryCache.size > 200) this.queryCache.clear();
+    this.queryCache.set(cacheKey, { time: now, results });
     return results;
   }
 
@@ -297,6 +358,7 @@ export class MemoryStore {
       }
     });
     tx();
+    if (purged > 0) this.queryCache.clear();
     return purged;
   }
 

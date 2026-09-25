@@ -155,6 +155,7 @@ const hapApi = {
   saveDefaultHostingPolicy: (channel, policy) => call('gui:hosting:saveDefaultPolicy', { channel, policy }),
   getHostingActivities: (limit) => call('gui:hosting:getActivities', limit),
   clearHostingActivities: () => call('gui:hosting:clearActivities'),
+  pruneGarbageContacts: (channel) => call('gui:hosting:pruneGarbage', channel),
   onHostingActivity: (callback) => {
     const listener = (_event, data) => callback(data);
     ipcRenderer.on('gui:hosting:activity', listener);
@@ -183,7 +184,7 @@ const hapApi = {
   execServerCommand: (payload) => call('gui:execServerCommand', payload),
   syncTarget: (input) => call('gui:syncTarget', input),
   chat: (input) => call('gui:chat', input),
-  abortChat: () => call('gui:chat:abort'),
+  abortChat: (sessionKey) => call('gui:chat:abort', sessionKey),
   onChatStream: (callback) => {
     ipcRenderer.on('gui:chat:stream', (_event, data) => callback(data));
   },

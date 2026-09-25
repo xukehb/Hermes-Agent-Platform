@@ -1030,6 +1030,7 @@ window.switchSession = (id) => {
 
   // 同步目标会话生成状态到底部按钮
   const isGen = Boolean(target?.isGenerating);
+  document.body.classList.toggle('is-chat-generating', isGen);
   const stopBtn = $('stopChatBtn');
   const sendBtn = $('sendChatBtn');
   if (stopBtn) stopBtn.style.display = isGen ? 'inline-flex' : 'none';
@@ -3454,7 +3455,7 @@ async function loadInlineDiff(file, isStaged = false) {
     }
   }
   if (contentEl) {
-    contentEl.innerHTML = '<div class="git-diff-line normal" style="color:#858585;">正在提取差异代码...</div>';
+    contentEl.innerHTML = '<div class="git-diff-line normal" style="color:var(--code-muted);">正在提取差异代码...</div>';
   }
 
   // 高亮左侧激活文件行
@@ -3491,7 +3492,7 @@ async function loadInlineDiff(file, isStaged = false) {
         for (const f of visualRes.files) {
           const fPath = (f.newPath || f.oldPath || '').replace(/^[ab]\//, '');
           currentInlineDiffHunksMap[fPath] = f.hunks;
-          allHtml += `<div style="padding:6px 10px;font-weight:700;font-family:var(--font-mono);font-size:12px;color:#e1e4e8;background:#252526;margin:8px 0 4px 0;border-radius:4px;"> ${esc(fPath)}</div>`;
+          allHtml += `<div style="padding:6px 10px;font-weight:700;font-family:var(--font-mono);font-size:12px;color:var(--code-text);background:var(--code-header-bg);border:1px solid var(--code-border);margin:8px 0 4px 0;border-radius:4px;"> ${esc(fPath)}</div>`;
           allHtml += formatGitDiffToHtml('', fPath, f.hunks);
         }
         if (contentEl) {
@@ -3620,7 +3621,7 @@ function renderGitModalContent() {
   if (staged.length === 0 && unstaged.length === 0) {
     list.innerHTML = '<div style="color:var(--text-muted);font-style:italic;padding:8px;font-size:12px;">工作区干净，暂无未提交变更</div>';
     const contentEl = $('gitInlineDiffContent');
-    if (contentEl) contentEl.innerHTML = '<div class="git-diff-line normal" style="color:#858585;">工作区干净，暂无代码变更。</div>';
+    if (contentEl) contentEl.innerHTML = '<div class="git-diff-line normal" style="color:var(--code-muted);">工作区干净，暂无代码变更。</div>';
     if ($('gitInlineDiffFileTitle')) $('gitInlineDiffFileTitle').textContent = '无变更';
   } else {
     let html = '';
@@ -3907,7 +3908,7 @@ async function loadGitCommitHistory() {
     if (commits.length === 0) {
       listEl.innerHTML = '<div style="color:var(--text-muted);font-style:italic;padding:8px;font-size:12px;">暂无提交历史记录</div>';
       const contentEl = $('gitHistoryDiffContent');
-      if (contentEl) contentEl.innerHTML = '<div class="git-diff-line normal" style="color:#858585;">暂无提交记录。</div>';
+      if (contentEl) contentEl.innerHTML = '<div class="git-diff-line normal" style="color:var(--code-muted);">暂无提交记录。</div>';
       return;
     }
 
@@ -3985,7 +3986,7 @@ window.selectHistoryCommit = async (hash) => {
     };
   }
 
-  if (contentEl) contentEl.innerHTML = '<div class="git-diff-line normal" style="color:#858585;">正在获取该提交代码差异...</div>';
+  if (contentEl) contentEl.innerHTML = '<div class="git-diff-line normal" style="color:var(--code-muted);">正在获取该提交代码差异...</div>';
 
   try {
     const res = await window.hap.gitShowCommit(currentActiveProject, hash);
@@ -7073,6 +7074,10 @@ async function renderWeChatView() {
     if (wechatyBox) {
       wechatyBox.style.display = isWechaty ? 'flex' : 'none';
     }
+    const visionTip = $('wxDesktopVisionTip');
+    if (visionTip) {
+      visionTip.style.display = curWxMode === 'desktop_vision' ? 'block' : 'none';
+    }
     if ($('wxPuppetTokenInput')) {
       if (wxConfig.puppetTokenConfigured && !$('wxPuppetTokenInput').value) {
         $('wxPuppetTokenInput').placeholder = '已配置 Token (******)，如需修改请输入新 Token';
@@ -7511,6 +7516,7 @@ $('wxModeSelect')?.addEventListener('change', async (e) => {
   const val = e.target.value;
   const isWeCom = val === 'wecom';
   const isWechaty = val === 'personal';
+  const isDesktopVision = val === 'desktop_vision';
   const wecomBox = $('wxWeComFields');
   if (wecomBox) {
     wecomBox.style.display = isWeCom ? 'flex' : 'none';
@@ -7519,7 +7525,10 @@ $('wxModeSelect')?.addEventListener('change', async (e) => {
   if (wechatyBox) {
     wechatyBox.style.display = isWechaty ? 'flex' : 'none';
   }
-  const isDesktopVision = val === 'desktop_vision';
+  const visionTip = $('wxDesktopVisionTip');
+  if (visionTip) {
+    visionTip.style.display = isDesktopVision ? 'block' : 'none';
+  }
   const mode = (isDesktopVision || isWechaty) ? 'personal' : val;
   const puppet = isDesktopVision ? 'desktop_vision' : (val === 'ilink_bot' ? 'ilink' : 'service');
   try {
@@ -10037,26 +10046,38 @@ function requestStreamAutoScroll() {
 }
 
 window.hap?.onChatStream?.((data) => {
-  const session = currentSession();
+  const sessionKey = data?.sessionKey || data?.sessionId;
+  let session = null;
+  if (sessionKey && typeof sessionKey === 'string' && sessionKey.startsWith('gui:')) {
+    const targetId = sessionKey.slice(4);
+    session = sessions.find((s) => s.id === targetId);
+  }
+  if (!session) {
+    session = currentSession();
+  }
   if (!session || !session.isGenerating) return;
 
+  const isCurrentActive = session.id === currentSessionId;
+
   if (data.type === 'stream_end') {
-    // 文本流已传输完成：立即彻底移除所有光标
-    clearTimeout(streamingCursorTimer);
-    streamingCursorTimer = null;
-    document.querySelectorAll('.streaming-cursor').forEach((el) => el.remove());
-    if (session.liveContent) {
-      const contentText = $('streamingContentText');
-      if (contentText) contentText.innerHTML = renderMarkdownContent(session.liveContent);
-      const lastMiniI = document.querySelector('#miniIConversation .mini-msg-ai:last-child');
-      if (lastMiniI) {
-        lastMiniI.classList.remove('is-streaming');
-        lastMiniI.innerHTML = renderMarkdownContent(session.liveContent);
-      }
-      const lastMiniStage = document.querySelector('#miniStageMessages .mini-msg-ai:last-child');
-      if (lastMiniStage) {
-        lastMiniStage.classList.remove('is-streaming');
-        lastMiniStage.innerHTML = renderMarkdownContent(session.liveContent);
+    if (isCurrentActive) {
+      // 文本流已传输完成：立即彻底移除所有光标
+      clearTimeout(streamingCursorTimer);
+      streamingCursorTimer = null;
+      document.querySelectorAll('.streaming-cursor').forEach((el) => el.remove());
+      if (session.liveContent) {
+        const contentText = $('streamingContentText');
+        if (contentText) contentText.innerHTML = renderMarkdownContent(session.liveContent);
+        const lastMiniI = document.querySelector('#miniIConversation .mini-msg-ai:last-child');
+        if (lastMiniI) {
+          lastMiniI.classList.remove('is-streaming');
+          lastMiniI.innerHTML = renderMarkdownContent(session.liveContent);
+        }
+        const lastMiniStage = document.querySelector('#miniStageMessages .mini-msg-ai:last-child');
+        if (lastMiniStage) {
+          lastMiniStage.classList.remove('is-streaming');
+          lastMiniStage.innerHTML = renderMarkdownContent(session.liveContent);
+        }
       }
     }
     return;
@@ -10064,38 +10085,43 @@ window.hap?.onChatStream?.((data) => {
 
   if (data.type === 'reasoning_delta' || data.type === 'thinking') {
     session.liveReasoning = (session.liveReasoning || '') + (data.text || '');
-    const box = $('streamingReasoningBox');
-    const content = $('streamingReasoningContent');
-    if (box) box.style.display = '';
-    if (content) content.innerHTML = renderMarkdownContent(session.liveReasoning);
+    if (isCurrentActive) {
+      const box = $('streamingReasoningBox');
+      const content = $('streamingReasoningContent');
+      if (box) box.style.display = '';
+      if (content) content.innerHTML = renderMarkdownContent(session.liveReasoning);
+      requestStreamAutoScroll();
+    }
   } else if (data.type === 'token_delta' || data.type === 'token') {
     session.liveContent = (session.liveContent || '') + (data.text || '');
-    const contentText = $('streamingContentText');
-    if (contentText) {
-      contentText.innerHTML = renderMarkdownContent(session.liveContent) + '<span class="streaming-cursor"></span>';
-    }
+    if (isCurrentActive) {
+      const contentText = $('streamingContentText');
+      if (contentText) {
+        contentText.innerHTML = renderMarkdownContent(session.liveContent) + '<span class="streaming-cursor"></span>';
+      }
 
-    // 同步渲染至小 i 弹窗与 Mini 模式舞台
-    const lastMiniI = document.querySelector('#miniIConversation .mini-msg-ai:last-child');
-    if (lastMiniI) {
-      lastMiniI.classList.add('is-streaming');
-      lastMiniI.innerHTML = renderMarkdownContent(session.liveContent) + '<span class="streaming-cursor"></span>';
-    }
-    const lastMiniStage = document.querySelector('#miniStageMessages .mini-msg-ai:last-child');
-    if (lastMiniStage) {
-      lastMiniStage.classList.add('is-streaming');
-      lastMiniStage.innerHTML = renderMarkdownContent(session.liveContent) + '<span class="streaming-cursor"></span>';
-    }
+      // 同步渲染至小 i 弹窗与 Mini 模式舞台
+      const lastMiniI = document.querySelector('#miniIConversation .mini-msg-ai:last-child');
+      if (lastMiniI) {
+        lastMiniI.classList.add('is-streaming');
+        lastMiniI.innerHTML = renderMarkdownContent(session.liveContent) + '<span class="streaming-cursor"></span>';
+      }
+      const lastMiniStage = document.querySelector('#miniStageMessages .mini-msg-ai:last-child');
+      if (lastMiniStage) {
+        lastMiniStage.classList.add('is-streaming');
+        lastMiniStage.innerHTML = renderMarkdownContent(session.liveContent) + '<span class="streaming-cursor"></span>';
+      }
 
-    requestStreamAutoScroll();
+      requestStreamAutoScroll();
 
-    // 智能防抖：连续 600ms 无新 Token 产生时，判定当前输出已停顿或结束，自动移除光标避免呆滞闪烁
-    clearTimeout(streamingCursorTimer);
-    streamingCursorTimer = setTimeout(() => {
-      document.querySelectorAll('.streaming-cursor').forEach((el) => el.remove());
-    }, 600);
+      // 智能防抖：连续 600ms 无新 Token 产生时，判定当前输出已停顿或结束，自动移除光标避免呆滞闪烁
+      clearTimeout(streamingCursorTimer);
+      streamingCursorTimer = setTimeout(() => {
+        document.querySelectorAll('.streaming-cursor').forEach((el) => el.remove());
+      }, 600);
+    }
   } else if (data.type === 'notice') {
-    if (data.message) {
+    if (data.message && isCurrentActive) {
       const isCompactionNotice = data.message.includes('压缩') || data.message.toLowerCase().includes('compact');
       if (!isCompactionNotice) {
         showToast(data.message, 'warning');
@@ -10110,45 +10136,54 @@ window.hap?.onChatStream?.((data) => {
     }
   } else if (data.type === 'text') {
     // 收到完整回合终态文本时，更新正文并彻底清除光标
-    clearTimeout(streamingCursorTimer);
-    streamingCursorTimer = null;
     if (data.text) {
       session.liveContent = data.text;
-      const contentText = $('streamingContentText');
-      if (contentText) {
-        contentText.innerHTML = renderMarkdownContent(session.liveContent);
-      }
-      const lastMiniI = document.querySelector('#miniIConversation .mini-msg-ai:last-child');
-      if (lastMiniI) {
-        lastMiniI.classList.remove('is-streaming');
-        lastMiniI.innerHTML = renderMarkdownContent(session.liveContent);
-      }
-      const lastMiniStage = document.querySelector('#miniStageMessages .mini-msg-ai:last-child');
-      if (lastMiniStage) {
-        lastMiniStage.classList.remove('is-streaming');
-        lastMiniStage.innerHTML = renderMarkdownContent(session.liveContent);
-      }
     }
-    document.querySelectorAll('.streaming-cursor').forEach((el) => el.remove());
-    requestStreamAutoScroll();
+    if (isCurrentActive) {
+      clearTimeout(streamingCursorTimer);
+      streamingCursorTimer = null;
+      if (data.text) {
+        const contentText = $('streamingContentText');
+        if (contentText) {
+          contentText.innerHTML = renderMarkdownContent(session.liveContent);
+        }
+        const lastMiniI = document.querySelector('#miniIConversation .mini-msg-ai:last-child');
+        if (lastMiniI) {
+          lastMiniI.classList.remove('is-streaming');
+          lastMiniI.innerHTML = renderMarkdownContent(session.liveContent);
+        }
+        const lastMiniStage = document.querySelector('#miniStageMessages .mini-msg-ai:last-child');
+        if (lastMiniStage) {
+          lastMiniStage.classList.remove('is-streaming');
+          lastMiniStage.innerHTML = renderMarkdownContent(session.liveContent);
+        }
+      }
+      document.querySelectorAll('.streaming-cursor').forEach((el) => el.remove());
+      requestStreamAutoScroll();
+    }
   } else if (data.type === 'goal_event') {
     if (data.data) {
       session.currentGoalPlan = data.data;
-      const box = $('streamingGoalCardBox');
-      if (box) {
-        box.innerHTML = renderGoalCardHtml(data.data);
+      if (isCurrentActive) {
+        const box = $('streamingGoalCardBox');
+        if (box) {
+          box.innerHTML = renderGoalCardHtml(data.data);
+        }
+        requestStreamAutoScroll();
       }
-      requestStreamAutoScroll();
     }
   }
 });
 
 $('stopChatBtn')?.addEventListener('click', async () => {
+  const cur = currentSession();
+  const sessionKey = cur ? 'gui:' + cur.id : undefined;
   try {
-    showToast('正在中断当前任务...', 'info');
-    await window.hap.abortChat();
+    showToast('正在中断当前会话任务...', 'info');
+    await window.hap.abortChat(sessionKey);
   } catch (err) {
     showToast('中断请求失败: ' + err.message, 'error');
+  } finally {
     if (streamScrollRaf) {
       cancelAnimationFrame(streamScrollRaf);
       streamScrollRaf = 0;
@@ -10156,18 +10191,17 @@ $('stopChatBtn')?.addEventListener('click', async () => {
     clearTimeout(streamingCursorTimer);
     streamingCursorTimer = null;
     document.querySelectorAll('.streaming-cursor').forEach((el) => el.remove());
-    for (const s of sessions) {
-      if (s) {
-        s.isGenerating = false;
-        s.generatingPlugin = null;
-        s.liveContent = '';
-        s.liveReasoning = '';
-      }
+    if (cur) {
+      cur.isGenerating = false;
+      cur.generatingPlugin = null;
+      cur.liveContent = '';
+      cur.liveReasoning = '';
+      setChatGenerating(false, cur);
     }
-    setChatGenerating(false);
     syncMiniConversationMessages();
     saveSessionsToStorage();
     renderCurrentSessionMessages();
+    renderProjectsTree();
   }
 });
 
@@ -15323,12 +15357,20 @@ $('reRunExecBtn')?.addEventListener('click', () => {
 });
 
 $('copyExecOutputBtn')?.addEventListener('click', () => {
-  const txt = $('execModalOutput')?.textContent || '';
-  copyText(txt, '终端输出内容');
+  if (window.TerminalConsoleController) {
+    window.TerminalConsoleController.copyOutput('execModalOutput');
+  } else {
+    const txt = $('execModalOutput')?.textContent || '';
+    copyText(txt, '终端输出内容');
+  }
 });
 
 $('clearExecOutputBtn')?.addEventListener('click', () => {
-  if ($('execModalOutput')) $('execModalOutput').textContent = '# 终端已清空\n';
+  if (window.TerminalConsoleController) {
+    window.TerminalConsoleController.clearOutput('execModalOutput');
+  } else {
+    if ($('execModalOutput')) $('execModalOutput').textContent = '# 终端已清空\n';
+  }
 });
 
 // SSL 申请向导
@@ -17631,6 +17673,7 @@ async function renderHostingOverview() {
     const wxModeDesc = $('hostingWxModeDesc');
     const wxTestVisionBtn = $('hostingWxTestVisionBtn');
     const wxSwitchModeBtn = $('hostingWxSwitchModeBtn');
+    const goToChannelsBtn = $('hostingGoToChannelsBtn');
 
     const currentPuppet = overview.wechat?.puppet || 'desktop_vision';
     const isVision = currentPuppet === 'desktop_vision';
@@ -17648,6 +17691,14 @@ async function renderHostingOverview() {
     if (wxTestVisionBtn) {
       wxTestVisionBtn.style.display = isVision ? 'inline-block' : 'none';
       wxTestVisionBtn.onclick = () => window.openVisionTestModal?.();
+    }
+
+    if (goToChannelsBtn) {
+      goToChannelsBtn.onclick = () => {
+        show('settings');
+        window.switchSettingsTab?.('channels');
+        window.switchSettingsSubTab?.('wechat');
+      };
     }
 
     if (wxSwitchModeBtn) {
@@ -18487,6 +18538,20 @@ function initChatHostingEvents() {
       populateHostingPolicyForm(activeHostingContact);
     }
     showToast('托管数据与状态已刷新', 'info');
+  });
+
+  // 一键清理无效会话与系统异常报错
+  $('hostingPruneGarbageBtn')?.addEventListener('click', async () => {
+    try {
+      const res = await window.hap.pruneGarbageContacts?.();
+      const count = res?.removedContacts ?? 0;
+      const msgCount = res?.removedMessages ?? 0;
+      showToast(`已清理 ${count} 个无效会话与 ${msgCount} 条异常报错记录`, 'success');
+      resetHostingDetailPanes();
+      await Promise.all([renderHostingOverview(), renderHostingContacts()]);
+    } catch (err) {
+      showToast('清理失败: ' + (err.message || String(err)), 'error');
+    }
   });
 
   // 一键清空全部托管会话与消息历史

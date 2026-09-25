@@ -85,6 +85,10 @@ export class WeChatContactStore {
     this.store.clearAllContacts('wechat');
   }
 
+  pruneGarbageContacts(): { removedContacts: number; removedMessages: number } {
+    return this.store.pruneGarbageContacts('wechat');
+  }
+
   getDefaultPolicy(_channel?: string): WeChatDefaultPolicy {
     return this.store.getDefaultPolicy('wechat');
   }

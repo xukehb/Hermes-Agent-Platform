@@ -26,7 +26,11 @@ afterEach(() => {
   WeChatContactStore.resetInstance();
 });
 
-function channelsOf(patch: Partial<ResolvedChannels['wechat']> = {}): ResolvedChannels {
+function channelsOf(
+  patch: Partial<Omit<ResolvedChannels['wechat'], 'personal'>> & {
+    personal?: Partial<ResolvedChannels['wechat']['personal']>;
+  } = {}
+): ResolvedChannels {
   return {
     editIntervalMs: 0,
     asyncThresholdMs: BUILTIN_CHANNELS.asyncThresholdMs,
@@ -362,6 +366,67 @@ describe('WeChatChannel 基础测试', () => {
 
     expect(host.requests.length).toBe(3);
     expect(host.requests[2]?.agentId).toBe('writer');
+  });
+
+  test('应当严格解耦聊天托管与机器人通道的 System Prompt 与角色定位', async () => {
+    const host = new StubHost();
+
+    // 1. 聊天托管模式 (personal + desktop_vision): 必须注入数字分身第一人称口吻与聊天规范
+    const hostingChannels = channelsOf({
+      mode: 'personal',
+      personal: {
+        puppet: 'desktop_vision',
+      },
+    });
+    const hostingChannel = new WeChatChannel({
+      host,
+      channels: hostingChannels,
+      limits,
+      paths,
+    });
+    await hostingChannel.start();
+
+    await hostingChannel.handlePersonalMessage({
+      id: 'msg_hosting_1',
+      fromId: 'wx_friend_1',
+      fromName: '测试好友',
+      isRoom: false,
+      text: '周末有空聚聚吗？',
+    });
+
+    expect(host.requests.length).toBe(1);
+    const hostingPrompt = host.requests[0]?.systemPrompt;
+    expect(hostingPrompt).toBeDefined();
+    expect(hostingPrompt).toContain('【最高优先级指令：微信即时通讯数字分身】');
+    expect(hostingPrompt).toContain('你就是本人，必须直接以第一人称回复');
+    await hostingChannel.stop();
+
+    // 2. 机器人模式 (ilink_bot): 绝不能注入数字分身第一人称口吻，作为专业 AI 智能体运行
+    const botChannels = channelsOf({
+      mode: 'ilink_bot',
+      defaultAgent: 'coder',
+    });
+    const botChannel = new WeChatChannel({
+      host,
+      channels: botChannels,
+      limits,
+      paths,
+    });
+    await botChannel.start();
+
+    await botChannel.handlePersonalMessage({
+      id: 'msg_bot_1',
+      fromId: 'wx_user_tech',
+      fromName: '开发者用户',
+      isRoom: false,
+      text: '帮我写一段 TypeScript 防抖函数',
+    });
+
+    expect(host.requests.length).toBe(2);
+    const botPrompt = host.requests[1]?.systemPrompt;
+    // 机器人模式下不注入数字分身提示
+    expect(botPrompt).toBeUndefined();
+    await botChannel.stop();
   });
 });
 

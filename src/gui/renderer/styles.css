@@ -628,70 +628,70 @@
    暗色内联样式中和器 (Inline Style Immunity)
    - 页面中仍存在大量历史遗留的浅色硬编码内联样式 (style="background:#ffffff" 等)
    - 此处统一拦截并改写为语义化变量，使暗色主题下不出现刺眼的白色色块
-   - 主题白名单：除 light 之外的一切主题均按暗色处理，旧主题 ID 亦自动覆盖
+   - 主题白名单：除 light 及 custom-base="light" 之外的一切深色/彩色主题均按暗色处理
    ========================================================================== */
-:root:not([data-theme="light"]) [style*="background:#ffffff"],
-:root:not([data-theme="light"]) [style*="background: #ffffff"],
-:root:not([data-theme="light"]) [style*="background:#fff"],
-:root:not([data-theme="light"]) [style*="background: #fff"],
-:root:not([data-theme="light"]) [style*="background:white"],
-:root:not([data-theme="light"]) [style*="background: white"] {
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="background:#ffffff"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="background: #ffffff"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="background:#fff"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="background: #fff"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="background:white"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="background: white"] {
   background: var(--bg-surface) !important;
 }
 
-:root:not([data-theme="light"]) [style*="background:#f8fafc"],
-:root:not([data-theme="light"]) [style*="background: #f8fafc"],
-:root:not([data-theme="light"]) [style*="background:#f9fafb"],
-:root:not([data-theme="light"]) [style*="background: #f9fafb"],
-:root:not([data-theme="light"]) [style*="background:#f1f5f9"],
-:root:not([data-theme="light"]) [style*="background: #f1f5f9"],
-:root:not([data-theme="light"]) [style*="background:#fafafa"],
-:root:not([data-theme="light"]) [style*="background: #fafafa"],
-:root:not([data-theme="light"]) [style*="background:#f4f4f5"],
-:root:not([data-theme="light"]) [style*="background: #f4f4f5"] {
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="background:#f8fafc"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="background: #f8fafc"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="background:#f9fafb"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="background: #f9fafb"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="background:#f1f5f9"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="background: #f1f5f9"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="background:#fafafa"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="background: #fafafa"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="background:#f4f4f5"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="background: #f4f4f5"] {
   background: var(--bg-subtle) !important;
 }
 
-:root:not([data-theme="light"]) [style*="color:#0f172a"],
-:root:not([data-theme="light"]) [style*="color: #0f172a"],
-:root:not([data-theme="light"]) [style*="color:#111827"],
-:root:not([data-theme="light"]) [style*="color: #111827"],
-:root:not([data-theme="light"]) [style*="color:#1e293b"],
-:root:not([data-theme="light"]) [style*="color: #1e293b"],
-:root:not([data-theme="light"]) [style*="color:#334155"],
-:root:not([data-theme="light"]) [style*="color: #334155"],
-:root:not([data-theme="light"]) [style*="color:#3f3f46"],
-:root:not([data-theme="light"]) [style*="color: #3f3f46"],
-:root:not([data-theme="light"]) [style*="color:#09090b"],
-:root:not([data-theme="light"]) [style*="color: #09090b"] {
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="color:#0f172a"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="color: #0f172a"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="color:#111827"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="color: #111827"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="color:#1e293b"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="color: #1e293b"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="color:#334155"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="color: #334155"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="color:#3f3f46"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="color: #3f3f46"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="color:#09090b"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="color: #09090b"] {
   color: var(--text-main) !important;
 }
 
-:root:not([data-theme="light"]) [style*="color:#64748b"],
-:root:not([data-theme="light"]) [style*="color: #64748b"],
-:root:not([data-theme="light"]) [style*="color:#6b7280"],
-:root:not([data-theme="light"]) [style*="color: #6b7280"],
-:root:not([data-theme="light"]) [style*="color:#71717a"],
-:root:not([data-theme="light"]) [style*="color: #71717a"] {
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="color:#64748b"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="color: #64748b"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="color:#6b7280"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="color: #6b7280"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="color:#71717a"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="color: #71717a"] {
   color: var(--text-muted) !important;
 }
 
-:root:not([data-theme="light"]) [style*="#e2e8f0"],
-:root:not([data-theme="light"]) [style*="#cbd5e1"],
-:root:not([data-theme="light"]) [style*="#e4e4e7"],
-:root:not([data-theme="light"]) [style*="#d4d4d8"] {
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="#e2e8f0"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="#cbd5e1"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="#e4e4e7"],
+:root:not([data-theme="light"]):not([data-custom-base="light"]) [style*="#d4d4d8"] {
   border-color: var(--border-default) !important;
 }
 
-:root:not([data-theme="light"]) select,
-:root:not([data-theme="light"]) input,
-:root:not([data-theme="light"]) textarea {
+:root:not([data-theme="light"]):not([data-custom-base="light"]) select,
+:root:not([data-theme="light"]):not([data-custom-base="light"]) input,
+:root:not([data-theme="light"]):not([data-custom-base="light"]) textarea {
   background-color: var(--bg-input-box);
   color: var(--text-main);
   border-color: var(--border-input);
 }
 
-:root:not([data-theme="light"]) option {
+:root:not([data-theme="light"]):not([data-custom-base="light"]) option {
   background-color: var(--bg-surface-raised);
   color: var(--text-main);
 }
@@ -791,7 +791,7 @@ textarea:focus {
 [data-theme="dark"] select:focus,
 [data-theme="dark"] textarea:focus {
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--border-focus) 22%, transparent);
 }
 
 /* ==========================================================================
@@ -971,7 +971,7 @@ body.has-wallpaper .rail-mac-spacer {
 .new-chat-btn:hover .plus-icon,
 .new-conversation-btn:hover .plus-icon {
   background: var(--primary);
-  color: #ffffff;
+  color: var(--bg-app);
 }
 
 .new-chat-btn:active,
@@ -1535,7 +1535,7 @@ body.has-wallpaper .rail-mac-spacer {
 
 .tool-capsule:hover {
   background: var(--bg-sidebar-hover);
-  border-color: #cbd5e1;
+  border-color: var(--border-hover);
 }
 
 .agent-switch-select {
@@ -2430,19 +2430,19 @@ body.has-wallpaper .rail-mac-spacer {
 
 /* VS Code 风格全屏/弹窗代码查看器 (Code Viewer Modal) */
 #codeViewerModal.modal {
-  background: #18181b;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-modal);
   max-width: 860px;
   width: 90vw;
   padding: 0;
   overflow: hidden;
-  color: #f4f4f5;
+  color: var(--code-text);
 }
 
 .code-viewer-wrap {
-  background: #18181b;
+  background: var(--code-bg);
   display: flex;
   flex-direction: column;
   max-height: 80vh;
@@ -2450,17 +2450,17 @@ body.has-wallpaper .rail-mac-spacer {
 }
 
 .code-viewer-head {
-  background: #202024;
+  background: var(--code-header-bg);
   padding: 8px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--code-border);
   user-select: none;
 }
 
 #codeViewerTitle {
-  color: #e4e4e7;
+  color: var(--code-text);
   font-family: var(--font-mono);
   font-size: 12.5px;
   font-weight: 600;
@@ -2469,9 +2469,9 @@ body.has-wallpaper .rail-mac-spacer {
 
 .code-viewer-body {
   display: flex;
-  background: #18181b;
+  background: var(--code-bg);
   overflow: auto;
-  font-family: 'Cascadia Code', Consolas, Menlo, Monaco, 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.65;
   padding: 12px 0;
@@ -3863,7 +3863,7 @@ body.has-wallpaper .rail-mac-spacer {
   cursor: pointer;
   top: 0; left: 0; right: 0; bottom: 0;
   background-color: var(--border-default);
-  transition: 0.2s;
+  transition: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   border-radius: var(--radius-pill);
 }
 .slider:before {
@@ -3873,16 +3873,21 @@ body.has-wallpaper .rail-mac-spacer {
   width: 14px;
   left: 3px;
   bottom: 3px;
-  background-color: white;
-  transition: 0.2s;
+  background-color: #ffffff;
+  transition: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
+input:checked + .slider,
 input:checked + .slider.green {
-  background-color: var(--text-main);
+  background-color: var(--primary);
 }
 input:checked + .slider:before {
   transform: translateX(16px);
+}
+/* 深色及彩色主题下开启态滑块底色反转，确保极佳对比度而不隐形 */
+:root:not([data-theme="light"]):not([data-custom-base="light"]) input:checked + .slider:before {
+  background-color: var(--bg-app);
 }
 
 /* 弹窗 Modal (Universal Modern Floating Glass Card) */
@@ -4350,17 +4355,17 @@ select optgroup {
 
 /* 在线拉取远程模型选择器 */
 #remoteModelPicker {
-  background-color: #f0fdf4 !important;
-  border: 1px solid #86efac !important;
-  color: #15803d !important;
+  background-color: var(--success-soft) !important;
+  border: 1px solid var(--success-border) !important;
+  color: var(--success) !important;
   font-weight: 600 !important;
   box-shadow: 0 1px 3px rgba(34, 197, 94, 0.12) !important;
   animation: fadeInDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 #remoteModelPicker:hover {
-  background-color: #dcfce7 !important;
-  border-color: #4ade80 !important;
+  background-color: var(--success-subtle) !important;
+  border-color: var(--success) !important;
 }
 
 @keyframes fadeInDown {
@@ -4433,57 +4438,41 @@ dialog .toast-container.in-dialog {
 .toast {
   /* 提示条只承载只读文本，不参与交互；保持穿透可彻底避免遮挡下方控件 */
   pointer-events: none;
-  padding: 8px 14px;
+  padding: 8px 16px;
   border-radius: var(--radius-pill);
-  background: #1e293b;
-  color: #ffffff;
+  background: var(--bg-surface-elevated, var(--bg-surface));
+  color: var(--text-main);
   font-size: 12.5px;
   font-weight: 500;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.2), 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-dropdown), 0 2px 8px rgba(0, 0, 0, 0.08);
   animation: toastPop 0.22s var(--ease-spring);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-default);
+  border-left-width: 4px;
+  border-left-style: solid;
+  border-left-color: var(--primary);
   text-align: center;
   max-width: 100%;
   word-break: break-word;
 }
 
-/* 提示条：统一深色底 + 左侧 3px 状态色标识条，避免整块高饱和渐变抢占注意力 */
-.toast {
-  border-left-width: 3px;
-  border-left-style: solid;
-}
-
 .toast.toast-error {
-  background: var(--text-main);
-  border-color: transparent;
-  border-left-color: #ef4444;
-  box-shadow: 0 8px 24px -6px rgba(9, 9, 11, 0.35);
+  border-left-color: var(--danger);
 }
 
 .toast.toast-success {
-  background: var(--text-main);
-  border-color: transparent;
-  border-left-color: #22c55e;
-  box-shadow: 0 8px 24px -6px rgba(9, 9, 11, 0.35);
+  border-left-color: var(--success);
 }
 
 .toast.toast-warning {
-  background: var(--text-main);
-  border-color: transparent;
-  border-left-color: #f59e0b;
-  color: #ffffff;
-  box-shadow: 0 8px 24px -6px rgba(9, 9, 11, 0.35);
+  border-left-color: var(--warning);
 }
 
 .toast.toast-info {
-  background: var(--text-main);
-  border-color: transparent;
   border-left-color: var(--blue-badge);
-  box-shadow: 0 8px 24px -6px rgba(9, 9, 11, 0.35);
 }
 
 @keyframes toastPop {
@@ -4552,10 +4541,28 @@ dialog .toast-container.in-dialog {
   padding: 1px 5px;
   border-radius: 3px;
 }
-.git-status-badge.M { background: #fff3cd; color: #856404; }
-.git-status-badge.A, .git-status-badge.untracked, .git-status-badge.question { background: #d4edda; color: #155724; }
-.git-status-badge.D { background: #f8d7da; color: #721c24; }
-.git-status-badge.C { background: #e11d48; color: #ffffff; font-weight: 700; }
+.git-status-badge.M {
+  background: var(--warning-soft);
+  color: var(--warning);
+  border: 1px solid var(--warning-border);
+}
+.git-status-badge.A,
+.git-status-badge.untracked,
+.git-status-badge.question {
+  background: var(--success-soft);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+}
+.git-status-badge.D {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid var(--danger-border);
+}
+.git-status-badge.C {
+  background: var(--danger);
+  color: var(--bg-app);
+  font-weight: 700;
+}
 
 .git-group-header {
   display: flex;
@@ -4677,13 +4684,14 @@ dialog .toast-container.in-dialog {
 .lightbox-wrap {
   display: flex;
   flex-direction: column;
-  background: #1e293b;
-  color: #ffffff;
-  border-radius: 16px;
+  background: var(--bg-surface);
+  color: var(--text-main);
+  border-radius: var(--radius-xl);
   overflow: hidden;
   max-width: 90vw;
   max-height: 90vh;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-modal);
 }
 
 .lightbox-header {
@@ -4691,8 +4699,8 @@ dialog .toast-container.in-dialog {
   align-items: center;
   justify-content: space-between;
   padding: 10px 18px;
-  background: #1e293b;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-default);
   font-size: 13px;
   font-weight: 600;
 }
@@ -4700,7 +4708,7 @@ dialog .toast-container.in-dialog {
 .lightbox-title {
   font-size: 13px;
   font-weight: 600;
-  color: #e2e8f0;
+  color: var(--text-main);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4719,7 +4727,7 @@ dialog .toast-container.in-dialog {
   padding: 18px;
   overflow: auto;
   max-height: calc(90vh - 54px);
-  background: #090d16;
+  background: var(--bg-app);
 }
 
 .lightbox-img {
@@ -5105,8 +5113,9 @@ dialog .toast-container.in-dialog {
 }
 
 .ops-agent-output pre {
-  background: #1e1e1e;
-  color: #d4d4d4;
+  background: var(--code-bg);
+  color: var(--code-text);
+  border: 1px solid var(--code-border);
   border-radius: 6px;
   padding: 10px 12px;
   margin: 6px 0;
@@ -6961,7 +6970,7 @@ body:not(.is-chat-generating) .streaming-cursor,
 .model-chip-btn:hover,
 .chip-action-btn:hover {
   color: var(--text-main);
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--bg-hover);
 }
 .model-chip-btn.test-btn:hover,
 .chip-action-btn.test-btn:hover {

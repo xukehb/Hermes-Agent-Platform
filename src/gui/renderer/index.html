@@ -86,7 +86,7 @@
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
           <span class="nav-text" data-i18n="rail.settings">系统设置</span>
-          <span class="sidebar-version-tag" id="sidebarVersionTag" style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-left:auto;padding:2px 6px;border-radius:4px;opacity:0.85;cursor:pointer;transition:all 150ms ease;" title="点击直达软件版本与检查更新" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--primary)';" onmouseout="this.style.background='transparent';this.style.color='var(--text-muted)';">v0.1.17</span>
+          <span class="sidebar-version-tag" id="sidebarVersionTag" style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-left:auto;padding:2px 6px;border-radius:4px;opacity:0.85;cursor:pointer;transition:all 150ms ease;" title="点击直达软件版本与检查更新" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--primary)';" onmouseout="this.style.background='transparent';this.style.color='var(--text-muted)';">v0.1.22</span>
         </div>
       </div>
     </aside>
@@ -195,7 +195,7 @@
                 <button id="aboutVersionMoreBtn" class="more-menu-item-btn" title="查看软件版本、运行环境与检查更新" data-i18n-title="more.aboutVersionTooltip">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                   <span data-i18n="more.aboutVersion">关于与版本更新</span>
-                  <span class="badge" id="moreMenuVersionBadge" style="margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:var(--text-secondary);background:var(--bg-subtle);border:1px solid var(--border-default);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.17</span>
+                  <span class="badge" id="moreMenuVersionBadge" style="margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:var(--text-secondary);background:var(--bg-subtle);border:1px solid var(--border-default);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.22</span>
                 </button>
 
                 <!-- 切换语言 -->
@@ -496,7 +496,7 @@
                     <span>执行结果与诊断输出</span>
                     <span id="sdOpsStatusText" style="font-size:11px;color:var(--text-main);">执行中...</span>
                   </div>
-                  <pre id="sdOpsOutputText" style="background:#18181b;color:#e4e4e7;padding:12px;border-radius:8px;font-family:var(--font-mono);font-size:11.5px;max-height:280px;overflow-y:auto;white-space:pre-wrap;"></pre>
+                  <pre id="sdOpsOutputText" style="background:var(--code-bg);color:var(--code-text);border:1px solid var(--code-border);padding:12px;border-radius:8px;font-family:var(--font-mono);font-size:11.5px;max-height:280px;overflow-y:auto;white-space:pre-wrap;"></pre>
                 </div>
               </div>
             </div>
@@ -646,13 +646,17 @@
               </div>
 
               <div class="hosting-btn-group">
+                <button type="button" class="btn secondary" id="hostingPruneGarbageBtn" title="一键清理OCR误识别噪点、非好友会话及历史系统报错" style="font-size:12px;padding:6px 11px;display:inline-flex;align-items:center;gap:4px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                  <span>清理无效会话</span>
+                </button>
                 <button type="button" class="btn secondary" id="hostingRefreshBtn" title="刷新状态与记忆" style="font-size:12px;padding:6px 11px;display:inline-flex;align-items:center;gap:4px;">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                   <span>刷新</span>
                 </button>
-                <button type="button" class="btn secondary btn-quiet-danger" id="hostingClearAllBtn" style="font-size:12px;padding:6px 11px;display:inline-flex;align-items:center;gap:4px;" title="清空历史缓存">
+                <button type="button" class="btn secondary btn-quiet-danger" id="hostingClearAllBtn" style="font-size:12px;padding:6px 11px;display:inline-flex;align-items:center;gap:4px;" title="清空全部历史会话记录">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                  <span>清空缓存</span>
+                  <span>清空全部</span>
                 </button>
                 <button type="button" class="btn secondary" id="hostingQuickAddBtn" style="font-size:12px;padding:6px 14px;display:inline-flex;align-items:center;gap:5px;" title="为特定特殊好友定制专属规则 (可选)">
                   <span>+ 特殊好友定制</span>
@@ -696,9 +700,9 @@
 
                   <!-- 微信操作组 -->
                   <div class="account-actions-row">
-                    <button type="button" class="btn text-btn switch-mode-btn" id="hostingWxSwitchModeBtn" title="切换模式：桌面免扫码视觉代管 / 手机扫码登录协议">
-                       切换扫码登录
-</button>
+                    <button type="button" class="btn text-btn" id="hostingGoToChannelsBtn" title="前往机器人与消息通道配置（配置 iLink Bot / 企业微信等独立 AI 助手通道）" style="font-size:11px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px;">
+                      <span>🤖 机器人通道设置</span>
+                    </button>
                     <div style="display:flex;gap:4px;align-items:center;">
                       <button type="button" class="btn text-btn vision-test-btn" id="hostingWxTestVisionBtn" style="font-size:11px;color:var(--primary, var(--primary));display:none;" title="测试视觉识别桌面微信窗口">
                         测试识屏
@@ -910,7 +914,7 @@
             </div>
             <div style="display:flex;align-items:center;gap:10px;">
               <button type="button" class="btn secondary" id="headerCheckUpdateBtn" style="font-size:12px;padding:5px 12px;display:inline-flex;align-items:center;gap:6px;border-radius:6px;cursor:pointer;" title="查看软件版本并检查 GitHub 更新">
-                <span class="badge" id="headerVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;color:var(--text-secondary);background:var(--bg-subtle);border:1px solid var(--border-default);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.17</span>
+                <span class="badge" id="headerVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;color:var(--text-secondary);background:var(--bg-subtle);border:1px solid var(--border-default);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.22</span>
                 <span id="headerCheckUpdateBtnText" style="font-size:12px;">检查更新</span>
               </button>
               <button type="button" class="btn secondary" id="backToChatBtn" onclick="show('chat')" style="font-size:12.5px;padding:6px 14px;display:inline-flex;align-items:center;gap:6px;">
@@ -1381,11 +1385,16 @@
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">接入模式 (Integration Mode) *</label>
                       <select id="wxModeSelect">
-                        <option value="desktop_vision">桌面视觉代管 (SightFlow 零封号免扫码真实好友代答) [推荐]</option>
-                        <option value="ilink_bot">个人微信扫码绑定 iLink Bot (腾讯官方无侵入扫码)</option>
+                        <option value="ilink_bot">个人微信扫码绑定 iLink Bot (官方无侵入扫码，专业 AI 助手) [推荐]</option>
+                        <option value="wecom">企业微信自建应用 (CorpID & Secret 模式，团队助手)</option>
+                        <option value="desktop_vision">桌面视觉代管 (SightFlow 免扫码代管，好友代聊分身)</option>
                         <option value="personal">Wechaty Puppet 商业服务 (需提供 Puppet Token 凭据)</option>
-                        <option value="wecom">企业微信自建应用 (CorpID & Secret 模式)</option>
                       </select>
+                    </div>
+
+                    <!-- 桌面视觉代管引导提示 -->
+                    <div id="wxDesktopVisionTip" class="channel-info-box" style="display:none;font-size:11.5px;color:var(--text-muted);line-height:1.5;background:var(--bg-tertiary);border-left:3px solid var(--primary);padding:8px 12px;border-radius:4px;">
+                      💡 <strong>模式说明</strong>：<strong>桌面视觉代管</strong>主要用于在【聊天托管】中代表个人与好友进行第一人称日常沟通。如需配置 AI 编程/运维等专业助手通道，建议选用 <strong>iLink Bot</strong> 或 <strong>企业微信</strong>；若需配置数字分身、专属好友事实库与人设，可前往左侧<strong>【聊天托管】</strong>。
                     </div>
 
                     <!-- 企业微信专属字段 -->
@@ -1941,7 +1950,7 @@
                   <div class="metric-sub" id="hostCpuSpeed">-- MHz</div>
                 </div>
                 <div class="progress-track">
-                  <div id="hostCpuBar" style="width:0%;height:100%;background:var(--text-main);transition:width 0.3s;"></div>
+                  <div id="hostCpuBar" style="width:0%;height:100%;background:var(--primary);transition:width 0.3s;"></div>
                 </div>
                 <div style="font-size:11px;color:var(--text-muted);text-overflow:ellipsis;overflow:hidden;white-space:nowrap;" id="hostCpuModel">--</div>
               </div>
@@ -1957,7 +1966,7 @@
                   <div class="metric-sub" id="hostMemTotalBrief">/ -- GB</div>
                 </div>
                 <div class="progress-track">
-                  <div id="hostMemBar" style="width:0%;height:100%;background:var(--text-main);transition:width 0.3s;"></div>
+                  <div id="hostMemBar" style="width:0%;height:100%;background:var(--primary);transition:width 0.3s;"></div>
                 </div>
                 <div style="font-size:11px;color:var(--text-muted);" id="hostMemTotal">空闲: -- GB</div>
               </div>
@@ -1970,7 +1979,7 @@
                 </div>
                 <div class="metric-number" id="hostProcessRss">-- MB</div>
                 <div class="progress-track">
-                  <div id="hostHeapBar" style="width:0%;height:100%;background:var(--text-main);transition:width 0.3s;"></div>
+                  <div id="hostHeapBar" style="width:0%;height:100%;background:var(--primary);transition:width 0.3s;"></div>
                 </div>
                 <div style="font-size:11px;color:var(--text-muted);" id="hostProcessHeap">堆使用: -- MB / -- MB</div>
               </div>
@@ -3345,7 +3354,7 @@
           <div style="display:flex;gap:8px;align-items:center;">
             <button type="button" class="codeblock-btn" id="codeViewerCopyBtn">复制代码</button>
             <button type="button" class="codeblock-btn" id="codeViewerOpenVsCodeBtn">VS Code 打开</button>
-            <button type="button" class="btn-close" id="closeCodeViewerBtn" aria-label="关闭" title="关闭" style="color:#a1a1aa;width:26px;height:26px;flex:0 0 26px;font-size:16px;"></button>
+            <button type="button" class="btn-close" id="closeCodeViewerBtn" aria-label="关闭" title="关闭" style="color:var(--text-muted);width:26px;height:26px;flex:0 0 26px;font-size:16px;"></button>
           </div>
         </div>
         <div class="code-viewer-body">
@@ -3446,18 +3455,18 @@
               </div>
 
               <!-- 右侧：实时 Diff 对比区 -->
-              <div style="display:flex;flex-direction:column;min-height:0;background:#1e1e1e;">
-                <div style="padding:6px 12px;background:#252526;border-bottom:1px solid #333333;display:flex;justify-content:space-between;align-items:center;">
+              <div style="display:flex;flex-direction:column;min-height:0;background:var(--code-bg);">
+                <div style="padding:6px 12px;background:var(--code-header-bg);border-bottom:1px solid var(--code-border);display:flex;justify-content:space-between;align-items:center;">
                   <div style="display:flex;align-items:center;gap:8px;overflow:hidden;">
-                    <span id="gitInlineDiffFileTitle" style="font-family:var(--font-mono);font-size:12px;color:#e1e4e8;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">选择左侧文件查看代码差异</span>
+                    <span id="gitInlineDiffFileTitle" style="font-family:var(--font-mono);font-size:12px;color:var(--code-text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">选择左侧文件查看代码差异</span>
                   </div>
                   <div style="display:flex;gap:6px;">
                     <button type="button" class="codeblock-btn" id="gitInlineDiffCopyBtn" style="font-size:11px;">复制代码</button>
                     <button type="button" class="codeblock-btn" id="gitInlineDiffOpenVsCodeBtn" style="font-size:11px;">VS Code 对比</button>
                   </div>
                 </div>
-                <div id="gitInlineDiffContent" class="git-diff-content" style="flex:1;overflow:auto;padding:12px 14px;color:#d4d4d4;font-size:12px;line-height:1.55;">
-                  <div class="git-diff-line normal" style="color:#858585;"> 点击左侧文件，实时审查具体修改的代码差异</div>
+                <div id="gitInlineDiffContent" class="git-diff-content" style="flex:1;overflow:auto;padding:12px 14px;color:var(--code-text);font-size:12px;line-height:1.55;">
+                  <div class="git-diff-line normal" style="color:var(--code-muted);"> 点击左侧文件，实时审查具体修改的代码差异</div>
                 </div>
               </div>
             </div>
@@ -3497,10 +3506,10 @@
               </div>
 
               <!-- 右侧：选中的 Commit 详情与代码 Diff -->
-              <div style="display:flex;flex-direction:column;min-height:0;background:#1e1e1e;">
-                <div style="padding:6px 12px;background:#252526;border-bottom:1px solid #333333;display:flex;justify-content:space-between;align-items:center;">
+              <div style="display:flex;flex-direction:column;min-height:0;background:var(--code-bg);">
+                <div style="padding:6px 12px;background:var(--code-header-bg);border-bottom:1px solid var(--code-border);display:flex;justify-content:space-between;align-items:center;">
                   <div style="display:flex;align-items:center;gap:8px;overflow:hidden;">
-                    <span id="gitHistoryDiffTitle" style="font-family:var(--font-mono);font-size:12px;color:#e1e4e8;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">选择左侧提交查看差异与改动</span>
+                    <span id="gitHistoryDiffTitle" style="font-family:var(--font-mono);font-size:12px;color:var(--code-text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">选择左侧提交查看差异与改动</span>
                   </div>
                   <div style="display:flex;gap:6px;align-items:center;" id="gitHistoryCommitActions">
                     <button type="button" class="codeblock-btn" id="gitHistoryRollbackBtn" style="display:none;color:var(--warning);font-weight:600;" title="回滚该提交，修改重新恢复至工作区未提交状态">回滚到工作区</button>
@@ -3508,8 +3517,8 @@
                     <button type="button" class="codeblock-btn" id="gitHistoryCopyHashBtn" style="font-size:11px;">复制 Hash</button>
                   </div>
                 </div>
-                <div id="gitHistoryDiffContent" class="git-diff-content" style="flex:1;overflow:auto;padding:12px 14px;color:#d4d4d4;font-size:12px;line-height:1.55;">
-                  <div class="git-diff-line normal" style="color:#858585;">点击左侧提交记录，查看该提交的变更差异代码。</div>
+                <div id="gitHistoryDiffContent" class="git-diff-content" style="flex:1;overflow:auto;padding:12px 14px;color:var(--code-text);font-size:12px;line-height:1.55;">
+                  <div class="git-diff-line normal" style="color:var(--code-muted);">点击左侧提交记录，查看该提交的变更差异代码。</div>
                 </div>
               </div>
             </div>
@@ -3577,11 +3586,11 @@
           <div style="display:flex;gap:8px;align-items:center;">
             <button type="button" class="codeblock-btn" id="gitDiffCopyBtn">复制 Diff</button>
             <button type="button" class="codeblock-btn" id="gitDiffOpenVsCodeBtn">VS Code 打开对比</button>
-            <button type="button" class="btn-close" id="closeGitDiffModalBtn" aria-label="关闭" title="关闭" style="color:#a1a1aa;width:26px;height:26px;flex:0 0 26px;font-size:16px;"></button>
+            <button type="button" class="btn-close" id="closeGitDiffModalBtn" aria-label="关闭" title="关闭" style="color:var(--text-muted);width:26px;height:26px;flex:0 0 26px;font-size:16px;"></button>
           </div>
         </div>
-        <div class="code-viewer-body" style="background:#1e1e1e;">
-          <pre class="code-text-area git-diff-content" id="gitDiffContent" style="color:#d4d4d4;padding:14px 18px;font-size:12.5px;line-height:1.6;overflow:auto;max-height:65vh;"></pre>
+        <div class="code-viewer-body" style="background:var(--code-bg);">
+          <pre class="code-text-area git-diff-content" id="gitDiffContent" style="color:var(--code-text);padding:14px 18px;font-size:12.5px;line-height:1.6;overflow:auto;max-height:65vh;"></pre>
         </div>
       </div>
     </dialog>
@@ -3895,7 +3904,7 @@
           <div class="lightbox-tools">
             <button type="button" class="codeblock-btn" id="lightboxCopyBtn">复制图片</button>
             <button type="button" class="codeblock-btn" id="lightboxDownloadBtn">下载原图</button>
-            <button type="button" class="btn-close" id="closeLightboxBtn" aria-label="关闭" title="关闭" style="color:#a1a1aa;width:26px;height:26px;flex:0 0 26px;font-size:16px;"></button>
+            <button type="button" class="btn-close" id="closeLightboxBtn" aria-label="关闭" title="关闭" style="color:var(--text-muted);width:26px;height:26px;flex:0 0 26px;font-size:16px;"></button>
           </div>
         </div>
         <div class="lightbox-body">
@@ -4653,7 +4662,7 @@
       <div class="modal-form-wrap" style="max-height:88vh;display:flex;flex-direction:column;padding:20px 24px;">
         <div class="modal-header-row" style="margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border-default);">
           <div style="display:flex;align-items:center;gap:12px;">
-            <div style="width:36px;height:36px;border-radius:10px;background:#18181b;color:var(--success);display:grid;place-items:center;font-size:18px;font-family:monospace;">$_</div>
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--bg-subtle);border:1px solid var(--border-default);color:var(--success);display:grid;place-items:center;font-size:18px;font-family:monospace;">$_</div>
             <div>
               <div style="display:flex;align-items:center;gap:8px;">
                 <h2 id="execModalTitle" style="font-size:16px;margin:0;font-weight:700;">远程脚本下发执行</h2>
@@ -4676,18 +4685,18 @@
           </div>
         </div>
 
-        <!-- 终端黑色输出窗口 -->
-        <div style="flex:1;min-height:300px;max-height:460px;background:#09090b;border-radius:10px;border:1px solid #27272a;display:flex;flex-direction:column;overflow:hidden;box-shadow:inset 0 2px 8px rgba(0,0,0,0.5);">
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 12px;background:#18181b;border-bottom:1px solid #27272a;font-size:11.5px;color:#a1a1aa;">
+        <!-- 终端控制台窗口 -->
+        <div style="flex:1;min-height:300px;max-height:460px;background:var(--code-bg);border-radius:10px;border:1px solid var(--code-border);display:flex;flex-direction:column;overflow:hidden;box-shadow:inset 0 2px 8px rgba(0,0,0,0.15);">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 12px;background:var(--code-header-bg);border-bottom:1px solid var(--code-border);font-size:11.5px;color:var(--code-muted);">
             <div style="display:flex;align-items:center;gap:6px;">
               <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--danger);"></span>
               <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warning);"></span>
               <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--success);"></span>
-              <span style="margin-left:6px;font-weight:600;color:#e4e4e7;" data-i18n="script.terminalConsoleTitle">终端流式控制台</span>
+              <span style="margin-left:6px;font-weight:600;color:var(--code-text);" data-i18n="script.terminalConsoleTitle">终端流式控制台</span>
             </div>
             <div style="display:flex;gap:8px;">
-              <button type="button" class="btn secondary" id="copyExecOutputBtn" style="padding:2px 8px;font-size:11px;background:#27272a;color:#e4e4e7;">复制输出</button>
-              <button type="button" class="btn secondary" id="clearExecOutputBtn" style="padding:2px 8px;font-size:11px;background:#27272a;color:#e4e4e7;">清屏</button>
+              <button type="button" class="codeblock-btn" id="copyExecOutputBtn" style="padding:2px 8px;font-size:11px;">复制输出</button>
+              <button type="button" class="codeblock-btn" id="clearExecOutputBtn" style="padding:2px 8px;font-size:11px;">清屏</button>
             </div>
           </div>
           <pre id="execModalOutput" style="flex:1;margin:0;padding:12px 14px;color:var(--code-text);background:transparent;font-family:'JetBrains Mono', Consolas, Monaco, monospace;font-size:12px;line-height:1.55;overflow-y:auto;white-space:pre-wrap;word-break:break-all;"></pre>
@@ -5966,6 +5975,9 @@
     <script src="./qrcode.js"></script>
     <script src="./i18n-source-en.js"></script>
     <script src="./i18n.js"></script>
+    <script src="./modules/theme-controller.js"></script>
+    <script src="./modules/git-controller.js"></script>
+    <script src="./modules/terminal-controller.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>

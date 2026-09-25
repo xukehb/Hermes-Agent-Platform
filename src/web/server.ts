@@ -3,7 +3,7 @@ import { serve } from '@hono/node-server';
 import { cors } from 'hono/cors';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { networkInterfaces } from 'node:os';
 import { isIP } from 'node:net';
 import { AgentOrchestrator } from '../agent/index.js';
@@ -1222,14 +1222,14 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
   // 早期实现只逐个枚举 styles.css / app.js / qrcode.js，导致新增的 i18n.js 在 Web 端
   // 始终 404、window.I18N 为 undefined，语言切换按钮静默失效。此处改为按白名单
   // 后缀统一托管 rendererDir 下的资源，避免同类缺陷再次发生。
-  app.get('/:asset{[A-Za-z0-9._-]+}', (c) => {
+  app.get('/:asset{[A-Za-z0-9._/-]+}', (c) => {
     const asset = c.req.param('asset');
     const allowed = new Set(['.css', '.js', '.mjs', '.cjs', '.json', '.map', '.svg', '.png', '.jpg', '.ico', '.woff', '.woff2']);
     const ext = asset.slice(asset.lastIndexOf('.')).toLowerCase();
     if (!asset.includes('.') || !allowed.has(ext)) return c.text('', 404);
 
-    const p = join(rendererDir, asset);
-    if (!existsSync(p)) return c.text('', 404);
+    const p = resolve(rendererDir, asset);
+    if (!p.startsWith(rendererDir) || !existsSync(p)) return c.text('', 404);
 
     const contentTypes: Record<string, string> = {
       '.css': 'text/css; charset=utf-8',

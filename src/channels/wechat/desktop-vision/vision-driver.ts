@@ -5,7 +5,7 @@ import { type CapturedWindow, captureWeChatWindow, isWeChatRunning } from './cap
 import { type SendReplyOptions, type ActionDriverResult, sendWeChatReply } from './action-driver.js';
 import { type WeChatVisionParseResult, type VisionParserOptions, parseWeChatScreen } from './vision-parser.js';
 import { checkImagesDiff, isTextSentByMe, type ImageDiffResult } from './ocr-parser.js';
-import { normalizeContactName } from '../../contacts-store.js';
+import { normalizeContactName, isGarbageContactName } from '../../contacts-store.js';
 
 export interface DesktopVisionActivityEvent {
   stage: 'detected' | 'thinking' | 'generated' | 'executing' | 'sent' | 'cooldown' | 'draft' | 'system' | 'scan';
@@ -193,6 +193,9 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
 
       if (parsed.chatTarget) {
         const normTarget = normalizeContactName(parsed.chatTarget) || parsed.chatTarget;
+        if (isGarbageContactName(normTarget)) {
+          return;
+        }
         if (parsed.chatTargetCoords) {
           this.targetCoordsMap.set(parsed.chatTarget, parsed.chatTargetCoords);
           this.targetCoordsMap.set(normTarget, parsed.chatTargetCoords);
@@ -231,6 +234,10 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
       // 消息去重指纹计算（目标:发送者:消息内容，以及纯内容指纹）
       const rawTarget = parsed.chatTarget || msg.sender;
       const chatTarget = normalizeContactName(rawTarget) || rawTarget;
+      if (isGarbageContactName(chatTarget)) {
+        this.log(`[DesktopVision] 忽略伪目标/非好友目标: "${chatTarget}"`);
+        return;
+      }
       const fingerprints = [
         `${chatTarget}:${msg.sender}:${cleanText}`,
         `${chatTarget}:${cleanText}`,

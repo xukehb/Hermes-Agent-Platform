@@ -168,14 +168,47 @@ async function captureViaMacScreencapture(): Promise<CapturedWindow> {
   }
 }
 
-/** 使用 Windows/Linux 系统工具截取当前桌面，保证非 Electron 环境也能识屏。 */
+/** 使用 Windows/Linux 系统工具截取当前桌面或微信窗口，保证非 Electron 环境也能识屏。 */
 async function captureViaSystemScreen(): Promise<CapturedWindow> {
   if (process.platform === 'darwin') return captureViaMacScreencapture();
   const tempPath = join(tmpdir(), `hap_wechat_cap_${Date.now()}_${randomUUID().slice(0, 6)}.png`);
   try {
     if (process.platform === 'win32') {
       const escaped = tempPath.replace(/'/g, "''");
-      const script = `Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing; $s=[Windows.Forms.Screen]::PrimaryScreen.Bounds; $b=New-Object Drawing.Bitmap $s.Width,$s.Height; $g=[Drawing.Graphics]::FromImage($b); $g.CopyFromScreen($s.Location,[Drawing.Point]::Empty,$s.Size); $b.Save('${escaped}',[Drawing.Imaging.ImageFormat]::Png); $g.Dispose(); $b.Dispose()`;
+      const script = `
+        Add-Type -AssemblyName System.Windows.Forms;
+        Add-Type -AssemblyName System.Drawing;
+        $captured = $false;
+        try {
+          $p = Get-Process -Name WeChat -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1;
+          if ($p) {
+            Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public class WinUser { [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect); [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left; public int Top; public int Right; public int Bottom; } }' -ErrorAction SilentlyContinue;
+            $rect = New-Object WinUser+RECT;
+            if ([WinUser]::GetWindowRect($p.MainWindowHandle, [ref]$rect)) {
+              $w = $rect.Right - $rect.Left;
+              $h = $rect.Bottom - $rect.Top;
+              if ($w -gt 150 -and $h -gt 150) {
+                $b = New-Object Drawing.Bitmap $w, $h;
+                $g = [Drawing.Graphics]::FromImage($b);
+                $g.CopyFromScreen($rect.Left, $rect.Top, 0, 0, (New-Object Drawing.Size $w, $h));
+                $b.Save('${escaped}', [Drawing.Imaging.ImageFormat]::Png);
+                $g.Dispose();
+                $b.Dispose();
+                $captured = $true;
+              }
+            }
+          }
+        } catch {}
+        if (-not $captured) {
+          $s = [Windows.Forms.Screen]::PrimaryScreen.Bounds;
+          $b = New-Object Drawing.Bitmap $s.Width, $s.Height;
+          $g = [Drawing.Graphics]::FromImage($b);
+          $g.CopyFromScreen($s.Location, [Drawing.Point]::Empty, $s.Size);
+          $b.Save('${escaped}', [Drawing.Imaging.ImageFormat]::Png);
+          $g.Dispose();
+          $b.Dispose();
+        }
+      `.replace(/\r?\n\s*/g, ' ').trim();
       await runCmd('powershell', ['-NoProfile', '-NonInteractive', '-Command', script]);
     } else {
       try { await runCmd('scrot', [tempPath]); } catch { await runCmd('import', ['-window', 'root', tempPath]); }

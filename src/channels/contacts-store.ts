@@ -40,6 +40,65 @@ export function normalizeContactId(rawId: string): string {
   return normalizeContactName(trimmed) || trimmed;
 }
 
+/**
+ * 识别是否为由屏幕 OCR 误识别捕获的垃圾假联系人、时间戳或窗口标题。
+ */
+export function isGarbageContactName(nameOrId: string): boolean {
+  if (!nameOrId) return true;
+  const s = nameOrId.trim();
+  if (s.length <= 1) return true;
+
+  // 1. 绝对文件路径、主目录路径或 IDE 窗口标题/插件状态/文件扩展名
+  if (/^(\/|~|[a-zA-Z]:[\\/])/.test(s)) return true;
+  if (/manifest\.json|HBuilder|VS Code|node_modules|macos_ocr|\.json|\.ts|\.js|\.md|\.exe|\.vue|\.html|\.css|Worked for|Working|reasonix|deepseek/i.test(s)) return true;
+
+  // 2. 非联系人界面系统占位符与官方系统号
+  if (/^(?:公众号|微信团队|文件传输助手|我|Q 搜終|搜索|消息|通讯录|订阅号|微信支付)$/.test(s)) return true;
+
+  // 3. 编号清单行或日志行末尾（如 "1.底层引擎升级："，冒号结尾）
+  if (/^\d+[\.、]/.test(s) || /[:：]$/.test(s)) return true;
+
+  // 4. 时间与日期标识（包括常见的视觉 OCR 错别字如昨灭、靠天、非天、我天、坐期五等）
+  if (/(?:昨天|前天|今天|昨灭|靠天|非天|我天|壽关|天)\s*\d{1,2}[:.：-]/i.test(s)) return true;
+  if (/(?:昨天|前天|今天|昨灭|非天|我天)\d{4}/i.test(s)) return true;
+  if (/^(?:星期|周|坐期)[一二三四五六日天]/.test(s)) return true;
+  if (/^\d{1,2}[-:\/.点：]\d{1,2}[|]?$/.test(s)) return true;
+  if (/^\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM|am|pm)?$/i.test(s)) return true;
+
+  // 5. 聊天气泡切片（包含换行，或首尾标点剥离后仍包含句子标点如逗号、句内句号、感叹号、问号、分号等）
+  if (/\n/.test(s)) return true;
+  const canon = normalizeContactName(s);
+  if (!canon || canon.length === 0) return true;
+  if (/[，。？！…；;?!]/.test(canon)) return true;
+
+  // 6. 常见聊天问候/问句/状态误识别为联系人
+  if (/^(?:你在干嘛|你在干什么|在干嘛|在干嘛呢|在吗|在不在|哈哈|好的|收到)$/.test(s)) return true;
+
+  // 7. 口语句式/代词片段 (如包含 "这块"、"这烧"、"怎么"、"什么" 等非人名虚词)
+  if (/(?:这块|这烧|这波|这届|那个|怎么|什么|为什么|如何)/.test(s)) return true;
+
+  // 8. 异常离散词片 (中文字符间夹杂多个空格，如 '件 造成 自闭白然')
+  if (/[\u4e00-\u9fa5]\s+[\u4e00-\u9fa5]/.test(s) && (s.match(/\s+/g) || []).length >= 2) return true;
+
+  return false;
+}
+
+/**
+ * 识别是否为大模型调用失败或凭据拒绝等系统异常报错文本。
+ */
+export function isErrorMessage(text: string): boolean {
+  if (!text) return true;
+  return (
+    text.includes('✗ 任务失败') ||
+    text.includes('（本次没有产生正文输出）') ||
+    text.includes('服务商拒绝了当前凭据') ||
+    text.includes('尚未配置 API Key') ||
+    text.includes('HTTP 403') ||
+    text.includes('HTTP 401') ||
+    text.includes('HTTP 500')
+  );
+}
+
 export interface ChannelContact {
   id: string; // 联系人或群聊唯一标识 (如 wx_user_xxx, feishu_chat_xxx, qq_group_123)
   channel: ChannelName;
@@ -148,6 +207,11 @@ export class ChannelContactStore {
       const idRedirectMap = new Map<string, string>(); // oldId -> canonicalId
 
       for (const c of realContacts) {
+        if (isGarbageContactName(c.id) || isGarbageContactName(c.name)) {
+          mutated = true;
+          continue;
+        }
+
         const canonId = normalizeContactId(c.id);
         const canonName = normalizeContactName(c.name) || canonId;
         const groupKey = `${c.channel}:${c.isRoom ? 'room' : 'user'}:${canonId}`;
@@ -206,9 +270,20 @@ export class ChannelContactStore {
         }
       }
 
-      // 重定向消息所属的 contactId
+      // 重定向消息所属的 contactId 并过滤报错与垃圾联系人消息
       const finalContacts = Array.from(canonicalMap.values());
       const redirectedMessages = messages
+        .filter((m) => {
+          if (isErrorMessage(m.text)) {
+            mutated = true;
+            return false;
+          }
+          if (isGarbageContactName(m.contactId) || isGarbageContactName(m.fromId)) {
+            mutated = true;
+            return false;
+          }
+          return true;
+        })
         .map((m) => {
           const redirected = idRedirectMap.get(m.contactId);
           if (redirected) {
@@ -228,11 +303,71 @@ export class ChannelContactStore {
       if (mutated) {
         this.save(result);
       }
-
       return result;
     } catch {
       return { contacts: [], messages: [], defaults: {} };
     }
+  }
+
+  /**
+   * 一键深度清理历史遗留的 OCR 噪点假联系人、系统报错气泡与孤立消息。
+   */
+  pruneGarbageContacts(channel?: ChannelName): { removedContacts: number; removedMessages: number } {
+    let rawContactsCount = 0;
+    let rawMessagesCount = 0;
+    try {
+      if (existsSync(this.filePath)) {
+        const parsed = JSON.parse(readFileSync(this.filePath, 'utf8'));
+        if (Array.isArray(parsed.contacts)) rawContactsCount = parsed.contacts.length;
+        if (Array.isArray(parsed.messages)) rawMessagesCount = parsed.messages.length;
+      }
+    } catch {}
+
+    const data = this.load();
+    const initialContactsCount = Math.max(rawContactsCount, data.contacts.length);
+    const initialMessagesCount = Math.max(rawMessagesCount, data.messages.length);
+
+    data.contacts = data.contacts.filter((c) => {
+      if (channel && c.channel !== channel) return true;
+      return !isGarbageContactName(c.id) && !isGarbageContactName(c.name);
+    });
+
+    const validContactIds = new Set(data.contacts.map((c) => c.id));
+    data.contacts.forEach((c) => {
+      if (c.aliases) {
+        c.aliases.forEach((a) => validContactIds.add(a));
+      }
+    });
+
+    data.messages = data.messages.filter((m) => {
+      if (channel && m.channel !== channel) return true;
+      if (isGarbageContactName(m.contactId) || isGarbageContactName(m.fromId)) return false;
+      if (isErrorMessage(m.text)) return false;
+      return validContactIds.has(m.contactId);
+    });
+
+    // 清理残留在联系人概览上的大模型异常报错气泡 (如 ✗ 任务失败 / HTTP 403)
+    data.contacts.forEach((c) => {
+      if (c.lastMessage && isErrorMessage(c.lastMessage)) {
+        const contactMsgs = data.messages.filter((m) => m.contactId === c.id || (c.aliases && c.aliases.includes(m.contactId)));
+        const cleanMsgs = contactMsgs.filter((m) => !isErrorMessage(m.text));
+        const lastClean = cleanMsgs.length > 0 ? cleanMsgs[cleanMsgs.length - 1] : undefined;
+        if (lastClean) {
+          c.lastMessage = lastClean.text;
+          c.lastSender = lastClean.fromName || (lastClean.sender === 'user' ? c.name : 'AI');
+          c.lastTime = lastClean.time || (lastClean.timestamp ? new Date(lastClean.timestamp).toLocaleTimeString() : c.lastTime);
+        } else {
+          c.lastMessage = undefined;
+          c.lastSender = undefined;
+        }
+      }
+    });
+
+    this.save(data);
+    return {
+      removedContacts: initialContactsCount - data.contacts.length,
+      removedMessages: initialMessagesCount - data.messages.length,
+    };
   }
 
   save(data: ChannelContactStoreData): void {
@@ -367,9 +502,41 @@ export class ChannelContactStore {
     }
 
     if (!contact) {
-      const def = this.getDefaultPolicy(msg.channel);
       const canonId = normalizeContactId(rawContactId);
       const canonName = normalizeContactName(rawContactName) || canonId;
+
+      // 彻底拦截 OCR 噪点，不应作为新联系人入库存盘
+      if (
+        isGarbageContactName(rawContactId) ||
+        isGarbageContactName(rawContactName) ||
+        isGarbageContactName(canonId) ||
+        isGarbageContactName(canonName)
+      ) {
+        const dummyContact: ChannelContact = {
+          id: canonId,
+          channel: msg.channel,
+          name: canonName,
+          type: msg.isRoom ? 'room' : 'user',
+          isRoom: msg.isRoom,
+          autoReply: false,
+          hostingMode: 'off',
+        };
+        const messageRecord: ChannelChatMessage = {
+          id: `msg_${Date.now()}_${randomUUID().slice(0, 4)}`,
+          channel: msg.channel,
+          contactId: canonId,
+          fromId: msg.fromId,
+          fromName: msg.fromName,
+          isRoom: msg.isRoom,
+          sender: 'user',
+          text: msg.text,
+          time,
+          timestamp: Date.now(),
+        };
+        return { contact: dummyContact, messageRecord };
+      }
+
+      const def = this.getDefaultPolicy(msg.channel);
       const initialAliases = canonId !== rawContactId ? [rawContactId] : undefined;
 
       contact = {
@@ -583,7 +750,7 @@ export class ChannelContactStore {
       if (m.isDraft) return false;
       if (m.sender === 'system') return false;
       if (!m.text || m.text.trim().length === 0) return false;
-      if (m.text.includes('✗ 任务失败') || m.text.includes('（本次没有产生正文输出）')) return false;
+      if (isErrorMessage(m.text)) return false;
       return true;
     });
 

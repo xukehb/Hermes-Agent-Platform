@@ -646,11 +646,12 @@ export class GuiService {
     dbPath: BOT_CONTROL_DB_PATH,
     credentialsDir: BOT_CREDENTIALS_DIR,
   });
-  private activeChatTask: {
+  private readonly activeChatTasks = new Map<string, {
     taskId: string;
     controller: AbortController;
     orchestrator: AgentOrchestrator;
-  } | null = null;
+    sessionKey: string;
+  }>();
   private mcpPlaygroundManager?: McpManager;
   private mcpPlaygroundModules?: Map<string, ToolModule>;
   private readonly activeOllamaPulls = new Map<string, AbortController>();
@@ -3235,11 +3236,12 @@ export class GuiService {
       };
     }
 
+    const sessionKey = input.sessionKey ?? 'gui:default';
     const orchestrator = new AgentOrchestrator({ configPath: this.configPath });
     const events: Array<Record<string, unknown>> = [];
     const chatController = new AbortController();
     const taskId = randomUUID();
-    this.activeChatTask = { taskId, controller: chatController, orchestrator };
+    this.activeChatTasks.set(sessionKey, { taskId, controller: chatController, orchestrator, sessionKey });
     try {
       const permissions = this.getPermissions();
       const projectPath = input.projectPath?.trim();
@@ -3299,7 +3301,7 @@ export class GuiService {
 
       const request: Parameters<AgentOrchestrator['runTask']>[0] = {
         input: prefix + actualInput,
-        sessionKey: input.sessionKey ?? 'gui:default',
+        sessionKey,
         tools: toolsForPermissions(permissions),
         signal: chatController.signal,
         goalMode: isGoalMode,
@@ -3309,7 +3311,7 @@ export class GuiService {
           events.push(evRecord);
           if (onStream) {
             try {
-              onStream(evRecord);
+              onStream({ ...evRecord, sessionKey });
             } catch {
               // ignore stream error
             }
@@ -3383,23 +3385,43 @@ export class GuiService {
       }
       return { outcome, events };
     } finally {
-      if (this.activeChatTask?.taskId === taskId) {
-        this.activeChatTask = null;
+      const active = this.activeChatTasks.get(sessionKey);
+      if (active?.taskId === taskId) {
+        this.activeChatTasks.delete(sessionKey);
       }
       await orchestrator.close();
     }
   }
 
-  abortChat(): { ok: boolean; message: string } {
-    if (!this.activeChatTask) {
+  abortChat(sessionKey?: string): { ok: boolean; message: string; aborted?: number } {
+    if (this.activeChatTasks.size === 0) {
       return { ok: false, message: '当前没有正在执行的生成任务' };
     }
+    if (sessionKey) {
+      const task = this.activeChatTasks.get(sessionKey);
+      if (!task) {
+        return { ok: false, message: `未找到会话 [${sessionKey}] 的生成任务` };
+      }
+      try {
+        task.controller.abort();
+        task.orchestrator.abort(task.taskId);
+        this.activeChatTasks.delete(sessionKey);
+        this.info(`已接收中断指令，已成功中止会话 [${sessionKey}] 的任务: ${task.taskId}`);
+        return { ok: true, message: '已成功中止对话生成', aborted: 1 };
+      } catch (err) {
+        return { ok: false, message: `中止生成失败: ${describeError(err)}` };
+      }
+    }
     try {
-      this.activeChatTask.controller.abort();
-      this.activeChatTask.orchestrator.abort(this.activeChatTask.taskId);
-      this.info(`已接收中断指令，已成功中止任务: ${this.activeChatTask.taskId}`);
-      this.activeChatTask = null;
-      return { ok: true, message: '已成功中止对话生成' };
+      let count = 0;
+      for (const [, task] of this.activeChatTasks) {
+        task.controller.abort();
+        task.orchestrator.abort(task.taskId);
+        count++;
+      }
+      this.activeChatTasks.clear();
+      this.info(`已接收中断指令，已成功中止全部 ${count} 个活跃生成任务`);
+      return { ok: true, message: `已成功中止全部 ${count} 个活跃生成任务`, aborted: count };
     } catch (err) {
       return { ok: false, message: `中止生成失败: ${describeError(err)}` };
     }
@@ -4416,6 +4438,13 @@ export class GuiService {
     store.clearAllContacts(channel);
     this.info(`已清空通道 [${channel || 'all'}] 的所有托管联系人及消息历史（共 ${beforeCount} 个会话）`);
     return { ok: true, clearedCount: beforeCount };
+  }
+
+  pruneGarbageChannelContacts(channel?: ChannelName): { ok: boolean; removedContacts: number; removedMessages: number } {
+    const store = ChannelContactStore.getInstance();
+    const result = store.pruneGarbageContacts(channel);
+    this.info(`[Hosting] 已清理无效会话与异常报错记录（清理 ${result.removedContacts} 个伪联系人，${result.removedMessages} 条无效消息）`);
+    return { ok: true, ...result };
   }
 
   getHostingPersonaTemplates(): Array<{ key: string; title: string; emoji: string; description: string; content: string }> {

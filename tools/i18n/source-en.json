@@ -527,6 +527,7 @@
   "一键添加": "Quick add",
   "一键清理选中项": "Clean selected",
   "一键清理选中项 (": "Clean selected (",
+  "一键清理OCR误识别噪点、非好友会话及历史系统报错": "One-click cleanup of OCR noise, non-friend sessions, and historic errors",
   "一键清除全部模型": "Remove all models",
   "一键清除当前列表中所有已包含的模型": "Remove every model from this list",
   "一键清除模型": "Remove all models",
@@ -2295,6 +2296,7 @@
   "清理成功！已释放": "Cleanup succeeded, freed ",
   "清理磁盘": "Clean disk",
   "清空": "Clear",
+  "清空全部历史会话记录": "Clear all historical conversation records",
   "清空 Systemd 过期日志与 apt 缓存": "Clear expired systemd logs and the apt cache",
   "清空上下文开启新对话 (/new)": "Clear context and start new conversation (/new)",
   "清空内置预置": "Reset built-in presets",
@@ -3099,5 +3101,6 @@
   "：点击【检查新版本】可随时主动核对更新；下载完成后支持一键重启并平滑安装。": ": click Check for updates at any time; once downloaded, the app restarts and installs in one step.",
   "：生成独立的 Merge 节点（推荐）": ": creates a distinct merge node (recommended)",
   "：电脑打开微信，点击左侧「启动代管」即可接管，零封号风险；": ": open WeChat on your computer and click Start hosting on the left; no ban risk. ",
-  "；AI 会在后台静默监听、自动调用上面的记忆库并拟人化代答。": "; the AI listens silently in the background, draws on the memory store above, and replies in a human-like way."
+  "；AI 会在后台静默监听、自动调用上面的记忆库并拟人化代答。": "; the AI listens silently in the background, draws on the memory store above, and replies in a human-like way.",
+  "前往机器人与消息通道配置（配置 iLink Bot / 企业微信等独立 AI 助手通道）": "Go to Robot & Channel settings (configure iLink Bot, WeCom, etc.)"
 }

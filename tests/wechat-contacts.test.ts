@@ -129,4 +129,75 @@ describe('WeChatContactStore', () => {
     expect(store.getContact('wx_user_to_delete')).toBeUndefined();
     expect(store.getMessages('wx_user_to_delete').length).toBe(0);
   });
+
+  it('应当准确识别并过滤 OCR 产生的噪点假联系人与系统占位符', async () => {
+    const { isGarbageContactName, isErrorMessage } = await import('../src/channels/contacts-store.js');
+
+    // 路径与 IDE 窗口状态
+    expect(isGarbageContactName('/Users/xuke/ldeaProjects/zn/admin-app/manifest.json - HBuilder X 4.87')).toBe(true);
+    expect(isGarbageContactName('Worked for 14m')).toBe(true);
+    expect(isGarbageContactName('•reasonix VL.38.11•deepseeK-v4-fLash•~/app')).toBe(true);
+
+    // 时间戳与视觉 OCR 错别字
+    expect(isGarbageContactName('昨天 00:10')).toBe(true);
+    expect(isGarbageContactName('靠天 20.08')).toBe(true);
+    expect(isGarbageContactName('昨灭 20:08')).toBe(true);
+    expect(isGarbageContactName('01:04|')).toBe(true);
+    expect(isGarbageContactName('坐期五')).toBe(true);
+
+    // 系统占位符与单字
+    expect(isGarbageContactName('我')).toBe(true);
+    expect(isGarbageContactName('公众号')).toBe(true);
+    expect(isGarbageContactName('1')).toBe(true);
+    expect(isGarbageContactName('w')).toBe(true);
+
+    // 标点断句气泡
+    expect(isGarbageContactName('害，没那么夸张啦。你最近在')).toBe(true);
+    expect(isGarbageContactName('你在干嘛')).toBe(true);
+
+    // 真实联系人应当保留
+    expect(isGarbageContactName('何莹莹')).toBe(false);
+    expect(isGarbageContactName('平安喜樂')).toBe(false);
+    expect(isGarbageContactName('AI新境交流群B2.0')).toBe(false);
+
+    // 报错信息判定
+    expect(isErrorMessage('（本次没有产生正文输出）\n\n✗ 任务失败：模型 xkk/deepseek-v4 请求失败：HTTP 403')).toBe(true);
+    expect(isErrorMessage('你好，在吗？')).toBe(false);
+  });
+
+  it('pruneGarbageContacts 应当能够一键清理历史遗留假联系人并净化消息流', () => {
+    const { store, dir } = createTempStore();
+    const { writeFileSync } = require('node:fs');
+    const { join } = require('node:path');
+
+    // 模拟旧版本写入磁盘的脏数据（包含假联系人与 403 异常报错）
+    const corruptedData = {
+      contacts: [
+        { id: '何莹莹', channel: 'wechat', name: '何莹莹', lastMessage: '✗ 任务失败：服务商拒绝了当前凭据 HTTP 403' },
+        { id: '昨天 00:10', channel: 'wechat', name: '昨天 00:10', lastMessage: '噪点' },
+        { id: '/Users/test/manifest.json', channel: 'wechat', name: '/Users/test/manifest.json', lastMessage: '噪点' },
+      ],
+      messages: [
+        { id: 'm1', channel: 'wechat', contactId: '何莹莹', fromId: '何莹莹', text: '你好呀', time: '10:00' },
+        { id: 'm2', channel: 'wechat', contactId: '何莹莹', fromId: '何莹莹', text: '✗ 任务失败：服务商拒绝了当前凭据 HTTP 403', time: '10:01' },
+        { id: 'm3', channel: 'wechat', contactId: '昨天 00:10', fromId: '昨天 00:10', text: '噪点', time: '10:02' },
+      ],
+      defaults: {},
+    };
+    writeFileSync(join(dir, 'wechat_contacts.json'), JSON.stringify(corruptedData, null, 2), 'utf8');
+
+    // 加载或执行清理
+    const result = store.pruneGarbageContacts();
+    expect(result.removedContacts).toBe(2);
+
+    const afterList = store.listContacts();
+    expect(afterList.length).toBe(1);
+    expect(afterList[0]?.name).toBe('何莹莹');
+    // 报错消息被清洗，lastMessage 恢复为上一条纯净消息
+    expect(afterList[0]?.lastMessage).toBe('你好呀');
+
+    const msgs = store.getMessages('何莹莹');
+    expect(msgs.length).toBe(1);
+    expect(msgs[0]?.text).toBe('你好呀');
+  });
 });

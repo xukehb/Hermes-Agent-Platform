@@ -239,6 +239,7 @@ function registerIpc(): void {
   });
   ipcMain.handle('gui:hosting:getActivities', (_event, limit) => invoke(() => service.getHostingActivities(limit)));
   ipcMain.handle('gui:hosting:clearActivities', () => invoke(() => service.clearHostingActivities()));
+  ipcMain.handle('gui:hosting:pruneGarbage', (_event, channel) => invoke(() => service.pruneGarbageChannelContacts(channel)));
   ipcMain.handle('gui:listBots', () => invoke(() => service.listBots()));
   ipcMain.handle('gui:upsertBot', (_event, bot) => invoke(() => service.upsertBot(bot)));
   ipcMain.handle('gui:deleteBot', (_event, id) => invoke(() => service.deleteBot(id)));
@@ -263,7 +264,7 @@ function registerIpc(): void {
   ipcMain.handle('gui:chat', (event, input) => invoke(() => service.chat(input, (streamEvent) => {
     event.sender.send('gui:chat:stream', streamEvent);
   })));
-  ipcMain.handle('gui:chat:abort', () => invoke(() => service.abortChat()));
+  ipcMain.handle('gui:chat:abort', (_event, sessionKey?: string) => invoke(() => service.abortChat(sessionKey)));
   ipcMain.handle('gui:mcp:listTools', (_event, payload) => invoke(() => service.listMcpPlaygroundTools(payload?.refresh)));
   ipcMain.handle('gui:mcp:callTool', (_event, payload) => invoke(() => service.callMcpPlaygroundTool(payload)));
   ipcMain.handle('gui:logs', () => invoke(() => service.logsSnapshot()));
