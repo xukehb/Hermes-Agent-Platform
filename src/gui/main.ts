@@ -208,6 +208,8 @@ function registerIpc(): void {
 
   // 聊天托管与数字分身代管 IPC 接口
   ipcMain.handle('gui:hosting:getOverview', () => invoke(() => service.getHostingOverview()));
+  ipcMain.handle('gui:hosting:startWeChat', () => invoke(() => service.startWeChatHostingService()));
+  ipcMain.handle('gui:hosting:stopWeChat', () => invoke(() => service.stopWeChatHostingService()));
   ipcMain.handle('gui:hosting:sendHumanMessage', (_event, payload) => invoke(() => service.sendHumanMessage(payload)));
   ipcMain.handle('gui:hosting:approveDraft', (_event, messageId) => invoke(() => service.approveDraft(messageId)));
   ipcMain.handle('gui:hosting:discardDraft', (_event, messageId) => invoke(() => service.discardDraft(messageId)));

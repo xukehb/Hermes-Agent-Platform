@@ -21,6 +21,8 @@ export function normalizeContactName(raw: string): string {
     s = s.replace(/^[。，、？！…·.?!,:;\s]+|[。，、？！…·.?!,:;\s]+$/g, '').trim();
     if (s === prev) break;
   }
+  // 特殊已知屏幕 OCR 错别字纠正（如“喜樂”被视觉错识为“支缴”）
+  if (s === '平安支缴') return '平安喜樂';
   return s;
 }
 
@@ -48,8 +50,10 @@ export function isGarbageContactName(nameOrId: string): boolean {
   const s = nameOrId.trim();
   if (s.length <= 1) return true;
 
-  // 1. 绝对文件路径、主目录路径或 IDE 窗口标题/插件状态/文件扩展名与文档预览
+  // 1. 绝对文件路径、主目录路径或 IDE 窗口标题/插件状态/文件扩展名与文档预览、网络 URL、Email 地址
   if (/^(\/|~|[a-zA-Z]:[\\/])/.test(s)) return true;
+  if (/^https?:\/\/|www\.|\.xyz[\/\b]|\.com[\/\b]|\.cn[\/\b]|\.top[\/\b]|\.net[\/\b]|\.org[\/\b]/i.test(s)) return true;
+  if (/@(?:gmail|hotmail|qq|163|outlook|foxmail|126)\./i.test(s)) return true;
   if (/manifest\.json|HBuilder|VS Code|node_modules|macos_ocr|\.docx?|\.xlsx?|\.pptx?|\.pdf|\.zip|\.rar|\.dmg|\.pkg|\.json|\.ts|\.js|\.md|\.exe|\.vue|\.html|\.css|Worked for|Working|reasonix|deepseek|需求文档|个人中心|接口文档|设计稿|原型图/i.test(s)) return true;
 
   // 2. 非联系人界面系统占位符与官方系统号/预览窗口
@@ -288,17 +292,62 @@ export class ChannelContactStore {
             mutated = true;
             return false;
           }
+          // 过滤屏幕输入工具栏误触残留的杂音符号消息（如 "©", "G口*、心", "口*、白"）及其引起的 AI 误答
+          if (
+            /^[日、凶这口⑨×…•©·\+\s*、G心白]+$/.test(m.text.trim()) ||
+            m.fromName === '平安支缴' ||
+            (m.sender === 'agent' && /怎么突然发个G|玩猜心游戏|玩摩斯密码|又换符号了|发个版权符号|一个字母加个符号/.test(m.text))
+          ) {
+            mutated = true;
+            return false;
+          }
+          // 过滤 AI 误读自己屏幕气泡错别字产生的自言自语死循环回音
+          if (
+            /披奇提有点不好题思了|被考得有点不好意思了/.test(m.text) ||
+            (m.sender === 'agent' && /没事没事，我心理素质还是可以的|害 别这么说嘛/.test(m.text))
+          ) {
+            mutated = true;
+            return false;
+          }
           return true;
         })
         .map((m) => {
           const redirected = idRedirectMap.get(m.contactId);
+          let targetMsg = m;
           if (redirected) {
             mutated = true;
-            return { ...m, contactId: redirected };
+            targetMsg = { ...m, contactId: redirected };
           }
-          return m;
+          // 修正历史记录中用户真实发出的短消息被误标为联系人发来的异常
+          if (
+            targetMsg.contactId === '平安喜樂' &&
+            (targetMsg.text === '晚安晚安' || targetMsg.text === '我在升级一下') &&
+            targetMsg.sender === 'user'
+          ) {
+            mutated = true;
+            targetMsg = {
+              ...targetMsg,
+              sender: 'human',
+              fromId: 'user_human',
+              fromName: '我 (人工回复)',
+            };
+          }
+          return targetMsg;
         })
         .filter((m) => finalContacts.some((c) => c.id === m.contactId));
+
+      // 同步更新联系人的 lastMessage
+      finalContacts.forEach((c) => {
+        const cMsgs = redirectedMessages.filter((m) => m.contactId === c.id);
+        if (cMsgs.length > 0) {
+          const lastM = cMsgs[cMsgs.length - 1]!;
+          c.lastMessage = lastM.text.slice(0, 80);
+          c.lastSender = lastM.sender === 'human'
+            ? '我 (人工回复)'
+            : (lastM.sender === 'user' ? (lastM.fromName || c.name) : `AI (${lastM.agentId || 'xx'})`);
+          c.lastTime = lastM.time || c.lastTime;
+        }
+      });
 
       const result: ChannelContactStoreData = {
         contacts: finalContacts,
@@ -494,6 +543,8 @@ export class ChannelContactStore {
     roomId?: string | undefined;
     roomName?: string | undefined;
     text: string;
+    isHosting?: boolean | undefined;
+    defaultAgent?: string | undefined;
   }): { contact: ChannelContact; messageRecord: ChannelChatMessage } {
     const data = this.load();
     const rawContactId = msg.isRoom && msg.roomId ? msg.roomId : msg.fromId;
@@ -540,6 +591,35 @@ export class ChannelContactStore {
           timestamp: Date.now(),
         };
         return { contact: dummyContact, messageRecord };
+      }
+
+      // 机器人模式 (非托管): 绝不将临时会话或群成员写入聊天托管好友库，亦不继承分身人设
+      if (msg.isHosting === false) {
+        const botContact: ChannelContact = {
+          id: canonId,
+          channel: msg.channel,
+          name: canonName,
+          type: msg.isRoom ? 'room' : 'user',
+          isRoom: msg.isRoom,
+          agentId: msg.defaultAgent || 'coder',
+          autoReply: true,
+          replyMode: msg.isRoom ? 'mention' : 'all',
+          hostingMode: 'off',
+        };
+        const messageRecord: ChannelChatMessage = {
+          id: `${msg.channel}_bot_msg_${Date.now()}_${randomUUID().slice(0, 4)}`,
+          channel: msg.channel,
+          contactId: canonId,
+          fromId: msg.fromId,
+          fromName: msg.fromName,
+          isRoom: msg.isRoom,
+          roomName: msg.roomName,
+          sender: 'user',
+          text: msg.text,
+          time,
+          timestamp: Date.now(),
+        };
+        return { contact: botContact, messageRecord };
       }
 
       const def = this.getDefaultPolicy(msg.channel);

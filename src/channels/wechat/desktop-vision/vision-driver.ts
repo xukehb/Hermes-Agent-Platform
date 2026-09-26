@@ -5,7 +5,7 @@ import { type CapturedWindow, captureWeChatWindow, isWeChatRunning } from './cap
 import { type SendReplyOptions, type ActionDriverResult, sendWeChatReply } from './action-driver.js';
 import { type WeChatVisionParseResult, type VisionParserOptions, parseWeChatScreen } from './vision-parser.js';
 import { checkImagesDiff, isTextSentByMe, type ImageDiffResult } from './ocr-parser.js';
-import { normalizeContactName, isGarbageContactName } from '../../contacts-store.js';
+import { normalizeContactName, isGarbageContactName, ChannelContactStore } from '../../contacts-store.js';
 
 export interface DesktopVisionActivityEvent {
   stage: 'detected' | 'thinking' | 'generated' | 'executing' | 'sent' | 'cooldown' | 'draft' | 'system' | 'scan';
@@ -205,19 +205,78 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
         }
       }
 
-      // 3. 判断是否需要回复来自好友的消息
-      if (!parsed.needsReply || !parsed.lastMessage) {
+      // 3. 检查是否有最后一条消息 (来自好友 或 来自我方/用户)
+      if (!parsed.lastMessage) {
         return;
       }
 
       const msg = parsed.lastMessage;
-      // 我方发送的消息绝对不触发自动回复
-      if (msg.isFromMe) {
+      const cleanText = msg.text.trim();
+      if (!cleanText) {
         return;
       }
 
-      const cleanText = msg.text.trim();
-      if (!cleanText) {
+      const rawTarget = parsed.chatTarget || msg.sender;
+      const chatTarget = normalizeContactName(rawTarget) || rawTarget;
+      if (isGarbageContactName(chatTarget)) {
+        this.log(`[DesktopVision] 忽略伪目标/非好友目标: "${chatTarget}"`);
+        return;
+      }
+
+      // 4. 我方发送的消息处理 (人工回复感知与防撞车保护)
+      if (msg.isFromMe) {
+        // 检查是否为 AI 最近发送的回复
+        const isSentByAI =
+          isTextSentByMe(cleanText, this.recentSentTexts) ||
+          this.recentSentTexts.has(cleanText) ||
+          this.recentSentTexts.has(msg.text);
+
+        if (isSentByAI) {
+          // AI 刚发出的消息，忽略巡检
+          return;
+        }
+
+        // 核心突破：如果不是 AI 刚刚发送的，则是用户【人类机主】在微信客户端主动发送/回复的消息！
+        const humanFp = `human:${chatTarget}:${cleanText}`;
+        if (!this.processedFingerprints.has(humanFp)) {
+          this.addFingerprint(humanFp);
+          this.recentSentTexts.add(cleanText);
+
+          this.log(`[DesktopVision] 识别到用户人工向【${chatTarget}】发送了微信消息: "${cleanText}"`);
+
+          // 1. 同步记录到联系人历史库中，sender 标记为 'human'
+          const contactStore = ChannelContactStore.getInstance();
+          contactStore.recordOutgoingMessage({
+            channel: 'wechat',
+            contactId: chatTarget,
+            sender: 'human',
+            text: cleanText,
+          });
+
+          // 2. 触发人工接管防撞车冷却期 (默认 10 分钟或联系人设定值)
+          const contact = contactStore.findContact(chatTarget, 'wechat');
+          const cooldownMinutes = contact?.cooldownMinutes ?? 10;
+          if (contact) {
+            contact.cooldownUntil = Date.now() + cooldownMinutes * 60 * 1000;
+            contact.humanTakenOver = false;
+            contactStore.upsertContact(contact);
+          }
+
+          // 3. 上报 live feed
+          this.onActivity?.({
+            stage: 'cooldown',
+            level: 'warning',
+            tag: '人工回复',
+            title: `检测到用户人工回复【${chatTarget}】：“${cleanText}”`,
+            detail: `已将消息记录为人工发出，并启动 ${cooldownMinutes} 分钟人工防撞车冷却保护，AI 自动避让静默。`,
+            target: chatTarget,
+          });
+        }
+        return;
+      }
+
+      // 5. 判断是否需要回复来自好友的消息
+      if (!parsed.needsReply) {
         return;
       }
 
@@ -232,12 +291,6 @@ export class DesktopVisionPersonalDriver implements WeChatPersonalDriver {
       }
 
       // 消息去重指纹计算（目标:发送者:消息内容，以及纯内容指纹）
-      const rawTarget = parsed.chatTarget || msg.sender;
-      const chatTarget = normalizeContactName(rawTarget) || rawTarget;
-      if (isGarbageContactName(chatTarget)) {
-        this.log(`[DesktopVision] 忽略伪目标/非好友目标: "${chatTarget}"`);
-        return;
-      }
       const fingerprints = [
         `${chatTarget}:${msg.sender}:${cleanText}`,
         `${chatTarget}:${cleanText}`,

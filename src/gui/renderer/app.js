@@ -7026,14 +7026,10 @@ async function renderWeChatView() {
     if ($('wxModeSelect')) {
       if (wxConfig.mode === 'wecom') {
         $('wxModeSelect').value = 'wecom';
-      } else if (wxConfig.puppet === 'desktop_vision') {
-        $('wxModeSelect').value = 'desktop_vision';
-      } else if (wxConfig.puppet === 'ilink' || wxConfig.mode === 'ilink_bot') {
-        $('wxModeSelect').value = 'ilink_bot';
-      } else if (wxConfig.puppet === 'service') {
+      } else if (wxConfig.puppet === 'service' || wxConfig.mode === 'personal') {
         $('wxModeSelect').value = 'personal';
       } else {
-        $('wxModeSelect').value = 'desktop_vision';
+        $('wxModeSelect').value = 'ilink_bot';
       }
     }
     if ($('wxAgentSelect')) {
@@ -7063,7 +7059,7 @@ async function renderWeChatView() {
     }
 
     // 根据当前模式切换字段显示
-    const curWxMode = $('wxModeSelect')?.value || 'desktop_vision';
+    const curWxMode = $('wxModeSelect')?.value || 'ilink_bot';
     const isWeCom = curWxMode === 'wecom';
     const isWechaty = curWxMode === 'personal';
     const wecomBox = $('wxWeComFields');
@@ -7073,10 +7069,6 @@ async function renderWeChatView() {
     const wechatyBox = $('wxWechatyFields');
     if (wechatyBox) {
       wechatyBox.style.display = isWechaty ? 'flex' : 'none';
-    }
-    const visionTip = $('wxDesktopVisionTip');
-    if (visionTip) {
-      visionTip.style.display = curWxMode === 'desktop_vision' ? 'block' : 'none';
     }
     if ($('wxPuppetTokenInput')) {
       if (wxConfig.puppetTokenConfigured && !$('wxPuppetTokenInput').value) {
@@ -7591,30 +7583,29 @@ $('toggleWxServiceBtn')?.addEventListener('click', async () => {
   if (wxConfig.running) {
     try {
       await window.hap.stopWeChatService();
-      showToast('微信连接已断开，登录凭据已保留', 'info');
+      showToast('微信机器人连接已断开', 'info');
       await renderWeChatView();
     } catch (err) {
       showToast('停止失败：' + err.message, 'error');
     }
   } else {
     try {
-      const selectedMode = $('wxModeSelect')?.value || 'desktop_vision';
-      const isDesktopVision = selectedMode === 'desktop_vision';
+      const selectedMode = $('wxModeSelect')?.value || 'ilink_bot';
       const isWechaty = selectedMode === 'personal';
-      const mode = (isDesktopVision || isWechaty) ? 'personal' : selectedMode;
-      const puppet = isDesktopVision ? 'desktop_vision' : (selectedMode === 'ilink_bot' ? 'ilink' : 'service');
+      const mode = isWechaty ? 'personal' : selectedMode;
+      const puppet = selectedMode === 'ilink_bot' ? 'ilink' : 'service';
       const puppetToken = $('wxPuppetTokenInput')?.value.trim();
 
       if (selectedMode === 'personal' && !puppetToken && !wxConfig.puppetTokenConfigured) {
-        showToast('Wechaty Puppet 商业服务模式需要配置 Token。若无 Token，请选择【桌面视觉代管】或【iLink Bot】模式。', 'warning');
+        showToast('Wechaty Puppet 商业服务模式需要配置 Token。若无 Token，请选择【个人微信扫码绑定 iLink Bot】模式。', 'warning');
         return;
       }
       if (selectedMode === 'wecom' && !$('wxCorpIdInput')?.value.trim() && !wxConfig.wecomCorpId) {
-        showToast('企业微信模式需要填写企业 ID (CorpID)。若为个人使用，请选择【桌面视觉代管】或【iLink Bot】模式。', 'warning');
+        showToast('企业微信模式需要填写企业 ID (CorpID)。若为个人使用，请选择【个人微信扫码绑定 iLink Bot】模式。', 'warning');
         return;
       }
 
-      showToast('正在启动微信服务...', 'info');
+      showToast('正在启动微信机器人网关服务...', 'info');
 
       await window.hap.saveWeChatConfig({
         mode,
@@ -17721,58 +17712,43 @@ async function renderHostingOverview() {
 
     if (wxBadge && wxUser && wxActionBtn) {
       if (overview.wechat?.running) {
-        if (overview.wechat.status === 'connected') {
-          wxBadge.className = 'badge success';
-          wxBadge.textContent = isVision ? '代管中' : '已连接';
-          wxUser.textContent = isVision
-            ? (overview.wechat.user || '桌面微信代管中 (免封号监听好友消息)')
-            : (overview.wechat.user ? `登录用户：${overview.wechat.user}` : '已完成连接');
-          wxActionBtn.textContent = '停止代管';
-          wxActionBtn.className = 'btn secondary action-main-btn';
-          wxActionBtn.onclick = async () => {
-            if (!confirm('确定停止当前微信代管服务吗？')) return;
-            try {
+        wxBadge.className = 'badge success';
+        wxBadge.textContent = '代管中';
+        wxUser.textContent = overview.wechat.user || '桌面微信代管中 (免扫码监听好友消息)';
+        wxActionBtn.textContent = '停止代管';
+        wxActionBtn.className = 'btn secondary action-main-btn';
+        wxActionBtn.onclick = async () => {
+          if (!confirm('确定停止当前微信桌面代管服务吗？')) return;
+          try {
+            if (window.hap.stopHostingWeChatService) {
+              await window.hap.stopHostingWeChatService();
+            } else {
               await window.hap.stopWeChatService();
-              showToast('微信代管已停止', 'info');
-              await renderHostingOverview();
-            } catch (e) {
-              showToast('停止微信失败: ' + e.message, 'error');
             }
-          };
-        } else if (overview.wechat.status === 'waiting_qr') {
-          wxBadge.className = 'badge warning';
-          wxBadge.textContent = '等待扫码';
-          wxUser.textContent = '请扫码完成微信验证';
-          wxActionBtn.textContent = '弹出二维码';
-          wxActionBtn.className = 'btn primary action-main-btn';
-          wxActionBtn.onclick = () => window.openWeChatScanModal?.();
-        } else {
-          wxBadge.className = 'badge neutral';
-          wxBadge.textContent = '启动中';
-          wxUser.textContent = isVision ? '正在连接桌面微信...' : '连接握手中...';
-          wxActionBtn.textContent = '连接详情';
-          wxActionBtn.className = 'btn secondary action-main-btn';
-          wxActionBtn.onclick = () => show('wechat');
-        }
+            showToast('微信桌面代管已停止', 'info');
+            await renderHostingOverview();
+          } catch (e) {
+            showToast('停止代管失败: ' + e.message, 'error');
+          }
+        };
       } else {
         wxBadge.className = 'badge neutral';
         wxBadge.textContent = '未启动';
-        wxUser.textContent = isVision ? '就绪，点击启动代管' : '点击启动微信扫码';
-        wxActionBtn.textContent = isVision ? '启动代管' : '扫码登录';
+        wxUser.textContent = '就绪，点击启动代管';
+        wxActionBtn.textContent = '启动分身代管';
         wxActionBtn.className = 'btn primary action-main-btn';
         wxActionBtn.onclick = async () => {
           try {
-            if (isVision) {
-              showToast('正在启动微信桌面视觉代管 (SightFlow)...', 'info');
-              await window.hap.startWeChatService();
-              await renderHostingOverview();
-              showToast('桌面微信视觉代管已就绪！', 'success');
+            showToast('正在启动微信桌面视觉代管 (SightFlow)...', 'info');
+            if (window.hap.startHostingWeChatService) {
+              await window.hap.startHostingWeChatService();
             } else {
-              await window.openWeChatScanModal?.();
-              await renderHostingOverview();
+              await window.hap.startWeChatService();
             }
+            await renderHostingOverview();
+            showToast('桌面微信视觉代管已就绪！', 'success');
           } catch (e) {
-            showToast('启动微信失败: ' + e.message, 'error');
+            showToast('启动代管失败: ' + e.message, 'error');
           }
         };
       }

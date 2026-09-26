@@ -16,7 +16,7 @@ import {
   type WeChatWindowBounds,
 } from '../channels/wechat/desktop-vision/index.js';
 import { ChannelManager, TelegramChannel, createChannelHost, parseCommand, HELP_TEXT, ChannelContactStore, WeChatContactStore, FeishuChannel, QQChannel, type ChannelContact, type ChannelChatMessage, type ChannelDefaultPolicy, type ChannelName, type WeChatContact, type WeChatChatMessage } from '../channels/index.js';
-import { BUILTIN_MODELS, BUILTIN_PROVIDERS, ConfigResolver, ConfigWriter, loadConfig, resolveConfigPath, sanitizeModelRef, type ModelPatch, type ProviderPatch, type ResolvedAgent, type ResolvedProvider } from '../config/index.js';
+import { BUILTIN_MODELS, BUILTIN_PROVIDERS, ConfigResolver, ConfigWriter, loadConfig, resolveConfigPath, sanitizeModelRef, type ModelPatch, type ProviderPatch, type ResolvedAgent, type ResolvedProvider, type ResolvedChannels } from '../config/index.js';
 import { describeError, type Attachment, type ProtocolName, type WireApi } from '../domain/index.js';
 import { planInjection, writeInjection, type InjectionTarget } from '../inject/index.js';
 import { ProviderRegistry } from '../providers/index.js';
@@ -944,6 +944,9 @@ export class GuiService {
       writeState(state);
     }
 
+    // 服务商地址、协议或凭据发生变化时，立即刷新长期运行的微信通道。
+    // 否则旧 orchestrator 会继续持有旧 ProviderRegistry/SDK 客户端。
+    this.reloadRunningChannels();
     this.info('已保存服务商：' + id);
     return { ok: true };
   }
@@ -1268,6 +1271,7 @@ export class GuiService {
     const saved = readSavedEnv();
     saved[key] = value;
     writeSavedEnv(saved);
+    this.reloadRunningChannels();
     this.info(`已更新环境变量：${key}`);
     return { ok: true, key };
   }
@@ -1278,6 +1282,7 @@ export class GuiService {
     const saved = readSavedEnv();
     delete saved[trimmed];
     writeSavedEnv(saved);
+    this.reloadRunningChannels();
     this.info(`已移除环境变量：${trimmed}`);
     return { ok: true };
   }
@@ -1300,6 +1305,7 @@ export class GuiService {
       count++;
     }
     writeSavedEnv(saved);
+    this.reloadRunningChannels();
     this.info(`批量保存了 ${count} 项环境变量`);
     return { ok: true, count };
   }
@@ -3717,6 +3723,7 @@ export class GuiService {
     }
   }
 
+  // 微信 AI 机器人消息网关状态 (Bot Channel: iLink Bot / 企业微信 / Wechaty)
   private wechatManager: WeChatChannel | undefined;
   private wechatOrchestrator: AgentOrchestrator | undefined;
   private wechatRunning = false;
@@ -3724,6 +3731,14 @@ export class GuiService {
   private wechatQrCode: string | undefined;
   private wechatLoginUser: string | undefined;
   private wechatError: string | undefined;
+
+  // 微信聊天托管与数字分身引擎状态 (Chat Hosting Engine: 桌面视觉免扫码代答)
+  private hostingWechatRunning = false;
+  private hostingWechatManager: WeChatChannel | undefined;
+  private hostingWechatOrchestrator: AgentOrchestrator | undefined;
+  private hostingWechatStatus: 'idle' | 'running' | 'error' = 'idle';
+  private hostingWechatUser: string | undefined;
+  private hostingWechatError: string | undefined;
 
   private reloadRunningChannels(): void {
     if (this.wechatOrchestrator) {
@@ -3733,9 +3748,21 @@ export class GuiService {
           channels: this.wechatOrchestrator.config.resolveChannels(),
           limits: this.wechatOrchestrator.config.resolveLimits(),
         });
-        this.info('已向运行中的微信服务同步最新配置');
+        this.info('已向运行中的微信机器人服务同步最新配置');
       } catch (err) {
-        this.error('向微信服务同步配置失败: ' + describeError(err));
+        this.error('向微信机器人服务同步配置失败: ' + describeError(err));
+      }
+    }
+    if (this.hostingWechatOrchestrator) {
+      try {
+        this.hostingWechatOrchestrator.reload();
+        this.hostingWechatManager?.reload({
+          channels: this.hostingWechatOrchestrator.config.resolveChannels(),
+          limits: this.hostingWechatOrchestrator.config.resolveLimits(),
+        });
+        this.info('已向运行中的微信聊天托管服务同步最新配置');
+      } catch (err) {
+        this.error('向微信聊天托管服务同步配置失败: ' + describeError(err));
       }
     }
   }
@@ -3938,9 +3965,20 @@ export class GuiService {
     this.wechatOrchestrator = orchestrator;
     this.wechatStatus = 'waiting_qr';
 
+    const resolvedChannels = orchestrator.config.resolveChannels();
+    const botWeChat = { ...resolvedChannels.wechat };
+    if (botWeChat.mode === 'personal' && (!botWeChat.personal?.puppet || botWeChat.personal.puppet === 'desktop_vision')) {
+      botWeChat.mode = 'ilink_bot';
+      botWeChat.personal = { ...botWeChat.personal, puppet: 'ilink' };
+    }
+    const channelsForBot: ResolvedChannels = {
+      ...resolvedChannels,
+      wechat: botWeChat,
+    };
+
     const manager = new WeChatChannel({
       host: createChannelHost(orchestrator),
-      channels: orchestrator.config.resolveChannels(),
+      channels: channelsForBot,
       limits: orchestrator.config.resolveLimits(),
       paths: orchestrator.resolvedPaths,
       env: process.env,
@@ -3948,7 +3986,7 @@ export class GuiService {
         this.addHostingActivity(act);
       },
       log: (line) => {
-        this.info(`[WeChat] ${line}`);
+        this.info(`[WeChat Bot] ${line}`);
         if (this.wechatManager !== manager) return;
         if (line.includes('[WeChat] 微信已登出：')) {
           this.wechatRunning = false;
@@ -3956,36 +3994,18 @@ export class GuiService {
           this.wechatError = line.split('[WeChat] 微信已登出：')[1]?.trim();
           this.wechatLoginUser = undefined;
           this.wechatQrCode = undefined;
-          this.addHostingActivity({
-            stage: 'system',
-            level: 'error',
-            tag: '微信登出',
-            title: `微信账号已登出: ${this.wechatError || '连接终止'}`,
-          });
         }
         if (line.includes('[WeChat] 请使用手机微信扫码登录：') || line.includes('[WeChat QR] 扫码地址:')) {
           const qr = line.split('：')[1]?.trim() || line.split('扫码地址:')[1]?.trim();
           if (qr && qr.startsWith('http')) {
             this.wechatQrCode = qr;
             this.wechatStatus = 'waiting_qr';
-            this.addHostingActivity({
-              stage: 'system',
-              level: 'info',
-              tag: '等待扫码',
-              title: '微信驱动等待手机扫码授权登录',
-            });
           }
         }
         if (line.includes('登录成功')) {
           this.wechatStatus = 'connected';
-          const userName = line.split('登录成功：')[1]?.split('(')[0]?.trim() || 'WeChat User';
+          const userName = line.split('登录成功：')[1]?.split('(')[0]?.trim() || 'WeChat Bot User';
           this.wechatLoginUser = userName;
-          this.addHostingActivity({
-            stage: 'system',
-            level: 'success',
-            tag: '微信就绪',
-            title: `桌面微信接入成功 (${userName})，进入静默巡检与代答模式`,
-          });
         }
       },
     });
@@ -3993,7 +4013,7 @@ export class GuiService {
     this.wechatManager = manager;
     this.wechatRunning = true;
 
-    const wxChannels = orchestrator.config.resolveChannels().wechat;
+    const wxChannels = channelsForBot.wechat;
     if (wxChannels.mode === 'personal' && wxChannels.personal?.puppet === 'service') {
       const tokenEnv = wxChannels.personal.puppetServiceTokenEnv || 'WECHATY_PUPPET_SERVICE_TOKEN';
       if (!process.env[tokenEnv]) {
@@ -4001,7 +4021,7 @@ export class GuiService {
         this.wechatOrchestrator = undefined;
         this.wechatRunning = false;
         this.wechatStatus = 'error';
-        this.wechatError = `当前选择了 Wechaty Puppet 商业服务模式，但未配置凭据环境变量【${tokenEnv}】。若需免 Token 快速接入，请在接入模式中切换为【桌面视觉代管】或【个人微信扫码绑定 iLink Bot】。`;
+        this.wechatError = `当前选择了 Wechaty Puppet 商业服务模式，但未配置凭据环境变量【${tokenEnv}】。若需免 Token 快速接入，请在接入模式中选择【个人微信扫码绑定 iLink Bot】。`;
         throw new Error(this.wechatError);
       }
     }
@@ -4012,7 +4032,7 @@ export class GuiService {
         this.wechatOrchestrator = undefined;
         this.wechatRunning = false;
         this.wechatStatus = 'error';
-        this.wechatError = '当前选择了企业微信模式，但缺少企业 ID (CorpID) 或 Secret。若需个人微信使用，请切换为【桌面视觉代管】或【个人微信扫码绑定 iLink Bot】模式。';
+        this.wechatError = '当前选择了企业微信模式，但缺少企业 ID (CorpID) 或 Secret。若为个人微信使用，请切换为【个人微信扫码绑定 iLink Bot】模式。';
         throw new Error(this.wechatError);
       }
     }
@@ -4510,24 +4530,15 @@ export class GuiService {
 
   saveChannelDefaultPolicy(channel: ChannelName, policy: Partial<ChannelDefaultPolicy>): ChannelDefaultPolicy {
     const res = ChannelContactStore.getInstance().saveDefaultPolicy(channel, policy);
-    if (channel === 'wechat' && policy.agentId) {
+    if (channel === 'wechat' && this.hostingWechatOrchestrator) {
       try {
-        const writer = new ConfigWriter(this.configPath);
-        const { config: hapConfig, exists, raw } = writer.read();
-        if (!hapConfig.channels) hapConfig.channels = {};
-        if (!hapConfig.channels.wechat) hapConfig.channels.wechat = {};
-        hapConfig.channels.wechat.default_agent = policy.agentId;
-        // @ts-expect-error private commit
-        writer.commit(hapConfig, exists, raw, '更新微信默认分身智能体配置');
-        if (this.wechatOrchestrator) {
-          this.wechatOrchestrator.reload();
-          this.wechatManager?.reload({
-            channels: this.wechatOrchestrator.config.resolveChannels(),
-            limits: this.wechatOrchestrator.config.resolveLimits(),
-          });
-        }
+        this.hostingWechatOrchestrator.reload();
+        this.hostingWechatManager?.reload({
+          channels: this.hostingWechatOrchestrator.config.resolveChannels(),
+          limits: this.hostingWechatOrchestrator.config.resolveLimits(),
+        });
       } catch (err) {
-        this.warn(`同步保存微信默认智能体至主配置文件失败: ${err}`);
+        this.warn(`向微信聊天托管服务同步分身配置失败: ${err}`);
       }
     }
     this.info(`已更新通道 [${channel}] 默认分身智能体与托管策略配置: agentId=${policy.agentId || 'default'}`);
@@ -4693,18 +4704,14 @@ export class GuiService {
   } {
     const store = ChannelContactStore.getInstance();
     const stats = store.getHostingStats();
-    let currentPuppet: 'ilink' | 'service' | 'desktop_vision' = 'ilink';
-    try {
-      currentPuppet = this.resolver().resolveChannels().wechat.personal.puppet;
-    } catch {}
     return {
       wechat: {
-        running: this.wechatRunning,
-        status: this.wechatStatus,
-        puppet: currentPuppet,
-        user: this.wechatLoginUser,
-        qrCode: this.wechatQrCode,
-        error: this.wechatError,
+        running: this.hostingWechatRunning,
+        status: this.hostingWechatRunning ? 'connected' : (this.hostingWechatStatus === 'error' ? 'error' : 'idle'),
+        puppet: 'desktop_vision',
+        user: this.hostingWechatUser || (this.hostingWechatRunning ? '桌面微信免扫码代管中' : '未启动代管'),
+        qrCode: undefined,
+        error: this.hostingWechatError,
       },
       qq: {
         running: this.qqRunning,
@@ -4712,6 +4719,123 @@ export class GuiService {
       },
       stats,
     };
+  }
+
+  async startWeChatHostingService(): Promise<{ ok: boolean; message: string; user?: string | undefined }> {
+    if (this.hostingWechatRunning) {
+      return { ok: true, message: '微信聊天托管服务正在运行中', user: this.hostingWechatUser };
+    }
+
+    if (this.hostingWechatManager) await this.stopWeChatHostingService();
+    this.hostingWechatError = undefined;
+    this.hostingWechatUser = undefined;
+    this.hostingWechatStatus = 'running';
+
+    const orchestrator = new AgentOrchestrator({ configPath: this.configPath });
+    await orchestrator.loadMcpTools();
+    this.hostingWechatOrchestrator = orchestrator;
+
+    const store = ChannelContactStore.getInstance();
+    const defPolicy = store.getDefaultPolicy('wechat');
+    const defaultAgent = defPolicy.agentId || 'assistant';
+
+    // 独立通道配置：锁定为桌面视觉代管模式，与机器人通道配置彻底解耦
+    const resolvedChannels = orchestrator.config.resolveChannels();
+    const hostingChannels: ResolvedChannels = {
+      ...resolvedChannels,
+      wechat: {
+        ...resolvedChannels.wechat,
+        enabled: true,
+        mode: 'personal',
+        defaultAgent,
+        mentionPatterns: [],
+        personal: {
+          ...resolvedChannels.wechat.personal,
+          puppet: 'desktop_vision',
+        },
+      },
+    };
+
+    const manager = new WeChatChannel({
+      host: createChannelHost(orchestrator),
+      channels: hostingChannels,
+      limits: orchestrator.config.resolveLimits(),
+      paths: orchestrator.resolvedPaths,
+      env: process.env,
+      onActivity: (act) => {
+        this.addHostingActivity(act);
+      },
+      log: (line) => {
+        this.info(`[Hosting WeChat] ${line}`);
+        if (this.hostingWechatManager !== manager) return;
+        if (line.includes('登录成功') || line.includes('桌面微信接入成功')) {
+          this.hostingWechatStatus = 'running';
+          const userName = line.split('登录成功：')[1]?.split('(')[0]?.trim() || '桌面微信已代管';
+          this.hostingWechatUser = userName;
+        }
+      },
+    });
+
+    this.hostingWechatManager = manager;
+    this.hostingWechatRunning = true;
+
+    try {
+      await manager.start();
+    } catch (error) {
+      await manager.stop();
+      this.hostingWechatManager = undefined;
+      this.hostingWechatOrchestrator = undefined;
+      this.hostingWechatRunning = false;
+      this.hostingWechatStatus = 'error';
+      this.hostingWechatError = describeError(error);
+      this.addHostingActivity({
+        stage: 'system',
+        level: 'error',
+        tag: '代管失败',
+        title: `启动桌面微信代管失败: ${this.hostingWechatError}`,
+      });
+      throw error;
+    }
+
+    this.hostingWechatUser = manager.currentUser?.name || '桌面微信免扫码代管中';
+    this.hostingWechatStatus = 'running';
+    this.info('[Hosting] 微信桌面视觉代管服务已成功启动！');
+    this.addHostingActivity({
+      stage: 'system',
+      level: 'success',
+      tag: '代管就绪',
+      title: '桌面微信视觉代管引擎已就绪，进入实时好友消息巡检与代答',
+      agentId: defaultAgent,
+    });
+
+    return {
+      ok: true,
+      message: '微信聊天托管服务已启动',
+      user: this.hostingWechatUser,
+    };
+  }
+
+  async stopWeChatHostingService(): Promise<{ ok: boolean; message: string }> {
+    const manager = this.hostingWechatManager;
+    this.hostingWechatManager = undefined;
+    this.hostingWechatOrchestrator = undefined;
+    this.hostingWechatRunning = false;
+    this.hostingWechatStatus = 'idle';
+    this.hostingWechatUser = undefined;
+    this.hostingWechatError = undefined;
+
+    try {
+      await manager?.stop();
+      this.addHostingActivity({
+        stage: 'system',
+        level: 'info',
+        tag: '代管停止',
+        title: '桌面微信代管服务已安全停止',
+      });
+      return { ok: true, message: '微信聊天托管已停止' };
+    } catch (err) {
+      throw new Error('停止微信托管服务失败: ' + describeError(err));
+    }
   }
 
   async testVisionCapture(): Promise<{
@@ -4765,12 +4889,7 @@ export class GuiService {
   }
 
   async switchWeChatHostingPuppet(puppet: 'ilink' | 'desktop_vision'): Promise<{ ok: boolean; puppet: string }> {
-    await this.saveWeChatConfig({ puppet });
-    if (this.wechatRunning) {
-      await this.stopWeChatService();
-      await this.startWeChatService();
-    }
-    return { ok: true, puppet };
+    return { ok: true, puppet: 'desktop_vision' };
   }
 
   async sendHumanMessage(payload: {
@@ -4795,8 +4914,15 @@ export class GuiService {
 
     // 3. 真正尝试向下游驱动下发消息
     try {
-      if (payload.channel === 'wechat' && this.wechatRunning && this.wechatManager) {
-        await this.wechatManager.sendMessage(payload.targetId, payload.text);
+      if (payload.channel === 'wechat') {
+        const activeMgr = (this.hostingWechatRunning && this.hostingWechatManager)
+          ? this.hostingWechatManager
+          : (this.wechatRunning && this.wechatManager ? this.wechatManager : undefined);
+        if (activeMgr) {
+          await activeMgr.sendMessage(payload.targetId, payload.text);
+        } else {
+          this.warn('[Hosting] 微信服务未运行，已仅记录人工消息至会话流');
+        }
       } else if (payload.channel === 'qq' && this.qqRunning && this.qqChannel) {
         const rawTarget = payload.targetId.replace(/^qq_group_|^qq_user_/, '');
         const isGroup = payload.targetId.startsWith('qq_group_');
@@ -4819,8 +4945,15 @@ export class GuiService {
     }
 
     try {
-      if (approved.channel === 'wechat' && this.wechatRunning && this.wechatManager) {
-        await this.wechatManager.sendMessage(approved.contactId, approved.text);
+      if (approved.channel === 'wechat') {
+        const activeMgr = (this.hostingWechatRunning && this.hostingWechatManager)
+          ? this.hostingWechatManager
+          : (this.wechatRunning && this.wechatManager ? this.wechatManager : undefined);
+        if (activeMgr) {
+          await activeMgr.sendMessage(approved.contactId, approved.text);
+        } else {
+          throw new Error('微信服务（聊天托管或机器人）均未运行');
+        }
       } else if (approved.channel === 'qq' && this.qqRunning && this.qqChannel) {
         const rawTarget = approved.contactId.replace(/^qq_group_|^qq_user_/, '');
         const isGroup = approved.contactId.startsWith('qq_group_');

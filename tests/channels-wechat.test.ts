@@ -435,5 +435,58 @@ describe('WeChatChannel 基础测试', () => {
     expect(botPrompt).toBeUndefined();
     await botChannel.stop();
   });
+
+  test('即使托管策略配置了分身人设与分身智能体，机器人通道也绝不受其污染', async () => {
+    const host = new StubHost();
+    const store = ChannelContactStore.getInstance(testContactsPath);
+    // 配置聊天托管默认策略（分身为 xx，人设为"你就是我..."）
+    store.saveDefaultPolicy('wechat', {
+      agentId: 'xx',
+      systemPrompt: '你就是我，以后代替我和我的朋友聊天，严格以第一人称口吻说话',
+      hostingMode: 'auto',
+      cooldownMinutes: 10,
+    });
+
+    const mockDriverFactory = () => ({
+      start: async () => undefined,
+      stop: async () => undefined,
+      sendMessage: async () => undefined,
+    });
+
+    // 机器人通道配置为 coder
+    const botChannels = channelsOf({
+      mode: 'ilink_bot',
+      defaultAgent: 'coder',
+    });
+    const botChannel = new WeChatChannel({
+      host,
+      channels: botChannels,
+      limits,
+      paths,
+      personalDriverFactory: mockDriverFactory,
+    });
+    await botChannel.start();
+
+    await botChannel.handlePersonalMessage({
+      id: 'msg_bot_test_2',
+      fromId: 'wx_group_member_99',
+      fromName: '群成员小张',
+      isRoom: false,
+      text: '请帮我写一个快速排序算法',
+    });
+
+    await botChannel.stop();
+
+    expect(host.requests.length).toBe(1);
+    const req = host.requests[0]!;
+    // 机器人通道绝不能被托管策略的 xx 覆盖，必须是 coder
+    expect(req.agentId).toBe('coder');
+    expect(req.channelDefaultAgent).toBe('coder');
+    // 绝不能继承分身人设
+    expect(req.systemPrompt).toBeUndefined();
+    // 临时群成员绝不入库 universal_contacts.json 污染好友库
+    const storedContacts = store.listContacts('wechat');
+    expect(storedContacts.find((c) => c.id === 'wx_group_member_99')).toBeUndefined();
+  });
 });
 

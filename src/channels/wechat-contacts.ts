@@ -51,6 +51,8 @@ export class WeChatContactStore {
     roomId?: string | undefined;
     roomName?: string | undefined;
     text: string;
+    isHosting?: boolean | undefined;
+    defaultAgent?: string | undefined;
   }): { contact: WeChatContact; messageRecord: WeChatChatMessage } {
     return this.store.recordIncomingMessage({
       channel: 'wechat',

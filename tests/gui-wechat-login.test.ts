@@ -76,7 +76,7 @@ ilink_account_id = "bot-local"
     await expect(service.startWeChatService()).rejects.toThrow('未配置凭据环境变量【WECHATY_PUPPET_SERVICE_TOKEN】');
     const errCfg = await service.getWeChatConfig();
     expect(errCfg.status).toBe('error');
-    expect(errCfg.error).toContain('桌面视觉代管');
+    expect(errCfg.error).toContain('个人微信扫码绑定 iLink Bot');
   });
 
   it('allows saving puppetToken and populates puppetTokenConfigured', async () => {
@@ -129,4 +129,3 @@ mode = "personal"
     expect(freshCfg.running).toBe(true);
   });
 });
-

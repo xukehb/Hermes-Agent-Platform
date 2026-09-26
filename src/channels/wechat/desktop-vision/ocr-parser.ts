@@ -5,6 +5,7 @@ import { tmpdir, homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import type { WeChatVisionParseResult } from './vision-parser.js';
+import { normalizeContactName, isGarbageContactName } from '../../contacts-store.js';
 
 function runCmd(file: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
@@ -105,6 +106,39 @@ export interface ChatBubble {
   lines: OcrRecognizedItem[];
 }
 
+/** 计算两个字符串的编辑距离相似度 (0.0 ~ 1.0) */
+export function textSimilarity(a: string, b: string): number {
+  if (a === b) return 1.0;
+  if (!a || !b) return 0.0;
+  const longer = a.length > b.length ? a : b;
+  const shorter = a.length > b.length ? b : a;
+  if (longer.length === 0) return 1.0;
+  if (longer.includes(shorter)) return shorter.length / longer.length;
+
+  const m = longer.length;
+  const n = shorter.length;
+  let prevRow = new Array(n + 1);
+  let currRow = new Array(n + 1);
+  for (let j = 0; j <= n; j++) prevRow[j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    currRow[0] = i;
+    const charA = longer[i - 1];
+    for (let j = 1; j <= n; j++) {
+      const cost = charA === shorter[j - 1] ? 0 : 1;
+      currRow[j] = Math.min(
+        currRow[j - 1] + 1,
+        prevRow[j] + 1,
+        prevRow[j - 1] + cost
+      );
+    }
+    const temp = prevRow;
+    prevRow = currRow;
+    currRow = temp;
+  }
+  return (m - prevRow[n]) / m;
+}
+
 /** 智能归一化与子串/模糊回音匹配：严格判断某段识别文本是否属于我方最近发送的回复 */
 export function isTextSentByMe(text: string, knownSentTexts?: Set<string>): boolean {
   if (!knownSentTexts || knownSentTexts.size === 0 || !text) return false;
@@ -126,9 +160,25 @@ export function isTextSentByMe(text: string, knownSentTexts?: Set<string>): bool
     // 1) 首尾行断句比对（末尾断句长度 >= 2 如“出题～”、“定～”，头部断句长度 >= 3）
     if (normTarget.length >= 2 && normSent.endsWith(normTarget)) return true;
     if (normTarget.length >= 3 && normSent.startsWith(normTarget)) return true;
-    // 2) 中间片段比对：必须要求片段足够长（>= 6 字符），防止把“好的”、“在吗”等 2~3 字通用短语在整句中误杀
+    // 2) 中间片段比对：必须要求片段足够长（>= 6 字符），防止把“好的”、“在吗”等通用短语误杀
     if (normTarget.length >= 6 && normSent.includes(normTarget)) return true;
     if (normSent.length >= 6 && normTarget.includes(normSent)) return true;
+
+    // 3) 整句/分句级模糊编辑距离匹配：解决屏幕 OCR 错别字导致 AI 误读自己并循环代答的问题
+    // (例如 "披奇提有点不好题思了" 对应 "被夸得有点不好意思了"；"被考得有点不好意思了" 对应 "被夸得有点不好意思了")
+    if (normTarget.length >= 4 && normSent.length >= 4) {
+      if (textSimilarity(normTarget, normSent) >= 0.65) return true;
+
+      // 按句号/感叹号/问号/换行拆分子句独立比对
+      const sentParts = sent
+        .split(/[。！？!?\n\r]+/)
+        .map((p) => p.replace(/[\s\p{P}\p{S}]/gu, ''))
+        .filter((p) => p.length >= 4);
+
+      for (const part of sentParts) {
+        if (textSimilarity(normTarget, part) >= 0.65) return true;
+      }
+    }
   }
 
   return false;
@@ -190,11 +240,25 @@ function finalizeBubble(lines: OcrRecognizedItem[], knownSentTexts?: Set<string>
   const minY = Math.min(...lines.map((l) => l.y));
   const maxY = Math.max(...lines.map((l) => l.y + l.height));
 
-  const hasRightEdge = lines.some((l) => (l.x + l.width) >= 0.70 || l.x >= 0.65);
+  // 1. 命中我方历史发送指纹库 (含模糊错别字容错)
   const matchesSent = isTextSentByMe(combinedText, knownSentTexts) ||
     lines.some((l) => isTextSentByMe(l.text, knownSentTexts));
 
-  const isFromMe = hasRightEdge || matchesSent;
+  let isFromMe = false;
+  if (matchesSent) {
+    isFromMe = true;
+  } else if (minX <= 0.35) {
+    // 2. 真实 WeChat 桌面端左侧好友头像对齐：
+    // 好友气泡起始坐标牢牢吸附在左侧头像栏 (x <= 0.35)
+    // 即使长文本向右延展，其 minX 依然 <= 0.35，绝对不属于我方发出
+    isFromMe = false;
+  } else if (minX >= 0.60) {
+    // 3. 我方右侧绿色气泡对齐：短文本起始直接位于右侧 (minX >= 0.60)
+    isFromMe = true;
+  } else if (minX >= 0.38 && maxX >= 0.78) {
+    // 4. 我方长文本绿色气泡：气泡向左延展，但右边缘必须贴近右侧头像 (maxX >= 0.78)，且起始 minX >= 0.38
+    isFromMe = true;
+  }
 
   return {
     text: combinedText,
@@ -205,6 +269,22 @@ function finalizeBubble(lines: OcrRecognizedItem[], knownSentTexts?: Set<string>
     height: maxY - minY,
     isFromMe,
   };
+}
+
+function isInvalidChatTarget(text: string): boolean {
+  if (!text) return true;
+  const s = text.trim();
+  if (s.length === 0) return true;
+  // 过滤 URL 与邮件
+  if (/^https?:\/\/|www\.|\.xyz[\/\b]|\.com[\/\b]|\.cn[\/\b]|\.top[\/\b]|\.net[\/\b]|\.org[\/\b]/i.test(s)) return true;
+  if (/@(?:gmail|hotmail|qq|163|outlook|foxmail|126)\./i.test(s)) return true;
+  // 过滤界面控件符号与搜索/标记
+  if (/^[Q\s]*搜索$|^日、|^凶$|^这$|^口$|^8、白$|^⑨$|^［\d+条］/.test(s)) return true;
+  if (/微信电脑版|图片浏览|视频播放|文件传输助手|微信支付|订阅号/i.test(s)) return true;
+  // 过滤时间戳
+  if (/^\d{1,2}[:：\-]\d{2}[|]?$/.test(s)) return true;
+  if (/(?:昨天|前天|今天)\s*\d{1,2}[:.：-]\d{2}/.test(s)) return true;
+  return false;
 }
 
 /** 解析本地 OCR 识别出来的 WeChat 窗口文本序列，提取活跃会话与待回复消息 */
@@ -227,14 +307,20 @@ export function parseWeChatOcrItems(
   );
 
   // 2. 尝试从聊天标题栏提取当前激活会话标题 (优先采用阶段2标题栏独立OCR切片)
-  const explicitTitle = items.find((i) => i.isTitle && i.text.trim().length > 0);
+  const explicitTitle = items.find((i) => i.isTitle && i.text.trim().length > 0 && !isInvalidChatTarget(i.text));
   const titleCandidate = explicitTitle || items.find((i) =>
-    i.x >= 0.32 && i.x <= 0.75 && i.y >= 0.86 &&
-    !/^[Q\s]*搜索$|^日、|^凶$|^这$|^口$|^8、白$|^⑨$|^［\d+条］/.test(i.text.trim())
+    i.x >= 0.28 && i.x <= 0.80 && i.y >= 0.86 &&
+    !isInvalidChatTarget(i.text)
   );
-  let chatTarget = titleCandidate?.text?.trim() || '';
+  let chatTarget = titleCandidate ? (normalizeContactName(titleCandidate.text) || titleCandidate.text.trim()) : '';
+  if (isInvalidChatTarget(chatTarget)) {
+    chatTarget = '';
+  }
 
-  // 3. 收集聊天视窗内部的消息气泡候选行 (x >= 0.38, y < 0.88, y > 0.12)
+  // 3. 收集聊天视窗内部的消息气泡候选行
+  // 坐标规范：
+  // x: [0.27, 0.98] (避开左侧会话栏 x <= 0.26)
+  // y: [0.21, 0.86] (避开顶部标题栏 y >= 0.86 与底部表情/输入工具栏 y < 0.21)
   const rawChatItems: OcrRecognizedItem[] = [];
 
   for (const item of items) {
@@ -242,15 +328,21 @@ export function parseWeChatOcrItems(
     const text = item.text.trim();
     if (!text) continue;
 
-    // 过滤时间戳行 (如 23:02, 17:42, 22:47)
-    if (/^\d{1,2}[:：\-]\d{2}$/.test(text)) continue;
-    // 过滤单个杂项符号
-    if (/^[日、凶这口⑨×…]$/.test(text)) continue;
+    // 过滤时间戳行 (如 23:02, 17:42, 22:47, 00:21|, 昨天 15:27)
+    if (/^\d{1,2}[:：\-]\d{2}[|]?$/.test(text)) continue;
+    if (/(?:昨天|前天|今天|昨灭|靠天|非天|我天)\s*\d{1,2}[:.：-]\d{2}/.test(text)) continue;
+    if (/^(?:昨天|前天|今天)$/.test(text)) continue;
+
+    // 过滤单个杂项符号与输入框/工具栏按钮
+    if (/^[日、凶这口⑨×…•©·\+\s]+$/.test(text)) continue;
+    if (/^[Q\s]*搜索$/.test(text)) continue;
+    if (/微信电脑版|图片浏览|视频播放/i.test(text)) continue;
+
     // 过滤调试标记与统计行（模型、用量、任务ID等）
     if (/^(?:[—\-_]{3,}|🤖|📊|🆔|任务[：:]|[0-9a-f]{8}$|tokens)/i.test(text)) continue;
 
-    // 聊天消息视窗区域
-    if (item.x >= 0.38 && item.y < 0.88 && item.y > 0.12) {
+    // 聊天消息视窗区域 (x: 0.27 - 0.98, y: 0.21 - 0.86)
+    if (item.x >= 0.27 && item.x <= 0.98 && item.y <= 0.86 && item.y >= 0.21) {
       rawChatItems.push(item);
     }
   }
@@ -258,27 +350,32 @@ export function parseWeChatOcrItems(
   // 执行气泡聚类，合并属于同一消息的多行文字
   const chatBubbles = clusterChatBubbles(rawChatItems, knownSentTexts);
 
-  // 4. 从左侧会话列表 (x: 0.12 - 0.35) 提取未读会话与最新来信
+  // 4. 从左侧会话列表 (x: 0.06 - 0.26) 提取未读会话与最新来信
   let listTarget = '';
   let listPreview = '';
   let listUnreadCount = 0;
 
-  const listItems = items.filter((i) => !i.isTitle && i.x >= 0.12 && i.x <= 0.35 && i.y < 0.88 && i.y > 0.12);
+  const listItems = items.filter((i) => !i.isTitle && i.x >= 0.06 && i.x <= 0.26 && i.y < 0.88 && i.y >= 0.08);
   listItems.sort((a, b) => b.y - a.y);
 
   let listTargetCoords: [number, number] | undefined;
   for (const li of listItems) {
     const text = li.text.trim();
     if (/^[Q\s]*搜索$/.test(text)) continue;
+    if (isInvalidChatTarget(text)) continue;
 
     const unreadMatch = text.match(/［(\d+)条］/);
     if (unreadMatch) {
       listUnreadCount = parseInt(unreadMatch[1] || '1', 10);
+      continue;
     }
 
-    if (!listTarget && !/［\d+条］/.test(text) && !/^\d{1,2}:\d{2}$/.test(text)) {
-      listTarget = text;
-      listTargetCoords = [li.x, li.y];
+    if (!listTarget && !/^\d{1,2}:\d{2}$/.test(text)) {
+      const norm = normalizeContactName(text);
+      if (norm && !isInvalidChatTarget(norm)) {
+        listTarget = norm;
+        listTargetCoords = [li.x, li.y];
+      }
     } else if (listTarget && !listPreview && !/^\d{1,2}:\d{2}$/.test(text) && text !== listTarget) {
       listPreview = text.replace(/［\d+条］/, '').trim();
       break;
@@ -320,8 +417,12 @@ export function parseWeChatOcrItems(
     }
 
     // 2. 当前视窗内最新消息由我方已发送完毕 (isFromMe 为 true)
-    // 但会话列表顶部有其他好友发来的新消息（例如 [我] 发来 "请回复"）
-    if (listTarget && listPreview && listTarget !== target) {
+    // 但会话列表有明确的【其他联系人】待办新来信
+    const normChatTarget = normalizeContactName(target);
+    const normListTarget = normalizeContactName(listTarget);
+    const isDifferentTarget = normListTarget && normListTarget !== normChatTarget;
+
+    if (isDifferentTarget && listPreview && (listUnreadCount > 0 || !isTextSentByMe(listPreview, knownSentTexts))) {
       return {
         ok: true,
         hasWeChatWindow: true,
@@ -351,13 +452,13 @@ export function parseWeChatOcrItems(
         text: cleanText,
       },
       needsReply: false,
-      summary: `当前会话 [${target}] 最新消息由我方刚刚发送（“${cleanText}”），无需重复答复`,
+      summary: `当前会话 [${target}] 最新消息由我方发送（“${cleanText}”），无需重复答复`,
       rawResponse: JSON.stringify(items),
     };
   }
 
-  if (listTarget && listPreview) {
-    // 视窗空白但左侧列表有待处理消息
+  // 视窗内无气泡，仅在会话列表有明确未读且不是当前会话时触发回复
+  if (listTarget && listPreview && listUnreadCount > 0 && normalizeContactName(listTarget) !== normalizeContactName(target)) {
     return {
       ok: true,
       hasWeChatWindow: true,

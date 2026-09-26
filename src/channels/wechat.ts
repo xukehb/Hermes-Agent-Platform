@@ -253,6 +253,7 @@ export class WeChatChannel implements Channel {
     let cleanText = msg.text.trim();
     let agentId: string | undefined;
 
+    const isHosting = this.isHostingMode;
     const contactStore = this.contactStore;
     const { contact } = contactStore.recordIncomingMessage({
       fromId: msg.fromId,
@@ -261,8 +262,9 @@ export class WeChatChannel implements Channel {
       roomId: msg.roomId,
       roomName: msg.roomName,
       text: msg.text,
+      isHosting,
+      defaultAgent: this.config.defaultAgent,
     });
-    const isHosting = this.isHostingMode;
 
     const sessionKey = msg.isRoom && msg.roomId ? `wechat:room:${msg.roomId}` : `wechat:user:${contact.id}`;
     const targetId = msg.isRoom && msg.roomId ? msg.roomId : contact.id;
@@ -332,8 +334,8 @@ export class WeChatChannel implements Channel {
       }
     }
 
-    const defPolicy = contactStore.getDefaultPolicy('wechat');
-    const assignedAgent = agentId || validContactAgentId || defPolicy.agentId || this.config.defaultAgent || fallbackAgent;
+    const defPolicy = isHosting ? contactStore.getDefaultPolicy('wechat') : {};
+    const assignedAgent = agentId || (isHosting ? validContactAgentId : undefined) || (isHosting ? defPolicy.agentId : undefined) || this.config.defaultAgent || fallbackAgent;
     const knownAgentList = this.options.host.agentsList ? this.options.host.agentsList() : [];
     const agentObj = knownAgentList.find((a) => a.id === assignedAgent);
     const agentName = agentObj?.displayName || agentObj?.name || (assignedAgent === 'xx' ? '小莹' : assignedAgent);
@@ -442,7 +444,9 @@ export class WeChatChannel implements Channel {
       },
     };
 
-    const effectiveSystemPrompt = contact.systemPrompt?.trim() || defPolicy.systemPrompt?.trim();
+    const effectiveSystemPrompt = isHosting
+      ? (contact.systemPrompt?.trim() || defPolicy.systemPrompt?.trim())
+      : (contact.systemPrompt?.trim() || undefined);
     let recalledCount = 0;
     let recalledTitles: string[] = [];
     let channelSystemPrompt: string | undefined;
@@ -519,13 +523,17 @@ export class WeChatChannel implements Channel {
     } else {
       // 机器人模式 (iLink Bot / WeCom / Wechaty Puppet)：
       // 严格作为专业 AI 智能体助手（Coder, Ops, Reviewer 等）运行，支持代码输出、Markdown 格式化与工具调用，绝不注入第一人称分身指令！
-      if (effectiveSystemPrompt) {
-        channelSystemPrompt = effectiveSystemPrompt;
+      if (contact.systemPrompt?.trim()) {
+        channelSystemPrompt = contact.systemPrompt.trim();
       }
     }
 
-    const effectiveDefaultAgent = validContactAgentId || defPolicy.agentId || this.config.defaultAgent || fallbackAgent;
-    const effectiveAgentId = agentId || validContactAgentId || defPolicy.agentId;
+    const effectiveDefaultAgent = isHosting
+      ? (validContactAgentId || defPolicy.agentId || this.config.defaultAgent || fallbackAgent)
+      : (this.config.defaultAgent || fallbackAgent);
+    const effectiveAgentId = isHosting
+      ? (agentId || validContactAgentId || defPolicy.agentId)
+      : (agentId || validContactAgentId || this.config.defaultAgent);
 
     // 提取纯净的多轮会话历史（最多15轮），保障大模型前言搭后语
     const recentHistory = contactStore.getRecentConversationHistory(contact.id, 'wechat', 15);

@@ -86,7 +86,7 @@
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
           <span class="nav-text" data-i18n="rail.settings">系统设置</span>
-          <span class="sidebar-version-tag" id="sidebarVersionTag" style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-left:auto;padding:2px 6px;border-radius:4px;opacity:0.85;cursor:pointer;transition:all 150ms ease;" title="点击直达软件版本与检查更新" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--primary)';" onmouseout="this.style.background='transparent';this.style.color='var(--text-muted)';">v0.1.23</span>
+          <span class="sidebar-version-tag" id="sidebarVersionTag" style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-left:auto;padding:2px 6px;border-radius:4px;opacity:0.85;cursor:pointer;transition:all 150ms ease;" title="点击直达软件版本与检查更新" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--primary)';" onmouseout="this.style.background='transparent';this.style.color='var(--text-muted)';">v0.1.24</span>
         </div>
       </div>
     </aside>
@@ -195,7 +195,7 @@
                 <button id="aboutVersionMoreBtn" class="more-menu-item-btn" title="查看软件版本、运行环境与检查更新" data-i18n-title="more.aboutVersionTooltip">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                   <span data-i18n="more.aboutVersion">关于与版本更新</span>
-                  <span class="badge" id="moreMenuVersionBadge" style="margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:var(--text-secondary);background:var(--bg-subtle);border:1px solid var(--border-default);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.23</span>
+                  <span class="badge" id="moreMenuVersionBadge" style="margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:var(--text-secondary);background:var(--bg-subtle);border:1px solid var(--border-default);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.24</span>
                 </button>
 
                 <!-- 切换语言 -->
@@ -914,7 +914,7 @@
             </div>
             <div style="display:flex;align-items:center;gap:10px;">
               <button type="button" class="btn secondary" id="headerCheckUpdateBtn" style="font-size:12px;padding:5px 12px;display:inline-flex;align-items:center;gap:6px;border-radius:6px;cursor:pointer;" title="查看软件版本并检查 GitHub 更新">
-                <span class="badge" id="headerVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;color:var(--text-secondary);background:var(--bg-subtle);border:1px solid var(--border-default);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.23</span>
+                <span class="badge" id="headerVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;color:var(--text-secondary);background:var(--bg-subtle);border:1px solid var(--border-default);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.24</span>
                 <span id="headerCheckUpdateBtnText" style="font-size:12px;">检查更新</span>
               </button>
               <button type="button" class="btn secondary" id="backToChatBtn" onclick="show('chat')" style="font-size:12.5px;padding:6px 14px;display:inline-flex;align-items:center;gap:6px;">
@@ -1369,7 +1369,7 @@
                   </button>
                   <button type="button" class="btn danger" id="logoutWxBtn" style="font-size:12px;">退出本地登录</button>
                   <button type="button" class="btn primary" id="toggleWxServiceBtn" style="font-size:12px;">
-                    启动微信服务
+                    启动微信机器人
                   </button>
                 </div>
               </div>
@@ -1379,22 +1379,24 @@
                 <!-- 左侧配置表单 -->
                 <div class="card" style="padding:16px;">
                   <div style="font-weight:700;font-size:13.5px;margin-bottom:12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border-default);padding-bottom:8px;">
-                    <span>微信通道通信与授权参数</span>
+                    <span>微信机器人网关通信与授权参数</span>
                   </div>
+
+                  <!-- 独立架构说明与聊天托管导航引导 -->
+                  <div class="channel-info-box" style="margin-bottom:12px;font-size:12px;line-height:1.6;background:var(--bg-tertiary);border-left:3px solid var(--primary);padding:10px 14px;border-radius:6px;">
+                    🤖 <strong>微信 AI 机器人消息网关</strong>：此处用于配置面向团队、技术群聊或公共服务的<strong>独立专业 AI 助手</strong>（如个人微信扫码挂载 iLink Bot、企业微信自建应用）。
+                    <br/>
+                    💡 <strong>独立运行提示</strong>：如果您希望接管当前电脑已登录的微信客户端，进行<strong>第一人称数字分身代管、替我挂机代聊真实好友</strong>，请直接前往左侧主导航的<strong>【聊天托管】</strong>。两套系统各自拥有独立的服务与配置，互不冲突。
+                  </div>
+
                   <form id="wxConfigForm" style="display:flex;flex-direction:column;gap:12px;">
                     <div class="form-group">
                       <label style="font-size:12px;font-weight:600;">接入模式 (Integration Mode) *</label>
                       <select id="wxModeSelect">
                         <option value="ilink_bot">个人微信扫码绑定 iLink Bot (官方无侵入扫码，专业 AI 助手) [推荐]</option>
                         <option value="wecom">企业微信自建应用 (CorpID & Secret 模式，团队助手)</option>
-                        <option value="desktop_vision">桌面视觉代管 (SightFlow 免扫码代管，好友代聊分身)</option>
                         <option value="personal">Wechaty Puppet 商业服务 (需提供 Puppet Token 凭据)</option>
                       </select>
-                    </div>
-
-                    <!-- 桌面视觉代管引导提示 -->
-                    <div id="wxDesktopVisionTip" class="channel-info-box" style="display:none;font-size:11.5px;color:var(--text-muted);line-height:1.5;background:var(--bg-tertiary);border-left:3px solid var(--primary);padding:8px 12px;border-radius:4px;">
-                      💡 <strong>模式说明</strong>：<strong>桌面视觉代管</strong>主要用于在【聊天托管】中代表个人与好友进行第一人称日常沟通。如需配置 AI 编程/运维等专业助手通道，建议选用 <strong>iLink Bot</strong> 或 <strong>企业微信</strong>；若需配置数字分身、专属好友事实库与人设，可前往左侧<strong>【聊天托管】</strong>。
                     </div>
 
                     <!-- 企业微信专属字段 -->
@@ -1419,7 +1421,7 @@
                         <label style="font-size:11.5px;font-weight:600;">Wechaty Puppet Token (WECHATY_PUPPET_SERVICE_TOKEN)</label>
                         <input id="wxPuppetTokenInput" type="password" placeholder="例如：puppet_padlocal_xxx / puppet_service_xxx" />
                         <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
-                          提示：此模式需自备付费 Puppet Token。若无 Token，请直接选择上方的【桌面视觉代管】或【个人微信扫码绑定 iLink Bot】模式。
+                          提示：此模式需自备付费 Puppet Token。若无 Token，请选择上方的【个人微信扫码绑定 iLink Bot】模式。
                         </div>
                       </div>
                     </div>

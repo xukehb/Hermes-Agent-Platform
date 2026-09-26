@@ -457,5 +457,124 @@ describe('WeChat Desktop Vision Agent (SightFlow 模式视觉代管)', () => {
     expect(res.hasWeChatWindow).toBe(true);
     expect(res.chatTarget).toBe('测试好友');
   });
-});
 
+  it('parseWeChatOcrItems 遇到好友发出的长文本气泡 (向右延展至 x+width=0.74)，准确判定为对方来信而绝不误判为我方发出', async () => {
+    const { parseWeChatOcrItems } = await import('../src/channels/wechat/desktop-vision/ocr-parser.js');
+    const mockItems = [
+      { text: '平安喜樂', x: 0.36, y: 0.91, width: 0.04, height: 0.02 }, // 标题栏
+      // 好友发来的长文本：吸附在左侧头像栏 (x=0.29)，文本向右延展至 x+width=0.74
+      {
+        text: '那你再升级升级吧，弄好了叫我，你觉得这个好不好玩',
+        x: 0.29,
+        y: 0.35,
+        width: 0.45,
+        height: 0.02,
+      },
+    ];
+
+    const res = parseWeChatOcrItems(mockItems);
+    expect(res.ok).toBe(true);
+    expect(res.chatTarget).toBe('平安喜樂');
+    expect(res.lastMessage?.isFromMe).toBe(false); // 绝不能误判为我方发出
+    expect(res.lastMessage?.text).toBe('那你再升级升级吧，弄好了叫我，你觉得这个好不好玩');
+    expect(res.needsReply).toBe(true); // 必须正确触发代答
+  });
+
+  it('parseWeChatOcrItems 能够准确识别机主本人在右侧发送的短消息 (如 "晚安晚安", "我在升级一下") 并判定无需回复', async () => {
+    const { parseWeChatOcrItems } = await import('../src/channels/wechat/desktop-vision/ocr-parser.js');
+    const mockItems = [
+      { text: '平安喜樂', x: 0.36, y: 0.91, width: 0.04, height: 0.02 },
+      { text: '睡觉啦，晚安呀', x: 0.29, y: 0.55, width: 0.15, height: 0.02 }, // 对方上一条来信
+      // 机主用户在微信右侧回复的短消息
+      { text: '晚安晚安', x: 0.88, y: 0.35, width: 0.05, height: 0.02 },
+    ];
+
+    const res = parseWeChatOcrItems(mockItems);
+    expect(res.ok).toBe(true);
+    expect(res.chatTarget).toBe('平安喜樂');
+    expect(res.lastMessage?.isFromMe).toBe(true); // 必须准确判定为我方/机主发出
+    expect(res.lastMessage?.text).toBe('晚安晚安');
+    expect(res.needsReply).toBe(false); // 绝不重复回复自己
+  });
+
+  it('isTextSentByMe 能够通过编辑距离模糊容错拦截 OCR 错别字回音 (披奇提 / 被考得)', async () => {
+    const { isTextSentByMe } = await import('../src/channels/wechat/desktop-vision/ocr-parser.js');
+    const sentHistory = new Set([
+      '哈哈，被夸得有点不好意思了。你最近怎么样，有啥好玩的事吗？',
+    ]);
+
+    // 屏幕 OCR 错别字场景 1: "被夸得" 错识为 "披奇提"
+    expect(isTextSentByMe('哈哈，披奇提有点不好题思了…', sentHistory)).toBe(true);
+    // 屏幕 OCR 错别字场景 2: "夸" 错识为 "考"
+    expect(isTextSentByMe('哈哈，被考得有点不好意思了…', sentHistory)).toBe(true);
+    // 好友真实新来信不被误伤
+    expect(isTextSentByMe('哈哈你最近怎么样呀', sentHistory)).toBe(false);
+  });
+
+  it('parseWeChatOcrItems 当会话列表顶部的联系人名称带标点噪点时，绝不错误触发跨会话切换或错读我方消息', async () => {
+    const { parseWeChatOcrItems } = await import('../src/channels/wechat/desktop-vision/ocr-parser.js');
+    const mockItems = [
+      { text: '平安喜樂', x: 0.36, y: 0.91, width: 0.04, height: 0.02, isTitle: true }, // 当前活跃会话标题
+      { text: '我在升级一下', x: 0.82, y: 0.35, width: 0.10, height: 0.02 }, // 我方右侧发出的最新消息
+      // 左侧列表顶部刚好是当前会话，但被 OCR 附带了标点噪点
+      { text: '平安喜樂。”', x: 0.12, y: 0.82, width: 0.06, height: 0.02 },
+      { text: '我在升级一下', x: 0.12, y: 0.79, width: 0.08, height: 0.02 },
+    ];
+
+    const res = parseWeChatOcrItems(mockItems);
+    expect(res.ok).toBe(true);
+    expect(res.chatTarget).toBe('平安喜樂');
+    // 绝不能将左侧会话列表中的预览错当成未读新消息来代答
+    expect(res.lastMessage?.isFromMe).toBe(true);
+    expect(res.needsReply).toBe(false);
+  });
+
+  it('DesktopVisionPersonalDriver 识别到机主人工在微信中回复的消息时，自动以 human 身份入库并触发防撞车冷却期', async () => {
+    const { ChannelContactStore } = await import('../src/channels/contacts-store.js');
+    const store = ChannelContactStore.getInstance();
+    store.upsertContact({
+      channel: 'wechat',
+      id: '测试好友B',
+      name: '测试好友B',
+      cooldownMinutes: 15,
+    });
+
+    const parseFn = vi.fn().mockResolvedValue({
+      ok: true,
+      hasWeChatWindow: true,
+      chatTarget: '测试好友B',
+      lastMessage: { sender: '我', text: '我现在去开会了，晚点聊', isFromMe: true },
+      needsReply: false,
+    });
+
+    const onActivity = vi.fn();
+    const driver = new DesktopVisionPersonalDriver({
+      pollIntervalMs: 100,
+      captureFn: async () => ({ ok: true, buffer: Buffer.from('dummy'), sourceType: 'system_capture' }),
+      parseFn,
+      onActivity,
+    });
+
+    try {
+      await driver.start();
+      await driver.tick();
+
+      // 验证活动日志记录了人工回复与防撞车冷却期
+      expect(onActivity).toHaveBeenCalledWith(
+        expect.objectContaining({
+          stage: 'cooldown',
+          tag: '人工回复',
+          title: expect.stringContaining('测试好友B'),
+        })
+      );
+
+      // 验证联系人历史记录中 sender 记录为 human
+      const contact = store.getContact('测试好友B', 'wechat');
+      expect(contact?.lastSender).toBe('我 (人工回复)');
+      expect(contact?.cooldownUntil).toBeGreaterThan(Date.now());
+    } finally {
+      await driver.stop();
+      store.removeContact('测试好友B', 'wechat');
+    }
+  });
+});
