@@ -51,18 +51,23 @@ if (!existsSync(target) || isForce) {
 if (existsSync(releaseNode)) {
   copyFileSync(releaseNode, target);
   console.log(`[Native Addon] Saved ${isElectron && !isNode ? 'Electron' : 'Node'} ABI ${abi} better_sqlite3.node`);
-  try {
-    unlinkSync(releaseNode);
-  } catch {}
-}
-
-// Always ensure build/Release/better_sqlite3.node is removed so bindings falls back to lib/binding/node-v*
-if (existsSync(releaseNode)) {
-  try {
-    unlinkSync(releaseNode);
-  } catch {}
 }
 
 if (!existsSync(target)) throw new Error(`未找到 ABI ${abi} 的 better_sqlite3.node`);
+
+// When building for Electron, ensure build/Release/better_sqlite3.node is present for electron-builder
+if (isElectron) {
+  mkdirSync(join(moduleRoot, 'build', 'Release'), { recursive: true });
+  copyFileSync(target, releaseNode);
+  console.log(`[Native Addon] Prepared build/Release/better_sqlite3.node for Electron packaging`);
+} else {
+  // In Node mode, remove releaseNode so bindings falls back to lib/binding/node-v*
+  if (existsSync(releaseNode)) {
+    try {
+      unlinkSync(releaseNode);
+    } catch {}
+  }
+}
+
 console.log(`[Native Addon] Verified ${target}`);
 
