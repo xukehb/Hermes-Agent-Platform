@@ -561,7 +561,9 @@ function renderMarkdownContent(rawText) {
       }
     }
 
-    outLines.push(line);
+    // 转义普通 Markdown 行；表格分支已通过 parseInlineMarkdown 单独转义。
+    // 这样模型输出中的原始 HTML 不会直接进入 innerHTML。
+    outLines.push(esc(line));
     i++;
   }
 

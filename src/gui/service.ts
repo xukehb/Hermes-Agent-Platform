@@ -1171,11 +1171,14 @@ export class GuiService {
         }
       }
       const latencyMs = Date.now() - started;
+      if (preview.trim() === '') {
+        return { ok: false, latencyMs, error: '模型未返回有效响应' };
+      }
       this.info(`测试模型 ${alias} (${realModelName}) 成功，耗时 ${latencyMs}ms`);
       return {
         ok: true,
         latencyMs,
-        preview: preview.trim() || 'OK',
+        preview: preview.trim(),
       };
     } catch (err) {
       const msg = describeError(err);
@@ -1388,7 +1391,7 @@ export class GuiService {
       const started = Date.now();
       let received = false;
       for await (const event of registry.client(id).send({ model: testModel, messages: [{ role: 'user', content: 'Reply with OK.' }], params: {}, maxTokens: 16 }, controller.signal)) {
-        if (event.type === 'text_delta' || event.type === 'finish') received = true;
+        if (event.type === 'text_delta' && event.text.trim() !== '') received = true;
       }
       const result = { providerId: id, reachable: received, handshakeMs: Date.now() - started, models: [testModel], ...(received ? {} : { error: '模型未返回有效响应' }) };
       this.providerHealth.set(id, { reachable: result.reachable, checkedAt: Date.now(), ...(result.error === undefined ? {} : { error: result.error }) });

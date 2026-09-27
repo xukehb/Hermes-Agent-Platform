@@ -78,6 +78,14 @@ describe('GuiService agent role management', () => {
     expect(check).not.toHaveBeenCalled();
   });
 
+  it('does not report a model test as reachable when the stream finishes without text', async () => {
+    const client = new MockProviderClient({ turns: [{ events: [{ type: 'finish', reason: 'stop' }] }] });
+    vi.spyOn(ProviderRegistry.prototype, 'client').mockReturnValue(client);
+    const result = await new GuiService(configPath).testProvider({ id: 'custom', baseUrl: 'http://localhost:9/v1', model: 'org/model' } as never);
+    expect(result.reachable).toBe(false);
+    expect(result.error).toContain('有效响应');
+  });
+
   it('rejects a model test without a user supplied model', async () => {
     const result = await new GuiService(configPath).testProvider({ id: 'custom', baseUrl: 'http://localhost:9/v1' });
     expect(result.error).toContain('模型');

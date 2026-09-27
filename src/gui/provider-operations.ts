@@ -309,7 +309,7 @@ export async function testProvider(configPath: string, idOrConfig: string | GuiP
     const started = Date.now();
     let received = false;
     for await (const event of registry.client(id).send({ model: testModel, messages: [{ role: 'user', content: 'Reply with OK.' }], params: {}, maxTokens: 16 }, controller.signal)) {
-      if (event.type === 'text_delta' || event.type === 'finish') received = true;
+      if (event.type === 'text_delta' && event.text.trim() !== '') received = true;
     }
     return { providerId: id, reachable: received, handshakeMs: Date.now() - started, models: [testModel], ...(received ? {} : { error: '模型未返回有效响应' }) };
   } catch (error) {
