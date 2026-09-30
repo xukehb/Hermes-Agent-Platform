@@ -199,8 +199,8 @@ export interface ModelPlan {
   protocolSource: ReturnType<typeof detectProtocol>['source'];
   /** 模型级 params 与智能体级 params 合并后的结果，智能体级优先 */
   params: Record<string, unknown>;
-  /** 输出上限：模型 max_output_tokens > 提供商 max_tokens_default */
-  maxTokens: number;
+  /** 输出上限：智能体 max_tokens > 模型 max_output_tokens > 提供商 max_tokens_default (0 表示不作人为限制) */
+  maxTokens?: number;
   /** 上下文窗口；未登记时给保守默认值以便压缩判断仍可工作 */
   contextWindow: number;
 }
@@ -241,7 +241,14 @@ export function planModel(
     protocol: detection.protocol,
     protocolSource: detection.source,
     params: { ...(entry?.params ?? {}), ...agent.params },
-    maxTokens: entry?.maxOutputTokens ?? provider.maxTokensDefault,
+    maxTokens:
+      typeof agent.params?.max_tokens === 'number'
+        ? (agent.params.max_tokens as number)
+        : typeof agent.params?.maxTokens === 'number'
+          ? (agent.params.maxTokens as number)
+          : entry?.maxOutputTokens !== undefined
+            ? entry.maxOutputTokens
+            : provider.maxTokensDefault,
     contextWindow: entry?.contextWindow ?? FALLBACK_CONTEXT_WINDOW,
   };
 }

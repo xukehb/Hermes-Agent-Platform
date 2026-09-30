@@ -52,7 +52,7 @@ export interface AdapterContext {
   /** 采样参数，模型级与智能体级合并后的结果 */
   params: Record<string, unknown>;
   /** 输出上限；Anthropic 必填，缺省由适配器兜底（FR-LOOP-011A 第 4 点） */
-  maxTokens?: number;
+  maxTokens?: number | undefined;
   stop?: readonly string[];
 }
 

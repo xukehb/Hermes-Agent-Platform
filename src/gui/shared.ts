@@ -20,6 +20,7 @@ export interface GuiProviderInput {
   envKey?: string;
   wireApi: 'chat' | 'responses' | 'anthropic-messages';
   protocol: 'hermes-native' | 'openai-tools' | 'deepseek' | 'anthropic';
+  maxTokensDefault?: number;
 }
 
 export interface GuiModelInput {

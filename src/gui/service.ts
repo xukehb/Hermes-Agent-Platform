@@ -934,6 +934,7 @@ export class GuiService {
       default_protocol: input.protocol,
     };
     if (input.name && input.name.trim()) patch.name = input.name.trim();
+    if (input.maxTokensDefault !== undefined) patch.max_tokens_default = input.maxTokensDefault;
 
     const writer = new ConfigWriter(this.configPath);
     writer.upsertProvider(id, patch);

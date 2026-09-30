@@ -505,23 +505,24 @@ $('openProjectVsCodeTopBtn')?.addEventListener('click', () => {
 function renderMarkdownContent(rawText) {
   if (!rawText) return '';
 
-  // 1. 抽取代码块，防止内部 Markdown 字符被误解析
+  // 1. 抽取代码块，防止内部 Markdown 字符与换行被误解析
   const codeBlocks = [];
-  let processed = rawText.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
+  let processed = rawText.replace(/```([a-zA-Z0-9_-]*)\r?\n([\s\S]*?)```/g, (match, lang, code) => {
     const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
     codeBlocks.push({ lang: lang.trim() || 'plaintext', code });
     return placeholder;
   });
 
-  // 2. 预处理 Markdown 表格 (GFM Tables)
+  // 2. 逐行块级元素扫描与语义化重构
   const lines = processed.split(/\r?\n/);
-  const outLines = [];
+  const blockTokens = [];
   let i = 0;
 
   while (i < lines.length) {
     const line = lines[i];
-    const isTableRow = /^\s*\|.+\|\s*$/.test(line);
 
+    // GFM Markdown 表格解析
+    const isTableRow = /^\s*\|.+\|\s*$/.test(line);
     if (isTableRow && i + 1 < lines.length && /^\s*\|(?:\s*:?-+:?\s*\|)+\s*$/.test(lines[i + 1])) {
       const tableLines = [];
       while (i < lines.length && /^\s*\|.+\|\s*$/.test(lines[i])) {
@@ -556,74 +557,142 @@ function renderMarkdownContent(rawText) {
           tableHtml += '</tr>';
         });
         tableHtml += '</tbody></table></div>';
-        outLines.push(tableHtml);
+        blockTokens.push(tableHtml);
         continue;
       }
     }
 
-    // 转义普通 Markdown 行；表格分支已通过 parseInlineMarkdown 单独转义。
-    // 这样模型输出中的原始 HTML 不会直接进入 innerHTML。
-    outLines.push(esc(line));
-    i++;
+    // 块级引用 (> Quote, 兼容连续多行)
+    if (/^\s*>\s?/.test(line)) {
+      const quoteLines = [];
+      while (i < lines.length && /^\s*>\s?/.test(lines[i])) {
+        quoteLines.push(lines[i].replace(/^\s*>\s?/, ''));
+        i++;
+      }
+      const quoteBody = quoteLines.map(l => parseInlineMarkdown(l)).join('<br>');
+      blockTokens.push(`<blockquote class="md-quote">${quoteBody}</blockquote>`);
+      continue;
+    }
+
+    // 代码块占位符行
+    if (/^__CODE_BLOCK_\d+__$/.test(line.trim())) {
+      blockTokens.push(line.trim());
+      i++;
+      continue;
+    }
+
+    // 标题行
+    const hMatch = line.match(/^(#{1,4})\s+(.+)$/);
+    if (hMatch) {
+      const level = hMatch[1].length;
+      const hText = parseInlineMarkdown(hMatch[2]);
+      const tag = `h${level}`;
+      const style = level === 1 ? 'margin:18px 0 10px;font-size:18.5px;font-weight:700;color:var(--text-main);'
+        : level === 2 ? 'margin:16px 0 8px;font-size:16.5px;font-weight:700;color:var(--text-main);'
+        : level === 3 ? 'margin:14px 0 6px;font-size:15px;font-weight:700;color:var(--text-main);'
+        : 'margin:12px 0 4px;font-size:13.5px;font-weight:700;color:var(--text-main);';
+      blockTokens.push(`<${tag} style="${style}">${hText}</${tag}>`);
+      i++;
+      continue;
+    }
+
+    // 分割线
+    if (/^---+$/.test(line.trim())) {
+      blockTokens.push('<hr style="border:none;border-top:1px solid var(--border-default);margin:14px 0;" />');
+      i++;
+      continue;
+    }
+
+    // 智能建议快捷回复交互化
+    const suggestPrefixMatch = line.match(/^(?:你可以直接回复|你也可以回复|快捷回复|建议回复|建议下一步|你可以通过以下方式继续|you can reply with|suggested replies|suggested next steps)[：:]\s*$/i);
+    if (suggestPrefixMatch && i + 1 < lines.length && /^\s*(?:[-*]|\d+\.)\s+/.test(lines[i + 1])) {
+      const chipLines = [];
+      i++;
+      while (i < lines.length && /^\s*(?:[-*]|\d+\.)\s+/.test(lines[i])) {
+        chipLines.push(lines[i].replace(/^\s*(?:[-*]|\d+\.)\s+/, '').trim());
+        i++;
+      }
+      const chipsHtml = chipLines.map(item => {
+        const cleanText = item.replace(/^\*\*|\*\*$/g, '').replace(/^`|`$/g, '').trim();
+        if (!cleanText) return '';
+        const promptAttr = cleanText.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        const titleTooltip = window.I18N ? window.I18N.t('chat.clickToSend', '点击直接发送此回复') : '点击直接发送此回复';
+        return `<button type="button" class="suggested-reply-chip" data-hero-prompt="${promptAttr}" title="${esc(titleTooltip)}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"/></svg>
+          <span>${esc(cleanText)}</span>
+        </button>`;
+      }).filter(Boolean).join('');
+      const sectionTitle = window.I18N ? window.I18N.t('chat.suggestedReplies', '建议快捷回复') : '建议快捷回复';
+      blockTokens.push(`
+        <div class="suggested-replies-wrap">
+          <div class="suggested-replies-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span data-i18n="chat.suggestedReplies">${esc(sectionTitle)}</span>
+          </div>
+          <div class="suggested-replies-chips">${chipsHtml}</div>
+        </div>
+      `);
+      continue;
+    }
+
+    // 任务复选框
+    const checkMatch = line.match(/^(\s*)(?:[-*]|\d+\.)\s+\[([ xX])\]\s+(.+)$/);
+    if (checkMatch) {
+      const isChecked = checkMatch[2].toLowerCase() === 'x';
+      const text = parseInlineMarkdown(checkMatch[3]);
+      const icon = isChecked
+        ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--success);flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>'
+        : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>';
+      const spanStyle = isChecked ? 'text-decoration:line-through;color:var(--text-muted);' : '';
+      blockTokens.push(`<div class="md-list-item" style="display:flex;align-items:center;gap:6px;margin:3px 0;">${icon}<span style="${spanStyle}">${text}</span></div>`);
+      i++;
+      continue;
+    }
+
+    // 无序与有序列表项
+    const listMatch = line.match(/^(\s*)([-*]|\d+\.)\s+(.+)$/);
+    if (listMatch) {
+      const indent = listMatch[1].length > 0 ? 'margin-left:18px;' : '';
+      const isNum = /^\d+\./.test(listMatch[2]);
+      const bullet = isNum
+        ? `<span class="md-number" style="color:var(--text-muted);font-weight:600;font-family:var(--font-mono);font-size:12px;flex-shrink:0;">${listMatch[2]}</span>`
+        : '<span class="md-bullet" style="color:var(--text-main);font-weight:bold;flex-shrink:0;">•</span>';
+      const text = parseInlineMarkdown(listMatch[3]);
+      blockTokens.push(`<div class="md-list-item" style="display:flex;align-items:baseline;gap:6px;margin:3px 0;${indent}">${bullet}<span>${text}</span></div>`);
+      i++;
+      continue;
+    }
+
+    // 空行 (段落隔离)
+    if (line.trim() === '') {
+      i++;
+      continue;
+    }
+
+    // 普通文本行 (连续多行聚合并渲染为具有舒适间距的独立段落)
+    const paraLines = [];
+    while (
+      i < lines.length &&
+      lines[i].trim() !== '' &&
+      !/^\s*\|.+\|\s*$/.test(lines[i]) &&
+      !/^\s*>\s?/.test(lines[i]) &&
+      !/^#{1,4}\s+/.test(lines[i]) &&
+      !/^---+$/.test(lines[i].trim()) &&
+      !/^\s*(?:[-*]|\d+\.)\s+/.test(lines[i]) &&
+      !/^__CODE_BLOCK_\d+__$/.test(lines[i].trim())
+    ) {
+      paraLines.push(parseInlineMarkdown(lines[i]));
+      i++;
+    }
+
+    if (paraLines.length > 0) {
+      blockTokens.push(`<p style="margin:0 0 8px 0;line-height:1.68;">${paraLines.join('<br>')}</p>`);
+    }
   }
 
-  let safe = outLines.join('\n');
+  let safe = blockTokens.join('\n');
 
-  // 3. 块级元素解析
-  // 标题
-  safe = safe.replace(/^#### (.*$)/gim, '<h4 style="margin:12px 0 4px;font-size:13.5px;font-weight:700;color:var(--text-main);">$1</h4>');
-  safe = safe.replace(/^### (.*$)/gim, '<h3 style="margin:14px 0 6px;font-size:15px;font-weight:700;color:var(--text-main);">$1</h3>');
-  safe = safe.replace(/^## (.*$)/gim, '<h2 style="margin:16px 0 8px;font-size:16.5px;font-weight:700;color:var(--text-main);">$1</h2>');
-  safe = safe.replace(/^# (.*$)/gim, '<h1 style="margin:18px 0 10px;font-size:18.5px;font-weight:700;color:var(--text-main);">$1</h1>');
-
-  // 分割线
-  safe = safe.replace(/^---+$/gim, '<hr style="border:none;border-top:1px solid var(--border-default);margin:14px 0;" />');
-
-  // 引用块 (Blockquote)
-  safe = safe.replace(/^\> (.*$)/gim, '<blockquote class="md-quote">$1</blockquote>');
-
-  // 智能建议快捷回复交互化 (自动将 '你可以直接回复：'转换为现代点击即发的交互胶囊)
-  const suggestRegex = /(?:你可以直接回复|你也可以回复|快捷回复|建议回复|建议下一步|你可以通过以下方式继续|you can reply with|suggested replies|suggested next steps)[：:]\s*((?:[\r\n]+(?:\s*[-*]|\s*\d+\.)\s+[^\r\n]+)+)/gi;
-  safe = safe.replace(suggestRegex, (match, listBody) => {
-    const rawItems = listBody.split(/\r?\n/).map(l => l.trim()).filter(l => /^(?:[-*]|\d+\.)\s+/.test(l));
-    if (rawItems.length === 0) return match;
-    const chipsHtml = rawItems.map(item => {
-      const cleanText = item.replace(/^(?:[-*]|\d+\.)\s+/, '').replace(/^\*\*|\*\*$/g, '').replace(/^`|`$/g, '').trim();
-      if (!cleanText) return '';
-      const promptAttr = cleanText.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-      const titleTooltip = window.I18N ? window.I18N.t('chat.clickToSend', '点击直接发送此回复') : '点击直接发送此回复';
-      return `<button type="button" class="suggested-reply-chip" data-hero-prompt="${promptAttr}" title="${esc(titleTooltip)}">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"/></svg>
-        <span>${esc(cleanText)}</span>
-      </button>`;
-    }).filter(Boolean).join('');
-
-    const sectionTitle = window.I18N ? window.I18N.t('chat.suggestedReplies', '建议快捷回复') : '建议快捷回复';
-    return `
-      <div class="suggested-replies-wrap">
-        <div class="suggested-replies-title">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          <span data-i18n="chat.suggestedReplies">${esc(sectionTitle)}</span>
-        </div>
-        <div class="suggested-replies-chips">
-          ${chipsHtml}
-        </div>
-      </div>
-    `;
-  });
-
-  // 任务复选框
-  safe = safe.replace(/^[\*\-] \[ \] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:center;gap:6px;margin:3px 0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);"><rect x="3" y="3" width="18" height="18" rx="2"/></svg><span>$1</span></div>');
-  safe = safe.replace(/^[\*\-] \[x\] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:center;gap:6px;margin:3px 0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--success);"><polyline points="20 6 9 17 4 12"/></svg><span style="text-decoration:line-through;color:var(--text-muted);">$1</span></div>');
-
-  // 无序列表与有序列表
-  safe = safe.replace(/^[*-] (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:baseline;gap:6px;margin:3px 0;"><span class="md-bullet" style="color:var(--text-main);font-weight:bold;">•</span><span>$1</span></div>');
-  safe = safe.replace(/^(\d+)\. (.*$)/gim, '<div class="md-list-item" style="display:flex;align-items:baseline;gap:6px;margin:3px 0;"><span class="md-number" style="color:var(--text-muted);font-weight:600;font-family:var(--font-mono);font-size:12px;">$1.</span><span>$2</span></div>');
-
-  // 行内元素解析 (图片、加粗、代码)
-  safe = parseInlineMarkdown(safe, false);
-
-  // 恢复代码块
+  // 3. 恢复代码块并渲染 Mac 风格控制台卡片
   codeBlocks.forEach((block, index) => {
     const encoded = encodeURIComponent(block.code);
     const blockHtml = `
@@ -657,8 +726,10 @@ function renderMarkdownContent(rawText) {
   return safe;
 }
 
-function parseInlineMarkdown(text, doEscape = true) {
-  let s = doEscape ? esc(text) : text;
+function parseInlineMarkdown(text) {
+  if (!text) return '';
+  // 先转义正文中的危险字符，防止恶意脚本注入
+  let s = esc(text);
 
   // 图片解析 (![alt](src))
   s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
@@ -678,10 +749,19 @@ function parseInlineMarkdown(text, doEscape = true) {
     `;
   });
 
-  // 加粗
+  // 超链接解析 ([text](url))
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="md-link" rel="noopener noreferrer">$1</a>');
+
+  // 加粗 (**text**)
   s = s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
-  // 行内代码
+  // 斜体 (*text*)
+  s = s.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+
+  // 删除线 (~~text~~)
+  s = s.replace(/~~(.*?)~~/g, '<del>$1</del>');
+
+  // 行内代码 (`code`)
   s = s.replace(/`([^\`]+)`/g, '<code class="md-inline-code">$1</code>');
 
   return s;
@@ -6213,6 +6293,7 @@ function openCreateAgentDialog() {
   $('agentInputToolTier').value = 'standard';
   $('agentInputRuntimeMode').value = 'persistent';
   $('agentInputReasoningVisible').checked = false;
+  if ($('agentInputMaxTokens')) $('agentInputMaxTokens').value = '';
   populateAgentModelOptions('');
 
   $('agentModal').showModal();
@@ -6315,6 +6396,14 @@ window.openAgentDialog = (agentId) => {
   $('agentInputWorkspace').value = agent.workspace || '';
   $('agentInputReasoningVisible').checked = !!agent.reasoningVisible;
   $('agentInputParamsJson').value = agent.paramsJson || '';
+  let parsedAgentParams = {};
+  try {
+    if (agent.paramsJson) parsedAgentParams = JSON.parse(agent.paramsJson);
+  } catch {}
+  const agentTokens = parsedAgentParams.max_tokens ?? parsedAgentParams.maxTokens;
+  if ($('agentInputMaxTokens')) {
+    $('agentInputMaxTokens').value = agentTokens !== undefined ? agentTokens : '';
+  }
   $('agentInputSystemPrompt').value = agent.systemPrompt || '';
   $('agentInputDescription').value = agent.description || '';
   $('agentInputToolTier').value = agent.toolTier || 'coding';
@@ -6388,6 +6477,24 @@ $('agentForm')?.addEventListener('submit', async (e) => {
     return;
   }
 
+  let finalParams = {};
+  if (paramsJson) {
+    try {
+      finalParams = JSON.parse(paramsJson);
+    } catch (err) {
+      showToast('模型参数 JSON 格式不合法：' + err.message, 'error');
+      return;
+    }
+  }
+  const rawAgentTokens = $('agentInputMaxTokens')?.value?.trim();
+  if (rawAgentTokens !== undefined && rawAgentTokens !== '' && !isNaN(Number(rawAgentTokens))) {
+    finalParams.max_tokens = Number(rawAgentTokens);
+  } else if (rawAgentTokens === '') {
+    delete finalParams.max_tokens;
+    delete finalParams.maxTokens;
+  }
+  const finalParamsJson = Object.keys(finalParams).length > 0 ? JSON.stringify(finalParams) : '';
+
   try {
     await window.hap.upsertAgent({
       id,
@@ -6406,7 +6513,7 @@ $('agentForm')?.addEventListener('submit', async (e) => {
       subagents,
       runtimeMode,
       reasoningVisible,
-      paramsJson,
+      paramsJson: finalParamsJson,
       systemPrompt,
     });
     $('agentModal').close();
@@ -6594,7 +6701,7 @@ function renderModels() {
         </td>
         <td>
           <span style="font-size:11px;color:var(--text-secondary);">
-            ${m.contextWindow ? Math.round(m.contextWindow / 1024) + 'k' : '自动'} / ${m.maxOutputTokens ? Math.round(m.maxOutputTokens / 1024) + 'k' : '自动'}
+            ${m.contextWindow ? Math.round(m.contextWindow / 1024) + 'k' : '自动'} / ${m.maxOutputTokens === 0 ? '<span style="color:var(--success);font-weight:600;">不限</span>' : (m.maxOutputTokens ? Math.round(m.maxOutputTokens / 1024) + 'k' : '自适应')}
           </span>
         </td>
         <td>
@@ -8033,6 +8140,9 @@ window.openProviderDialog = async (id) => {
     $('providerInputEnvKey').value = p.envKey || '';
     $('providerInputWireApi').value = p.wireApi || 'chat';
     $('providerInputProtocol').value = p.defaultProtocol || p.protocol || 'openai-tools';
+    if ($('providerInputMaxTokensDefault')) {
+      $('providerInputMaxTokensDefault').value = p.maxTokensDefault !== undefined ? p.maxTokensDefault : '';
+    }
     $('deleteProviderBtn').style.display = 'inline-block';
 
     try {
@@ -8061,6 +8171,9 @@ window.openProviderDialog = async (id) => {
     $('providerDialogTitle').textContent = '新增 AI 服务商与模型';
     $('providerPresetRow').style.display = 'block';
     $('providerInputId').readOnly = false;
+    if ($('providerInputMaxTokensDefault')) {
+      $('providerInputMaxTokensDefault').value = '';
+    }
     $('deleteProviderBtn').style.display = 'none';
     originalDialogModelAliases = new Set();
     currentDialogModels = [];
@@ -8082,6 +8195,9 @@ $('providerForm')?.addEventListener('submit', async (e) => {
     return;
   }
 
+  const rawDefTokens = data.maxTokensDefault !== undefined ? String(data.maxTokensDefault).trim() : '';
+  const maxTokensDefault = rawDefTokens !== '' && !isNaN(Number(rawDefTokens)) ? Number(rawDefTokens) : undefined;
+
   try {
     // 1. 保存服务商
     await window.hap.upsertProvider({
@@ -8092,6 +8208,7 @@ $('providerForm')?.addEventListener('submit', async (e) => {
       envKey: data.envKey?.trim() || undefined,
       wireApi: data.wireApi,
       protocol: data.protocol,
+      maxTokensDefault,
     });
 
     // 2. 清理在本次编辑中被移除的模型（支持一键清空或单个移除）
@@ -8282,7 +8399,7 @@ window.openModelDialog = (alias) => {
     $('modelProviderSelect').value = m.providerId || m.provider || '';
     $('modelInputModel').value = m.modelName || m.model || '';
     $('modelInputContext').value = m.contextWindow || '';
-    $('modelInputMaxOutput').value = m.maxOutputTokens || '';
+    $('modelInputMaxOutput').value = m.maxOutputTokens !== undefined ? m.maxOutputTokens : '';
     $('modelInputProtocol').value = m.protocol || '';
     $('deleteModelBtn').style.display = 'inline-block';
 
@@ -8299,6 +8416,7 @@ window.openModelDialog = (alias) => {
   } else {
     $('modelDialogTitle').textContent = '新增模型';
     $('modelInputAlias').readOnly = false;
+    $('modelInputMaxOutput').value = '';
     $('deleteModelBtn').style.display = 'none';
   }
   dialog.showModal();
@@ -8367,13 +8485,16 @@ $('modelForm')?.addEventListener('submit', async (e) => {
   const alias = data.alias.trim();
   const setAsDefault = $('modelSetAsDefaultCb')?.checked;
 
+  const rawMaxTokens = data.maxOutputTokens !== undefined ? String(data.maxOutputTokens).trim() : '';
+  const maxOutputTokens = rawMaxTokens !== '' && !isNaN(Number(rawMaxTokens)) ? Number(rawMaxTokens) : undefined;
+
   try {
     await window.hap.upsertModel({
       alias,
       provider: data.provider.trim(),
       model: data.model.trim(),
       contextWindow: data.contextWindow ? Number(data.contextWindow) : undefined,
-      maxOutputTokens: data.maxOutputTokens ? Number(data.maxOutputTokens) : undefined,
+      maxOutputTokens,
       protocol: data.protocol ? data.protocol : undefined,
       capabilities: caps.length > 0 ? caps : undefined,
     });

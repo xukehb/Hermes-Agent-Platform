@@ -179,7 +179,9 @@ export class AnthropicClient implements ProviderClient {
       model: request.model,
       messages: request.messages,
       stream: true,
-      max_tokens: request.maxTokens ?? this.provider.maxTokensDefault,
+      max_tokens: request.maxTokens && request.maxTokens > 0
+        ? request.maxTokens
+        : (this.provider.maxTokensDefault && this.provider.maxTokensDefault > 0 ? this.provider.maxTokensDefault : 16384),
     };
     if (request.system !== undefined && request.system !== '') body.system = request.system;
     if (request.tools !== undefined && request.tools.length > 0) body.tools = request.tools;

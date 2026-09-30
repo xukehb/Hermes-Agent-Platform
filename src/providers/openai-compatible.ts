@@ -169,7 +169,7 @@ export class OpenAiCompatibleClient implements ProviderClient {
     }
     const body: Record<string, unknown> = { ...request.params, model: request.model, messages, stream: true };
     if (request.tools !== undefined && request.tools.length > 0) body.tools = request.tools;
-    if (request.maxTokens !== undefined) body.max_tokens = request.maxTokens;
+    if (request.maxTokens !== undefined && request.maxTokens > 0) body.max_tokens = request.maxTokens;
     if (request.stop !== undefined && request.stop.length > 0) body.stop = request.stop;
     if (includeUsage) body.stream_options = { include_usage: true };
     return body;
@@ -180,7 +180,7 @@ export class OpenAiCompatibleClient implements ProviderClient {
     const body: Record<string, unknown> = { ...request.params, model: request.model, input: request.messages, stream: true };
     if (request.system !== undefined && request.system !== '') body.instructions = request.system;
     if (request.tools !== undefined && request.tools.length > 0) body.tools = request.tools;
-    if (request.maxTokens !== undefined) body.max_output_tokens = request.maxTokens;
+    if (request.maxTokens !== undefined && request.maxTokens > 0) body.max_output_tokens = request.maxTokens;
     return body;
   }
 

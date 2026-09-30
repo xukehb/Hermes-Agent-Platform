@@ -113,6 +113,7 @@ export function upsertProvider(configPath: string, input: GuiProviderInput): { o
     default_protocol: input.protocol,
   };
   if (input.name && input.name.trim()) patch.name = input.name.trim();
+  if (input.maxTokensDefault !== undefined) patch.max_tokens_default = input.maxTokensDefault;
 
   const writer = new ConfigWriter(configPath);
   writer.upsertProvider(id, patch);

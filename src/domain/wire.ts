@@ -30,7 +30,7 @@ export interface WireRequest {
   /** 采样参数等透传项（temperature / top_p / ...） */
   params: Record<string, unknown>;
   /** Anthropic 必填；OpenAI 线制可选（FR-LOOP-011A 第 4 点） */
-  maxTokens?: number;
+  maxTokens?: number | undefined;
   /** 停止序列。hermes-native 用它在 </tool_call> 处收束 */
   stop?: string[];
   /** 重试回调：通知上层发生了可恢复错误并即将进行第 attempt 次重试（1 <= attempt <= maxRetries） */

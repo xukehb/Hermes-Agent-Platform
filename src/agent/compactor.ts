@@ -145,7 +145,7 @@ export async function compactHistory(
     systemPrompt: COMPACT_SYSTEM_PROMPT,
     tools: [],
     params: options.utility.params,
-    maxTokens: Math.min(options.utility.maxTokens, 2048),
+    maxTokens: Math.min(options.utility.maxTokens ?? 2048, 2048),
   });
 
   const client = options.registry.client(options.utility.providerId);
