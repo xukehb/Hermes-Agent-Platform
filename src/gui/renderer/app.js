@@ -505,9 +505,15 @@ $('openProjectVsCodeTopBtn')?.addEventListener('click', () => {
 function renderMarkdownContent(rawText) {
   if (!rawText) return '';
 
-  // 1. 抽取代码块，防止内部 Markdown 字符与换行被误解析
+  // 1. 抽取闭合及流式未闭合代码块，防止内部 Markdown 字符与换行被误解析
   const codeBlocks = [];
   let processed = rawText.replace(/```([a-zA-Z0-9_-]*)\r?\n([\s\S]*?)```/g, (match, lang, code) => {
+    const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
+    codeBlocks.push({ lang: lang.trim() || 'plaintext', code });
+    return placeholder;
+  });
+  // 容错处理流式传输中尚未闭合的代码块（末尾尚未到达闭合的 ```）
+  processed = processed.replace(/```([a-zA-Z0-9_-]*)\r?\n([\s\S]*)$/, (match, lang, code) => {
     const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
     codeBlocks.push({ lang: lang.trim() || 'plaintext', code });
     return placeholder;
@@ -519,6 +525,7 @@ function renderMarkdownContent(rawText) {
   let i = 0;
 
   while (i < lines.length) {
+    const loopStartI = i;
     const line = lines[i];
 
     // GFM Markdown 表格解析
@@ -581,9 +588,9 @@ function renderMarkdownContent(rawText) {
       continue;
     }
 
-    // 标题行
-    const hMatch = line.match(/^(#{1,4})\s+(.+)$/);
-    if (hMatch) {
+    // 标题行 (容错兼容流式生成中只有标记或尚未输入正文的情况)
+    const hMatch = line.match(/^(#{1,4})\s*(.*)$/);
+    if (hMatch && line.trim().startsWith('#')) {
       const level = hMatch[1].length;
       const hText = parseInlineMarkdown(hMatch[2]);
       const tag = `h${level}`;
@@ -636,7 +643,7 @@ function renderMarkdownContent(rawText) {
     }
 
     // 任务复选框
-    const checkMatch = line.match(/^(\s*)(?:[-*]|\d+\.)\s+\[([ xX])\]\s+(.+)$/);
+    const checkMatch = line.match(/^(\s*)(?:[-*]|\d+\.)\s+\[([ xX])\]\s*(.*)$/);
     if (checkMatch) {
       const isChecked = checkMatch[2].toLowerCase() === 'x';
       const text = parseInlineMarkdown(checkMatch[3]);
@@ -649,8 +656,8 @@ function renderMarkdownContent(rawText) {
       continue;
     }
 
-    // 无序与有序列表项
-    const listMatch = line.match(/^(\s*)([-*]|\d+\.)\s+(.+)$/);
+    // 无序与有序列表项 (容错兼容流式生成中标记后文本为空的情况)
+    const listMatch = line.match(/^(\s*)([-*]|\d+\.)\s*(.*)$/);
     if (listMatch) {
       const indent = listMatch[1].length > 0 ? 'margin-left:18px;' : '';
       const isNum = /^\d+\./.test(listMatch[2]);
@@ -674,11 +681,11 @@ function renderMarkdownContent(rawText) {
     while (
       i < lines.length &&
       lines[i].trim() !== '' &&
-      !/^\s*\|.+\|\s*$/.test(lines[i]) &&
+      !(/^\s*\|.+\|\s*$/.test(lines[i]) && i + 1 < lines.length && /^\s*\|(?:\s*:?-+:?\s*\|)+\s*$/.test(lines[i + 1])) &&
       !/^\s*>\s?/.test(lines[i]) &&
-      !/^#{1,4}\s+/.test(lines[i]) &&
+      !/^#{1,4}(?:\s|$)/.test(lines[i].trim()) &&
       !/^---+$/.test(lines[i].trim()) &&
-      !/^\s*(?:[-*]|\d+\.)\s+/.test(lines[i]) &&
+      !/^\s*(?:[-*]|\d+\.)(?:\s|$)/.test(lines[i]) &&
       !/^__CODE_BLOCK_\d+__$/.test(lines[i].trim())
     ) {
       paraLines.push(parseInlineMarkdown(lines[i]));
@@ -687,6 +694,12 @@ function renderMarkdownContent(rawText) {
 
     if (paraLines.length > 0) {
       blockTokens.push(`<p style="margin:0 0 8px 0;line-height:1.68;">${paraLines.join('<br>')}</p>`);
+    }
+
+    // 铁律安全兜底：若本轮循环因任何特殊边界未推进，强制单行推进并渲染，彻底杜绝死循环卡死
+    if (i === loopStartI) {
+      blockTokens.push(`<p style="margin:0 0 8px 0;line-height:1.68;">${parseInlineMarkdown(lines[i])}</p>`);
+      i++;
     }
   }
 
@@ -755,8 +768,8 @@ function parseInlineMarkdown(text) {
   // 加粗 (**text**)
   s = s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
-  // 斜体 (*text*)
-  s = s.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+  // 斜体 (*text*) - 限制跨星号范围避免回溯
+  s = s.replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '<em>$1</em>');
 
   // 删除线 (~~text~~)
   s = s.replace(/~~(.*?)~~/g, '<del>$1</del>');
@@ -10159,6 +10172,85 @@ function requestStreamAutoScroll() {
   });
 }
 
+let streamContentRaf = 0;
+let pendingContentSession = null;
+let streamReasoningRaf = 0;
+let pendingReasoningSession = null;
+
+function renderLiveStreamContent(session) {
+  if (!session) return;
+  const contentText = $('streamingContentText');
+  if (contentText) {
+    contentText.innerHTML = renderMarkdownContent(session.liveContent) + '<span class="streaming-cursor"></span>';
+  }
+  const lastMiniI = document.querySelector('#miniIConversation .mini-msg-ai:last-child');
+  if (lastMiniI) {
+    lastMiniI.classList.add('is-streaming');
+    lastMiniI.innerHTML = renderMarkdownContent(session.liveContent) + '<span class="streaming-cursor"></span>';
+  }
+  const lastMiniStage = document.querySelector('#miniStageMessages .mini-msg-ai:last-child');
+  if (lastMiniStage) {
+    lastMiniStage.classList.add('is-streaming');
+    lastMiniStage.innerHTML = renderMarkdownContent(session.liveContent) + '<span class="streaming-cursor"></span>';
+  }
+}
+
+function flushLiveContentRender(session) {
+  if (streamContentRaf) {
+    cancelAnimationFrame(streamContentRaf);
+    streamContentRaf = 0;
+  }
+  pendingContentSession = null;
+  if (session) {
+    renderLiveStreamContent(session);
+  }
+}
+
+function scheduleLiveContentRender(session) {
+  pendingContentSession = session;
+  if (!streamContentRaf) {
+    streamContentRaf = requestAnimationFrame(() => {
+      streamContentRaf = 0;
+      if (pendingContentSession) {
+        renderLiveStreamContent(pendingContentSession);
+        pendingContentSession = null;
+      }
+    });
+  }
+}
+
+function renderLiveStreamReasoning(session) {
+  if (!session) return;
+  const box = $('streamingReasoningBox');
+  const content = $('streamingReasoningContent');
+  if (box) box.style.display = '';
+  if (content) content.innerHTML = renderMarkdownContent(session.liveReasoning || '');
+}
+
+function flushLiveReasoningRender(session) {
+  if (streamReasoningRaf) {
+    cancelAnimationFrame(streamReasoningRaf);
+    streamReasoningRaf = 0;
+  }
+  pendingReasoningSession = null;
+  if (session) {
+    renderLiveStreamReasoning(session);
+  }
+}
+
+function scheduleLiveReasoningRender(session) {
+  pendingReasoningSession = session;
+  if (!streamReasoningRaf) {
+    streamReasoningRaf = requestAnimationFrame(() => {
+      streamReasoningRaf = 0;
+      if (pendingReasoningSession) {
+        renderLiveStreamReasoning(pendingReasoningSession);
+        pendingReasoningSession = null;
+      }
+    });
+  }
+}
+
 window.hap?.onChatStream?.((data) => {
   const sessionKey = data?.sessionKey || data?.sessionId;
   let session = null;
@@ -10175,6 +10267,17 @@ window.hap?.onChatStream?.((data) => {
 
   if (data.type === 'stream_end') {
     if (isCurrentActive) {
+      if (streamContentRaf) {
+        cancelAnimationFrame(streamContentRaf);
+        streamContentRaf = 0;
+      }
+      if (streamReasoningRaf) {
+        cancelAnimationFrame(streamReasoningRaf);
+        streamReasoningRaf = 0;
+      }
+      pendingContentSession = null;
+      pendingReasoningSession = null;
+
       // 文本流已传输完成：立即彻底移除所有光标
       clearTimeout(streamingCursorTimer);
       streamingCursorTimer = null;
@@ -10200,32 +10303,13 @@ window.hap?.onChatStream?.((data) => {
   if (data.type === 'reasoning_delta' || data.type === 'thinking') {
     session.liveReasoning = (session.liveReasoning || '') + (data.text || '');
     if (isCurrentActive) {
-      const box = $('streamingReasoningBox');
-      const content = $('streamingReasoningContent');
-      if (box) box.style.display = '';
-      if (content) content.innerHTML = renderMarkdownContent(session.liveReasoning);
+      scheduleLiveReasoningRender(session);
       requestStreamAutoScroll();
     }
   } else if (data.type === 'token_delta' || data.type === 'token') {
     session.liveContent = (session.liveContent || '') + (data.text || '');
     if (isCurrentActive) {
-      const contentText = $('streamingContentText');
-      if (contentText) {
-        contentText.innerHTML = renderMarkdownContent(session.liveContent) + '<span class="streaming-cursor"></span>';
-      }
-
-      // 同步渲染至小 i 弹窗与 Mini 模式舞台
-      const lastMiniI = document.querySelector('#miniIConversation .mini-msg-ai:last-child');
-      if (lastMiniI) {
-        lastMiniI.classList.add('is-streaming');
-        lastMiniI.innerHTML = renderMarkdownContent(session.liveContent) + '<span class="streaming-cursor"></span>';
-      }
-      const lastMiniStage = document.querySelector('#miniStageMessages .mini-msg-ai:last-child');
-      if (lastMiniStage) {
-        lastMiniStage.classList.add('is-streaming');
-        lastMiniStage.innerHTML = renderMarkdownContent(session.liveContent) + '<span class="streaming-cursor"></span>';
-      }
-
+      scheduleLiveContentRender(session);
       requestStreamAutoScroll();
 
       // 智能防抖：连续 600ms 无新 Token 产生时，判定当前输出已停顿或结束，自动移除光标避免呆滞闪烁
@@ -10254,6 +10338,11 @@ window.hap?.onChatStream?.((data) => {
       session.liveContent = data.text;
     }
     if (isCurrentActive) {
+      if (streamContentRaf) {
+        cancelAnimationFrame(streamContentRaf);
+        streamContentRaf = 0;
+      }
+      pendingContentSession = null;
       clearTimeout(streamingCursorTimer);
       streamingCursorTimer = null;
       if (data.text) {

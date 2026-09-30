@@ -1,6 +1,6 @@
 {
   "name": "hermes-agent-platform",
-  "version": "0.1.25",
+  "version": "0.1.26",
   "private": true,
   "type": "module",
   "description": "Hermes Agent Platform - 赫尔墨斯多智能体协同开发平台",
@@ -52,7 +52,9 @@
       {
         "from": "bin",
         "to": "bin",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "asarUnpack": [
