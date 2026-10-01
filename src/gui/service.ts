@@ -3022,12 +3022,17 @@ export class GuiService {
       });
     }
 
+    const isVision = catalogItem?.category === 'vision' || /(?:^|[-_./: ])(?:vl|vision)(?:[-_./: ]|$)|[-_]vl|llava|minicpm/i.test(modelTag);
+    const modelCaps: ('tools' | 'vision' | 'streaming' | 'reasoning' | 'longctx')[] = isVision
+      ? ['tools', 'vision', 'streaming']
+      : (catalogItem?.category === 'reasoning' ? ['reasoning', 'streaming'] : ['tools', 'streaming']);
+
     writer.upsertModel(alias, {
       provider: 'ollama',
       model: modelTag,
       display_name: catalogItem?.displayName || `Ollama ${modelTag}`,
       protocol: catalogItem?.protocol || 'openai-tools',
-      capabilities: catalogItem?.category === 'reasoning' ? ['reasoning', 'streaming'] : ['tools', 'streaming'],
+      capabilities: modelCaps,
     });
 
     const state = readState();

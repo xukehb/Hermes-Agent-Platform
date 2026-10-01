@@ -15,7 +15,7 @@
 
 import { join } from 'node:path';
 import { ConfigError, type ConfigLayer, type ProtocolName, type WireApi } from '../domain/index.js';
-import { BUILTIN, BUILTIN_CHANNELS, BUILTIN_LIMITS, BUILTIN_MODELS, BUILTIN_PROVIDERS, TOOL_PROFILES } from './defaults.js';
+import { BUILTIN, BUILTIN_CHANNELS, BUILTIN_LIMITS, BUILTIN_MODELS, BUILTIN_PROVIDERS, TOOL_PROFILES, inferModelCapabilities } from './defaults.js';
 import { type LoadedConfig, expandHome } from './loader.js';
 import type {
   ExplainCandidate,
@@ -1227,6 +1227,10 @@ export class ConfigResolver {
     const result = new Map<string, ResolvedModel>();
     for (const [alias, entry] of merged) {
       const model = entry.model ?? alias;
+      const explicitCaps = entry.capabilities;
+      const capabilities = (explicitCaps && explicitCaps.length > 0)
+        ? [...explicitCaps]
+        : inferModelCapabilities(model, alias);
       result.set(alias, {
         alias,
         providerId: entry.provider,
@@ -1235,7 +1239,7 @@ export class ConfigResolver {
         fullName: entry.provider + '/' + model,
         contextWindow: entry.context_window,
         maxOutputTokens: entry.max_output_tokens,
-        capabilities: [...(entry.capabilities ?? [])],
+        capabilities,
         protocol: entry.protocol,
         params: { ...(entry.params ?? {}) },
       });

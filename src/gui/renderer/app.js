@@ -6081,9 +6081,10 @@ function renderProviders() {
           const mLat = modelLatencies.get(m.alias);
 
           const caps = Array.isArray(m.capabilities) ? m.capabilities : [];
+          const hasVision = caps.includes('vision');
           const capIcons = [];
           if (caps.includes('tools')) capIcons.push('<span class="cap-pill tools" title="工具调用 (Tools)">Tools</span>');
-          if (caps.includes('vision')) capIcons.push('<span class="cap-pill vision" title="多模态视觉 (Vision)">Vision</span>');
+          if (hasVision) capIcons.push('<span class="cap-pill vision" title="多模态视觉 (Vision · 支持图片/截屏/文档分析)">👁️ 视觉</span>');
           if (caps.includes('reasoning')) capIcons.push('<span class="cap-pill reasoning" title="深度思考 (Reasoning)">Reasoning</span>');
           if (caps.includes('streaming')) capIcons.push('<span class="cap-pill streaming" title="流式传输 (Streaming)">Stream</span>');
           if (caps.includes('longctx')) capIcons.push('<span class="cap-pill longctx" title="长上下文 (LongCtx)">LongCtx</span>');
@@ -6100,6 +6101,7 @@ function renderProviders() {
               <div style="display:flex;align-items:center;gap:5px;">
                 ${isDefault ? '<span class="star-badge" title="系统全局默认主模型"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px;margin-right:2px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>默认</span>' : ''}
                 <strong class="chip-alias">${esc(m.alias)}</strong>
+                ${hasVision ? '<span class="vision-badge-pill" title="支持多模态视觉理解与图片输入">👁️ 视觉</span>' : ''}
                 ${m.model && m.model !== m.alias ? `<span class="chip-real-name">(${esc(m.model)})</span>` : ''}
                 ${m.contextWindow ? `<span class="model-ctx-badge">${(m.contextWindow / 1024).toFixed(0)}k</span>` : ''}
                 ${latBadge}
@@ -6282,11 +6284,15 @@ function populateAgentModelOptions(selectedModel = '') {
 
   modelSelect.innerHTML = `
     <option value="" ${!targetModel || !hasMatch ? 'selected' : ''}>继承全局默认模型</option>
-  ` + (state.models || []).map((model) => `
-    <option value="${esc(model.alias)}" ${isModelMatched(model) ? 'selected' : ''}>
-      ${esc(model.alias)} (${esc(model.providerId || model.provider)})
-    </option>
-  `).join('');
+  ` + (state.models || []).map((model) => {
+    const hasVision = Array.isArray(model.capabilities) && model.capabilities.includes('vision');
+    const visionTag = hasVision ? ' [👁️ 视觉]' : '';
+    return `
+      <option value="${esc(model.alias)}" ${isModelMatched(model) ? 'selected' : ''}>
+        ${esc(model.alias)}${visionTag} (${esc(model.providerId || model.provider)})
+      </option>
+    `;
+  }).join('');
 }
 
 function joinAgentFieldList(value) {
@@ -6669,9 +6675,10 @@ function renderModels() {
     const mLat = modelLatencies.get(m.alias);
 
     const caps = Array.isArray(m.capabilities) ? m.capabilities : [];
+    const hasVision = caps.includes('vision');
     const capBadges = [];
     if (caps.includes('tools')) capBadges.push('<span class="cap-pill tools" title="工具调用">Tools</span>');
-    if (caps.includes('vision')) capBadges.push('<span class="cap-pill vision" title="视觉多模态">Vision</span>');
+    if (hasVision) capBadges.push('<span class="cap-pill vision" title="多模态视觉 (支持图片/截屏/文档分析)">👁️ 视觉</span>');
     if (caps.includes('reasoning')) capBadges.push('<span class="cap-pill reasoning" title="深度思考推理">Reasoning</span>');
     if (caps.includes('streaming')) capBadges.push('<span class="cap-pill streaming" title="流式传输">Stream</span>');
     if (caps.includes('longctx')) capBadges.push('<span class="cap-pill longctx" title="长上下文">LongCtx</span>');
@@ -6698,6 +6705,7 @@ function renderModels() {
         <td>
           <div style="display:flex;align-items:center;gap:6px;">
             <strong style="color:var(--text-main);font-size:13px;">${esc(m.alias)}</strong>
+            ${hasVision ? '<span class="vision-badge-pill" title="支持多模态视觉理解与图片输入">👁️ 视觉</span>' : ''}
             ${isDefault ? '<span class="star-badge" style="font-size:10px;">默认</span>' : ''}
           </div>
         </td>
@@ -6869,8 +6877,10 @@ function formatModelLabel(m) {
   if (!m) return '';
   const alias = m.alias || m.id || '';
   const fullName = m.fullName || m.model || '';
-  if (!fullName || fullName === alias) return alias;
-  return `${alias} (${fullName})`;
+  const hasVision = Array.isArray(m.capabilities) && m.capabilities.includes('vision');
+  const visionTag = hasVision ? ' [👁️ 视觉]' : '';
+  if (!fullName || fullName === alias) return `${alias}${visionTag}`;
+  return `${alias}${visionTag} (${fullName})`;
 }
 
 function fillSelects() {
@@ -6884,7 +6894,9 @@ function fillSelects() {
       const isReady = p && p.healthStatus === 'ok';
       const statusText = isReady ? '就绪' : (p?.healthStatus === 'missing_credentials' ? '需配置 Key' : '需连通测试');
       const providerLabel = trSourceText(p?.name || m.providerId);
-      return `<option value="${esc(m.fullName || m.alias)}">${esc(m.alias)} (${esc(providerLabel)} · ${trSourceText(statusText)})</option>`;
+      const hasVision = Array.isArray(m.capabilities) && m.capabilities.includes('vision');
+      const visionTag = hasVision ? ' [👁️ 视觉]' : '';
+      return `<option value="${esc(m.fullName || m.alias)}">${esc(m.alias)}${visionTag} (${esc(providerLabel)} · ${trSourceText(statusText)})</option>`;
     }).join('');
 
     if (previousModel && state.models.some((m) => (m.fullName || m.alias) === previousModel)) {
@@ -8233,11 +8245,15 @@ $('providerForm')?.addEventListener('submit', async (e) => {
 
     // 3. 同步保存该服务商名下保留或新增的所有模型
     for (const m of currentDialogModels) {
+      const isVision = /(?:^|[-_./: ])(?:vl|vision|omni|image)(?:[-_./: ]|$)|[-_]vl(?:[:.]|$)|qwen.*[-_]vl|llava|minicpm[-_]?v|internvl|cogvlm|glm-[0-9.]+v|phi-.*(?:vision|multimodal)|gpt-4o|gpt-5|gemini|claude-3|claude-sonnet|claude-opus|gpt-image/i.test(`${m.alias} ${m.model || ''}`);
+      const caps = ['tools', 'streaming'];
+      if (isVision) caps.push('vision');
       await window.hap.upsertModel({
         alias: m.alias,
         provider: providerId,
         model: m.model || m.alias,
         contextWindow: m.contextWindow || inferDefaultContextWindow(m.model || m.alias),
+        capabilities: caps,
       }).catch(err => console.warn('保存模型警告:', err));
     }
 
@@ -8458,9 +8474,11 @@ $('fetchRemoteModelsBtn')?.addEventListener('click', async () => {
       showToast(`成功获取到 ${res.models.length} 个可用模型`, 'success');
       const picker = $('remoteModelPicker');
       picker.style.display = 'block';
+      const isVisionName = (n) => /(?:^|[-_./: ])(?:vl|vision|omni|image)(?:[-_./: ]|$)|[-_]vl(?:[:.]|$)|qwen.*[-_]vl|llava|minicpm[-_]?v|internvl|cogvlm|glm-[0-9.]+v|phi-.*(?:vision|multimodal)|gpt-4o|gpt-5|gemini|claude-3|claude-sonnet|claude-opus|gpt-image/i.test(n);
       const options = ['<option value="">-- 点击快速点选拉取到的模型 --</option>'];
       res.models.forEach((name) => {
-        options.push(`<option value="${esc(name)}">${esc(name)}</option>`);
+        const tag = isVisionName(name) ? ' [👁️ 视觉]' : '';
+        options.push(`<option value="${esc(name)}">${esc(name)}${tag}</option>`);
       });
       picker.innerHTML = options.join('');
 
@@ -8472,6 +8490,10 @@ $('fetchRemoteModelsBtn')?.addEventListener('click', async () => {
           const shortName = val.split('/').pop();
           $('modelInputAlias').value = shortName;
         }
+        const isVision = isVisionName(val);
+        if ($('modelCapVision')) $('modelCapVision').checked = isVision;
+        if ($('modelCapTools')) $('modelCapTools').checked = true;
+        if ($('modelCapStreaming')) $('modelCapStreaming').checked = true;
       };
     } else {
       showToast('拉取失败：' + (res.error || '该服务商未开放标准 /v1/models 接口'), 'error');
@@ -8679,6 +8701,7 @@ window.refreshModelHub = async () => {
     if ($('hubCountCoding')) $('hubCountCoding').textContent = evals.filter(e => e.model.category === 'coding').length;
     if ($('hubCountReasoning')) $('hubCountReasoning').textContent = evals.filter(e => e.model.category === 'reasoning').length;
     if ($('hubCountFast')) $('hubCountFast').textContent = evals.filter(e => e.model.category === 'fast').length;
+    if ($('hubCountVision')) $('hubCountVision').textContent = evals.filter(e => e.model.category === 'vision' || e.model.tags?.includes('视觉多模态')).length;
 
     renderModelHubCards();
   } catch (err) {
@@ -8695,6 +8718,8 @@ function renderModelHubCards() {
 
   if (hubActiveCategory === 'recommended') {
     list = list.filter(e => e.tier === 'best');
+  } else if (hubActiveCategory === 'vision') {
+    list = list.filter(e => e.model.category === 'vision' || (e.model.tags && e.model.tags.includes('视觉多模态')));
   } else if (hubActiveCategory !== 'all') {
     list = list.filter(e => e.model.category === hubActiveCategory);
   }
@@ -8731,8 +8756,12 @@ function renderModelHubCards() {
     const recVramGb = (m.recommendedVramBytes / gb).toFixed(1);
     const recRamGb = (m.recommendedRamBytes / gb).toFixed(0);
 
+    const isVisionModel = m.category === 'vision' || (m.tags && m.tags.includes('视觉多模态'));
     let tierClass = 'tier-' + e.tier;
     let badgeHtml = m.badge ? `<span class="hub-badge-pill">${esc(m.badge)}</span>` : '';
+    if (isVisionModel) {
+      badgeHtml = `<span class="vision-badge-pill" style="font-size:11px;padding:2px 8px;">👁️ 视觉多模态</span> ` + badgeHtml;
+    }
 
     let actionButtonHtml = '';
     if (isDownloading) {
@@ -13078,14 +13107,18 @@ function renderCurrentDialogModels() {
     container.innerHTML = '<span style="font-size:11.5px;color:var(--text-muted);line-height:24px;">暂无添加模型，请点击上方「一键从服务商获取模型」或手动添加</span>';
     return;
   }
-  container.innerHTML = currentDialogModels.map((m, idx) => `
+  container.innerHTML = currentDialogModels.map((m, idx) => {
+    const isVision = /(?:^|[-_./: ])(?:vl|vision|omni|image)(?:[-_./: ]|$)|[-_]vl(?:[:.]|$)|qwen.*[-_]vl|llava|minicpm[-_]?v|internvl|cogvlm|glm-[0-9.]+v|phi-.*(?:vision|multimodal)|gpt-4o|gpt-5|gemini|claude-3|claude-sonnet|claude-opus|gpt-image/i.test(`${m.alias} ${m.model || ''}`);
+    return `
     <span class="model-dialog-pill">
       <strong>${esc(m.alias)}</strong>
+      ${isVision ? '<span class="vision-badge-pill" style="font-size:10px;padding:1px 6px;">👁️ 视觉</span>' : ''}
       ${m.model && m.model !== m.alias ? `<span style="color:var(--text-muted);font-size:11px;">(${esc(m.model)})</span>` : ''}
       ${m.contextWindow ? `<span class="model-ctx-badge">${(m.contextWindow/1024).toFixed(0)}k</span>` : ''}
       <span class="model-dialog-remove" title="移除此模型" onclick="window.removeModelFromDialog(${idx})">×</span>
     </span>
-  `).join('');
+  `;
+  }).join('');
 }
 
 window.removeModelFromDialog = (index) => {
@@ -13129,15 +13162,20 @@ window.fetchAndSyncModelsForProvider = async (providerId, clickBtn) => {
 
     $('quickModelSyncTitle').textContent = `从 [${providerId}] 获取到 ${res.models.length} 个模型`;
     const listEl = $('quickModelSyncList');
-    listEl.innerHTML = res.models.map((name) => `
+    const isVisionName = (n) => /(?:^|[-_./: ])(?:vl|vision|omni|image)(?:[-_./: ]|$)|[-_]vl(?:[:.]|$)|qwen.*[-_]vl|llava|minicpm[-_]?v|internvl|cogvlm|glm-[0-9.]+v|phi-.*(?:vision|multimodal)|gpt-4o|gpt-5|gemini|claude-3|claude-sonnet|claude-opus|gpt-image/i.test(n);
+    listEl.innerHTML = res.models.map((name) => {
+      const isVision = isVisionName(name);
+      return `
       <label style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:6px;font-size:12.5px;cursor:pointer;transition:background 0.1s;">
         <div style="display:flex;align-items:center;gap:10px;">
           <input type="checkbox" class="quick-model-cb" data-model="${esc(name)}" checked style="width:15px;height:15px;" />
           <strong style="color:var(--text-main);">${esc(name)}</strong>
+          ${isVision ? '<span class="vision-badge-pill" style="font-size:10.5px;padding:1px 6px;">👁️ 视觉</span>' : ''}
         </div>
         <span class="prop-chip" style="font-size:11px;color:var(--text-main);background:var(--bg-subtle);">${esc(name.split('/').pop())}</span>
       </label>
-    `).join('');
+    `;
+    }).join('');
 
     $('quickModelSelectAll').checked = true;
     $('quickModelSelectAll').onchange = (e) => {
@@ -13155,11 +13193,15 @@ window.fetchAndSyncModelsForProvider = async (providerId, clickBtn) => {
       for (const cb of selectedCbs) {
         const modelName = cb.dataset.model;
         const alias = modelName.split('/').pop() || modelName;
+        const isVision = isVisionName(modelName);
+        const caps = ['tools', 'streaming'];
+        if (isVision) caps.push('vision');
         await window.hap.upsertModel({
           alias,
           provider: providerId,
           model: modelName,
           contextWindow: inferDefaultContextWindow(modelName),
+          capabilities: caps,
         }).catch(() => {});
       }
       showToast(`成功从 ${providerId} 导入并生效 ${selectedCbs.length} 个模型！`, 'success');

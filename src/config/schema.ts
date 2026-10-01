@@ -42,6 +42,7 @@ export const modelProviderSchema = z.strictObject({
 
 /** 模型能力标签。vision 决定能否接图片附件（FR-CHAN-011）。 */
 export const modelCapabilitySchema = z.enum(['tools', 'vision', 'streaming', 'reasoning', 'longctx']);
+export type ModelCapability = z.infer<typeof modelCapabilitySchema>;
 
 /**
  * 模型目录条目。对应 hap model add 写入的 [models.<alias>] 块。

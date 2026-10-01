@@ -15,7 +15,7 @@
 
 import type { ProtocolName, WireApi } from '../domain/index.js';
 import type { ResolvedChannels, ResolvedLimits, RuntimeMode, ToolProfileName } from './resolved.js';
-import type { AgentDefaultsConfig, AgentEntryConfig, HapConfig, ModelEntryConfig, ModelProviderConfig } from './schema.js';
+import type { AgentDefaultsConfig, AgentEntryConfig, HapConfig, ModelCapability, ModelEntryConfig, ModelProviderConfig } from './schema.js';
 
 /** 内置工具名清单（FR-TOOL-001）。顺序即 <tools> 段的展示顺序。 */
 export const BUILTIN_TOOL_NAMES = [
@@ -337,6 +337,33 @@ export const BUILTIN_MODELS: Record<string, ModelEntryConfig> = {
     protocol: 'hermes-native',
   },
 };
+
+/**
+ * 根据模型名和别名智能推断模型能力（用于未在配置中显式声明 capabilities 时的合理兜底与自动标注）。
+ */
+export function inferModelCapabilities(modelName: string, alias?: string): ModelCapability[] {
+  const target = `${alias || ''} ${modelName || ''}`.toLowerCase();
+  const caps = new Set<ModelCapability>(['tools', 'streaming']);
+
+  // 排除已知纯文本模型误判
+  const isPureText = /deepseek|kimi|qwen[0-9.]*-(?:coder|chat)|llama[0-9.]*-(?:instruct|chat)/i.test(target) && !/vl|vision/i.test(target);
+
+  if (!isPureText) {
+    // 多模态视觉匹配（包括 VL 系列、Vision、Llava、MiniCPM-V、GPT-4o/5、Gemini、Claude 等）
+    const visionPattern = /(?:^|[-_./: ])(?:vl|vision|omni|image)(?:[-_./: ]|$)|[-_]vl(?:[:.]|$)|qwen.*[-_]vl|llava|minicpm[-_]?v|internvl|cogvlm|glm-[0-9.]+v|phi-.*(?:vision|multimodal)|gpt-4o|gpt-5|gemini|claude-3|claude-sonnet|claude-opus|gpt-image/i;
+    if (visionPattern.test(target)) {
+      caps.add('vision');
+    }
+  }
+
+  // 深度思考推理模型匹配
+  const reasoningPattern = /(?:^|[-_./: ])(?:r1|reasoner|reasoning|thinking|o1|o3|o4)(?:[-_./: ]|$)|deepseek-r1/i;
+  if (reasoningPattern.test(target)) {
+    caps.add('reasoning');
+  }
+
+  return [...caps];
+}
 
 /**
  * 智能体模板（FR-AGT-005）。
