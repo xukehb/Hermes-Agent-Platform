@@ -388,13 +388,13 @@
     const updateWakeChip = () => {
       const label = $('ballWakeWordLabel');
       if (label && vwc.settings) {
-        label.textContent = `🎤 ${vwc.settings.wakeWord || '小赫'}`;
+        label.textContent = `🎤 ${vwc.settings.wakeWord || '贾维斯'}`;
       }
     };
     updateWakeChip();
 
     $('ballWakeWordChip')?.addEventListener('click', async () => {
-      const cur = vwc.settings.wakeWord || '小赫';
+      const cur = vwc.settings.wakeWord || '贾维斯';
       const next = window.prompt('修改语音唤醒词 (喊出该词直接唤醒小球执行操作):', cur);
       if (next && next.trim() && next.trim() !== cur) {
         await vwc.updateSettings({ wakeWord: next.trim() });
@@ -402,6 +402,60 @@
         showBubble(`已更新唤醒词为: ${next.trim()}`, '✅', 3000);
       }
     });
+
+    // 贾维斯模式切换控制器 (Jarvis Mode Controller)
+    function syncJarvisMode() {
+      const isJarvis = vwc ? Boolean(vwc.settings.jarvisMode) : true;
+      document.body.classList.toggle('jarvis-mode', isJarvis);
+
+      const chip = $('ballJarvisChip');
+      const label = $('ballJarvisModeLabel');
+      if (chip) chip.classList.toggle('active', isJarvis);
+      if (label) label.textContent = isJarvis ? '⚡ 贾维斯模式' : '⚪ 经典极简模式';
+    }
+
+    syncJarvisMode();
+
+    $('ballJarvisChip')?.addEventListener('click', async () => {
+      if (!vwc) return;
+      const nextMode = !vwc.settings.jarvisMode;
+      await vwc.updateSettings({ jarvisMode: nextMode });
+      syncJarvisMode();
+      showBubble(nextMode ? '已切换至钢铁侠贾维斯模式' : '已切换至经典极简小球模式', '⚡', 3000);
+    });
+
+    // 方舟反应堆音频频谱流驱动 (Arc Reactor Reactive Spectrum Loop)
+    const arcRingOuter = $('arcRingOuter');
+    const arcRingMid = $('arcRingMid');
+    const arcCoreGlow = $('arcCoreGlow');
+
+    let outerAngle = 0;
+    let midAngle = 0;
+
+    function renderArcSpectrum() {
+      if (vwc && document.body.classList.contains('jarvis-mode')) {
+        const { energy } = vwc.getFrequencyData();
+
+        // 根据音频能量与音量动态加速反应堆旋转
+        const speedMult = 1 + energy * 8;
+        outerAngle = (outerAngle + 0.5 * speedMult) % 360;
+        midAngle = (midAngle - 0.7 * speedMult) % 360;
+
+        if (arcRingOuter) {
+          arcRingOuter.style.transform = `rotate(${outerAngle}deg) scale(${1 + energy * 0.22})`;
+        }
+        if (arcRingMid) {
+          arcRingMid.style.transform = `rotate(${midAngle}deg) scale(${1 + energy * 0.14})`;
+        }
+        if (arcCoreGlow) {
+          const glowPx = Math.round(8 + energy * 26);
+          arcCoreGlow.style.filter = `drop-shadow(0 0 ${glowPx}px #38bdf8) brightness(${1 + energy * 0.7})`;
+        }
+      }
+      requestAnimationFrame(renderArcSpectrum);
+    }
+
+    requestAnimationFrame(renderArcSpectrum);
   }
 
   // 8. 初始化信息同步

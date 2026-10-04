@@ -116,13 +116,25 @@ export interface VoiceWakeSettings {
   wakeWord: string;
   autoExecute: boolean;
   sensitivity?: number;
+  ttsEnabled?: boolean;
+  ttsVoice?: string;
+  ttsRate?: number;
+  ttsPitch?: number;
+  jarvisMode?: boolean;
+  arcReactorTheme?: boolean;
 }
 
 export const DEFAULT_VOICE_WAKE_SETTINGS: VoiceWakeSettings = {
   enabled: true,
-  wakeWord: 'Hermes',
+  wakeWord: '贾维斯',
   autoExecute: true,
   sensitivity: 0.7,
+  ttsEnabled: true,
+  ttsVoice: 'default',
+  ttsRate: 1.0,
+  ttsPitch: 0.95,
+  jarvisMode: true,
+  arcReactorTheme: true,
 };
 
 interface GuiState {
@@ -1270,6 +1282,73 @@ export class GuiService {
       };
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
+  async systemControl(payload: { action: string; param?: unknown }): Promise<{ ok: boolean; message: string; data?: unknown }> {
+    const { action, param } = payload;
+    const isMac = process.platform === 'darwin';
+    const isWin = process.platform === 'win32';
+
+    try {
+      if (action === 'get_time') {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        const dateStr = now.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' });
+        return { ok: true, message: `现在是 ${dateStr} ${timeStr}，先生。`, data: { timeStr, dateStr } };
+      }
+
+      if (action === 'volume_up') {
+        if (isMac) {
+          await execa('osascript', ['-e', 'set volume output volume ((output volume of (get volume settings)) + 15)']);
+        } else if (isWin) {
+          await execa('powershell', ['-c', '$obj = New-Object -ComObject WScript.Shell; 1..5 | ForEach-Object { $obj.SendKeys([char]175) }']);
+        }
+        return { ok: true, message: '已为您调高系统音量，先生。' };
+      }
+
+      if (action === 'volume_down') {
+        if (isMac) {
+          await execa('osascript', ['-e', 'set volume output volume ((output volume of (get volume settings)) - 15)']);
+        } else if (isWin) {
+          await execa('powershell', ['-c', '$obj = New-Object -ComObject WScript.Shell; 1..5 | ForEach-Object { $obj.SendKeys([char]174) }']);
+        }
+        return { ok: true, message: '已为您降低系统音量，先生。' };
+      }
+
+      if (action === 'volume_mute') {
+        if (isMac) {
+          await execa('osascript', ['-e', 'set volume output muted (not (output muted of (get volume settings)))']);
+        } else if (isWin) {
+          await execa('powershell', ['-c', '$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys([char]173)']);
+        }
+        return { ok: true, message: '已为您切换静音状态，先生。' };
+      }
+
+      if (action === 'lock_screen') {
+        if (isMac) {
+          await execa('pmset', ['displaysleepnow']);
+        } else if (isWin) {
+          await execa('rundll32.exe', ['user32.dll,LockWorkStation']);
+        }
+        return { ok: true, message: '已为您锁定屏幕，先生。' };
+      }
+
+      if (action === 'open_app') {
+        const target = String(param || '').trim();
+        if (!target) return { ok: false, message: '未指定要启动的应用程序名称。' };
+        if (isMac) {
+          await execa('open', ['-a', target]);
+        } else if (isWin) {
+          await execa('cmd', ['/c', 'start', '', target]);
+        }
+        return { ok: true, message: `已为您启动 ${target}，先生。` };
+      }
+
+      return { ok: false, message: `未知系统操作: ${action}` };
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      return { ok: false, message: `执行系统操作失败: ${errorMsg}` };
     }
   }
 

@@ -17,6 +17,15 @@
       </div>
       <div class="ball-glow-ring"></div>
       <div class="ball-core">
+        <!-- 钢铁侠方舟反应堆 (Iron Man Arc Reactor) HUD 视觉元素 -->
+        <div class="arc-reactor" id="arcReactor">
+          <div class="arc-ring-outer" id="arcRingOuter"></div>
+          <div class="arc-ring-mid" id="arcRingMid"></div>
+          <div class="arc-core-glow" id="arcCoreGlow">
+            <div class="arc-core-triangle"></div>
+            <div class="arc-core-center"></div>
+          </div>
+        </div>
         <div class="ball-icon">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
             <path
@@ -136,8 +145,11 @@
         <div class="quick-tool-chip" id="ballModelChip" title="当前模型">
           <span class="chip-val" id="ballModelName">HAP</span>
         </div>
+        <div class="quick-tool-chip" id="ballJarvisChip" title="切换钢铁侠贾维斯模式 / 经典极简模式">
+          <span class="chip-val" id="ballJarvisModeLabel">⚡ 贾维斯模式</span>
+        </div>
         <div class="quick-tool-chip" id="ballWakeWordChip" title="语音唤醒词：喊出唤醒词自动对话">
-          <span class="chip-val" id="ballWakeWordLabel">🎤 小赫</span>
+          <span class="chip-val" id="ballWakeWordLabel">🎤 贾维斯</span>
         </div>
         <button class="quick-action-chip" id="ballNewChatBtn" title="新建会话">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -155,6 +167,7 @@
       </div>
     </div>
 
+    <script src="./jarvis-speech.js"></script>
     <script src="./voice-wake.js"></script>
     <script src="./ball.js"></script>
   </body>

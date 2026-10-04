@@ -5931,9 +5931,11 @@ function renderProviderMetrics() {
 
   // 5. 语音唤醒控制状态同步
   const vwc = window.voiceWakeController;
-  const vwSettings = state.voiceWakeSettings || vwc?.settings || { enabled: true, wakeWord: 'Hermes', autoExecute: true };
+  const vwSettings = state.voiceWakeSettings || vwc?.settings || { enabled: true, wakeWord: '贾维斯', autoExecute: true };
   if ($('voiceWakeEnabledCb')) $('voiceWakeEnabledCb').checked = Boolean(vwSettings.enabled);
-  if ($('voiceWakeWordInput')) $('voiceWakeWordInput').value = vwSettings.wakeWord || 'Hermes';
+  if ($('jarvisModeCb')) $('jarvisModeCb').checked = vwSettings.jarvisMode !== false;
+  if ($('voiceWakeTtsCb')) $('voiceWakeTtsCb').checked = vwSettings.ttsEnabled !== false;
+  if ($('voiceWakeWordInput')) $('voiceWakeWordInput').value = vwSettings.wakeWord || '贾维斯';
   if ($('voiceWakeAutoExecCb')) $('voiceWakeAutoExecCb').checked = vwSettings.autoExecute !== false;
 }
 
@@ -5968,6 +5970,34 @@ window.saveVoiceWakeToggle = async (enabled) => {
     showToast(enabled ? '已开启语音唤醒监听' : '已关闭语音唤醒监听', 'info');
   } catch (err) {
     showToast(`更新语音唤醒开关失败: ${err.message}`, 'error');
+  }
+};
+
+window.saveJarvisModeToggle = async (enabled) => {
+  try {
+    const vwc = window.voiceWakeController;
+    if (vwc) {
+      await vwc.updateSettings({ jarvisMode: Boolean(enabled) });
+    } else {
+      await window.hap.updateVoiceWakeSettings({ jarvisMode: Boolean(enabled) });
+    }
+    showToast(enabled ? '已开启钢铁侠贾维斯模式（管家人格+屏幕感知+方舟动效）' : '已切换为普通语音模式', 'info');
+  } catch (err) {
+    showToast(`更新贾维斯模式失败: ${err.message}`, 'error');
+  }
+};
+
+window.saveVoiceWakeTtsToggle = async (enabled) => {
+  try {
+    const vwc = window.voiceWakeController;
+    if (vwc) {
+      await vwc.updateSettings({ ttsEnabled: Boolean(enabled) });
+    } else {
+      await window.hap.updateVoiceWakeSettings({ ttsEnabled: Boolean(enabled) });
+    }
+    showToast(enabled ? '已开启贾维斯 TTS 语音回话播报' : '已关闭语音回话', 'info');
+  } catch (err) {
+    showToast(`更新语音播报失败: ${err.message}`, 'error');
   }
 };
 

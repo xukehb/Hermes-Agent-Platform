@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, screen, session, shell } from 'electron';
+import { app, BrowserWindow, desktopCapturer, dialog, ipcMain, Menu, screen, session, shell } from 'electron';
 import electronUpdater from 'electron-updater';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -246,6 +246,25 @@ function registerIpc(): void {
   );
   ipcMain.handle('gui:transcribeAudio', (_event, payload: { audioBase64: string; mimeType?: string; modelAlias?: string }) =>
     invoke(() => service.transcribeAudio(payload))
+  );
+  ipcMain.handle('gui:captureScreen', async () => {
+    try {
+      const sources = await desktopCapturer.getSources({
+        types: ['screen'],
+        thumbnailSize: { width: 1920, height: 1080 },
+      });
+      if (sources && sources.length > 0 && sources[0]) {
+        const primary = sources[0];
+        const dataUrl = primary.thumbnail.toDataURL();
+        return { ok: true, data: dataUrl, dataUrl };
+      }
+      return { ok: false, error: '未能获取屏幕截图' };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+  ipcMain.handle('gui:systemControl', (_event, payload: { action: string; param?: unknown }) =>
+    invoke(() => service.systemControl(payload))
   );
   ipcMain.handle('gui:voiceWake:broadcast', (_event, payload: { type: string; data?: unknown }) => {
     if (ballWindow && !ballWindow.isDestroyed()) {

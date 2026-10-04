@@ -157,4 +157,51 @@ model = "whisper-large-v3"
     expect(result.ok).toBe(false);
     expect(result.error).toContain('为空');
   });
+
+  it('GuiService manages Jarvis mode, TTS options and Arc Reactor settings in voiceWakeSettings', () => {
+    const service = new GuiService(configPath);
+
+    const updated = service.updateVoiceWakeSettings({
+      wakeWord: '贾维斯',
+      jarvisMode: true,
+      arcReactorTheme: true,
+      ttsEnabled: true,
+      ttsVoice: 'Daniel',
+      ttsRate: 1.05,
+      ttsPitch: 0.95,
+    });
+
+    expect(updated.wakeWord).toBe('贾维斯');
+    expect(updated.jarvisMode).toBe(true);
+    expect(updated.arcReactorTheme).toBe(true);
+    expect(updated.ttsEnabled).toBe(true);
+    expect(updated.ttsVoice).toBe('Daniel');
+    expect(updated.ttsRate).toBe(1.05);
+    expect(updated.ttsPitch).toBe(0.95);
+
+    const reloaded = service.getVoiceWakeSettings();
+    expect(reloaded.jarvisMode).toBe(true);
+    expect(reloaded.arcReactorTheme).toBe(true);
+    expect(reloaded.ttsEnabled).toBe(true);
+  });
+
+  it('GuiService.systemControl handles get_time action and error states', async () => {
+    const service = new GuiService(configPath);
+
+    // 1. get_time
+    const timeRes = await service.systemControl({ action: 'get_time' });
+    expect(timeRes.ok).toBe(true);
+    expect(timeRes.message).toContain('现在是');
+    expect(timeRes.message).toContain('先生');
+
+    // 2. open_app with empty param
+    const appRes = await service.systemControl({ action: 'open_app', param: '' });
+    expect(appRes.ok).toBe(false);
+    expect(appRes.message).toContain('未指定');
+
+    // 3. unknown action
+    const unknownRes = await service.systemControl({ action: 'unknown_cmd' });
+    expect(unknownRes.ok).toBe(false);
+    expect(unknownRes.message).toContain('未知系统操作');
+  });
 });

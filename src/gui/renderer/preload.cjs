@@ -36,6 +36,8 @@ const hapApi = {
   getVoiceWakeSettings: () => call('gui:getVoiceWakeSettings'),
   updateVoiceWakeSettings: (patch) => call('gui:updateVoiceWakeSettings', patch),
   transcribeAudio: (payload) => call('gui:transcribeAudio', payload),
+  captureScreen: () => call('gui:captureScreen'),
+  systemControl: (payload) => call('gui:systemControl', payload),
   broadcastVoiceWake: (payload) => call('gui:voiceWake:broadcast', payload),
   onVoiceWakeEvent: (callback) => {
     const listener = (_event, data) => callback(data);

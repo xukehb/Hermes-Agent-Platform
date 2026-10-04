@@ -730,3 +730,147 @@ body.ball-mode-expanded .ball-panel {
   from { opacity: 0.6; }
   to { opacity: 1; }
 }
+
+/* ==========================================================================
+   钢铁侠方舟反应堆 (Iron Man Arc Reactor) HUD 科技视觉
+   ========================================================================== */
+.arc-reactor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 外层旋转高精度全息刻度环 (Outer Segmented Holographic Dial) */
+.arc-ring-outer {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(56, 189, 248, 0.65);
+  box-shadow:
+    0 0 10px rgba(56, 189, 248, 0.4),
+    inset 0 0 8px rgba(56, 189, 248, 0.25);
+  animation: arc-spin-clockwise 10s linear infinite;
+  transition: all 0.2s ease;
+}
+
+/* 中层反向旋转能量三角环 (Middle Counter-Rotating Energy Conduit) */
+.arc-ring-mid {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px dotted rgba(129, 140, 248, 0.7);
+  box-shadow: 0 0 12px rgba(129, 140, 248, 0.35);
+  animation: arc-spin-counter 6s linear infinite;
+  transition: all 0.2s ease;
+}
+
+/* 核心高能方舟聚能环 (Core Glowing Reactor Core & Coils) */
+.arc-core-glow {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #38bdf8 0%, rgba(56, 189, 248, 0.4) 50%, transparent 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 0 8px #38bdf8);
+  animation: arc-core-pulse 2.2s infinite ease-in-out;
+}
+
+.arc-core-triangle {
+  width: 13px;
+  height: 13px;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  background: rgba(56, 189, 248, 0.25);
+  box-shadow: inset 0 0 4px #fff;
+}
+
+.arc-core-center {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 10px #38bdf8, 0 0 16px #ffffff;
+}
+
+/* 贾维斯模式下的小球整体质感 */
+body.jarvis-mode .ball-core {
+  background: radial-gradient(circle at 50% 50%, #031326 0%, #020b18 60%, #01040a 100%);
+  border-color: rgba(56, 189, 248, 0.7);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.65),
+    0 0 18px rgba(56, 189, 248, 0.5),
+    inset 0 0 12px rgba(56, 189, 248, 0.3);
+}
+
+body.jarvis-mode .ball-icon {
+  opacity: 0.15;
+  transition: opacity 0.2s ease;
+}
+
+body.jarvis-mode:hover .ball-icon {
+  opacity: 0.4;
+}
+
+/* 唤醒态高能脉冲 */
+body.jarvis-mode .ball-widget.voice-woken .arc-ring-outer {
+  border-color: #38bdf8;
+  border-style: solid;
+  animation-duration: 2s;
+  box-shadow: 0 0 20px #38bdf8, inset 0 0 12px #38bdf8;
+}
+
+body.jarvis-mode .ball-widget.voice-woken .arc-core-glow {
+  filter: drop-shadow(0 0 16px #38bdf8) brightness(1.4);
+}
+
+/* 录音与收音态：能量环随音频波形跳动 */
+body.jarvis-mode .ball-widget.voice-recording .arc-ring-outer {
+  border-color: #f43f5e;
+  box-shadow: 0 0 22px rgba(244, 63, 94, 0.8);
+  animation-duration: 1.2s;
+}
+
+body.jarvis-mode .ball-widget.voice-recording .arc-core-glow {
+  filter: drop-shadow(0 0 18px #f43f5e) brightness(1.5);
+}
+
+/* 智能体执行态：高速自旋聚能 */
+body.jarvis-mode .ball-widget.voice-executing .arc-ring-outer {
+  border-color: #eab308;
+  box-shadow: 0 0 24px rgba(234, 179, 8, 0.85);
+  animation-duration: 0.6s;
+}
+
+body.jarvis-mode .ball-widget.voice-executing .arc-ring-mid {
+  border-color: #f59e0b;
+  animation-duration: 0.4s;
+}
+
+@keyframes arc-spin-clockwise {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes arc-spin-counter {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes arc-core-pulse {
+  0%, 100% { transform: scale(0.95); opacity: 0.85; }
+  50% { transform: scale(1.15); opacity: 1; filter: drop-shadow(0 0 14px #38bdf8); }
+}
