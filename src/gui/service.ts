@@ -111,6 +111,20 @@ export interface GuiHostingActivity {
   elapsedMs?: number | undefined;
 }
 
+export interface VoiceWakeSettings {
+  enabled: boolean;
+  wakeWord: string;
+  autoExecute: boolean;
+  sensitivity?: number;
+}
+
+export const DEFAULT_VOICE_WAKE_SETTINGS: VoiceWakeSettings = {
+  enabled: true,
+  wakeWord: 'Hermes',
+  autoExecute: true,
+  sensitivity: 0.7,
+};
+
 interface GuiState {
   projects: GuiProject[];
   hiddenProviders?: string[];
@@ -119,6 +133,7 @@ interface GuiState {
   skills?: GuiSkill[];
   plugins?: GuiPlugin[];
   permissions?: GuiPermissionConfig;
+  voiceWakeSettings?: VoiceWakeSettings;
 }
 
 const DATA_DIR = process.env.HAP_GUI_DATA_DIR || join(homedir(), '.hap', 'gui');
@@ -510,6 +525,7 @@ function readState(): GuiState {
   let skills = DEFAULT_SKILLS;
   let plugins = DEFAULT_PLUGINS;
   let permissions = DEFAULT_PERMISSIONS;
+  let voiceWakeSettings = DEFAULT_VOICE_WAKE_SETTINGS;
 
   if (existsSync(STATE_PATH)) {
     try {
@@ -539,6 +555,9 @@ function readState(): GuiState {
         plugins = merged;
       }
       if (raw.permissions) permissions = raw.permissions;
+      if (raw.voiceWakeSettings) {
+        voiceWakeSettings = { ...DEFAULT_VOICE_WAKE_SETTINGS, ...raw.voiceWakeSettings };
+      }
     } catch {}
   } else {
     // 仅在首次创建状态文件时，默认初始化当前工作区为初始工程，并清空默认内置服务商
@@ -561,6 +580,7 @@ function readState(): GuiState {
       skills,
       plugins,
       permissions,
+      voiceWakeSettings,
     });
   }
 
@@ -578,6 +598,7 @@ function readState(): GuiState {
     skills,
     plugins,
     permissions,
+    voiceWakeSettings,
   };
 }
 
@@ -699,6 +720,10 @@ export class GuiService {
       configPath: this.configPath,
       defaultAgentId,
       defaultModel: resolver.resolveDefaultModel(),
+      defaultImageModel: resolver.resolveDefaultImageModel(),
+      defaultVideoModel: resolver.resolveDefaultVideoModel(),
+      defaultAudioModel: resolver.resolveDefaultAudioModel(),
+      voiceWakeSettings: state.voiceWakeSettings || DEFAULT_VOICE_WAKE_SETTINGS,
       projects: state.projects,
       providers,
       models,
@@ -1035,6 +1060,9 @@ export class GuiService {
     const patch: ModelPatch = {
       provider,
       model,
+      category: input.category,
+      base_url: input.baseUrl,
+      api_key: input.apiKey,
       context_window: input.contextWindow !== undefined ? input.contextWindow : 1048576,
       max_output_tokens: input.maxOutputTokens,
       protocol: input.protocol,
@@ -1106,6 +1134,10 @@ export class GuiService {
   }
 
   setDefaultModel(rawAlias: string): object {
+    return this.setDefaultModelCategory('chat', rawAlias);
+  }
+
+  setDefaultModelCategory(category: 'chat' | 'image' | 'video' | 'audio' | string, rawAlias: string): object {
     const alias = rawAlias.trim();
     if (!alias) throw new Error('模型标识不能为空');
     const resolver = this.resolver();
@@ -1114,10 +1146,131 @@ export class GuiService {
     if (!found) {
       throw new Error(`模型 "${alias}" 未在已注册模型目录中找到，无法设为默认模型`);
     }
-    const result = new ConfigWriter(this.configPath).setGlobals({ defaultModel: alias });
-    this.info('已设置全局默认模型：' + alias);
+    const cat = (category || 'chat').toLowerCase();
+    const patch: {
+      defaultModel?: string;
+      defaultImageModel?: string;
+      defaultVideoModel?: string;
+      defaultAudioModel?: string;
+    } = {};
+
+    let catName = '主对话模型';
+    if (cat === 'image') {
+      patch.defaultImageModel = alias;
+      catName = '默认图片模型';
+    } else if (cat === 'video') {
+      patch.defaultVideoModel = alias;
+      catName = '默认视频模型';
+    } else if (cat === 'audio') {
+      patch.defaultAudioModel = alias;
+      catName = '默认语音模型';
+    } else {
+      patch.defaultModel = alias;
+    }
+
+    const result = new ConfigWriter(this.configPath).setGlobals(patch);
+    this.info(`已设置全局${catName}：` + alias);
     this.reloadRunningChannels();
     return result;
+  }
+
+  getVoiceWakeSettings(): VoiceWakeSettings {
+    const state = readState();
+    return state.voiceWakeSettings || DEFAULT_VOICE_WAKE_SETTINGS;
+  }
+
+  updateVoiceWakeSettings(patch: Partial<VoiceWakeSettings>): VoiceWakeSettings {
+    const state = readState();
+    const current = state.voiceWakeSettings || DEFAULT_VOICE_WAKE_SETTINGS;
+    const updated: VoiceWakeSettings = {
+      ...current,
+      ...patch,
+      wakeWord: (patch.wakeWord !== undefined ? patch.wakeWord.trim() : current.wakeWord) || 'Hermes',
+    };
+    writeState({
+      ...state,
+      voiceWakeSettings: updated,
+    });
+    this.info('已更新语音唤醒设置: ' + JSON.stringify(updated));
+    return updated;
+  }
+
+  async transcribeAudio(payload: {
+    audioBase64: string;
+    mimeType?: string;
+    modelAlias?: string;
+  }): Promise<{ ok: boolean; text?: string; error?: string }> {
+    try {
+      const { audioBase64, mimeType = 'audio/webm', modelAlias } = payload;
+      if (!audioBase64) {
+        return { ok: false, error: '音频数据为空' };
+      }
+      const audioBuffer = Buffer.from(audioBase64, 'base64');
+      const resolver = this.resolver();
+      const models = resolver.resolveModels();
+
+      const targetAlias = modelAlias || resolver.resolveDefaultAudioModel();
+      let targetModel = targetAlias
+        ? models.get(targetAlias) || [...models.values()].find((m) => m.alias === targetAlias || m.fullName === targetAlias)
+        : undefined;
+
+      if (!targetModel) {
+        targetModel = [...models.values()].find(
+          (m) =>
+            m.category === 'audio' ||
+            m.capabilities.includes('audio') ||
+            /whisper|asr|audio|voice|cosyvoice|sensevoice/i.test(m.alias) ||
+            /whisper|asr|audio|voice|cosyvoice|sensevoice/i.test(m.model)
+        );
+      }
+
+      if (targetModel) {
+        const providerId = targetModel.providerId;
+        const provider = resolver.resolveProviders().get(providerId);
+        const baseUrl = targetModel.baseUrl || provider?.baseUrl || 'https://api.openai.com/v1';
+        const apiKey =
+          targetModel.apiKey || (provider?.envKey ? process.env[provider.envKey] : undefined) || process.env.OPENAI_API_KEY;
+        const modelIdentifier = targetModel.model || targetModel.alias || 'whisper-1';
+
+        const ext = mimeType.includes('wav') ? 'wav' : mimeType.includes('ogg') ? 'ogg' : mimeType.includes('mp3') ? 'mp3' : 'webm';
+        const formData = new FormData();
+        const blob = new Blob([new Uint8Array(audioBuffer)], { type: mimeType });
+        formData.append('file', blob, `voice.${ext}`);
+        formData.append('model', modelIdentifier);
+
+        const endpoint = baseUrl.endsWith('/audio/transcriptions')
+          ? baseUrl
+          : `${baseUrl.replace(/\/+$/, '')}/audio/transcriptions`;
+
+        const headers: Record<string, string> = {};
+        if (apiKey) {
+          headers['Authorization'] = `Bearer ${apiKey}`;
+        }
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers,
+          body: formData,
+        });
+
+        if (res.ok) {
+          const json = (await res.json()) as { text?: string };
+          if (json && typeof json.text === 'string') {
+            return { ok: true, text: json.text.trim() };
+          }
+        } else {
+          const errText = await res.text().catch(() => '');
+          return { ok: false, error: `语音转写服务返回错误 (${res.status}): ${errText.slice(0, 200)}` };
+        }
+      }
+
+      return {
+        ok: false,
+        error: '未找到已配置的语音转写模型 (Audio Model)。请在模型中心或本地部署中配置语音模型（如 Whisper / SenseVoice）。',
+      };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
   }
 
   async testModel(rawAlias: string): Promise<{ ok: boolean; latencyMs?: number; preview?: string; error?: string }> {

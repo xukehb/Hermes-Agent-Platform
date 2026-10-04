@@ -32,6 +32,19 @@ const hapApi = {
   removeModel: (alias) => call('gui:removeModel', alias),
   batchRemoveModels: (aliases) => call('gui:batchRemoveModels', aliases),
   setDefaultModel: (alias) => call('gui:setDefaultModel', alias),
+  setDefaultModelCategory: (category, alias) => call('gui:setDefaultModelCategory', { category, alias }),
+  getVoiceWakeSettings: () => call('gui:getVoiceWakeSettings'),
+  updateVoiceWakeSettings: (patch) => call('gui:updateVoiceWakeSettings', patch),
+  transcribeAudio: (payload) => call('gui:transcribeAudio', payload),
+  broadcastVoiceWake: (payload) => call('gui:voiceWake:broadcast', payload),
+  onVoiceWakeEvent: (callback) => {
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('gui:voiceWake:event', listener);
+    return () => ipcRenderer.removeListener('gui:voiceWake:event', listener);
+  },
+  removeVoiceWakeListeners: () => {
+    ipcRenderer.removeAllListeners('gui:voiceWake:event');
+  },
   testModel: (alias) => call('gui:testModel', alias),
   upsertAgent: (input) => call('gui:upsertAgent', input),
   setDefaultAgent: (id) => call('gui:setDefaultAgent', id),

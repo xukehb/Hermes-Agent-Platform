@@ -86,7 +86,7 @@
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
           <span class="nav-text" data-i18n="rail.settings">系统设置</span>
-          <span class="sidebar-version-tag" id="sidebarVersionTag" style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-left:auto;padding:2px 6px;border-radius:4px;opacity:0.85;cursor:pointer;transition:all 150ms ease;" title="点击直达软件版本与检查更新" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--primary)';" onmouseout="this.style.background='transparent';this.style.color='var(--text-muted)';">v0.1.27</span>
+          <span class="sidebar-version-tag" id="sidebarVersionTag" style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-left:auto;padding:2px 6px;border-radius:4px;opacity:0.85;cursor:pointer;transition:all 150ms ease;" title="点击直达软件版本与检查更新" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--primary)';" onmouseout="this.style.background='transparent';this.style.color='var(--text-muted)';">v0.1.28</span>
         </div>
       </div>
     </aside>
@@ -202,7 +202,7 @@
                 <button id="aboutVersionMoreBtn" class="more-menu-item-btn" title="查看软件版本、运行环境与检查更新" data-i18n-title="more.aboutVersionTooltip">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                   <span data-i18n="more.aboutVersion">关于与版本更新</span>
-                  <span class="badge" id="moreMenuVersionBadge" style="margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:var(--text-secondary);background:var(--bg-subtle);border:1px solid var(--border-default);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.27</span>
+                  <span class="badge" id="moreMenuVersionBadge" style="margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:var(--text-secondary);background:var(--bg-subtle);border:1px solid var(--border-default);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.28</span>
                 </button>
 
                 <!-- 切换语言 -->
@@ -921,7 +921,7 @@
             </div>
             <div style="display:flex;align-items:center;gap:10px;">
               <button type="button" class="btn secondary" id="headerCheckUpdateBtn" style="font-size:12px;padding:5px 12px;display:inline-flex;align-items:center;gap:6px;border-radius:6px;cursor:pointer;" title="查看软件版本并检查 GitHub 更新">
-                <span class="badge" id="headerVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;color:var(--text-secondary);background:var(--bg-subtle);border:1px solid var(--border-default);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.27</span>
+                <span class="badge" id="headerVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;color:var(--text-secondary);background:var(--bg-subtle);border:1px solid var(--border-default);padding:1px 6px;border-radius:4px;font-weight:600;">v0.1.28</span>
                 <span id="headerCheckUpdateBtnText" style="font-size:12px;">检查更新</span>
               </button>
               <button type="button" class="btn secondary" id="backToChatBtn" onclick="show('chat')" style="font-size:12.5px;padding:6px 14px;display:inline-flex;align-items:center;gap:6px;">
@@ -1018,6 +1018,110 @@
                 </div>
               </div>
 
+              <!-- 独立多模态默认模型配置与语音唤醒控制卡片 -->
+              <div class="card" style="margin-bottom:16px;border:1px solid var(--border-default);border-radius:12px;background:var(--bg-surface);overflow:hidden;box-shadow:var(--shadow-sm);">
+                <div style="padding:12px 16px;background:var(--bg-subtle);border-bottom:1px solid var(--border-subtle);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                  <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:13.5px;color:var(--text-main);">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <span>多模态模型独立配置与语音唤醒监听</span>
+                  </div>
+                  <div style="font-size:11.5px;color:var(--text-muted);">
+                    支持单独指定图片、视频、语音模型 · 最小化支持喊唤醒词直接对话操作
+                  </div>
+                </div>
+                <div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:16px;">
+                  <!-- 默认对话主模型 -->
+                  <div style="background:var(--bg-main);padding:12px 14px;border:1px solid var(--border-default);border-radius:10px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                      <span style="font-size:12px;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:5px;">
+                        <span>💬 默认对话模型</span>
+                      </span>
+                      <span class="badge" style="font-size:10.5px;padding:1px 6px;background:var(--bg-subtle);color:var(--primary);border:1px solid var(--border-default);">主模型</span>
+                    </div>
+                    <select id="defaultChatModelSelect" class="input-field" style="width:100%;font-size:12px;padding:6px 8px;border-radius:6px;background:var(--bg-surface);color:var(--text-main);border:1px solid var(--border-default);margin-bottom:4px;" onchange="window.saveDefaultModelSelection('chat', this.value)">
+                      <option value="">加载中...</option>
+                    </select>
+                    <div style="font-size:11px;color:var(--text-muted);">文本问答、代码编写与核心逻辑</div>
+                  </div>
+
+                  <!-- 默认图片生成模型 -->
+                  <div style="background:var(--bg-main);padding:12px 14px;border:1px solid var(--border-default);border-radius:10px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                      <span style="font-size:12px;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:5px;">
+                        <span>🎨 默认图片模型</span>
+                      </span>
+                      <span class="badge" style="font-size:10.5px;padding:1px 6px;background:var(--bg-subtle);color:#ec4899;border:1px solid var(--border-default);">图像生成</span>
+                    </div>
+                    <select id="defaultImageModelSelect" class="input-field" style="width:100%;font-size:12px;padding:6px 8px;border-radius:6px;background:var(--bg-surface);color:var(--text-main);border:1px solid var(--border-default);margin-bottom:4px;" onchange="window.saveDefaultModelSelection('image', this.value)">
+                      <option value="">未单独指定 (跟随主模型)</option>
+                    </select>
+                    <div style="font-size:11px;color:var(--text-muted);">绘图、生图工具与视觉处理专用</div>
+                  </div>
+
+                  <!-- 默认视频生成模型 -->
+                  <div style="background:var(--bg-main);padding:12px 14px;border:1px solid var(--border-default);border-radius:10px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                      <span style="font-size:12px;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:5px;">
+                        <span>🎬 默认视频模型</span>
+                      </span>
+                      <span class="badge" style="font-size:10.5px;padding:1px 6px;background:var(--bg-subtle);color:#a855f7;border:1px solid var(--border-default);">视频生成</span>
+                    </div>
+                    <select id="defaultVideoModelSelect" class="input-field" style="width:100%;font-size:12px;padding:6px 8px;border-radius:6px;background:var(--bg-surface);color:var(--text-main);border:1px solid var(--border-default);margin-bottom:4px;" onchange="window.saveDefaultModelSelection('video', this.value)">
+                      <option value="">未单独指定 (跟随主模型)</option>
+                    </select>
+                    <div style="font-size:11px;color:var(--text-muted);">CogVideoX、混元等视频生成任务</div>
+                  </div>
+
+                  <!-- 默认语音模型与监听唤醒配置 -->
+                  <div style="background:var(--bg-main);padding:12px 14px;border:1px solid var(--border-default);border-radius:10px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                      <span style="font-size:12px;font-weight:700;color:var(--text-main);display:flex;align-items:center;gap:5px;">
+                        <span>🎙️ 默认语音模型</span>
+                      </span>
+                      <span class="badge" style="font-size:10.5px;padding:1px 6px;background:var(--bg-subtle);color:#10b981;border:1px solid var(--border-default);">语音 ASR</span>
+                    </div>
+                    <select id="defaultAudioModelSelect" class="input-field" style="width:100%;font-size:12px;padding:6px 8px;border-radius:6px;background:var(--bg-surface);color:var(--text-main);border:1px solid var(--border-default);margin-bottom:4px;" onchange="window.saveDefaultModelSelection('audio', this.value)">
+                      <option value="">未单独指定 (Whisper/WebSpeech)</option>
+                    </select>
+                    <div style="font-size:11px;color:var(--text-muted);">语音口述转写、Whisper、CosyVoice</div>
+                  </div>
+                </div>
+
+                <!-- 语音监听唤醒专属设置条 -->
+                <div style="padding:12px 16px;background:var(--bg-subtle);border-top:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+                    <!-- 唤醒监听开关 -->
+                    <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;font-weight:600;color:var(--text-main);">
+                      <input type="checkbox" id="voiceWakeEnabledCb" onchange="window.saveVoiceWakeToggle(this.checked)" style="cursor:pointer;" checked />
+                      <span>开启语音唤醒监听</span>
+                    </label>
+
+                    <!-- 自定义唤醒词 -->
+                    <div style="display:inline-flex;align-items:center;gap:6px;font-size:12px;">
+                      <span style="color:var(--text-secondary);font-weight:600;">自定义唤醒词:</span>
+                      <input type="text" id="voiceWakeWordInput" class="input-field" style="width:110px;padding:3px 8px;font-size:12px;border-radius:6px;border:1px solid var(--border-default);background:var(--bg-surface);color:var(--text-main);" value="Hermes" placeholder="如: 小赫、Hermes" onchange="window.saveVoiceWakeWord(this.value)" />
+                    </div>
+
+                    <!-- 唤醒后自动执行操作 -->
+                    <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;color:var(--text-main);">
+                      <input type="checkbox" id="voiceWakeAutoExecCb" onchange="window.saveVoiceWakeAutoExec(this.checked)" style="cursor:pointer;" checked />
+                      <span>唤醒后自动听取口述并执行操作</span>
+                    </label>
+                  </div>
+
+                  <!-- 麦克风收音测试与状态指示 -->
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span id="voiceWakeStatusBadge" class="badge" style="font-size:11px;padding:3px 8px;background:var(--bg-surface);border:1px solid var(--border-default);color:var(--primary);display:inline-flex;align-items:center;gap:4px;">
+                      <span style="width:6px;height:6px;border-radius:50%;background:var(--primary);display:inline-block;"></span>
+                      <span id="voiceWakeStatusText">监听中</span>
+                    </span>
+                    <button type="button" class="btn secondary" id="testVoiceMicBtn" onclick="window.testVoiceWakeMic(this)" style="font-size:11.5px;padding:4px 10px;">
+                      麦克风测试
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <!-- 控制台主卡片 -->
               <div class="card" style="border:1px solid var(--border-default);border-radius:12px;box-shadow:var(--shadow-sm);background:var(--bg-surface);overflow:hidden;">
                 <!-- 顶部功能与切换条 -->
@@ -1076,6 +1180,9 @@
                         <option value="all">全部能力</option>
                         <option value="tools">工具调用</option>
                         <option value="vision">视觉</option>
+                        <option value="audio">语音模型</option>
+                        <option value="image">图片模型</option>
+                        <option value="video">视频模型</option>
                         <option value="reasoning">深度思考</option>
                         <option value="streaming">流式传输</option>
                         <option value="longctx">长上下文</option>
@@ -2336,7 +2443,7 @@
                     <div>
                       <div style="font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;">
                         <span>关于与软件版本 (About Hermes)</span>
-                        <span class="badge" id="appCurrentVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;padding:2px 8px;background:var(--bg-subtle);color:var(--text-secondary);border:1px solid var(--border-default);border-radius:6px;font-weight:600;">v0.1.17</span>
+                        <span class="badge" id="appCurrentVersionBadge" style="font-family:var(--font-mono);font-size:11.5px;padding:2px 8px;background:var(--bg-subtle);color:var(--text-secondary);border:1px solid var(--border-default);border-radius:6px;font-weight:600;">v0.1.28</span>
                       </div>
                       <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">Hermes Agent Platform · 赫尔墨斯多智能体协同开发平台</div>
                     </div>
@@ -2352,7 +2459,7 @@
                   <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
                     <div style="padding:12px 14px;background:var(--bg-main);border:1px solid var(--border-default);border-radius:8px;">
                       <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:600;">当前安装版本</div>
-                      <div style="font-size:16px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin-top:4px;" id="aboutSoftwareVersionText">v0.1.17</div>
+                      <div style="font-size:16px;font-weight:700;color:var(--text-main);font-family:var(--font-mono);margin-top:4px;" id="aboutSoftwareVersionText">v0.1.28</div>
                       <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">已内置自动重试与全协议适配</div>
                     </div>
                     <div style="padding:12px 14px;background:var(--bg-main);border:1px solid var(--border-default);border-radius:8px;">
@@ -3122,6 +3229,18 @@
                 <span>👁️ 多模态视觉</span>
                 <span class="market-tab-badge" id="hubCountVision">0</span>
               </button>
+              <button type="button" class="market-tab-btn" data-hub-cat="audio" onclick="window.onModelHubFilterChange('audio')">
+                <span>🎙️ 语音模型</span>
+                <span class="market-tab-badge" id="hubCountAudio">0</span>
+              </button>
+              <button type="button" class="market-tab-btn" data-hub-cat="image" onclick="window.onModelHubFilterChange('image')">
+                <span>🎨 图片模型</span>
+                <span class="market-tab-badge" id="hubCountImage">0</span>
+              </button>
+              <button type="button" class="market-tab-btn" data-hub-cat="video" onclick="window.onModelHubFilterChange('video')">
+                <span>🎬 视频模型</span>
+                <span class="market-tab-badge" id="hubCountVideo">0</span>
+              </button>
             </div>
 
             <div style="display:flex;align-items:center;gap:8px;min-width:200px;">
@@ -3178,8 +3297,22 @@
           </div>
 
           <div class="form-group">
-            <label>厂商真实模型名 (Model Name) *</label>
-            <input spellcheck="false" name="model" id="modelInputModel" placeholder="例如：deepseek-chat" required />
+            <label>厂商真实模型名 (Model Name / ID) *</label>
+            <input spellcheck="false" name="model" id="modelInputModel" placeholder="例如：deepseek-chat, whisper:large-v3, flux-schnell" required />
+          </div>
+
+          <div class="form-group">
+            <label>模型分类 (Category)</label>
+            <select name="category" id="modelInputCategory">
+              <option value="general">通用文本/对话 (General)</option>
+              <option value="coding">代码大模型 (Coding)</option>
+              <option value="reasoning">深度思考推理 (Reasoning)</option>
+              <option value="fast">轻量端侧极速 (Fast)</option>
+              <option value="vision">视觉理解多模态 (Vision)</option>
+              <option value="audio">语音模型 (Audio / Voice)</option>
+              <option value="image">图片模型 (Image Generation)</option>
+              <option value="video">视频模型 (Video Generation)</option>
+            </select>
           </div>
 
           <div class="form-group">
@@ -3193,7 +3326,7 @@
             <small style="font-size:11px;color:var(--text-muted);margin-top:2px;display:block;">支持自定义数值（如 16384、32768、65536、131072）。填 0 或留空则由厂商最大输出决定。</small>
           </div>
 
-          <div class="form-group full-width">
+          <div class="form-group">
             <label>协议覆盖 (可选)</label>
             <select name="protocol" id="modelInputProtocol">
               <option value="">跟随服务商默认</option>
@@ -3204,11 +3337,32 @@
             </select>
           </div>
 
+          <!-- 本地化部署独立端点与凭据覆盖 -->
+          <div class="form-group full-width" style="background:var(--bg-subtle);padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border-default);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <label style="font-size:12px;font-weight:600;margin:0;">本地化部署独立配置 (可选覆盖 URL / Key)</label>
+              <span style="font-size:11px;color:var(--text-muted);">适用于自建 Whisper/ComfyUI/CogVideoX/vLLM 本地独立端点</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div>
+                <label style="font-size:11.5px;color:var(--text-secondary);margin-bottom:2px;">独立 Base URL (本地服务地址)</label>
+                <input spellcheck="false" name="baseUrl" id="modelInputBaseUrl" placeholder="如 http://127.0.0.1:8000/v1 (留空跟随服务商)" style="font-size:12px;" />
+              </div>
+              <div>
+                <label style="font-size:11.5px;color:var(--text-secondary);margin-bottom:2px;">独立 API Key (本地密钥凭据)</label>
+                <input type="password" name="apiKey" id="modelInputApiKey" placeholder="本地部署无密码可留空" style="font-size:12px;" autocomplete="off" />
+              </div>
+            </div>
+          </div>
+
           <div class="form-group full-width">
             <label>模型能力标签 (Capabilities)</label>
             <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:4px;padding:8px 12px;background:var(--bg-subtle);border:1px solid var(--border-default);border-radius:6px;font-size:12px;">
               <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapTools" checked /> 工具调用 (Tools)</label>
               <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapVision" /> 视觉理解 (Vision)</label>
+              <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapAudio" /> 语音处理 (Audio)</label>
+              <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapImage" /> 图片生成 (Image)</label>
+              <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapVideo" /> 视频生成 (Video)</label>
               <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapReasoning" /> 深度思考推理 (Reasoning)</label>
               <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapStreaming" checked /> 流式输出 (Streaming)</label>
               <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="modelCapLongctx" /> 超长上下文 (LongCtx)</label>
@@ -6003,6 +6157,7 @@
     <script src="./modules/theme-controller.js"></script>
     <script src="./modules/git-controller.js"></script>
     <script src="./modules/terminal-controller.js"></script>
+    <script src="./voice-wake.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>

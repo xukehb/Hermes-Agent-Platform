@@ -40,8 +40,8 @@ export const modelProviderSchema = z.strictObject({
   max_tokens_default: z.number().int().positive().optional(),
 });
 
-/** 模型能力标签。vision 决定能否接图片附件（FR-CHAN-011）。 */
-export const modelCapabilitySchema = z.enum(['tools', 'vision', 'streaming', 'reasoning', 'longctx']);
+/** 模型能力标签。vision 决定能否接图片附件（FR-CHAN-011），audio/image/video 支持多模态分类与本地模型部署 */
+export const modelCapabilitySchema = z.enum(['tools', 'vision', 'audio', 'image', 'video', 'streaming', 'reasoning', 'longctx']);
 export type ModelCapability = z.infer<typeof modelCapabilitySchema>;
 
 /**
@@ -55,6 +55,9 @@ export const modelEntrySchema = z.strictObject({
   /** 厂商侧真实模型标识，缺省时取 alias 本身 */
   model: z.string().min(1).optional(),
   display_name: z.string().min(1).optional(),
+  category: z.string().min(1).optional(),
+  base_url: z.string().min(1).optional(),
+  api_key: z.string().min(1).optional(),
   context_window: z.number().int().positive().optional(),
   max_output_tokens: z.number().int().positive().optional(),
   capabilities: z.array(modelCapabilitySchema).optional(),
@@ -287,6 +290,9 @@ export const mcpServerSchema = z.strictObject({
 export const profileSchema = z.strictObject({
   default_agent: z.string().min(1).optional(),
   default_model: z.string().min(1).optional(),
+  default_image_model: z.string().min(1).optional(),
+  default_video_model: z.string().min(1).optional(),
+  default_audio_model: z.string().min(1).optional(),
   utility_model: z.string().min(1).optional(),
   protocol: protocolSchema.optional(),
   params: paramsSchema.optional(),
@@ -306,6 +312,9 @@ export const pathsSchema = z.strictObject({
 export const hapConfigSchema = z.strictObject({
   default_agent: z.string().min(1).optional(),
   default_model: z.string().min(1).optional(),
+  default_image_model: z.string().min(1).optional(),
+  default_video_model: z.string().min(1).optional(),
+  default_audio_model: z.string().min(1).optional(),
   active_profile: z.string().min(1).optional(),
   paths: pathsSchema.optional(),
   limits: limitsSchema.optional(),

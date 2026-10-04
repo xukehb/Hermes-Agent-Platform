@@ -310,7 +310,14 @@ export class ConfigWriter {
   }
 
   /** 设置全局默认项。用于 hap agent create --set-default 与 hap init 之后的调档。 */
-  setGlobals(patch: { defaultAgent?: string; defaultModel?: string; activeProfile?: string }): WriteResult {
+  setGlobals(patch: {
+    defaultAgent?: string;
+    defaultModel?: string;
+    defaultImageModel?: string;
+    defaultVideoModel?: string;
+    defaultAudioModel?: string;
+    activeProfile?: string;
+  }): WriteResult {
     const { config, exists, raw } = this.read();
     const next: HapConfig = { ...config };
     const notes: string[] = [];
@@ -321,6 +328,18 @@ export class ConfigWriter {
     if (patch.defaultModel !== undefined) {
       next.default_model = patch.defaultModel;
       notes.push('default_model=' + patch.defaultModel);
+    }
+    if (patch.defaultImageModel !== undefined) {
+      next.default_image_model = patch.defaultImageModel;
+      notes.push('default_image_model=' + patch.defaultImageModel);
+    }
+    if (patch.defaultVideoModel !== undefined) {
+      next.default_video_model = patch.defaultVideoModel;
+      notes.push('default_video_model=' + patch.defaultVideoModel);
+    }
+    if (patch.defaultAudioModel !== undefined) {
+      next.default_audio_model = patch.defaultAudioModel;
+      notes.push('default_audio_model=' + patch.defaultAudioModel);
     }
     if (patch.activeProfile !== undefined) {
       next.active_profile = patch.activeProfile;

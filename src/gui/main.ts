@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, screen, session, shell } from 'electron';
 import electronUpdater from 'electron-updater';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -237,6 +237,25 @@ function registerIpc(): void {
   ipcMain.handle('gui:removeModel', (_event, alias) => invoke(() => service.removeModel(alias)));
   ipcMain.handle('gui:batchRemoveModels', (_event, aliases) => invoke(() => service.batchRemoveModels(aliases)));
   ipcMain.handle('gui:setDefaultModel', (_event, alias) => invoke(() => service.setDefaultModel(alias)));
+  ipcMain.handle('gui:setDefaultModelCategory', (_event, payload: { category: string; alias: string }) =>
+    invoke(() => service.setDefaultModelCategory(payload.category, payload.alias))
+  );
+  ipcMain.handle('gui:getVoiceWakeSettings', () => invoke(() => service.getVoiceWakeSettings()));
+  ipcMain.handle('gui:updateVoiceWakeSettings', (_event, patch: Record<string, unknown>) =>
+    invoke(() => service.updateVoiceWakeSettings(patch))
+  );
+  ipcMain.handle('gui:transcribeAudio', (_event, payload: { audioBase64: string; mimeType?: string; modelAlias?: string }) =>
+    invoke(() => service.transcribeAudio(payload))
+  );
+  ipcMain.handle('gui:voiceWake:broadcast', (_event, payload: { type: string; data?: unknown }) => {
+    if (ballWindow && !ballWindow.isDestroyed()) {
+      ballWindow.webContents.send('gui:voiceWake:event', payload);
+    }
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('gui:voiceWake:event', payload);
+    }
+    return { ok: true, data: true };
+  });
   ipcMain.handle('gui:testModel', (_event, alias) => invoke(() => service.testModel(alias)));
   ipcMain.handle('gui:upsertAgent', (_event, input) => invoke(() => service.upsertAgent(input)));
   ipcMain.handle('gui:setDefaultAgent', (_event, id) => invoke(() => service.setDefaultAgent(id)));
@@ -643,7 +662,17 @@ async function createWindow(): Promise<void> {
 }
 
 registerIpc();
-void app.whenReady().then(createWindow);
+void app.whenReady().then(() => {
+  session.defaultSession.setPermissionCheckHandler((_webContents, permission) => {
+    if (permission === 'media') return true;
+    return true;
+  });
+  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+    if (permission === 'media') return callback(true);
+    callback(true);
+  });
+  return createWindow();
+});
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });

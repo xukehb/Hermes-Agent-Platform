@@ -195,10 +195,16 @@ export function validateCrossReferences(config: HapConfig, filePath: string): vo
 
   const globalRefs: Array<[string, string | undefined]> = [
     ['default_model', config.default_model],
+    ['default_image_model', config.default_image_model],
+    ['default_video_model', config.default_video_model],
+    ['default_audio_model', config.default_audio_model],
     ['agents.defaults.utility_model', config.agents?.defaults?.utility_model],
   ];
   for (const [profileName, profile] of Object.entries(config.profiles ?? {})) {
     globalRefs.push(['profiles.' + profileName + '.default_model', profile.default_model]);
+    globalRefs.push(['profiles.' + profileName + '.default_image_model', profile.default_image_model]);
+    globalRefs.push(['profiles.' + profileName + '.default_video_model', profile.default_video_model]);
+    globalRefs.push(['profiles.' + profileName + '.default_audio_model', profile.default_audio_model]);
     globalRefs.push(['profiles.' + profileName + '.utility_model', profile.utility_model]);
   }
   for (const [keyPath, ref] of globalRefs) {

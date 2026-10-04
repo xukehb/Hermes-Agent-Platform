@@ -82,6 +82,9 @@ export interface CliOverrides {
   agent?: string;
   profile?: string;
   model?: string;
+  imageModel?: string;
+  videoModel?: string;
+  audioModel?: string;
   fallbacks?: string[];
   utilityModel?: string;
   protocol?: ProtocolName;
@@ -598,6 +601,27 @@ function globalSpecs(): KeySpec[] {
       profile: { extract: (ctx) => ctx.profile?.default_model, source: 'profiles.<active>.default_model' },
       defaults: { extract: (ctx) => ctx.root.default_model, source: 'default_model' },
       builtin: { extract: () => BUILTIN.defaultModel, source: 'BUILTIN.defaultModel' },
+    }),
+    makeSpec('default_image_model', 'global', {
+      cli: { extract: (ctx) => ctx.cli.imageModel, source: '--image-model' },
+      env: { extract: (ctx) => envString(ctx.env, 'HAP_IMAGE_MODEL'), source: 'HAP_IMAGE_MODEL' },
+      profile: { extract: (ctx) => ctx.profile?.default_image_model, source: 'profiles.<active>.default_image_model' },
+      defaults: { extract: (ctx) => ctx.root.default_image_model, source: 'default_image_model' },
+      builtin: { extract: () => BUILTIN.defaultImageModel, source: 'BUILTIN.defaultImageModel' },
+    }),
+    makeSpec('default_video_model', 'global', {
+      cli: { extract: (ctx) => ctx.cli.videoModel, source: '--video-model' },
+      env: { extract: (ctx) => envString(ctx.env, 'HAP_VIDEO_MODEL'), source: 'HAP_VIDEO_MODEL' },
+      profile: { extract: (ctx) => ctx.profile?.default_video_model, source: 'profiles.<active>.default_video_model' },
+      defaults: { extract: (ctx) => ctx.root.default_video_model, source: 'default_video_model' },
+      builtin: { extract: () => BUILTIN.defaultVideoModel, source: 'BUILTIN.defaultVideoModel' },
+    }),
+    makeSpec('default_audio_model', 'global', {
+      cli: { extract: (ctx) => ctx.cli.audioModel, source: '--audio-model' },
+      env: { extract: (ctx) => envString(ctx.env, 'HAP_AUDIO_MODEL'), source: 'HAP_AUDIO_MODEL' },
+      profile: { extract: (ctx) => ctx.profile?.default_audio_model, source: 'profiles.<active>.default_audio_model' },
+      defaults: { extract: (ctx) => ctx.root.default_audio_model, source: 'default_audio_model' },
+      builtin: { extract: () => BUILTIN.defaultAudioModel, source: 'BUILTIN.defaultAudioModel' },
     }),
     makeSpec('active_profile', 'global', {
       cli: { extract: (ctx) => ctx.cli.profile, source: '--profile' },
@@ -1237,6 +1261,9 @@ export class ConfigResolver {
         model,
         displayName: entry.display_name ?? alias,
         fullName: entry.provider + '/' + model,
+        category: entry.category,
+        baseUrl: entry.base_url,
+        apiKey: entry.api_key,
         contextWindow: entry.context_window,
         maxOutputTokens: entry.max_output_tokens,
         capabilities,
@@ -1309,6 +1336,18 @@ export class ConfigResolver {
 
   resolveDefaultModel(): string {
     return asString(this.read('default_model', this.context())) ?? BUILTIN.defaultModel;
+  }
+
+  resolveDefaultImageModel(): string | undefined {
+    return asString(this.read('default_image_model', this.context())) ?? BUILTIN.defaultImageModel;
+  }
+
+  resolveDefaultVideoModel(): string | undefined {
+    return asString(this.read('default_video_model', this.context())) ?? BUILTIN.defaultVideoModel;
+  }
+
+  resolveDefaultAudioModel(): string | undefined {
+    return asString(this.read('default_audio_model', this.context())) ?? BUILTIN.defaultAudioModel;
   }
 
   /**

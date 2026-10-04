@@ -168,6 +168,9 @@ export function upsertModel(configPath: string, input: GuiModelInput): { ok: boo
   const patch: ModelPatch = {
     provider,
     model,
+    category: input.category,
+    base_url: input.baseUrl,
+    api_key: input.apiKey,
     context_window: input.contextWindow !== undefined ? input.contextWindow : 1048576,
     max_output_tokens: input.maxOutputTokens,
     protocol: input.protocol,

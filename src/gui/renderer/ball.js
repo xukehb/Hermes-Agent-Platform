@@ -281,7 +281,130 @@
     return div.innerHTML;
   }
 
-  // 7. 初始化信息同步
+  // 7. 语音唤醒与口述指令交互联动 (Voice Wake & Command Integration)
+  const vwc = window.voiceWakeController;
+  let bubbleTimer = null;
+
+  function showBubble(text, icon = '🎤', duration = 3500) {
+    const bubble = $('ballWakeBubble');
+    const bubbleText = $('ballWakeBubbleText');
+    const bubbleIcon = $('ballWakeBubbleIcon');
+    if (!bubble || !bubbleText) return;
+
+    bubbleText.textContent = text;
+    if (bubbleIcon && icon) bubbleIcon.textContent = icon;
+    ballWidget?.classList.add('has-bubble');
+
+    clearTimeout(bubbleTimer);
+    if (duration > 0) {
+      bubbleTimer = setTimeout(() => {
+        if (!ballWidget?.classList.contains('voice-woken') &&
+            !ballWidget?.classList.contains('voice-recording') &&
+            !ballWidget?.classList.contains('voice-executing')) {
+          ballWidget?.classList.remove('has-bubble');
+        }
+      }, duration);
+    }
+  }
+
+  if (vwc) {
+    // 监听语音控制器状态流
+    vwc.onStatusChange((status, detail) => {
+      if (!ballWidget) return;
+      ballWidget.classList.remove('voice-listening', 'voice-woken', 'voice-recording', 'voice-executing');
+      if (status && status !== 'idle') {
+        ballWidget.classList.add('voice-' + status);
+      }
+
+      const micBtn = $('ballMicBtn');
+      if (micBtn) {
+        micBtn.classList.toggle('active', status === 'recording' || status === 'transcribing');
+      }
+
+      const dot = $('ballStatusDot');
+      if (dot) {
+        dot.title = detail || `Hermes Voice: ${status}`;
+      }
+
+      if (status === 'listening') {
+        const wakeWord = vwc.settings.wakeWord || '小赫';
+        showBubble(`喊“${wakeWord}”唤醒对话`, '🎤', 2500);
+      } else if (status === 'woken') {
+        showBubble('我在，请说指令...', '⚡', 4000);
+      } else if (status === 'recording') {
+        showBubble(detail || '正在收听语音...', '🎙️', 0);
+      } else if (status === 'transcribing') {
+        showBubble('正在识别转录...', '⏳', 0);
+      } else if (status === 'executing') {
+        showBubble(detail || '智能体执行操作中...', '⚙️', 0);
+      } else if (status === 'idle' && detail) {
+        const isSuccess = detail.includes('完成') || detail.includes('成功');
+        showBubble(detail, isSuccess ? '✅' : 'ℹ️', 4000);
+      }
+    });
+
+    // 唤醒事件
+    vwc.onWake((word) => {
+      showBubble(`已唤醒 [${word}]，请说操作...`, '⚡', 4000);
+    });
+
+    // 捕获到口述指令时，如果面板展开，同步打入对话流
+    vwc.onCommand((cmd) => {
+      const stream = $('ballChatMessages');
+      const welcome = $('ballWelcomeTip');
+      if (welcome) welcome.remove();
+
+      const userMsg = document.createElement('div');
+      userMsg.className = 'ball-chat-msg user';
+      userMsg.textContent = `🎙️ ${cmd}`;
+      stream?.appendChild(userMsg);
+      stream?.scrollTo({ top: stream.scrollHeight, behavior: 'smooth' });
+    });
+
+    // 指令执行完成
+    vwc.onResult((res) => {
+      const stream = $('ballChatMessages');
+      const aiMsg = document.createElement('div');
+      aiMsg.className = 'ball-chat-msg assistant';
+      if (res.ok) {
+        aiMsg.innerHTML = escapeHtml(res.reply || '指令执行完毕');
+      } else {
+        aiMsg.innerHTML = '<span style="color:#f43f5e">执行异常：' + escapeHtml(res.error || '未知错误') + '</span>';
+      }
+      stream?.appendChild(aiMsg);
+      stream?.scrollTo({ top: stream.scrollHeight, behavior: 'smooth' });
+    });
+
+    // 麦克风快捷按钮交互：单击录音，再次单击转录执行
+    $('ballMicBtn')?.addEventListener('click', async () => {
+      if (!vwc.isManualRecording) {
+        await vwc.startManualRecording();
+      } else {
+        await vwc.stopManualRecordingAndTranscribe();
+      }
+    });
+
+    // 唤醒词标签同步与快捷修改
+    const updateWakeChip = () => {
+      const label = $('ballWakeWordLabel');
+      if (label && vwc.settings) {
+        label.textContent = `🎤 ${vwc.settings.wakeWord || '小赫'}`;
+      }
+    };
+    updateWakeChip();
+
+    $('ballWakeWordChip')?.addEventListener('click', async () => {
+      const cur = vwc.settings.wakeWord || '小赫';
+      const next = window.prompt('修改语音唤醒词 (喊出该词直接唤醒小球执行操作):', cur);
+      if (next && next.trim() && next.trim() !== cur) {
+        await vwc.updateSettings({ wakeWord: next.trim() });
+        updateWakeChip();
+        showBubble(`已更新唤醒词为: ${next.trim()}`, '✅', 3000);
+      }
+    });
+  }
+
+  // 8. 初始化信息同步
   async function loadSnapshot() {
     try {
       const res = await window.hap?.snapshot?.();

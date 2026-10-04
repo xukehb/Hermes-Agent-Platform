@@ -27,10 +27,13 @@ export interface GuiModelInput {
   alias: string;
   provider: string;
   model: string;
+  category?: string;
+  baseUrl?: string;
+  apiKey?: string;
   contextWindow?: number;
   maxOutputTokens?: number;
   protocol?: 'hermes-native' | 'openai-tools' | 'deepseek' | 'anthropic';
-  capabilities?: ('tools' | 'vision' | 'streaming' | 'reasoning' | 'longctx')[];
+  capabilities?: ('tools' | 'vision' | 'audio' | 'image' | 'video' | 'streaming' | 'reasoning' | 'longctx')[];
 }
 
 export interface GuiSyncInput {

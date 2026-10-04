@@ -5862,6 +5862,191 @@ function renderProviderMetrics() {
       $('statDefaultModel').textContent = '未设置';
     }
   }
+
+  // 独立多模态默认模型与语音唤醒配置联动
+  const allModels = state.models || [];
+  const defaultImageModel = state.defaultImageModel || '';
+  const defaultVideoModel = state.defaultVideoModel || '';
+  const defaultAudioModel = state.defaultAudioModel || '';
+
+  // 1. 默认主对话模型选择器
+  const chatSelect = $('defaultChatModelSelect');
+  if (chatSelect) {
+    const chatModels = allModels.filter(m => !m.category || m.category === 'chat' || m.category === 'vision' || m.capabilities?.includes('tools'));
+    const listToRender = chatModels.length > 0 ? chatModels : allModels;
+    chatSelect.innerHTML = listToRender.map(m => `
+      <option value="${esc(m.alias)}" ${m.alias === defaultModel ? 'selected' : ''}>
+        ${esc(m.alias)}${m.model && m.model !== m.alias ? ' (' + esc(m.model) + ')' : ''}
+      </option>
+    `).join('') || '<option value="">无可用模型</option>';
+  }
+
+  // 2. 默认图片生成模型选择器
+  const imgSelect = $('defaultImageModelSelect');
+  if (imgSelect) {
+    const imgModels = allModels.filter(m => m.category === 'image' || m.capabilities?.includes('image'));
+    const listToRender = imgModels.length > 0 ? imgModels : allModels;
+    const options = ['<option value="">未单独指定 (跟随主对话模型)</option>'];
+    for (const m of listToRender) {
+      options.push(`
+        <option value="${esc(m.alias)}" ${m.alias === defaultImageModel ? 'selected' : ''}>
+          ${esc(m.alias)}${m.model && m.model !== m.alias ? ' (' + esc(m.model) + ')' : ''}
+        </option>
+      `);
+    }
+    imgSelect.innerHTML = options.join('');
+  }
+
+  // 3. 默认视频生成模型选择器
+  const videoSelect = $('defaultVideoModelSelect');
+  if (videoSelect) {
+    const videoModels = allModels.filter(m => m.category === 'video' || m.capabilities?.includes('video'));
+    const listToRender = videoModels.length > 0 ? videoModels : allModels;
+    const options = ['<option value="">未单独指定 (跟随主对话模型)</option>'];
+    for (const m of listToRender) {
+      options.push(`
+        <option value="${esc(m.alias)}" ${m.alias === defaultVideoModel ? 'selected' : ''}>
+          ${esc(m.alias)}${m.model && m.model !== m.alias ? ' (' + esc(m.model) + ')' : ''}
+        </option>
+      `);
+    }
+    videoSelect.innerHTML = options.join('');
+  }
+
+  // 4. 默认语音模型选择器
+  const audioSelect = $('defaultAudioModelSelect');
+  if (audioSelect) {
+    const audioModels = allModels.filter(m => m.category === 'audio' || m.capabilities?.includes('audio') || /whisper|asr|audio|voice/i.test(m.alias));
+    const listToRender = audioModels.length > 0 ? audioModels : allModels;
+    const options = ['<option value="">未单独指定 (使用内置 WebSpeech / Whisper)</option>'];
+    for (const m of listToRender) {
+      options.push(`
+        <option value="${esc(m.alias)}" ${m.alias === defaultAudioModel ? 'selected' : ''}>
+          ${esc(m.alias)}${m.model && m.model !== m.alias ? ' (' + esc(m.model) + ')' : ''}
+        </option>
+      `);
+    }
+    audioSelect.innerHTML = options.join('');
+  }
+
+  // 5. 语音唤醒控制状态同步
+  const vwc = window.voiceWakeController;
+  const vwSettings = state.voiceWakeSettings || vwc?.settings || { enabled: true, wakeWord: 'Hermes', autoExecute: true };
+  if ($('voiceWakeEnabledCb')) $('voiceWakeEnabledCb').checked = Boolean(vwSettings.enabled);
+  if ($('voiceWakeWordInput')) $('voiceWakeWordInput').value = vwSettings.wakeWord || 'Hermes';
+  if ($('voiceWakeAutoExecCb')) $('voiceWakeAutoExecCb').checked = vwSettings.autoExecute !== false;
+}
+
+window.saveDefaultModelSelection = async (category, alias) => {
+  try {
+    await window.hap.setDefaultModelCategory(category, alias || '');
+    if (category === 'image') state.defaultImageModel = alias;
+    else if (category === 'video') state.defaultVideoModel = alias;
+    else if (category === 'audio') state.defaultAudioModel = alias;
+    else state.defaultModel = alias;
+
+    const catName = category === 'image' ? '图片模型' : category === 'video' ? '视频模型' : category === 'audio' ? '语音模型' : '主对话模型';
+    showToast(`已成功更新默认${catName}：${alias || '默认跟随'}`, 'success');
+    await refresh();
+  } catch (err) {
+    showToast(`更新默认模型失败：${err.message}`, 'error');
+  }
+};
+
+window.setGlobalDefaultModelCategory = async (category, alias) => {
+  return window.saveDefaultModelSelection(category, alias);
+};
+
+window.saveVoiceWakeToggle = async (enabled) => {
+  try {
+    const vwc = window.voiceWakeController;
+    if (vwc) {
+      await vwc.updateSettings({ enabled: Boolean(enabled) });
+    } else {
+      await window.hap.updateVoiceWakeSettings({ enabled: Boolean(enabled) });
+    }
+    showToast(enabled ? '已开启语音唤醒监听' : '已关闭语音唤醒监听', 'info');
+  } catch (err) {
+    showToast(`更新语音唤醒开关失败: ${err.message}`, 'error');
+  }
+};
+
+window.saveVoiceWakeWord = async (word) => {
+  const w = (word || '').trim();
+  if (!w) return;
+  try {
+    const vwc = window.voiceWakeController;
+    if (vwc) {
+      await vwc.updateSettings({ wakeWord: w });
+    } else {
+      await window.hap.updateVoiceWakeSettings({ wakeWord: w });
+    }
+    showToast(`已更新自定义唤醒词为: [${w}]`, 'success');
+  } catch (err) {
+    showToast(`保存唤醒词失败: ${err.message}`, 'error');
+  }
+};
+
+window.saveVoiceWakeAutoExec = async (autoExecute) => {
+  try {
+    const vwc = window.voiceWakeController;
+    if (vwc) {
+      await vwc.updateSettings({ autoExecute: Boolean(autoExecute) });
+    } else {
+      await window.hap.updateVoiceWakeSettings({ autoExecute: Boolean(autoExecute) });
+    }
+    showToast(autoExecute ? '已开启唤醒后自动执行口述操作' : '已关闭自动执行操作', 'info');
+  } catch (err) {
+    showToast(`保存失败: ${err.message}`, 'error');
+  }
+};
+
+window.testVoiceWakeMic = async (btn) => {
+  const vwc = window.voiceWakeController;
+  if (!vwc) {
+    showToast('语音唤醒控制器尚未就绪', 'warn');
+    return;
+  }
+  const statusBadge = $('voiceWakeStatusBadge');
+  const statusText = $('voiceWakeStatusText');
+  showToast(`正在测试麦克风录音与唤醒词识别（请说出唤醒词: ${vwc.settings.wakeWord || '小赫'}）...`, 'info');
+  vwc.playWakeChime();
+
+  try {
+    if (vwc.startListening) {
+      vwc.startListening();
+    }
+    if (statusBadge) statusBadge.style.color = 'var(--primary)';
+    if (statusText) statusText.textContent = '收音测试中...';
+
+    setTimeout(() => {
+      showToast('麦克风收音探针测试完毕，声学驱动就绪', 'success');
+      if (statusText) statusText.textContent = '已就绪';
+    }, 2500);
+  } catch (err) {
+    showToast(`麦克风测试失败: ${err.message}`, 'error');
+  }
+};
+
+if (window.voiceWakeController) {
+  window.voiceWakeController.onStatusChange((status) => {
+    const textEl = $('voiceWakeStatusText');
+    const badgeEl = $('voiceWakeStatusBadge');
+    if (!textEl || !badgeEl) return;
+    if (status === 'listening') {
+      textEl.textContent = '监听中';
+      badgeEl.style.color = 'var(--primary)';
+    } else if (status === 'woken' || status === 'recording') {
+      textEl.textContent = '已唤醒/收音中';
+      badgeEl.style.color = '#f43f5e';
+    } else if (status === 'executing') {
+      textEl.textContent = '执行操作中';
+      badgeEl.style.color = '#eab308';
+    } else {
+      textEl.textContent = '就绪';
+      badgeEl.style.color = 'var(--text-muted)';
+    }
+  });
 }
 
 window.switchProviderModelView = (mode) => {
@@ -6600,7 +6785,8 @@ window.toggleSelectAllModelsInHeader = (checked) => {
     }
     if (capFilter !== 'all') {
       const caps = Array.isArray(m.capabilities) ? m.capabilities : [];
-      if (!caps.includes(capFilter)) return false;
+      const matchCap = caps.includes(capFilter) || m.category === capFilter;
+      if (!matchCap) return false;
     }
     if (kw) {
       const mMatch = m.alias.toLowerCase().includes(kw) ||
@@ -6662,7 +6848,8 @@ function renderModels() {
 
     if (capFilter !== 'all') {
       const caps = Array.isArray(m.capabilities) ? m.capabilities : [];
-      if (!caps.includes(capFilter)) return false;
+      const matchCap = caps.includes(capFilter) || m.category === capFilter;
+      if (!matchCap) return false;
     }
 
     if (kw) {
@@ -6693,10 +6880,17 @@ function renderModels() {
     const mLat = modelLatencies.get(m.alias);
 
     const caps = Array.isArray(m.capabilities) ? m.capabilities : [];
-    const hasVision = caps.includes('vision');
+    const hasVision = caps.includes('vision') || m.category === 'vision';
+    const hasAudio = caps.includes('audio') || m.category === 'audio';
+    const hasImage = caps.includes('image') || m.category === 'image';
+    const hasVideo = caps.includes('video') || m.category === 'video';
+
     const capBadges = [];
     if (caps.includes('tools')) capBadges.push('<span class="cap-pill tools" title="工具调用">Tools</span>');
-    if (hasVision) capBadges.push('<span class="cap-pill vision" title="多模态视觉 (支持图片/截屏/文档分析)">👁️ 视觉</span>');
+    if (hasAudio) capBadges.push('<span class="cap-pill audio" style="background:rgba(59,130,246,0.15);color:#3b82f6;border-radius:4px;padding:2px 6px;font-size:10.5px;" title="语音大模型 / ASR / TTS">🎙️ 语音</span>');
+    if (hasImage) capBadges.push('<span class="cap-pill image" style="background:rgba(16,185,129,0.15);color:#10b981;border-radius:4px;padding:2px 6px;font-size:10.5px;" title="图片生成 / 文生图">🎨 图片</span>');
+    if (hasVideo) capBadges.push('<span class="cap-pill video" style="background:rgba(245,158,11,0.15);color:#f59e0b;border-radius:4px;padding:2px 6px;font-size:10.5px;" title="视频生成 / 文生视频">🎬 视频</span>');
+    if (hasVision && !hasAudio && !hasImage && !hasVideo) capBadges.push('<span class="cap-pill vision" title="多模态视觉 (支持图片/截屏/文档分析)">👁️ 视觉</span>');
     if (caps.includes('reasoning')) capBadges.push('<span class="cap-pill reasoning" title="深度思考推理">Reasoning</span>');
     if (caps.includes('streaming')) capBadges.push('<span class="cap-pill streaming" title="流式传输">Stream</span>');
     if (caps.includes('longctx')) capBadges.push('<span class="cap-pill longctx" title="长上下文">LongCtx</span>');
@@ -6709,22 +6903,35 @@ function renderModels() {
         : `<span class="badge danger" style="font-size:11px;" title="${esc(mLat.error || '')}">失败</span>`;
     }
 
+    let aliasBadges = '';
+    if (hasAudio) aliasBadges += '<span class="badge info" style="font-size:10px;padding:1px 5px;background:rgba(59,130,246,0.15);color:#3b82f6;">🎙️ 语音</span>';
+    else if (hasImage) aliasBadges += '<span class="badge success" style="font-size:10px;padding:1px 5px;background:rgba(16,185,129,0.15);color:#10b981;">🎨 图片</span>';
+    else if (hasVideo) aliasBadges += '<span class="badge warning" style="font-size:10px;padding:1px 5px;background:rgba(245,158,11,0.15);color:#f59e0b;">🎬 视频</span>';
+    else if (hasVision) aliasBadges += '<span class="vision-badge-pill" title="支持多模态视觉理解与图片输入">👁️ 视觉</span>';
+    if (m.baseUrl) aliasBadges += `<span class="prop-chip" style="font-size:10px;padding:1px 5px;color:var(--text-muted);" title="独立部署端点: ${esc(m.baseUrl)}">独立URL</span>`;
+
     return `
       <tr class="${isDefault ? 'row-default-model' : ''}">
         <td style="width:36px;text-align:center;">
           <input type="checkbox" style="cursor:pointer;" ${isChecked ? 'checked' : ''} onchange="window.toggleSelectModel('${escJs(m.alias)}')" />
         </td>
-        <td style="width:70px;text-align:center;">
-          ${isDefault
-            ? `<button type="button" class="btn text-btn" style="color:var(--warning);font-weight:700;font-size:12px;padding:2px 6px;cursor:default;display:inline-flex;align-items:center;gap:3px;" title="当前全局默认主模型"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>默认</span></button>`
-            : `<button type="button" class="btn text-btn" style="color:var(--text-muted);font-size:12px;padding:2px 6px;cursor:pointer;display:inline-flex;align-items:center;gap:3px;" title="点击设为全局默认主模型" onclick="window.setGlobalDefaultModel('${escJs(m.alias)}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>设默认</span></button>`
-          }
+        <td style="width:85px;text-align:center;">
+          ${(() => {
+            const cat = m.category || (m.capabilities?.includes('audio') ? 'audio' : m.capabilities?.includes('image') ? 'image' : m.capabilities?.includes('video') ? 'video' : 'chat');
+            const isDefaultCat = (cat === 'image' && m.alias === state.defaultImageModel) ||
+                                 (cat === 'video' && m.alias === state.defaultVideoModel) ||
+                                 (cat === 'audio' && m.alias === state.defaultAudioModel) ||
+                                 (cat === 'chat' && m.alias === defaultModel);
+            const catLabel = cat === 'image' ? '图片' : cat === 'video' ? '视频' : cat === 'audio' ? '语音' : '主模型';
+            return isDefaultCat
+              ? `<button type="button" class="btn text-btn" style="color:var(--warning);font-weight:700;font-size:11.5px;padding:2px 5px;cursor:default;display:inline-flex;align-items:center;gap:3px;" title="当前默认${catLabel}"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>默认${catLabel}</span></button>`
+              : `<button type="button" class="btn text-btn" style="color:var(--text-muted);font-size:11.5px;padding:2px 5px;cursor:pointer;display:inline-flex;align-items:center;gap:3px;" title="设为默认${catLabel}" onclick="window.setGlobalDefaultModelCategory('${cat}', '${escJs(m.alias)}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>设${catLabel}</span></button>`;
+          })()}
         </td>
         <td>
           <div style="display:flex;align-items:center;gap:6px;">
             <strong style="color:var(--text-main);font-size:13px;">${esc(m.alias)}</strong>
-            ${hasVision ? '<span class="vision-badge-pill" title="支持多模态视觉理解与图片输入">👁️ 视觉</span>' : ''}
-            ${isDefault ? '<span class="star-badge" style="font-size:10px;">默认</span>' : ''}
+            ${aliasBadges}
           </div>
         </td>
         <td>
@@ -8090,7 +8297,57 @@ const PRESET_TEMPLATES = {
   xai: { name: 'xAI Grok', baseUrl: 'https://api.x.ai/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'grok-beta', category: '国际前沿大模型'},
 
   // 本地与私有化部署
-  ollama: { name: 'Ollama 本地运行', baseUrl: 'http://127.0.0.1:11434/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'llama3:latest', category: '本地与私有化部署' },
+  ollama: {
+    name: 'Ollama 本地运行',
+    baseUrl: 'http://127.0.0.1:11434/v1',
+    wireApi: 'chat',
+    protocol: 'openai-tools',
+    testModel: 'llama3:latest',
+    category: '本地与私有化部署',
+    defaultModels: [
+      { alias: 'llama3:latest', model: 'llama3:latest', contextWindow: 8192, category: 'general' },
+      { alias: 'qwen2.5:7b', model: 'qwen2.5:7b', contextWindow: 32768, category: 'coding' },
+    ],
+  },
+  'local-audio': {
+    name: '本地语音模型部署 (Whisper / ASR / TTS)',
+    baseUrl: 'http://127.0.0.1:8000/v1',
+    wireApi: 'chat',
+    protocol: 'openai-tools',
+    testModel: 'whisper-large-v3',
+    category: '本地与私有化部署',
+    defaultModels: [
+      { alias: 'whisper-large-v3', model: 'whisper:large-v3', contextWindow: 16384, category: 'audio' },
+      { alias: 'whisper-base', model: 'whisper:base', contextWindow: 16384, category: 'audio' },
+      { alias: 'qwen2-audio-7b', model: 'qwen2-audio:7b', contextWindow: 8192, category: 'audio' },
+      { alias: 'cosyvoice', model: 'cosyvoice:latest', contextWindow: 4096, category: 'audio' },
+    ],
+  },
+  'local-image': {
+    name: '本地图片模型部署 (Flux / SD / ComfyUI)',
+    baseUrl: 'http://127.0.0.1:7860/v1',
+    wireApi: 'chat',
+    protocol: 'openai-tools',
+    testModel: 'flux-schnell',
+    category: '本地与私有化部署',
+    defaultModels: [
+      { alias: 'flux-schnell', model: 'flux-schnell', contextWindow: 4096, category: 'image' },
+      { alias: 'stable-diffusion-3.5', model: 'stable-diffusion-3.5:medium', contextWindow: 4096, category: 'image' },
+      { alias: 'sdxl-turbo', model: 'sdxl-turbo', contextWindow: 2048, category: 'image' },
+    ],
+  },
+  'local-video': {
+    name: '本地视频模型部署 (CogVideoX / 混元)',
+    baseUrl: 'http://127.0.0.1:8080/v1',
+    wireApi: 'chat',
+    protocol: 'openai-tools',
+    testModel: 'cogvideox-5b',
+    category: '本地与私有化部署',
+    defaultModels: [
+      { alias: 'cogvideox-5b', model: 'cogvideox:5b', contextWindow: 8192, category: 'video' },
+      { alias: 'hunyuan-video', model: 'hunyuan-video:latest', contextWindow: 8192, category: 'video' },
+    ],
+  },
   lmstudio: { name: 'LM Studio 本地部署', baseUrl: 'http://127.0.0.1:1234/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'local-model', category: '本地与私有化部署' },
   vllm: { name: 'vLLM 推理服务', baseUrl: 'http://127.0.0.1:8000/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'default', category: '本地与私有化部署' },
 };
@@ -8111,7 +8368,7 @@ function initPresetSelect() {
     categories[cat].push({ key, ...item });
   });
 
-  const options = ['<option value="">-- 选择预置模板（如 DeepSeek、Qwen、OpenAI、Anthropic、Ollama 等） --</option>'];
+  const options = ['<option value="">-- 选择预置模板（如 DeepSeek、Qwen、OpenAI、本地语音/图片/视频、Ollama 等） --</option>'];
   Object.entries(categories).forEach(([categoryName, list]) => {
     if (list.length === 0) return;
     options.push(`<optgroup label="${esc(trSourceText(categoryName))}">`);
@@ -8131,9 +8388,15 @@ function initPresetSelect() {
     $('providerInputBaseUrl').value = t.baseUrl;
     $('providerInputWireApi').value = t.wireApi;
     $('providerInputProtocol').value = t.protocol;
-    $('providerInputEnvKey').value = `${key.toUpperCase()}_API_KEY`;
+    $('providerInputEnvKey').value = `${key.toUpperCase().replace(/[^A-Z0-9]/g, '_')}_API_KEY`;
     if ($('providerInputTestModel')) {
       $('providerInputTestModel').value = t.testModel || '';
+    }
+
+    // 若有预置模型且当前列表为空，则自动加载推荐模型
+    if (Array.isArray(t.defaultModels) && t.defaultModels.length > 0 && currentDialogModels.length === 0) {
+      currentDialogModels = t.defaultModels.map(m => ({ ...m }));
+      renderCurrentDialogModels();
     }
   });
 }
@@ -8264,12 +8527,22 @@ $('providerForm')?.addEventListener('submit', async (e) => {
     // 3. 同步保存该服务商名下保留或新增的所有模型
     for (const m of currentDialogModels) {
       const isVision = /(?:^|[-_./: ])(?:vl|vision|omni|image)(?:[-_./: ]|$)|[-_]vl(?:[:.]|$)|qwen.*[-_]vl|llava|minicpm[-_]?v|internvl|cogvlm|glm-[0-9.]+v|phi-.*(?:vision|multimodal)|gpt-4o|gpt-5|gemini|claude-3|claude-sonnet|claude-opus|gpt-image/i.test(`${m.alias} ${m.model || ''}`);
+      const isAudio = m.category === 'audio' || /(?:^|[-_./: ])(?:audio|whisper|asr|tts|voice|speech|cosyvoice|sensevoice|chat-tts|chattts)(?:[-_./: ]|$)/i.test(`${m.alias} ${m.model || ''}`);
+      const isImage = m.category === 'image' || /(?:^|[-_./: ])(?:flux|diffusion|sdxl|sd[0-9.]*|midjourney|dall-e|imagen|image-gen)(?:[-_./: ]|$)/i.test(`${m.alias} ${m.model || ''}`);
+      const isVideo = m.category === 'video' || /(?:^|[-_./: ])(?:video|cogvideo|hunyuan-video|kling|sora|svd|videox)(?:[-_./: ]|$)/i.test(`${m.alias} ${m.model || ''}`);
       const caps = ['tools', 'streaming'];
       if (isVision) caps.push('vision');
+      if (isAudio) caps.push('audio');
+      if (isImage) caps.push('image');
+      if (isVideo) caps.push('video');
+      const cat = m.category || (isAudio ? 'audio' : (isImage ? 'image' : (isVideo ? 'video' : (isVision ? 'vision' : undefined))));
       await window.hap.upsertModel({
         alias: m.alias,
         provider: providerId,
         model: m.model || m.alias,
+        category: cat,
+        baseUrl: m.baseUrl || undefined,
+        apiKey: m.apiKey || undefined,
         contextWindow: m.contextWindow || inferDefaultContextWindow(m.model || m.alias),
         capabilities: caps,
       }).catch(err => console.warn('保存模型警告:', err));
@@ -8403,9 +8676,12 @@ window.openModelDialog = (alias) => {
   }
 
   // 重置特性多选框
-  ['modelCapTools', 'modelCapVision', 'modelCapReasoning', 'modelCapStreaming', 'modelCapLongctx'].forEach(id => {
+  ['modelCapTools', 'modelCapVision', 'modelCapAudio', 'modelCapImage', 'modelCapVideo', 'modelCapReasoning', 'modelCapStreaming', 'modelCapLongctx'].forEach(id => {
     if ($(id)) $(id).checked = false;
   });
+  if ($('modelInputCategory')) $('modelInputCategory').value = 'general';
+  if ($('modelInputBaseUrl')) $('modelInputBaseUrl').value = '';
+  if ($('modelInputApiKey')) $('modelInputApiKey').value = '';
   if ($('modelSetAsDefaultCb')) $('modelSetAsDefaultCb').checked = false;
 
   const testBtn = $('testDialogModelBtn');
@@ -8445,6 +8721,9 @@ window.openModelDialog = (alias) => {
     $('modelInputAlias').readOnly = true;
     $('modelProviderSelect').value = m.providerId || m.provider || '';
     $('modelInputModel').value = m.modelName || m.model || '';
+    if ($('modelInputCategory')) $('modelInputCategory').value = m.category || 'general';
+    if ($('modelInputBaseUrl')) $('modelInputBaseUrl').value = m.baseUrl || '';
+    if ($('modelInputApiKey')) $('modelInputApiKey').value = m.apiKey || '';
     $('modelInputContext').value = m.contextWindow || '';
     $('modelInputMaxOutput').value = m.maxOutputTokens !== undefined ? m.maxOutputTokens : '';
     $('modelInputProtocol').value = m.protocol || '';
@@ -8453,6 +8732,9 @@ window.openModelDialog = (alias) => {
     const caps = new Set(m.capabilities || []);
     if ($('modelCapTools')) $('modelCapTools').checked = caps.has('tools');
     if ($('modelCapVision')) $('modelCapVision').checked = caps.has('vision');
+    if ($('modelCapAudio')) $('modelCapAudio').checked = caps.has('audio') || m.category === 'audio';
+    if ($('modelCapImage')) $('modelCapImage').checked = caps.has('image') || m.category === 'image';
+    if ($('modelCapVideo')) $('modelCapVideo').checked = caps.has('video') || m.category === 'video';
     if ($('modelCapReasoning')) $('modelCapReasoning').checked = caps.has('reasoning');
     if ($('modelCapStreaming')) $('modelCapStreaming').checked = caps.has('streaming');
     if ($('modelCapLongctx')) $('modelCapLongctx').checked = caps.has('longctx');
@@ -8493,9 +8775,17 @@ $('fetchRemoteModelsBtn')?.addEventListener('click', async () => {
       const picker = $('remoteModelPicker');
       picker.style.display = 'block';
       const isVisionName = (n) => /(?:^|[-_./: ])(?:vl|vision|omni|image)(?:[-_./: ]|$)|[-_]vl(?:[:.]|$)|qwen.*[-_]vl|llava|minicpm[-_]?v|internvl|cogvlm|glm-[0-9.]+v|phi-.*(?:vision|multimodal)|gpt-4o|gpt-5|gemini|claude-3|claude-sonnet|claude-opus|gpt-image/i.test(n);
+      const isAudioName = (n) => /(?:^|[-_./: ])(?:audio|whisper|asr|tts|voice|speech|cosyvoice|sensevoice|chat-tts|chattts)(?:[-_./: ]|$)/i.test(n);
+      const isImageName = (n) => /(?:^|[-_./: ])(?:flux|diffusion|sdxl|sd[0-9.]*|midjourney|dall-e|imagen|image-gen)(?:[-_./: ]|$)/i.test(n);
+      const isVideoName = (n) => /(?:^|[-_./: ])(?:video|cogvideo|hunyuan-video|kling|sora|svd|videox)(?:[-_./: ]|$)/i.test(n);
+
       const options = ['<option value="">-- 点击快速点选拉取到的模型 --</option>'];
       res.models.forEach((name) => {
-        const tag = isVisionName(name) ? ' [👁️ 视觉]' : '';
+        let tag = '';
+        if (isAudioName(name)) tag = ' [🎙️ 语音]';
+        else if (isImageName(name)) tag = ' [🎨 图片]';
+        else if (isVideoName(name)) tag = ' [🎬 视频]';
+        else if (isVisionName(name)) tag = ' [👁️ 视觉]';
         options.push(`<option value="${esc(name)}">${esc(name)}${tag}</option>`);
       });
       picker.innerHTML = options.join('');
@@ -8509,7 +8799,21 @@ $('fetchRemoteModelsBtn')?.addEventListener('click', async () => {
           $('modelInputAlias').value = shortName;
         }
         const isVision = isVisionName(val);
+        const isAudio = isAudioName(val);
+        const isImage = isImageName(val);
+        const isVideo = isVideoName(val);
+
+        if ($('modelInputCategory')) {
+          if (isAudio) $('modelInputCategory').value = 'audio';
+          else if (isImage) $('modelInputCategory').value = 'image';
+          else if (isVideo) $('modelInputCategory').value = 'video';
+          else if (isVision) $('modelInputCategory').value = 'vision';
+        }
+
         if ($('modelCapVision')) $('modelCapVision').checked = isVision;
+        if ($('modelCapAudio')) $('modelCapAudio').checked = isAudio;
+        if ($('modelCapImage')) $('modelCapImage').checked = isImage;
+        if ($('modelCapVideo')) $('modelCapVideo').checked = isVideo;
         if ($('modelCapTools')) $('modelCapTools').checked = true;
         if ($('modelCapStreaming')) $('modelCapStreaming').checked = true;
       };
@@ -8531,6 +8835,9 @@ $('modelForm')?.addEventListener('submit', async (e) => {
   const caps = [];
   if ($('modelCapTools')?.checked) caps.push('tools');
   if ($('modelCapVision')?.checked) caps.push('vision');
+  if ($('modelCapAudio')?.checked) caps.push('audio');
+  if ($('modelCapImage')?.checked) caps.push('image');
+  if ($('modelCapVideo')?.checked) caps.push('video');
   if ($('modelCapReasoning')?.checked) caps.push('reasoning');
   if ($('modelCapStreaming')?.checked) caps.push('streaming');
   if ($('modelCapLongctx')?.checked) caps.push('longctx');
@@ -8541,11 +8848,18 @@ $('modelForm')?.addEventListener('submit', async (e) => {
   const rawMaxTokens = data.maxOutputTokens !== undefined ? String(data.maxOutputTokens).trim() : '';
   const maxOutputTokens = rawMaxTokens !== '' && !isNaN(Number(rawMaxTokens)) ? Number(rawMaxTokens) : undefined;
 
+  const category = data.category?.trim() || undefined;
+  const baseUrl = data.baseUrl?.trim() || undefined;
+  const apiKey = data.apiKey?.trim() || undefined;
+
   try {
     await window.hap.upsertModel({
       alias,
       provider: data.provider.trim(),
       model: data.model.trim(),
+      category,
+      baseUrl,
+      apiKey,
       contextWindow: data.contextWindow ? Number(data.contextWindow) : undefined,
       maxOutputTokens,
       protocol: data.protocol ? data.protocol : undefined,
@@ -8720,6 +9034,9 @@ window.refreshModelHub = async () => {
     if ($('hubCountReasoning')) $('hubCountReasoning').textContent = evals.filter(e => e.model.category === 'reasoning').length;
     if ($('hubCountFast')) $('hubCountFast').textContent = evals.filter(e => e.model.category === 'fast').length;
     if ($('hubCountVision')) $('hubCountVision').textContent = evals.filter(e => e.model.category === 'vision' || e.model.tags?.includes('视觉多模态')).length;
+    if ($('hubCountAudio')) $('hubCountAudio').textContent = evals.filter(e => e.model.category === 'audio' || e.model.tags?.includes('语音识别') || e.model.tags?.includes('语音大模型')).length;
+    if ($('hubCountImage')) $('hubCountImage').textContent = evals.filter(e => e.model.category === 'image' || e.model.tags?.includes('图片生成')).length;
+    if ($('hubCountVideo')) $('hubCountVideo').textContent = evals.filter(e => e.model.category === 'video' || e.model.tags?.includes('视频生成')).length;
 
     renderModelHubCards();
   } catch (err) {
@@ -8738,6 +9055,12 @@ function renderModelHubCards() {
     list = list.filter(e => e.tier === 'best');
   } else if (hubActiveCategory === 'vision') {
     list = list.filter(e => e.model.category === 'vision' || (e.model.tags && e.model.tags.includes('视觉多模态')));
+  } else if (hubActiveCategory === 'audio') {
+    list = list.filter(e => e.model.category === 'audio' || (e.model.tags && (e.model.tags.includes('语音识别') || e.model.tags.includes('语音大模型'))));
+  } else if (hubActiveCategory === 'image') {
+    list = list.filter(e => e.model.category === 'image' || (e.model.tags && e.model.tags.includes('图片生成')));
+  } else if (hubActiveCategory === 'video') {
+    list = list.filter(e => e.model.category === 'video' || (e.model.tags && e.model.tags.includes('视频生成')));
   } else if (hubActiveCategory !== 'all') {
     list = list.filter(e => e.model.category === hubActiveCategory);
   }
@@ -8775,11 +9098,25 @@ function renderModelHubCards() {
     const recRamGb = (m.recommendedRamBytes / gb).toFixed(0);
 
     const isVisionModel = m.category === 'vision' || (m.tags && m.tags.includes('视觉多模态'));
+    const isAudioModel = m.category === 'audio' || (m.tags && (m.tags.includes('语音识别') || m.tags.includes('语音大模型')));
+    const isImageModel = m.category === 'image' || (m.tags && m.tags.includes('图片生成'));
+    const isVideoModel = m.category === 'video' || (m.tags && m.tags.includes('视频生成'));
+
     let tierClass = 'tier-' + e.tier;
     let badgeHtml = m.badge ? `<span class="hub-badge-pill">${esc(m.badge)}</span>` : '';
-    if (isVisionModel) {
+    if (isAudioModel) {
+      badgeHtml = `<span class="badge info" style="font-size:11px;padding:2px 8px;background:rgba(59,130,246,0.15);color:#3b82f6;">🎙️ 语音模型</span> ` + badgeHtml;
+    } else if (isImageModel) {
+      badgeHtml = `<span class="badge success" style="font-size:11px;padding:2px 8px;background:rgba(16,185,129,0.15);color:#10b981;">🎨 图片模型</span> ` + badgeHtml;
+    } else if (isVideoModel) {
+      badgeHtml = `<span class="badge warning" style="font-size:11px;padding:2px 8px;background:rgba(245,158,11,0.15);color:#f59e0b;">🎬 视频模型</span> ` + badgeHtml;
+    } else if (isVisionModel) {
       badgeHtml = `<span class="vision-badge-pill" style="font-size:11px;padding:2px 8px;">👁️ 视觉多模态</span> ` + badgeHtml;
     }
+
+    const localConfigBtn = `
+      <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 9px;" title="配置此模型的本地 URL / Key / 真实模型 ID" onclick="window.openLocalDeploymentForModel('${escJs(m.id)}')">本地部署</button>
+    `;
 
     let actionButtonHtml = '';
     if (isDownloading) {
@@ -8791,20 +9128,24 @@ function renderModelHubCards() {
         <span class="badge success" style="font-size:11.5px;padding:4px 8px;">本地已就绪</span>
         <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 9px;" onclick="window.setDefaultHubModel('${escJs(m.id)}')">设为主模型</button>
         <button type="button" class="btn primary" style="font-size:11.5px;padding:4px 10px;" onclick="window.testHubModelChat('${escJs(m.id)}')">去对话</button>
+        ${localConfigBtn}
         <button type="button" class="btn danger" style="font-size:11px;padding:4px 7px;" title="从磁盘删除模型" onclick="window.deleteHubModel('${escJs(m.id)}')"></button>
       `;
     } else {
       if (e.tier === 'insufficient') {
         actionButtonHtml = `
           <button type="button" class="btn danger" style="font-size:11.5px;padding:4px 12px;opacity:0.9;" onclick="window.pullHubModel('${escJs(m.id)}', true)">硬件不足，仍要安装</button>
+          ${localConfigBtn}
         `;
       } else if (e.tier === 'best') {
         actionButtonHtml = `
           <button type="button" class="btn primary" style="font-size:12px;padding:5px 14px;" onclick="window.pullHubModel('${escJs(m.id)}')">一键极速部署</button>
+          ${localConfigBtn}
         `;
       } else {
         actionButtonHtml = `
           <button type="button" class="btn primary" style="font-size:12px;padding:5px 14px;" onclick="window.pullHubModel('${escJs(m.id)}')">一键部署安装</button>
+          ${localConfigBtn}
         `;
       }
     }
@@ -8984,6 +9325,56 @@ window.testHubModelChat = (modelTag) => {
   window.closeModelHubModal();
   if (typeof show === 'function') show('chat');
   showToast(`已选择模型 [${alias}]，可以开始对话！`, 'success');
+};
+
+window.openLocalDeploymentForModel = (modelId) => {
+  const evalItem = hubCurrentProfile?.evaluations?.find(e => e.model.id === modelId);
+  const catalogModel = evalItem?.model;
+  const category = catalogModel?.category || (/(?:audio|whisper|voice|asr|tts)/i.test(modelId) ? 'audio' : (/(?:flux|diffusion|image)/i.test(modelId) ? 'image' : (/(?:video)/i.test(modelId) ? 'video' : 'general')));
+  const cleanAlias = modelId.replace(/[:/]/g, '-');
+
+  let defaultUrl = 'http://127.0.0.1:11434/v1';
+  let defaultProviderId = 'ollama';
+  if (category === 'audio') {
+    defaultUrl = 'http://127.0.0.1:8000/v1';
+    defaultProviderId = 'local-audio';
+  } else if (category === 'image') {
+    defaultUrl = 'http://127.0.0.1:7860/v1';
+    defaultProviderId = 'local-image';
+  } else if (category === 'video') {
+    defaultUrl = 'http://127.0.0.1:8080/v1';
+    defaultProviderId = 'local-video';
+  }
+
+  // 检查是否已有此本地服务商，若无则使用列表中匹配的或首个服务商
+  let targetProvider = state.providers?.find(p => p.id === defaultProviderId || p.baseUrl === defaultUrl);
+  if (!targetProvider && state.providers && state.providers.length > 0) {
+    targetProvider = state.providers[0];
+  }
+
+  window.closeModelHubModal();
+  window.openModelDialog();
+
+  const aliasInput = $('modelInputAlias');
+  if (aliasInput) {
+    aliasInput.value = cleanAlias;
+    aliasInput.readOnly = false;
+  }
+  if ($('modelInputModel')) $('modelInputModel').value = modelId;
+  if ($('modelInputCategory')) $('modelInputCategory').value = category;
+  if ($('modelInputBaseUrl')) $('modelInputBaseUrl').value = defaultUrl;
+  if ($('modelInputApiKey')) {
+    $('modelInputApiKey').value = '';
+    $('modelInputApiKey').placeholder = '本地部署无密码可留空';
+  }
+  if ($('modelProviderSelect') && targetProvider) $('modelProviderSelect').value = targetProvider.id;
+
+  if (category === 'audio' && $('modelCapAudio')) $('modelCapAudio').checked = true;
+  if (category === 'image' && $('modelCapImage')) $('modelCapImage').checked = true;
+  if (category === 'video' && $('modelCapVideo')) $('modelCapVideo').checked = true;
+  if (category === 'vision' && $('modelCapVision')) $('modelCapVision').checked = true;
+
+  showToast(`已为您载入模型 [${modelId}] 的本地部署配置，可修改独立 URL、Key 及真实模型 ID`, 'info');
 };
 
 window.startOllamaFromHub = async () => {
@@ -13127,10 +13518,16 @@ function renderCurrentDialogModels() {
   }
   container.innerHTML = currentDialogModels.map((m, idx) => {
     const isVision = /(?:^|[-_./: ])(?:vl|vision|omni|image)(?:[-_./: ]|$)|[-_]vl(?:[:.]|$)|qwen.*[-_]vl|llava|minicpm[-_]?v|internvl|cogvlm|glm-[0-9.]+v|phi-.*(?:vision|multimodal)|gpt-4o|gpt-5|gemini|claude-3|claude-sonnet|claude-opus|gpt-image/i.test(`${m.alias} ${m.model || ''}`);
+    const isAudio = m.category === 'audio' || /(?:^|[-_./: ])(?:audio|whisper|asr|tts|voice|speech|cosyvoice|sensevoice|chat-tts|chattts)(?:[-_./: ]|$)/i.test(`${m.alias} ${m.model || ''}`);
+    const isImage = m.category === 'image' || /(?:^|[-_./: ])(?:flux|diffusion|sdxl|sd[0-9.]*|midjourney|dall-e|imagen|image-gen)(?:[-_./: ]|$)/i.test(`${m.alias} ${m.model || ''}`);
+    const isVideo = m.category === 'video' || /(?:^|[-_./: ])(?:video|cogvideo|hunyuan-video|kling|sora|svd|videox)(?:[-_./: ]|$)/i.test(`${m.alias} ${m.model || ''}`);
     return `
     <span class="model-dialog-pill">
       <strong>${esc(m.alias)}</strong>
-      ${isVision ? '<span class="vision-badge-pill" style="font-size:10px;padding:1px 6px;">👁️ 视觉</span>' : ''}
+      ${isAudio ? '<span class="badge info" style="font-size:10px;padding:1px 5px;background:rgba(59,130,246,0.15);color:#3b82f6;">🎙️ 语音</span>' : ''}
+      ${isImage ? '<span class="badge success" style="font-size:10px;padding:1px 5px;background:rgba(16,185,129,0.15);color:#10b981;">🎨 图片</span>' : ''}
+      ${isVideo ? '<span class="badge warning" style="font-size:10px;padding:1px 5px;background:rgba(245,158,11,0.15);color:#f59e0b;">🎬 视频</span>' : ''}
+      ${isVision && !isAudio && !isImage && !isVideo ? '<span class="vision-badge-pill" style="font-size:10px;padding:1px 6px;">👁️ 视觉</span>' : ''}
       ${m.model && m.model !== m.alias ? `<span style="color:var(--text-muted);font-size:11px;">(${esc(m.model)})</span>` : ''}
       ${m.contextWindow ? `<span class="model-ctx-badge">${(m.contextWindow/1024).toFixed(0)}k</span>` : ''}
       <span class="model-dialog-remove" title="移除此模型" onclick="window.removeModelFromDialog(${idx})">×</span>

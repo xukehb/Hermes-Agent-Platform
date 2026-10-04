@@ -18,7 +18,7 @@ import { ProviderRegistry } from '../providers/index.js';
 import { describeError } from '../channels/index.js';
 
 /** 能力标签取值，与 schema 的 modelCapabilitySchema 保持一致。 */
-const CAPABILITIES = ['tools', 'vision', 'streaming', 'reasoning', 'longctx'] as const;
+const CAPABILITIES = ['tools', 'vision', 'audio', 'image', 'video', 'streaming', 'reasoning', 'longctx'] as const;
 
 export function registerModelCommands(root: Command, globals: () => GlobalOptions): void {
   const model = root.command('model').description('管理模型目录');

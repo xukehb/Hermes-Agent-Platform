@@ -166,6 +166,12 @@ export const BUILTIN = {
   defaultAgent: 'coder',
   /** 全局默认模型 */
   defaultModel: 'deepseek/deepseek-chat',
+  /** 全局默认图片生成模型 */
+  defaultImageModel: undefined as string | undefined,
+  /** 全局默认视频生成模型 */
+  defaultVideoModel: undefined as string | undefined,
+  /** 全局默认语音识别/音频模型 */
+  defaultAudioModel: undefined as string | undefined,
   /** 协议探测链的最后一环（FR-LOOP-012 / FR-PROV-008） */
   protocol: 'openai-tools' as ProtocolName,
   runtimeMode: 'oneshot' as RuntimeMode,
@@ -360,6 +366,24 @@ export function inferModelCapabilities(modelName: string, alias?: string): Model
   const reasoningPattern = /(?:^|[-_./: ])(?:r1|reasoner|reasoning|thinking|o1|o3|o4)(?:[-_./: ]|$)|deepseek-r1/i;
   if (reasoningPattern.test(target)) {
     caps.add('reasoning');
+  }
+
+  // 语音大模型 / ASR / TTS 匹配
+  const audioPattern = /(?:^|[-_./: ])(?:audio|whisper.*|asr|tts|voice|speech|cosyvoice.*|sensevoice.*|chat-?tts.*)(?:[-_./: ]|$)|(?:audio|whisper|cosyvoice|sensevoice)/i;
+  if (audioPattern.test(target)) {
+    caps.add('audio');
+  }
+
+  // 图像生成 / 文生图匹配
+  const imagePattern = /(?:^|[-_./: ])(?:flux.*|diffusion|sdxl.*|sd[0-9.]*|midjourney|dall-e.*|imagen.*|image-gen)(?:[-_./: ]|$)|(?:flux|sdxl|diffusion)/i;
+  if (imagePattern.test(target)) {
+    caps.add('image');
+  }
+
+  // 视频生成 / 文生视频匹配
+  const videoPattern = /(?:^|[-_./: ])(?:video|cogvideo.*|hunyuan[-_]?video.*|kling.*|sora.*|svd.*|videox.*)(?:[-_./: ]|$)|(?:cogvideo|hunyuan-video|videox)/i;
+  if (videoPattern.test(target)) {
+    caps.add('video');
   }
 
   return [...caps];

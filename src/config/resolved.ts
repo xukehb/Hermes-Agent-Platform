@@ -129,6 +129,9 @@ export interface ResolvedModel {
   displayName: string;
   /** provider/model 全名，路由与 trace 统一使用该形式 */
   fullName: string;
+  category?: string | undefined;
+  baseUrl?: string | undefined;
+  apiKey?: string | undefined;
   contextWindow: number | undefined;
   maxOutputTokens: number | undefined;
   capabilities: string[];
