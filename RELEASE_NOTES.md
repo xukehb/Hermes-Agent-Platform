@@ -1,25 +1,45 @@
-# Hermes Agent Platform v0.1.27 发布说明 / Release Notes
+# Hermes Agent Platform v0.1.29 发布说明 / Release Notes
 
 ## 🌟 核心更新亮点 (Highlights)
 
-### 1. 👁️ 开源大模型库全面扩容「多模态视觉 (Vision)」专题分类
-- **引入主流开源多模态视觉旗舰**：在本地/开源模型库（Model Catalog）中正式加入独立的多模态视觉分类，收录：
-  - **Qwen 2.5 VL (7B)**：全能开源多模态旗舰，专精发票/文档/复杂表格 OCR、高精度图表结构提取与桌面截屏 UI 视觉免扫码代答；
-  - **Qwen 2.5 VL (3B)**：轻量端侧视觉小钢炮，极低显存占用（~3GB），可在轻薄本上毫秒级响应截屏速读；
-  - **LLaVA (7B)**：经典图文对话模型，生态成熟；
-  - **MiniCPM-V 2.6 (8B)**：端侧全能高分辨率视觉标杆，支持高清切片与细节对比分析。
-- **界面沉浸式视觉标识**：
-  - 模型广场顶部新增「👁️ 多模态视觉」快捷筛选 Tab 与数量实时统计；
-  - 模型服务商列表、模型管理表格以及智能体角色配置下拉框中，全链路高亮显示「👁️ 视觉」渐变专属徽章胶囊，一眼识别模型图文能力。
+### 1. ⚡ 钢铁侠贾维斯 (J.A.R.V.I.S.) 核心系统全面上线
+- **随时待命与专属管家人格 (Persona: "Sir")**：
+  - 尊称用户为“先生 (Sir)”，语调沉稳、严谨、优雅；
+  - 默认唤醒词升级为「**贾维斯**」（支持自由自定义为其他名称）；
+  - 唤醒时给予标志性管家语音问候（如 *“At your service, sir.”* / *“随时为您效劳，先生。”*）。
 
-### 2. 🧠 多模态与推理能力自动推断识别引擎 (inferModelCapabilities)
-- **智能特征匹配**：配置解析引擎（ConfigResolver）在遇到未显式配置 `capabilities` 的模型时，自动根据模型名称和别名（包含 `vl`、`vision`、`omni`、`minicpm`、`llava`、`internvl`、`gpt-4o/5`、`claude`、`gemini` 等关键词）智能识别并自动补全 `vision` 标签，保障与图片附件上传、桌面截图代管等上层业务的无缝互通；
-- **Ollama 本地拉取能力自动对齐**：通过 GUI 一键拉取或保存 Ollama 模型时，自动为视觉类模型绑定 `['tools', 'vision', 'streaming']` 能力。
+### 2. 🎙️ 本地 TTS 语音合成回话与全双工即时打断 (Barge-in)
+- **纯本地 Web Speech 驱动**：采用本地系统级语音合成引擎，零额外网络请求、零延迟；
+- **智能优选管家音色**：优先匹配英国绅士男音（macOS 经典英音 `"Daniel"`，Windows 优雅自然音色）与自然普通话；
+- **提炼式口述汇报**：智能体执行任务后，自动剥离 Markdown 语法与长篇代码，口述精炼的管家式汇报（*“先生，操作已执行完毕。”*）；
+- **全双工打断 (Barge-in)**：当贾维斯正在朗读时，用户开口说话即可瞬间打断播报，无缝切换为新指令收音。
 
-### 3. 🚀 Markdown 渲染主线程死循环彻底修复与 RAF 流式批处理
-- **循环行推进不变量安全兜底 (Fail-Safe Invariant)**：彻底根除 Markdown 解析器在遇到半截流式表格（如单行表头 `| col |`）、流式标题（`# `）、列表项（`- `）或未闭合特殊语法时导致的变量指针原地踏步与主线程死循环问题（100% CPU 假死、页面转圈、系统弹窗报错未响应）；
-- **流式未闭合代码块即时捕获**：流式生成过程中尚未闭合的开代码块自动先行抽取与容错，实时呈现优雅的代码卡片与高亮，避免代码行字符误流入 Markdown 普通文本扫描器造成转义异常；
-- **60/120fps 批处理抗雪崩**：彻底移除高速 Token 吐出时对成千上万字全量文本的同步高频 Markdown 全解析与 DOM 暴力赋值，引入由浏览器屏幕刷新率调度的 `scheduleLiveContentRender`，长文本生成零掉帧。
+### 3. 👁️ 屏幕视觉感知与一键截屏诊断 (Screen Vision)
+- **口述即看**：口述“*贾维斯，帮我看下屏幕*”或“*分析一下屏幕上的报错*”，系统秒级静默捕获当前屏幕画面；
+- **视觉模型多模态诊断**：截屏画面与口述意图自动打包提交给配置的多模态视觉大模型（Vision LLM），完成全屏代码、界面与报错诊断。
+
+### 4. 🌐 钢铁侠方舟反应堆 (Arc Reactor HUD) 与真实音频频谱律动
+- **三层全息反应堆结构**：
+  - 外层：高精度全息 12 段几何刻度环顺时针自旋；
+  - 中层：点状能量导管环逆时针差速反向旋转；
+  - 内层：方舟高能晶体与发光三角核心，脉冲流光；
+- **真实音频频谱联动**：连接 Web Audio API AnalyserNode，反应堆旋转速度、外环扩散幅度与核心光晕随用户说话的声音大小与声波频率产生高能机械律动。
+
+### 5. 🦾 系统级原生控制快车道 (System Control Fast Path <50ms)
+对日常高频操作系统指令进行毫秒级原生拦截，秒级执行且无需等待大模型慢速思考：
+- *“把音量调大 / 声音大点”* ➔ 秒调系统音量并语音反馈；
+- *“调小声音 / 音量小点”* ➔ 秒降系统音量；
+- *“静音 / 闭嘴”* ➔ 秒切静音；
+- *“锁屏 / 锁定屏幕”* ➔ 秒级息屏锁屏；
+- *“现在几点了”* ➔ 即时报时（*“现在是 X月X日 星期X XX:XX，先生。”*）；
+- *“打开浏览器 / 打开 VSCode / 打开终端”* ➔ 秒级启动指定应用。
+
+### 6. ⏳ 10 秒连续多轮对话窗口 (Continuous Dialogue)
+- 唤醒一次后保持 10 秒活跃倾听窗口，用户无需每句话都重复喊唤醒词，像面对面交流一样自然连续追问，超时 10 秒无声自动恢复待机。
+
+### 7. 🧩 多模态模型（图片/视频/语音）独立部署与默认路由
+- 支持独立指定默认图片模型（Flux / SD）、默认视频模型（CogVideoX / 混元）与默认语音模型（Whisper / SenseVoice / CosyVoice）；
+- 各模态模型全面支持本地私有化部署并填写自定义 URL、API Key 与 Model ID。
 
 ---
 
@@ -30,10 +50,10 @@
 
 ### 🪟 Windows (x64)
 - **安装文件**：
-  - **标准安装向导（推荐）**：[`Hermes-Agent-Platform-0.1.27-Windows-x64-Setup.exe`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.27/Hermes-Agent-Platform-0.1.27-Windows-x64-Setup.exe) (经典安装向导，支持选择安装路径、创建桌面快捷方式与开始菜单入口)
-  - **绿色便携免安装版**：[`Hermes-Agent-Platform-0.1.27-Windows-x64-Portable.exe`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.27/Hermes-Agent-Platform-0.1.27-Windows-x64-Portable.exe) (单文件解压即用)
+  - **标准安装向导（推荐）**：[`Hermes-Agent-Platform-0.1.29-Windows-x64-Setup.exe`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.29/Hermes-Agent-Platform-0.1.29-Windows-x64-Setup.exe) (经典安装向导，支持选择安装路径、创建桌面快捷方式与开始菜单入口)
+  - **绿色便携免安装版**：[`Hermes-Agent-Platform-0.1.29-Windows-x64-Portable.exe`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.29/Hermes-Agent-Platform-0.1.29-Windows-x64-Portable.exe) (单文件解压即用)
 - **安装与运行说明**：
-  1. 下载 `Hermes-Agent-Platform-0.1.27-Windows-x64-Setup.exe` 并双击启动安装向导；
+  1. 下载 `Hermes-Agent-Platform-0.1.29-Windows-x64-Setup.exe` 并双击启动安装向导；
   2. 按照向导提示选择安装目录（如 `D:\Program Files\Hermes Agent Platform`）并勾选创建桌面快捷方式，点击“下一步”直到完成；
   3. 若遇到 **Windows Defender SmartScreen** 弹出“Windows 已保护你的电脑 / 未知发布者”提示：
      - 点击提示框中的 **「更多信息」 (More info)**；
@@ -42,11 +62,11 @@
 ### 🍎 macOS (Apple Silicon & Intel)
 - **安装文件**：
   - **Apple Silicon (M1 / M2 / M3 / M4 / M系列芯片)**：
-    - DMG 安装镜像：[`Hermes-Agent-Platform-0.1.27-macOS-arm64.dmg`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.27/Hermes-Agent-Platform-0.1.27-macOS-arm64.dmg)
-    - 免安装压缩包：[`Hermes-Agent-Platform-0.1.27-macOS-arm64.zip`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.27/Hermes-Agent-Platform-0.1.27-macOS-arm64.zip)
+    - DMG 安装镜像：[`Hermes-Agent-Platform-0.1.29-macOS-arm64.dmg`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.29/Hermes-Agent-Platform-0.1.29-macOS-arm64.dmg)
+    - 免安装压缩包：[`Hermes-Agent-Platform-0.1.29-macOS-arm64.zip`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.29/Hermes-Agent-Platform-0.1.29-macOS-arm64.zip)
   - **Intel x64 芯片**：
-    - DMG 安装镜像：[`Hermes-Agent-Platform-0.1.27-macOS-x64.dmg`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.27/Hermes-Agent-Platform-0.1.27-macOS-x64.dmg)
-    - 免安装压缩包：[`Hermes-Agent-Platform-0.1.27-macOS-x64.zip`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.27/Hermes-Agent-Platform-0.1.27-macOS-x64.zip)
+    - DMG 安装镜像：[`Hermes-Agent-Platform-0.1.29-macOS-x64.dmg`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.29/Hermes-Agent-Platform-0.1.29-macOS-x64.dmg)
+    - 免安装压缩包：[`Hermes-Agent-Platform-0.1.29-macOS-x64.zip`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.29/Hermes-Agent-Platform-0.1.29-macOS-x64.zip)
 - **安装与运行说明**：
   1. 双击打开 `.dmg` 镜像，将 `Hermes Agent Platform` 图标拖入 `Applications`（应用程序）文件夹；
   2. 若首次打开出现系统安全阻拦提示：
@@ -58,12 +78,12 @@
 
 ### 🐧 Ubuntu / Debian Linux (x64)
 - **安装文件**：
-  - DEB 安装包：[`Hermes-Agent-Platform-0.1.27-Ubuntu-amd64.deb`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.27/Hermes-Agent-Platform-0.1.27-Ubuntu-amd64.deb)
+  - **DEB 安装包**：[`Hermes-Agent-Platform-0.1.29-Ubuntu-amd64.deb`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.29/Hermes-Agent-Platform-0.1.29-Ubuntu-amd64.deb)
 - **安装与运行说明**：
   1. 下载 `.deb` 安装包至本地；
   2. 终端运行：
      ```bash
-     sudo dpkg -i Hermes-Agent-Platform-0.1.27-Ubuntu-amd64.deb
+     sudo dpkg -i Hermes-Agent-Platform-0.1.29-Ubuntu-amd64.deb
      sudo apt-get install -f
      ```
   3. 安装完成后在应用程序列表启动，或在终端输入 `hermes-agent-platform`。

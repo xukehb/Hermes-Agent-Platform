@@ -1696,6 +1696,7 @@
   "日志已刷新": "Logs refreshed",
   "融合 GitHub 专家技能包与 Model Context Protocol (MCP) 标准插件，赋予智能体任意外部能力": "Combine GitHub expert skill packs with Model Context Protocol (MCP) plugins to give agents arbitrary external capabilities",
   "柔和水彩 (Watercolor)": "Watercolor",
+  "如: 贾维斯、Hermes": "e.g. Jarvis, Hermes",
   "如 `0 9 * * *` (每天早9点), `*/15 * * * *` (每15分钟)": "e.g. `0 9 * * *` (daily at 9am), `*/15 * * * *` (every 15 minutes)",
   "如：": "e.g. ",
   "如：全栈开发专家": "e.g. Full-stack development expert",

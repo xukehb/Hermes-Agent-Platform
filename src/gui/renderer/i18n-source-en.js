@@ -1247,6 +1247,7 @@
     '好的，这就处理！': 'Sure, on it!',
     '如 `0 9 * * *` (每天早9点), `*/15 * * * *` (每15分钟)': 'e.g. `0 9 * * *` (daily at 9am), `*/15 * * * *` (every 15 minutes)',
     '如 http://127.0.0.1:8000/v1 (留空跟随服务商)': 'e.g. http://127.0.0.1:8000/v1 (leave blank to follow provider)',
+    '如: 贾维斯、Hermes': 'e.g. Jarvis, Hermes',
     '如开启加密则填写': 'Fill in if encryption is enabled',
     '如：': 'e.g. ',
     '如：data-analyst': 'e.g. data-analyst',
