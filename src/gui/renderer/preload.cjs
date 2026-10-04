@@ -211,6 +211,16 @@ const hapApi = {
   listMcpTools: (refresh) => call('gui:mcp:listTools', { refresh }),
   callMcpTool: (payload) => call('gui:mcp:callTool', payload),
   getOllamaStatus: () => call('gui:ollama:getStatus'),
+  getDockerModels: () => call('gui:docker:status'),
+  deployDockerModel: (input) => call('gui:docker:deploy', input),
+  stopDockerModel: (id) => call('gui:docker:stop', id),
+  removeDockerModel: (input) => call('gui:docker:remove', input),
+  dockerModelLogs: (id) => call('gui:docker:logs', id),
+  onDockerModelProgress: (callback) => {
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('gui:docker:progress', listener);
+    return () => ipcRenderer.removeListener('gui:docker:progress', listener);
+  },
   getRecommendedModels: (categoryFilter) => call('gui:ollama:getRecommendedModels', categoryFilter),
   startOllamaService: () => call('gui:ollama:startService'),
   pullOllamaModel: (modelTag) => call('gui:ollama:pullModel', modelTag),

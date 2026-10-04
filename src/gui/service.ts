@@ -33,6 +33,8 @@ import { MemoryStore, type MemoryCard } from '../memory/index.js';
 import { AstSymbolIndexer } from '../tools/ast-indexer/index.js';
 import { getLocalIpAddresses } from '../web/server.js';
 import { getGatewayService } from '../gateway/index.js';
+import { DockerDeploymentManager, type DockerDeploymentProgress } from '../system/docker-deployment.js';
+import { DOCKER_MODELS, getDockerRecipe, validateDockerHost, type DockerModelRecipe } from '../system/docker-models.js';
 import {
   getHostSystemInfo,
   scanLocalDisk,
@@ -673,6 +675,7 @@ function readOptionalText(path: string | undefined): string {
 }
 
 export class GuiService {
+  private readonly dockerDeployment = new DockerDeploymentManager();
   private readonly logs: GuiLogEntry[] = [];
   private readonly providerHealth = new Map<string, { reachable: boolean; checkedAt: number; error?: string }>();
   private readonly botControl = new BotControlFacade({
@@ -1229,11 +1232,15 @@ export class GuiService {
       if (!targetModel) {
         targetModel = [...models.values()].find(
           (m) =>
-            m.category === 'audio' ||
+            !/cosyvoice/i.test(m.model) && (m.category === 'audio' ||
             m.capabilities.includes('audio') ||
             /whisper|asr|audio|voice|cosyvoice|sensevoice/i.test(m.alias) ||
-            /whisper|asr|audio|voice|cosyvoice|sensevoice/i.test(m.model)
+            /whisper|asr|audio|voice|cosyvoice|sensevoice/i.test(m.model))
         );
+      }
+
+      if (targetModel && /cosyvoice/i.test(targetModel.model)) {
+        return { ok: false, error: 'CosyVoice 是语音合成模型，不能用于转写；请将默认语音模型设为 Whisper 或 Qwen2-Audio。' };
       }
 
       if (targetModel) {
@@ -1367,6 +1374,19 @@ export class GuiService {
     const provider = resolver.resolveProviders().get(providerId);
     if (!provider) {
       return { ok: false, error: `模型所属服务商 "${providerId}" 未找到` };
+    }
+
+    if (DOCKER_MODELS.some(recipe => recipe.container === providerId && recipe.repo === modelEntry.model && provider.baseUrl === `http://127.0.0.1:${recipe.port}/v1`)) {
+      const started = Date.now();
+      try {
+        const healthUrl = `${provider.baseUrl.replace(/\/v1\/?$/, '')}/health`;
+        const response = await fetch(healthUrl, { signal: AbortSignal.timeout(10_000) });
+        const body = await response.json().catch(() => ({})) as { phase?: string; model?: string; error?: string };
+        if (!response.ok || body.phase !== 'ready' || body.model !== modelEntry.model) return { ok: false, latencyMs: Date.now() - started, error: body.error || `推理服务尚未就绪或模型不匹配 (${response.status})` };
+        return { ok: true, latencyMs: Date.now() - started, preview: `模型 ${body.model} 已加载；具体推理请使用对应音频、图片或视频接口。` };
+      } catch (error) {
+        return { ok: false, latencyMs: Date.now() - started, error: error instanceof Error ? error.message : String(error) };
+      }
     }
 
     const saved = readSavedEnv();
@@ -1699,7 +1719,7 @@ export class GuiService {
       const fullPrompt = `${prompt}${styleDesc ? ` (${styleDesc.trim()})` : ''}`;
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 40000);
+      const timeoutId = setTimeout(() => controller.abort(), providerId.startsWith('hap-model-') ? 600_000 : 40_000);
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -3161,6 +3181,42 @@ export class GuiService {
   }
 
   // 获取本地 Ollama 引擎状态与已安装模型
+  async getDockerModels() {
+    const result = await this.dockerDeployment.status();
+    // Repair missing registration after the app was closed during a model download.
+    const models = this.resolver().resolveModels();
+    for (const item of result.models) {
+      const recipe = getDockerRecipe(item.id);
+      if (item.status === 'ready' && !models.has(`${recipe.container}/model`)) this.registerDockerModel(recipe);
+    }
+    return { ...result, recipes: DOCKER_MODELS.map(recipe => ({ ...recipe, blockers: result.host ? validateDockerHost(recipe, result.host) : [result.message] })) };
+  }
+
+  async deployDockerModel(input: { id: string; token?: string }, onProgress: (progress: DockerDeploymentProgress) => void) {
+    const recipe = await this.dockerDeployment.deploy(input.id, onProgress, input.token ?? '');
+    this.registerDockerModel(recipe);
+    return { ok: true, baseUrl: `http://127.0.0.1:${recipe.port}/v1` };
+  }
+
+  private registerDockerModel(recipe: DockerModelRecipe): void {
+    const writer = new ConfigWriter(this.configPath);
+    writer.upsertProvider(recipe.container, { name: `Docker · ${recipe.repo}`, base_url: `http://127.0.0.1:${recipe.port}/v1`, wire_api: 'chat', default_protocol: 'openai-tools' });
+    const state = readState();
+    state.hiddenProviders = (state.hiddenProviders ?? []).filter(id => id !== recipe.container);
+    writeState(state);
+    this.upsertModel({ alias: `${recipe.container}/model`, provider: recipe.container, model: recipe.repo, category: recipe.kind, capabilities: [recipe.kind], protocol: 'openai-tools' });
+  }
+
+  async stopDockerModel(id: string) { await this.dockerDeployment.stop(id); return { ok: true }; }
+  async removeDockerModel(input: { id: string; weights?: boolean }) {
+    const recipe = getDockerRecipe(input.id);
+    await this.dockerDeployment.remove(input.id, input.weights === true);
+    this.removeModel(`${recipe.container}/model`);
+    this.removeProvider(recipe.container);
+    return { ok: true };
+  }
+  async dockerModelLogs(id: string) { return this.dockerDeployment.logs(id); }
+
   async getOllamaStatus(): Promise<OllamaStatusResult> {
     const status = await checkOllamaStatus();
     if (status.isRunning && status.installedModels.length > 0) {

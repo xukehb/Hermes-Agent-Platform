@@ -430,3 +430,7 @@ npm run build       # 编译 TypeScript 并复制桌面端资源
 | `tests` | 自动化测试 |
 
 架构与功能设计可参阅 [项目规格](specs/hermes-agent-platform.spec.md)。提交前按变更范围执行类型检查、测试和 lint；文档中的截图存放在 `docs/images/`。
+
+### Docker 多模态模型一键部署
+
+模型广场新增 9 个外部语音、图片和视频模型的 Docker 部署入口，支持运行条件检测、模型下载、健康检查、服务商自动注册及停止/删除管理。macOS Docker 支持 CPU Whisper，GPU 模型需要 x86_64 NVIDIA 主机。详见 [Docker 部署指南](docs/docker-model-deployment.md)。

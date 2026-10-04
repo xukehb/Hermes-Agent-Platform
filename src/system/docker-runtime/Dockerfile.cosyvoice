@@ -1,0 +1,10 @@
+FROM python:3.10-slim-bookworm
+RUN apt-get update && apt-get install -y --no-install-recommends git ffmpeg sox libsox-dev libsndfile1 build-essential && rm -rf /var/lib/apt/lists/*
+RUN git clone https://github.com/FunAudioLLM/CosyVoice.git /opt/CosyVoice && cd /opt/CosyVoice && git checkout 074ca6dc9e80a2f424f1f74b48bdd7d3fea531cc && git submodule update --init --recursive
+WORKDIR /opt/CosyVoice
+# Optional TensorRT/DeepSpeed accelerators are not used by the base CosyVoice pipeline.
+RUN sed '/^--extra-index/d; /^deepspeed/d; /^tensorrt/d; /^onnxruntime-gpu/d' requirements.txt > /tmp/requirements.txt && pip install --no-cache-dir -r /tmp/requirements.txt onnxruntime==1.18.0 python-multipart==0.0.20 huggingface-hub==0.30.2
+COPY server.py /app/server.py
+ENV PYTHONUNBUFFERED=1 HF_HOME=/cache/huggingface PYTHONPATH=/opt/CosyVoice:/opt/CosyVoice/third_party/Matcha-TTS
+EXPOSE 8000
+CMD ["python", "/app/server.py"]

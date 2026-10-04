@@ -350,6 +350,13 @@ function registerIpc(): void {
   ipcMain.handle('gui:getWebInfo', () => invoke(() => service.getWebInfo()));
   ipcMain.handle('gui:getHostSysInfo', () => invoke(() => service.getHostSysInfo()));
   ipcMain.handle('gui:ollama:getStatus', () => invoke(() => service.getOllamaStatus()));
+  ipcMain.handle('gui:docker:status', () => invoke(() => service.getDockerModels()));
+  ipcMain.handle('gui:docker:stop', (_event, id) => invoke(() => service.stopDockerModel(id)));
+  ipcMain.handle('gui:docker:remove', (_event, input) => invoke(() => service.removeDockerModel(input)));
+  ipcMain.handle('gui:docker:logs', (_event, id) => invoke(() => service.dockerModelLogs(id)));
+  ipcMain.handle('gui:docker:deploy', (_event, input) => invoke(() => service.deployDockerModel(input, progress => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('gui:docker:progress', progress);
+  })));
   ipcMain.handle('gui:ollama:getRecommendedModels', (_event, categoryFilter) => invoke(() => service.getRecommendedModels(categoryFilter)));
   ipcMain.handle('gui:ollama:startService', () => invoke(() => service.startOllamaService()));
   ipcMain.handle('gui:ollama:cancelPull', (_event, modelTag) => invoke(() => service.cancelOllamaPull(modelTag)));

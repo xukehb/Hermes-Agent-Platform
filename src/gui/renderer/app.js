@@ -8938,6 +8938,10 @@ window.deleteModel = async (targetAlias) => {
 let hubActiveCategory = 'all';
 let hubSearchKeyword = '';
 let hubCurrentProfile = null;
+let hubDockerState = { available: false, message: '正在检测 Docker…', models: [], recipes: [] };
+const hubDockerProgress = new Map();
+let hubDockerListenerRegistered = false;
+
 let hubOllamaStatus = null;
 const hubDownloadProgressMap = new Map();
 let hubProgressListenerRegistered = false;
@@ -8946,6 +8950,14 @@ window.openModelHubModal = () => {
   const dialog = $('modelHubModal');
   if (!dialog) return;
 
+  if (!hubDockerListenerRegistered && window.hap.onDockerModelProgress) {
+    hubDockerListenerRegistered = true;
+    window.hap.onDockerModelProgress(progress => {
+      hubDockerProgress.set(progress.modelId, progress);
+      const el = document.getElementById(`dockerProgress_${progress.modelId}`);
+      if (el) el.textContent = `${progress.phase}: ${progress.message.slice(-1200)}`;
+    });
+  }
   if (!hubProgressListenerRegistered && window.hap && window.hap.onOllamaPullProgress) {
     hubProgressListenerRegistered = true;
     window.hap.onOllamaPullProgress((progress) => {
@@ -8998,11 +9010,13 @@ window.refreshModelHub = async () => {
   if (titleEl) titleEl.textContent = '正在探测本机硬件与引擎状态...';
 
   try {
-    const [ollamaStatus, profile] = await Promise.all([
+    const [ollamaStatus, profile, dockerState] = await Promise.all([
       window.hap.getOllamaStatus(),
       window.hap.getRecommendedModels('all'),
+      window.hap.getDockerModels ? window.hap.getDockerModels().catch(error => ({ available: false, message: error.message, models: [], recipes: [] })) : Promise.resolve({ available: false, message: 'Docker 部署需要桌面端', models: [], recipes: [] }),
     ]);
 
+    hubDockerState = dockerState;
     hubOllamaStatus = ollamaStatus;
     hubCurrentProfile = profile;
 
@@ -9151,7 +9165,20 @@ function renderModelHubCards() {
 
     let actionButtonHtml = '';
     if (m.deployment === 'external') {
-      actionButtonHtml = `<button type="button" class="btn secondary" onclick="window.hap.openExternal('${escJs(m.sourceUrl)}')">官方模型主页</button>${localConfigBtn}`;
+      const dockerModel = hubDockerState.models.find(item => item.id === m.id);
+      const running = dockerModel?.status === 'ready';
+      const deploying = hubDockerProgress.has(m.id) || dockerModel?.status === 'deploying';
+      const recipe = hubDockerState.recipes.find(item => item.id === m.id);
+      actionButtonHtml = `<button type="button" class="btn secondary" onclick="window.hap.openExternal('${escJs(m.sourceUrl)}')">官方模型主页</button>${localConfigBtn}
+        <button type="button" class="btn primary" ${!hubDockerState.available || deploying || recipe?.blockers?.length ? 'disabled' : ''} onclick="window.deployDockerHubModel('${escJs(m.id)}')">${running ? '已就绪 · 同步配置' : dockerModel?.status === 'exited' ? '启动 Docker 服务' : 'Docker 一键部署'}</button>
+        ${dockerModel && dockerModel.status !== 'absent' || deploying ? `<button type="button" class="btn secondary" onclick="window.stopDockerHubModel('${escJs(m.id)}')">停止 / 取消</button><button type="button" class="btn secondary" onclick="window.showDockerHubLogs('${escJs(m.id)}')">查看日志</button><button type="button" class="btn danger" onclick="window.removeDockerHubModel('${escJs(m.id)}')">删除部署</button>` : ''}
+        <div style="width:100%;font-size:11px;color:var(--text-secondary)">${!hubDockerState.available ? esc(hubDockerState.message) : recipe ? `内存 ≥ ${recipe.minMemoryGB} GB · 磁盘余量 ≥ ${recipe.minDiskGB} GB${recipe.requiresGpu ? ` · NVIDIA 显存 ≥ ${recipe.minVramGB} GB` : ' · CPU 可用'}` : ''}${dockerModel?.status ? ` · ${esc(dockerModel.status)}` : ''}</div>
+        ${recipe?.blockers?.length ? `<div style="width:100%;font-size:11px;color:var(--warning)">${esc(recipe.blockers.join('；'))}</div>` : ''}
+        ${!hubDockerState.available ? `<button type="button" class="btn secondary" onclick="window.hap.openExternal('https://docs.docker.com/get-started/get-docker/')">安装 / 启动 Docker</button>` : ''}
+        ${running && recipe ? `<button type="button" class="btn secondary" onclick="window.hap.openExternal('http://127.0.0.1:${recipe.port}/docs')">打开推理接口</button>` : ''}
+        ${recipe?.engine === 'cosyvoice' ? '<div style="width:100%;font-size:11px;">声音克隆：需要参考音频和参考文字，不用于语音转写。</div>' : ''}
+        ${recipe && recipe.runtimeRepo !== recipe.repo ? `<div style="width:100%;font-size:11px;">兼容权重：${esc(recipe.runtimeRepo)}</div>` : ''}
+        <pre id="dockerProgress_${esc(m.id)}" style="width:100%;max-height:100px;overflow:auto;white-space:pre-wrap;font-size:11px;">${esc(hubDockerProgress.get(m.id)?.message || dockerModel?.error || '')}</pre>`;
     } else if (isDownloading) {
       actionButtonHtml = `
         <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="window.cancelHubModelPull('${escJs(m.id)}')">取消拉取</button>
@@ -9267,6 +9294,43 @@ function updateHubCardProgress(progress) {
     `;
   }
 }
+
+window.deployDockerHubModel = async (id) => {
+  const recipe = hubDockerState.recipes.find(item => item.id === id);
+  if (!recipe) return;
+  const ok = await showConfirm({ title: 'Docker 一键部署', message: `将构建推理镜像并下载 <strong>${esc(recipe.runtimeRepo)}</strong> 的权重。首次安装可能需要较长时间。<br>Docker 内存至少 ${recipe.minMemoryGB} GB，磁盘余量至少 ${recipe.minDiskGB} GB。${recipe.requiresGpu ? `<br>需要 NVIDIA GPU，单卡显存至少 ${recipe.minVramGB} GB；macOS Docker 不支持 Apple GPU。` : ''}<br>受限仓库请先在 Hugging Face 接受模型许可，再填写读取令牌。<br><label>Hugging Face Token（可选）<input id="dockerDeployToken" type="password" autocomplete="off" placeholder="hf_…" style="width:100%"></label>`, okText: '开始部署' });
+  const token = $('dockerDeployToken')?.value.trim() || '';
+  if ($('dockerDeployToken')) $('dockerDeployToken').value = '';
+  if (!ok) return;
+  hubDockerProgress.set(id, { phase: 'check', message: '正在检查运行条件…' });
+  renderModelHubCards();
+  try {
+    await window.hap.deployDockerModel({ id, token });
+    showToast('模型服务已就绪，并已加入模型服务商', 'success');
+  } catch (err) {
+    showToast(`部署未完成：${err.message}`, 'error');
+  } finally {
+    hubDockerProgress.delete(id);
+    await window.refreshModelHub();
+  }
+};
+window.stopDockerHubModel = async (id) => {
+  try { await window.hap.stopDockerModel(id); hubDockerProgress.delete(id); await window.refreshModelHub(); }
+  catch (err) { showToast(err.message, 'error'); }
+};
+window.showDockerHubLogs = async (id) => {
+  try {
+    const logs = await window.hap.dockerModelLogs(id);
+    await showConfirm({ title: 'Docker 服务日志', message: `<pre style="max-height:400px;overflow:auto;white-space:pre-wrap;">${esc(logs)}</pre>`, okText: '关闭' });
+  } catch (err) { showToast(err.message, 'error'); }
+};
+window.removeDockerHubModel = async (id) => {
+  const ok = await showConfirm({ title: '删除 Docker 部署', message: '将停止并删除此模型容器，移除服务商与模型配置。默认保留已下载权重。<br><label><input type="checkbox" id="dockerRemoveWeights">同时永久删除模型权重缓存（不可恢复）</label>', okText: '删除部署', isDanger: true });
+  const weights = $('dockerRemoveWeights')?.checked === true;
+  if (!ok) return;
+  try { await window.hap.removeDockerModel({ id, weights }); await window.refreshModelHub(); }
+  catch (err) { showToast(err.message, 'error'); }
+};
 
 window.pullHubModel = async (modelTag, force = false) => {
   const model = hubCurrentProfile?.evaluations?.find(e => e.model.id === modelTag)?.model;

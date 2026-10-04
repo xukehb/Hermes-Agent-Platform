@@ -147,7 +147,7 @@ export function evaluateModelForHardware(
   if (model.deployment === 'external') {
     expectedTokPerSec = '需专用服务实测';
     tierLabel = '需独立部署';
-    rationale = '权重来自外部模型仓库，Ollama 无法直接拉取；请按模型主页部署对应推理服务。硬件数值仅为估算。';
+    rationale = '权重来自外部模型仓库，Ollama 无法直接拉取；可使用 Docker 一键部署或按模型主页部署专用推理服务。硬件数值仅为估算。';
   }
 
   return {
