@@ -8623,6 +8623,7 @@ html[data-wp-adaptive="on"] body.has-wallpaper .status-bar .status-item {
 
 .theme-picker-trigger-btn,
 .opacity-trigger-btn,
+.mini-ball-btn,
 .mini-mode-btn {
   display: inline-flex;
   align-items: center;
@@ -10026,6 +10027,7 @@ body.platform-mac .mini-drag-titlebar {
   }
 
   #miniIAssistantBtn > span[data-i18n],
+  #floatingBallToggleBtn > span[data-i18n],
   #miniModeToggleBtn > span[data-i18n],
   #appearanceToggleBtn > #appearanceDisplayLabel,
   #headerLangBtn > span[data-lang-current],
@@ -10038,6 +10040,7 @@ body.platform-mac .mini-drag-titlebar {
   #appearanceToggleBtn,
   #headerLangBtn,
   #headerMoreBtn,
+  #floatingBallToggleBtn,
   #miniModeToggleBtn {
     gap: 0;
   }

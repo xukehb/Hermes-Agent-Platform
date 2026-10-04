@@ -1887,6 +1887,8 @@
   "随时输入指令，小 i 将为你即时解答或执行任务": "Type anything; Mini-i answers questions and runs tasks instantly",
   "缩小化": "Mini Mode",
   "缩小为桌面悬浮小窗模式 (Alt+M)": "Shrink to Floating Mini Mode (Alt+M)",
+  "缩小为桌面悬浮小球 (最小化时亦会自动切换)": "Shrink to Floating Ball (Auto-activates on Minimize)",
+  "悬浮球": "Ball Mode",
   "所见即所得的规范格式与提示指南展示": "What-you-see-is-what-you-get preview of the convention and guidance",
   "所属服务商": "Provider",
   "所属服务商 *": "Provider *",

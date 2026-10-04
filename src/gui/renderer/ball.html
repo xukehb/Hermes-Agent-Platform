@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hermes Floating Ball</title>
+    <!-- 引入全局主题色彩变量库，确保 100% 同步所有多套企业与个性化主题色板 -->
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./ball.css" />
+  </head>
+  <body class="ball-mode-collapsed">
+    <!-- 1. 极简轻量悬浮小球 (Slim Floating Ball) -->
+    <div id="ballWidget" class="ball-widget" title="单击展开快捷面板 · 双击放大还原 · 拖动调整位置">
+      <div class="ball-glow-ring"></div>
+      <div class="ball-core">
+        <div class="ball-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M12 2L14.6 9.4L22 12L14.6 14.6L12 22L9.4 14.6L2 12L9.4 9.4L12 2Z"
+              fill="url(#ballDynamicGrad)"
+            />
+            <defs>
+              <linearGradient id="ballDynamicGrad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                <stop stop-color="var(--primary, #38bdf8)" />
+                <stop offset="0.6" stop-color="var(--accent, #818cf8)" />
+                <stop offset="1" stop-color="var(--primary-hover, #c084fc)" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <span class="ball-status-dot" title="Hermes 在线就绪"></span>
+      </div>
+      <div class="ball-tooltip">点击展开</div>
+    </div>
+
+    <!-- 2. 纤细修长弹出功能面板 (Ultra-Slim Popup Panel) -->
+    <div id="ballPanel" class="ball-panel">
+      <!-- 极简流线顶栏 -->
+      <div class="panel-header">
+        <div class="panel-brand">
+          <div class="panel-mini-avatar">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 2L14.6 9.4L22 12L14.6 14.6L12 22L9.4 14.6L2 12L9.4 9.4L12 2Z"
+                fill="currentColor"
+              />
+            </svg>
+          </div>
+          <div class="panel-titles">
+            <span class="panel-title-text">Hermes Mini</span>
+            <span class="panel-status-tag" id="ballAgentBadge">小 i</span>
+          </div>
+        </div>
+        <div class="panel-header-actions">
+          <button id="ballPinBtn" class="panel-action-btn" title="切换始终置顶">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="17" x2="12" y2="22" />
+              <path d="M5 17h14v-2l-3-3V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v7l-3 3v2z" />
+            </svg>
+          </button>
+          <button id="ballCollapseBtn" class="panel-action-btn" title="收起为小球">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 功能 1：【放大还原】修长流线胶囊按钮 -->
+      <div class="panel-restore-box">
+        <button id="ballRestoreMainBtn" class="btn-restore-full" title="放大还原为完整工作台界面">
+          <div class="restore-icon-box">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <polyline points="15 3 21 3 21 9" />
+              <polyline points="9 21 3 21 3 15" />
+              <line x1="21" y1="3" x2="14" y2="10" />
+              <line x1="3" y1="21" x2="10" y2="14" />
+            </svg>
+          </div>
+          <div class="restore-texts">
+            <span class="restore-title">放大还原工作台</span>
+          </div>
+          <span class="restore-arrow">→</span>
+        </button>
+      </div>
+
+      <!-- 功能 2：极简快捷问答流与紧凑输入条 -->
+      <div class="panel-chat-section">
+        <div class="panel-chat-header">
+          <span class="chat-section-label">快捷问答</span>
+          <button id="ballClearChatBtn" class="chat-tool-btn" title="清空对话">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+            </svg>
+            <span>清空</span>
+          </button>
+        </div>
+
+        <div id="ballChatMessages" class="panel-chat-stream">
+          <div class="ball-welcome-tip" id="ballWelcomeTip">
+            <span>输入指令或问题，小 i 将立即在此作答。</span>
+          </div>
+        </div>
+
+        <div class="panel-input-box">
+          <textarea
+            id="ballInputText"
+            placeholder="输入指令... (Enter 发送)"
+            rows="1"
+          ></textarea>
+          <button id="ballSendBtn" class="ball-send-btn" title="发送指令">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 功能 3：常用微型工具栏 (模型/新建/最小化) -->
+      <div class="panel-quick-tools">
+        <div class="quick-tool-chip" id="ballModelChip" title="当前模型">
+          <span class="chip-val" id="ballModelName">HAP</span>
+        </div>
+        <button class="quick-action-chip" id="ballNewChatBtn" title="新建会话">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          <span>新建</span>
+        </button>
+        <button class="quick-action-chip" id="ballMinimizeTaskbarBtn" title="真正最小化到任务栏">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          <span>最小化</span>
+        </button>
+      </div>
+    </div>
+
+    <script src="./ball.js"></script>
+  </body>
+</html>

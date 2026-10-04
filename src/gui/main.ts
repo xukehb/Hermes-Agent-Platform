@@ -56,8 +56,157 @@ let mainWindow: BrowserWindow | null = null;
 let isMiniMode = false;
 let normalBounds: Electron.Rectangle | null = null;
 
+// 悬浮小球 (Floating Ball) 窗口状态管理
+let ballWindow: BrowserWindow | null = null;
+let isBallMode = false;
+let bypassMinimizeToBall = false;
+let ballPos = { x: -1, y: -1 };
+let isBallExpanded = false;
+
+const BALL_SIZE = 64;
+const PANEL_WIDTH = 306;
+const PANEL_HEIGHT = 470;
+
 function rendererPath(file: string): string {
   return join(__dirname, 'renderer', file);
+}
+
+function ensureBallWindow(): BrowserWindow {
+  if (ballWindow && !ballWindow.isDestroyed()) {
+    return ballWindow;
+  }
+  const isMac = process.platform === 'darwin';
+  ballWindow = new BrowserWindow({
+    width: BALL_SIZE,
+    height: BALL_SIZE,
+    frame: false,
+    transparent: true,
+    hasShadow: false,
+    resizable: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    show: false,
+    focusable: true,
+    backgroundColor: '#00000000',
+    webPreferences: {
+      preload: rendererPath('preload.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  if (isMac) {
+    ballWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    ballWindow.setAlwaysOnTop(true, 'floating');
+  } else {
+    ballWindow.setAlwaysOnTop(true, 'screen-saver');
+  }
+
+  ballWindow.on('closed', () => {
+    ballWindow = null;
+  });
+
+  void ballWindow.loadFile(rendererPath('ball.html'));
+  return ballWindow;
+}
+
+function switchToBallMode(): void {
+  if (isBallMode) return;
+  isBallMode = true;
+  isBallExpanded = false;
+
+  const win = ensureBallWindow();
+  const targetBounds = mainWindow ? mainWindow.getBounds() : { x: 0, y: 0, width: 1000, height: 700 };
+  const currentDisplay = screen.getDisplayMatching(targetBounds);
+  const workArea = currentDisplay.workArea;
+
+  if (ballPos.x === -1 || ballPos.y === -1) {
+    ballPos.x = Math.round(workArea.x + workArea.width - BALL_SIZE - 30);
+    ballPos.y = Math.round(workArea.y + workArea.height - BALL_SIZE - 100);
+  } else {
+    ballPos.x = Math.max(workArea.x, Math.min(workArea.x + workArea.width - BALL_SIZE, ballPos.x));
+    ballPos.y = Math.max(workArea.y, Math.min(workArea.y + workArea.height - BALL_SIZE, ballPos.y));
+  }
+
+  win.setBounds({ x: ballPos.x, y: ballPos.y, width: BALL_SIZE, height: BALL_SIZE });
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.hide();
+  }
+  win.webContents.send('gui:ball:resetCollapsed');
+  win.show();
+  mainWindow?.webContents.send('gui:ball:modeChanged', true);
+}
+
+function restoreFromBall(): void {
+  if (!isBallMode) return;
+  isBallMode = false;
+  isBallExpanded = false;
+
+  if (ballWindow && !ballWindow.isDestroyed()) {
+    ballWindow.webContents.send('gui:ball:resetCollapsed');
+    ballWindow.setBounds({ x: ballPos.x, y: ballPos.y, width: BALL_SIZE, height: BALL_SIZE });
+    ballWindow.hide();
+  }
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.focus();
+    mainWindow.webContents.send('gui:ball:modeChanged', false);
+  }
+}
+
+function minimizeToTaskbar(): void {
+  isBallMode = false;
+  isBallExpanded = false;
+
+  if (ballWindow && !ballWindow.isDestroyed()) {
+    ballWindow.webContents.send('gui:ball:resetCollapsed');
+    ballWindow.setBounds({ x: ballPos.x, y: ballPos.y, width: BALL_SIZE, height: BALL_SIZE });
+    ballWindow.hide();
+  }
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    bypassMinimizeToBall = true;
+    mainWindow.show();
+    mainWindow.minimize();
+    mainWindow.webContents.send('gui:ball:modeChanged', false);
+  }
+}
+
+function setBallExpanded(expanded: boolean): void {
+  if (!ballWindow || ballWindow.isDestroyed()) return;
+  isBallExpanded = expanded;
+  const currentDisplay = screen.getDisplayMatching({ x: ballPos.x, y: ballPos.y, width: BALL_SIZE, height: BALL_SIZE });
+  const workArea = currentDisplay.workArea;
+
+  if (expanded) {
+    const targetX = Math.max(
+      workArea.x + 10,
+      Math.min(workArea.x + workArea.width - PANEL_WIDTH - 10, ballPos.x - (PANEL_WIDTH - BALL_SIZE))
+    );
+    const targetY = Math.max(
+      workArea.y + 10,
+      Math.min(workArea.y + workArea.height - PANEL_HEIGHT - 10, ballPos.y - (PANEL_HEIGHT - BALL_SIZE))
+    );
+    ballWindow.setBounds({ x: targetX, y: targetY, width: PANEL_WIDTH, height: PANEL_HEIGHT });
+  } else {
+    ballWindow.setBounds({ x: ballPos.x, y: ballPos.y, width: BALL_SIZE, height: BALL_SIZE });
+  }
+}
+
+function moveBallWindow(deltaX: number, deltaY: number): void {
+  if (!ballWindow || ballWindow.isDestroyed() || isBallExpanded) return;
+  ballPos.x += Math.round(deltaX);
+  ballPos.y += Math.round(deltaY);
+
+  const currentDisplay = screen.getDisplayMatching({ x: ballPos.x, y: ballPos.y, width: BALL_SIZE, height: BALL_SIZE });
+  const workArea = currentDisplay.workArea;
+  ballPos.x = Math.max(workArea.x, Math.min(workArea.x + workArea.width - BALL_SIZE, ballPos.x));
+  ballPos.y = Math.max(workArea.y, Math.min(workArea.y + workArea.height - BALL_SIZE, ballPos.y));
+
+  ballWindow.setPosition(ballPos.x, ballPos.y);
 }
 
 async function invoke<T>(handler: () => Promise<T> | T): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
@@ -298,9 +447,40 @@ function registerIpc(): void {
   ipcMain.handle('gui:clearGatewayLogs', () => invoke(() => service.clearGatewayLogs()));
   ipcMain.handle('gui:getGatewayClientPresets', (_event, key) => invoke(() => service.getGatewayClientPresets(key)));
 
+  // 悬浮小球 (Floating Ball) 控制 IPC 接口
+  ipcMain.handle('gui:ball:enter', () => {
+    switchToBallMode();
+    return { ok: true, data: true };
+  });
+  ipcMain.handle('gui:ball:restore', () => {
+    restoreFromBall();
+    return { ok: true, data: true };
+  });
+  ipcMain.handle('gui:ball:minimizeToTaskbar', () => {
+    minimizeToTaskbar();
+    return { ok: true, data: true };
+  });
+  ipcMain.handle('gui:ball:setExpanded', (_event, payload: { expanded: boolean }) => {
+    setBallExpanded(Boolean(payload?.expanded));
+    return { ok: true, data: isBallExpanded };
+  });
+  ipcMain.handle('gui:ball:move', (_event, payload: { deltaX: number; deltaY: number }) => {
+    moveBallWindow(Number(payload?.deltaX) || 0, Number(payload?.deltaY) || 0);
+    return { ok: true, data: ballPos };
+  });
+  ipcMain.handle('gui:ball:getState', () => {
+    return { ok: true, data: { isBallMode, isBallExpanded, ballPos } };
+  });
+  ipcMain.handle('gui:theme:sync', (_event, payload: { theme: string; customAccent?: string; customBase?: string }) => {
+    if (ballWindow && !ballWindow.isDestroyed()) {
+      ballWindow.webContents.send('gui:theme:changed', payload);
+    }
+    return { ok: true, data: true };
+  });
+
   // 窗口系统控制、透明度调节与 Mini 模式 IPC 接口
   ipcMain.handle('gui:window:minimize', () => {
-    mainWindow?.minimize();
+    switchToBallMode();
     return { ok: true, data: true };
   });
   ipcMain.handle('gui:window:maximize', () => {
@@ -398,6 +578,14 @@ async function createWindow(): Promise<void> {
   });
 
   mainWindow = window;
+  window.on('minimize', () => {
+    if (bypassMinimizeToBall) {
+      bypassMinimizeToBall = false;
+      return;
+    }
+    switchToBallMode();
+  });
+
   const unsubscribeUpdater = desktopUpdater.subscribe((state) => {
     if (!window.isDestroyed()) window.webContents.send('gui:update:state', state);
   });
@@ -408,6 +596,10 @@ async function createWindow(): Promise<void> {
     unsubscribeUpdater();
     unsubscribeHosting();
     mainWindow = null;
+    if (ballWindow && !ballWindow.isDestroyed()) {
+      ballWindow.close();
+      ballWindow = null;
+    }
   });
 
   window.webContents.once('did-finish-load', () => {

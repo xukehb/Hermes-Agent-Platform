@@ -224,6 +224,31 @@ const hapApi = {
   removeMiniModeListeners: () => {
     ipcRenderer.removeAllListeners('gui:window:miniModeChanged');
   },
+  enterBallMode: () => call('gui:ball:enter'),
+  restoreFromBall: () => call('gui:ball:restore'),
+  minimizeToTaskbar: () => call('gui:ball:minimizeToTaskbar'),
+  setBallExpanded: (expanded) => call('gui:ball:setExpanded', { expanded }),
+  moveBallWindow: (deltaX, deltaY) => call('gui:ball:move', { deltaX, deltaY }),
+  getBallState: () => call('gui:ball:getState'),
+  onBallModeChanged: (callback) => {
+    ipcRenderer.on('gui:ball:modeChanged', (_event, data) => callback(data));
+  },
+  removeBallModeListeners: () => {
+    ipcRenderer.removeAllListeners('gui:ball:modeChanged');
+  },
+  onBallReset: (callback) => {
+    ipcRenderer.on('gui:ball:resetCollapsed', (_event, data) => callback(data));
+  },
+  removeBallResetListeners: () => {
+    ipcRenderer.removeAllListeners('gui:ball:resetCollapsed');
+  },
+  syncThemeToBall: (payload) => call('gui:theme:sync', payload),
+  onThemeChanged: (callback) => {
+    ipcRenderer.on('gui:theme:changed', (_event, data) => callback(data));
+  },
+  removeThemeChangedListeners: () => {
+    ipcRenderer.removeAllListeners('gui:theme:changed');
+  },
   getGatewayOverview: () => call('gui:getGatewayOverview'),
   getGatewayConfig: () => call('gui:getGatewayConfig'),
   updateGatewayConfig: (patch) => call('gui:updateGatewayConfig', patch),

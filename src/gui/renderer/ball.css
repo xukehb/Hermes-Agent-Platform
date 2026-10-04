@@ -1,0 +1,616 @@
+:root {
+  --ball-primary: var(--primary, #38bdf8);
+  --ball-primary-hover: var(--primary-hover, #7dd3fc);
+  --ball-accent: var(--accent, #818cf8);
+  --ball-glow: var(--accent-glow, rgba(56, 189, 248, 0.35));
+  --ball-bg: var(--bg-surface, #0f172a);
+  --ball-panel-bg: var(--glass-bg, rgba(15, 23, 42, 0.9));
+  --ball-border: var(--border-default, rgba(255, 255, 255, 0.12));
+  --ball-border-subtle: var(--border-subtle, rgba(255, 255, 255, 0.06));
+  --ball-text: var(--text-main, #f8fafc);
+  --ball-text-sub: var(--text-muted, #94a3b8);
+  --ball-bubble-user: var(--primary-subtle, rgba(56, 189, 248, 0.18));
+  --ball-bubble-ai: var(--bg-user-bubble, rgba(255, 255, 255, 0.06));
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Roboto, sans-serif;
+  color: var(--ball-text);
+}
+
+/* ==========================================================================
+   1. 极简轻量悬浮小球 (Slim Collapsed Ball)
+   ========================================================================== */
+.ball-widget {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  z-index: 100;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ball-widget:active {
+  cursor: grabbing;
+}
+
+body.ball-mode-collapsed .ball-widget {
+  display: flex !important;
+}
+
+body.ball-mode-collapsed .ball-panel {
+  display: none !important;
+}
+
+body.ball-mode-expanded .ball-widget {
+  display: none !important;
+}
+
+.ball-core {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, var(--bg-surface-raised, #1e293b) 0%, var(--bg-surface, #0f172a) 70%, var(--bg-app, #020617) 100%);
+  border: 1px solid var(--primary-border, rgba(56, 189, 248, 0.35));
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.45),
+    0 0 12px var(--ball-glow),
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.22s ease;
+}
+
+.ball-widget:hover .ball-core {
+  transform: scale(1.06);
+  border-color: var(--ball-primary);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.55),
+    0 0 18px var(--ball-glow),
+    inset 0 1px 2px rgba(255, 255, 255, 0.35);
+}
+
+.ball-glow-ring {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid var(--ball-primary);
+  opacity: 0.3;
+  pointer-events: none;
+  animation: ball-pulse 2.8s infinite ease-out;
+}
+
+@keyframes ball-pulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.15;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+.ball-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ball-primary);
+  filter: drop-shadow(0 1px 4px var(--ball-glow));
+}
+
+.ball-status-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--success, #10b981);
+  border: 1.5px solid var(--bg-surface, #0f172a);
+  box-shadow: 0 0 6px var(--success, #10b981);
+}
+
+.ball-tooltip {
+  position: absolute;
+  bottom: -18px;
+  white-space: nowrap;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--ball-text);
+  background: var(--bg-surface-raised, rgba(15, 23, 42, 0.9));
+  padding: 1.5px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--ball-border);
+  opacity: 0;
+  transform: translateY(3px);
+  pointer-events: none;
+  transition: all 0.18s ease;
+  backdrop-filter: blur(8px);
+}
+
+.ball-widget:hover .ball-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ==========================================================================
+   2. 纤细修长弹出功能面板 (Ultra-Slim Popup Panel)
+   ========================================================================== */
+.ball-panel {
+  display: none !important;
+  position: absolute;
+  inset: 4px;
+  border-radius: 14px;
+  background: var(--ball-panel-bg);
+  border: 1px solid var(--ball-border);
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.55),
+    0 0 16px var(--ball-glow),
+    inset 0 1px 1px rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  flex-direction: column;
+  padding: 9px 10px 8px 10px;
+  gap: 7px;
+  z-index: 150;
+  transform-origin: top right;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: scale(0.94);
+  opacity: 0;
+}
+
+body.ball-mode-expanded .ball-panel {
+  display: flex !important;
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* 顶栏 */
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 1px;
+}
+
+.panel-brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.panel-mini-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--primary-subtle, rgba(56, 189, 248, 0.15));
+  border: 1px solid var(--primary-border, rgba(56, 189, 248, 0.3));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ball-primary);
+}
+
+.panel-titles {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.panel-title-text {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ball-text);
+  letter-spacing: -0.2px;
+}
+
+.panel-status-tag {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--ball-primary);
+  background: var(--primary-subtle, rgba(56, 189, 248, 0.12));
+  border: 1px solid var(--primary-border, rgba(56, 189, 248, 0.25));
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+
+.panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.panel-action-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ball-text-sub);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.panel-action-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--ball-text);
+  border-color: var(--ball-border);
+}
+
+.panel-action-btn.active {
+  background: var(--primary-subtle, rgba(56, 189, 248, 0.2));
+  color: var(--ball-primary);
+  border-color: var(--primary-border, rgba(56, 189, 248, 0.4));
+}
+
+/* 功能 1：【放大还原工作台】修长流线胶囊大按钮 */
+.panel-restore-box {
+  width: 100%;
+}
+
+.btn-restore-full {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--primary-subtle, rgba(37, 99, 235, 0.25)) 0%, var(--primary, rgba(56, 189, 248, 0.35)) 100%);
+  border: 1px solid var(--primary-border, rgba(56, 189, 248, 0.4));
+  color: var(--ball-text);
+  cursor: pointer;
+  box-shadow: 0 2px 10px var(--ball-glow);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: left;
+}
+
+.btn-restore-full:hover {
+  background: linear-gradient(135deg, var(--primary, #38bdf8) 0%, var(--primary-hover, #60a5fa) 100%);
+  color: #ffffff;
+  border-color: var(--primary-hover);
+  box-shadow: 0 4px 14px var(--ball-glow);
+  transform: translateY(-0.5px);
+}
+
+.btn-restore-full:hover .restore-icon-box {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.btn-restore-full:hover .restore-arrow {
+  color: #ffffff;
+  transform: translateX(2px);
+}
+
+.btn-restore-full:active {
+  transform: translateY(0.5px);
+}
+
+.restore-icon-box {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--primary-subtle, rgba(255, 255, 255, 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ball-primary);
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.restore-texts {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.restore-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: -0.1px;
+}
+
+.restore-arrow {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ball-primary);
+  transition: transform 0.15s ease;
+}
+
+/* 功能 2：极简快捷问答区 (Slim Chat Stream) */
+.panel-chat-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--bg-subtle, rgba(0, 0, 0, 0.22));
+  border-radius: 10px;
+  border: 1px solid var(--ball-border-subtle);
+  padding: 7px 8px;
+}
+
+.panel-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ball-text-sub);
+}
+
+.chat-tool-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9.5px;
+  color: var(--ball-text-sub);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 1.5px 4px;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.chat-tool-btn:hover {
+  color: var(--ball-text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.panel-chat-stream {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 2px;
+}
+
+.panel-chat-stream::-webkit-scrollbar {
+  width: 3px;
+}
+
+.panel-chat-stream::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.ball-welcome-tip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 100%;
+  padding: 10px;
+  color: var(--ball-text-sub);
+  font-size: 10.5px;
+  line-height: 1.45;
+  opacity: 0.75;
+}
+
+.ball-chat-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  line-height: 1.4;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.ball-chat-msg.user {
+  align-self: flex-end;
+  background: var(--ball-bubble-user);
+  border: 1px solid var(--primary-border, rgba(56, 189, 248, 0.3));
+  color: var(--ball-text);
+  padding: 4px 8px;
+  border-radius: 8px 8px 1px 8px;
+  max-width: 90%;
+}
+
+.ball-chat-msg.assistant {
+  align-self: flex-start;
+  background: var(--ball-bubble-ai);
+  border: 1px solid var(--ball-border-subtle);
+  color: var(--ball-text);
+  padding: 4px 8px;
+  border-radius: 8px 8px 8px 1px;
+  max-width: 95%;
+}
+
+.streaming-cursor {
+  display: inline-block;
+  width: 5px;
+  height: 10px;
+  background: var(--ball-primary);
+  vertical-align: middle;
+  margin-left: 2px;
+  animation: cursor-blink 0.8s infinite;
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* 输入栏 (Slim Input Bar) */
+.panel-input-box {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg-input-box, rgba(15, 23, 42, 0.6));
+  border: 1px solid var(--border-input, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  padding: 3px 6px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.panel-input-box:focus-within {
+  border-color: var(--ball-primary);
+  box-shadow: 0 0 8px var(--ball-glow);
+}
+
+#ballInputText {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  color: var(--ball-text);
+  font-size: 11px;
+  line-height: 1.35;
+  font-family: inherit;
+  user-select: text;
+  -webkit-user-select: text;
+  padding: 1px 0;
+  height: 20px;
+}
+
+#ballInputText::placeholder {
+  color: var(--text-placeholder, #64748b);
+  font-size: 10.5px;
+}
+
+.ball-send-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--ball-primary);
+  border: none;
+  color: var(--bg-app, #0f172a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.ball-send-btn:hover {
+  background: var(--ball-primary-hover);
+  box-shadow: 0 0 8px var(--ball-glow);
+}
+
+.ball-send-btn:active {
+  transform: scale(0.92);
+}
+
+/* 功能 3：常用微工具栏 (Micro-Chips) */
+.panel-quick-tools {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.quick-tool-chip {
+  display: flex;
+  align-items: center;
+  font-size: 9.5px;
+  padding: 2.5px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--ball-border-subtle);
+  color: var(--ball-text-sub);
+}
+
+.chip-val {
+  color: var(--ball-primary);
+  font-weight: 600;
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-action-chip {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  padding: 2.5px 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--ball-border-subtle);
+  color: var(--ball-text-sub);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quick-action-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ball-text);
+  border-color: var(--ball-border);
+}
+
+.quick-action-chip:active {
+  transform: scale(0.95);
+}
+
+/* ==========================================================================
+   3. 浅色主题 (Light Theme) 专门轻量晶莹适配
+   ========================================================================== */
+[data-theme="light"] .ball-panel {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.12),
+    0 0 10px rgba(0, 0, 0, 0.05),
+    inset 0 1px 1px rgba(255, 255, 255, 0.9);
+}
+
+[data-theme="light"] .ball-core {
+  background: radial-gradient(circle at 32% 28%, #ffffff 0%, #f4f4f5 70%, #e4e4e7 100%);
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 0 8px rgba(0, 0, 0, 0.06),
+    inset 0 1px 1.5px #ffffff;
+}
+
+[data-theme="light"] .btn-restore-full {
+  background: linear-gradient(135deg, #18181b 0%, #27272a 100%);
+  color: #ffffff;
+  border-color: #3f3f46;
+}
+
+[data-theme="light"] .ball-send-btn {
+  background: #18181b;
+  color: #ffffff;
+}

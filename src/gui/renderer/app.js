@@ -2109,6 +2109,14 @@ function applyTheme(theme, showNotice = false) {
   root.setAttribute('data-theme', finalTheme);
   localStorage.setItem('hap_theme', finalTheme);
 
+  try {
+    window.hap?.syncThemeToBall?.({
+      theme: finalTheme,
+      customAccent: finalTheme === 'custom' ? getCustomThemeAccent() : undefined,
+      customBase: finalTheme === 'custom' ? getCustomThemeBase() : undefined,
+    });
+  } catch {}
+
   // 自定义主题色板可编辑，选中态需要实时同步输入控件
   syncCustomThemeControls();
 
@@ -2974,6 +2982,10 @@ function initMiniModeAndMiniI() {
   });
 
   // 缩小化与 Mini 模式进入/退出
+  $('floatingBallToggleBtn')?.addEventListener('click', () => {
+    window.hap?.enterBallMode?.();
+  });
+
   $('miniModeToggleBtn')?.addEventListener('click', () => {
     setMiniMode(true);
   });
@@ -3018,6 +3030,12 @@ function initMiniModeAndMiniI() {
       syncMiniConversationMessages();
     } else {
       hideMiniIPopover();
+    }
+  });
+
+  window.hap?.onBallModeChanged?.((isBall) => {
+    if (isBall) {
+      hideAllPopovers();
     }
   });
 
@@ -12670,7 +12688,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Web 工作台没有原生窗口，桌面专属的「缩小化 / 置顶小窗」入口会变成死按钮，直接隐藏。
   // 桌面端 (Electron) 不受影响，window.isWebMode 仅由 src/web/server.ts 注入。
   if (window.isWebMode) {
-    ['miniModeToggleBtn', 'miniPinWindowBtn', 'miniExpandWindowBtn'].forEach((id) => {
+    ['floatingBallToggleBtn', 'miniModeToggleBtn', 'miniPinWindowBtn', 'miniExpandWindowBtn'].forEach((id) => {
       const el = $(id);
       if (el) el.remove();
     });
