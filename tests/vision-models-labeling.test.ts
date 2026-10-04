@@ -14,6 +14,8 @@ describe('Vision & Multimodal Model Identification and Labeling', () => {
       'gpt-4o-audio-preview',
       'gpt-image-2',
       'qwen2.5-vl:7b',
+      'qwen2.5vl:7b',
+      'qwen2.5vl:3b',
       'qwen2-vl',
       'llava:7b',
       'llava-phi3:3.8b',
@@ -102,7 +104,7 @@ describe('Vision & Multimodal Model Identification and Labeling', () => {
     const visionModels = OPEN_SOURCE_MODEL_CATALOG.filter((m) => m.category === 'vision');
     expect(visionModels.length).toBeGreaterThanOrEqual(3);
 
-    const qwenVl = visionModels.find((m) => m.id === 'qwen2.5-vl:7b');
+    const qwenVl = visionModels.find((m) => m.id === 'qwen2.5vl:7b');
     expect(qwenVl).toBeDefined();
     expect(qwenVl?.displayName).toContain('视觉');
     expect(qwenVl?.tags).toContain('视觉多模态');

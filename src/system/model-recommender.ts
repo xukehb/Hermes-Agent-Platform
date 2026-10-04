@@ -143,7 +143,12 @@ export function evaluateModelForHardware(
     score -= 20;
   }
 
-  const isInstalled = installedModelIds.has(model.id) || installedModelIds.has(`ollama/${model.id}`);
+  const isInstalled = model.deployment === 'ollama' && (installedModelIds.has(model.id) || installedModelIds.has(`ollama/${model.id}`));
+  if (model.deployment === 'external') {
+    expectedTokPerSec = '需专用服务实测';
+    tierLabel = '需独立部署';
+    rationale = '权重来自外部模型仓库，Ollama 无法直接拉取；请按模型主页部署对应推理服务。硬件数值仅为估算。';
+  }
 
   return {
     model,

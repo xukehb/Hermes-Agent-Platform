@@ -1,5 +1,6 @@
 import { execSync, spawn } from 'node:child_process';
 import process from 'node:process';
+import { OPEN_SOURCE_MODEL_CATALOG } from './model-catalog.js';
 
 export interface OllamaStatusResult {
   isRunning: boolean;
@@ -156,6 +157,10 @@ export async function pullOllamaModelStream(
     onProgress: (progress: OllamaPullProgress) => void;
   }
 ): Promise<void> {
+  const entry = OPEN_SOURCE_MODEL_CATALOG.find((model) => model.id === modelTag || model.modelId === modelTag);
+  if (entry?.deployment === 'external') {
+    throw new Error(`此模型不支持 Ollama 一键部署，请先部署专用推理服务并配置接口：${entry.sourceUrl}`);
+  }
   const baseUrl = (options.baseUrl || DEFAULT_BASE_URL).replace(/\/+$/, '');
   const url = `${baseUrl}/api/pull`;
 

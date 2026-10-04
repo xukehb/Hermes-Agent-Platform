@@ -8340,17 +8340,17 @@ const PRESET_TEMPLATES = {
     ],
   },
   'local-audio': {
-    name: '本地语音模型部署 (Whisper / ASR / TTS)',
+    name: '接入已部署语音服务 (Whisper / ASR / TTS)',
     baseUrl: 'http://127.0.0.1:8000/v1',
     wireApi: 'chat',
     protocol: 'openai-tools',
-    testModel: 'whisper-large-v3',
+    testModel: 'openai/whisper-large-v3',
     category: '本地与私有化部署',
     defaultModels: [
-      { alias: 'whisper-large-v3', model: 'whisper:large-v3', contextWindow: 16384, category: 'audio' },
-      { alias: 'whisper-base', model: 'whisper:base', contextWindow: 16384, category: 'audio' },
-      { alias: 'qwen2-audio-7b', model: 'qwen2-audio:7b', contextWindow: 8192, category: 'audio' },
-      { alias: 'cosyvoice', model: 'cosyvoice:latest', contextWindow: 4096, category: 'audio' },
+      { alias: 'whisper-large-v3', model: 'openai/whisper-large-v3', contextWindow: 16384, category: 'audio' },
+      { alias: 'whisper-base', model: 'openai/whisper-base', contextWindow: 16384, category: 'audio' },
+      { alias: 'qwen2-audio-7b', model: 'Qwen/Qwen2-Audio-7B-Instruct', contextWindow: 8192, category: 'audio' },
+      { alias: 'cosyvoice', model: 'FunAudioLLM/CosyVoice-300M', contextWindow: 4096, category: 'audio' },
     ],
   },
   'local-image': {
@@ -8358,12 +8358,12 @@ const PRESET_TEMPLATES = {
     baseUrl: 'http://127.0.0.1:7860/v1',
     wireApi: 'chat',
     protocol: 'openai-tools',
-    testModel: 'flux-schnell',
+    testModel: 'black-forest-labs/FLUX.1-schnell',
     category: '本地与私有化部署',
     defaultModels: [
-      { alias: 'flux-schnell', model: 'flux-schnell', contextWindow: 4096, category: 'image' },
-      { alias: 'stable-diffusion-3.5', model: 'stable-diffusion-3.5:medium', contextWindow: 4096, category: 'image' },
-      { alias: 'sdxl-turbo', model: 'sdxl-turbo', contextWindow: 2048, category: 'image' },
+      { alias: 'flux-schnell', model: 'black-forest-labs/FLUX.1-schnell', contextWindow: 4096, category: 'image' },
+      { alias: 'stable-diffusion-3.5', model: 'stabilityai/stable-diffusion-3.5-medium', contextWindow: 4096, category: 'image' },
+      { alias: 'sdxl-turbo', model: 'stabilityai/sdxl-turbo', contextWindow: 2048, category: 'image' },
     ],
   },
   'local-video': {
@@ -8371,11 +8371,11 @@ const PRESET_TEMPLATES = {
     baseUrl: 'http://127.0.0.1:8080/v1',
     wireApi: 'chat',
     protocol: 'openai-tools',
-    testModel: 'cogvideox-5b',
+    testModel: 'THUDM/CogVideoX-5b',
     category: '本地与私有化部署',
     defaultModels: [
-      { alias: 'cogvideox-5b', model: 'cogvideox:5b', contextWindow: 8192, category: 'video' },
-      { alias: 'hunyuan-video', model: 'hunyuan-video:latest', contextWindow: 8192, category: 'video' },
+      { alias: 'cogvideox-5b', model: 'THUDM/CogVideoX-5b', contextWindow: 8192, category: 'video' },
+      { alias: 'hunyuan-video', model: 'tencent/HunyuanVideo', contextWindow: 8192, category: 'video' },
     ],
   },
   lmstudio: { name: 'LM Studio 本地部署', baseUrl: 'http://127.0.0.1:1234/v1', wireApi: 'chat', protocol: 'openai-tools', testModel: 'local-model', category: '本地与私有化部署' },
@@ -8556,7 +8556,7 @@ $('providerForm')?.addEventListener('submit', async (e) => {
 
     // 3. 同步保存该服务商名下保留或新增的所有模型
     for (const m of currentDialogModels) {
-      const isVision = /(?:^|[-_./: ])(?:vl|vision|omni|image)(?:[-_./: ]|$)|[-_]vl(?:[:.]|$)|qwen.*[-_]vl|llava|minicpm[-_]?v|internvl|cogvlm|glm-[0-9.]+v|phi-.*(?:vision|multimodal)|gpt-4o|gpt-5|gemini|claude-3|claude-sonnet|claude-opus|gpt-image/i.test(`${m.alias} ${m.model || ''}`);
+      const isVision = /(?:^|[-_./: ])(?:vl|vision|omni|image)(?:[-_./: ]|$)|[-_]vl(?:[:.]|$)|qwen.*[-_]?vl|llava|minicpm[-_]?v|internvl|cogvlm|glm-[0-9.]+v|phi-.*(?:vision|multimodal)|gpt-4o|gpt-5|gemini|claude-3|claude-sonnet|claude-opus|gpt-image/i.test(`${m.alias} ${m.model || ''}`);
       const isAudio = m.category === 'audio' || /(?:^|[-_./: ])(?:audio|whisper|asr|tts|voice|speech|cosyvoice|sensevoice|chat-tts|chattts)(?:[-_./: ]|$)/i.test(`${m.alias} ${m.model || ''}`);
       const isImage = m.category === 'image' || /(?:^|[-_./: ])(?:flux|diffusion|sdxl|sd[0-9.]*|midjourney|dall-e|imagen|image-gen)(?:[-_./: ]|$)/i.test(`${m.alias} ${m.model || ''}`);
       const isVideo = m.category === 'video' || /(?:^|[-_./: ])(?:video|cogvideo|hunyuan-video|kling|sora|svd|videox)(?:[-_./: ]|$)/i.test(`${m.alias} ${m.model || ''}`);
@@ -8804,7 +8804,7 @@ $('fetchRemoteModelsBtn')?.addEventListener('click', async () => {
       showToast(`成功获取到 ${res.models.length} 个可用模型`, 'success');
       const picker = $('remoteModelPicker');
       picker.style.display = 'block';
-      const isVisionName = (n) => /(?:^|[-_./: ])(?:vl|vision|omni|image)(?:[-_./: ]|$)|[-_]vl(?:[:.]|$)|qwen.*[-_]vl|llava|minicpm[-_]?v|internvl|cogvlm|glm-[0-9.]+v|phi-.*(?:vision|multimodal)|gpt-4o|gpt-5|gemini|claude-3|claude-sonnet|claude-opus|gpt-image/i.test(n);
+      const isVisionName = (n) => /(?:^|[-_./: ])(?:vl|vision|omni|image)(?:[-_./: ]|$)|[-_]vl(?:[:.]|$)|qwen.*[-_]?vl|llava|minicpm[-_]?v|internvl|cogvlm|glm-[0-9.]+v|phi-.*(?:vision|multimodal)|gpt-4o|gpt-5|gemini|claude-3|claude-sonnet|claude-opus|gpt-image/i.test(n);
       const isAudioName = (n) => /(?:^|[-_./: ])(?:audio|whisper|asr|tts|voice|speech|cosyvoice|sensevoice|chat-tts|chattts)(?:[-_./: ]|$)/i.test(n);
       const isImageName = (n) => /(?:^|[-_./: ])(?:flux|diffusion|sdxl|sd[0-9.]*|midjourney|dall-e|imagen|image-gen)(?:[-_./: ]|$)/i.test(n);
       const isVideoName = (n) => /(?:^|[-_./: ])(?:video|cogvideo|hunyuan-video|kling|sora|svd|videox)(?:[-_./: ]|$)/i.test(n);
@@ -9043,7 +9043,7 @@ window.refreshModelHub = async () => {
     } else {
       if (dot) dot.style.background = 'var(--danger)';
       if (text) text.textContent = '未检测到本地 Ollama 引擎';
-      if (sub) sub.textContent = '安装后即可解锁所有开源大模型一键流式拉取与本地部署';
+      if (sub) sub.textContent = '安装后可拉取支持 Ollama 的模型；其他模型需要专用推理服务';
       if (actions) {
         const cmdEsc = escJs(ollamaStatus.installCommand || '');
         const urlEsc = escJs(ollamaStatus.downloadUrl || 'https://ollama.com');
@@ -9073,6 +9073,7 @@ window.refreshModelHub = async () => {
     if (titleEl) titleEl.textContent = '探测硬件状态失败';
     if (adviceEl) adviceEl.textContent = err.message;
   }
+  if (typeof refresh === 'function') await refresh();
 };
 
 function renderModelHubCards() {
@@ -9145,11 +9146,13 @@ function renderModelHubCards() {
     }
 
     const localConfigBtn = `
-      <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 9px;" title="配置此模型的本地 URL / Key / 真实模型 ID" onclick="window.openLocalDeploymentForModel('${escJs(m.id)}')">本地部署</button>
+      <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 9px;" title="配置此模型的本地 URL / Key / 真实模型 ID" onclick="window.openLocalDeploymentForModel('${escJs(m.id)}')">配置已部署服务</button>
     `;
 
     let actionButtonHtml = '';
-    if (isDownloading) {
+    if (m.deployment === 'external') {
+      actionButtonHtml = `<button type="button" class="btn secondary" onclick="window.hap.openExternal('${escJs(m.sourceUrl)}')">官方模型主页</button>${localConfigBtn}`;
+    } else if (isDownloading) {
       actionButtonHtml = `
         <button type="button" class="btn secondary" style="font-size:11.5px;padding:4px 10px;" onclick="window.cancelHubModelPull('${escJs(m.id)}')">取消拉取</button>
       `;
@@ -9266,6 +9269,11 @@ function updateHubCardProgress(progress) {
 }
 
 window.pullHubModel = async (modelTag, force = false) => {
+  const model = hubCurrentProfile?.evaluations?.find(e => e.model.id === modelTag)?.model;
+  if (model?.deployment === 'external') {
+    showToast('该模型需要专用推理服务，请先查看官方模型主页，再配置服务接口。', 'warning');
+    return;
+  }
   if (!hubOllamaStatus || !hubOllamaStatus.isRunning) {
     showToast('本地 Ollama 引擎尚未启动，请先在上方点击【一键启动服务】或完成安装', 'warning');
     return;
@@ -9390,7 +9398,7 @@ window.openLocalDeploymentForModel = (modelId) => {
     aliasInput.value = cleanAlias;
     aliasInput.readOnly = false;
   }
-  if ($('modelInputModel')) $('modelInputModel').value = modelId;
+  if ($('modelInputModel')) $('modelInputModel').value = catalogModel?.modelId || modelId;
   if ($('modelInputCategory')) $('modelInputCategory').value = category;
   if ($('modelInputBaseUrl')) $('modelInputBaseUrl').value = defaultUrl;
   if ($('modelInputApiKey')) {
@@ -13547,7 +13555,7 @@ function renderCurrentDialogModels() {
     return;
   }
   container.innerHTML = currentDialogModels.map((m, idx) => {
-    const isVision = /(?:^|[-_./: ])(?:vl|vision|omni|image)(?:[-_./: ]|$)|[-_]vl(?:[:.]|$)|qwen.*[-_]vl|llava|minicpm[-_]?v|internvl|cogvlm|glm-[0-9.]+v|phi-.*(?:vision|multimodal)|gpt-4o|gpt-5|gemini|claude-3|claude-sonnet|claude-opus|gpt-image/i.test(`${m.alias} ${m.model || ''}`);
+    const isVision = /(?:^|[-_./: ])(?:vl|vision|omni|image)(?:[-_./: ]|$)|[-_]vl(?:[:.]|$)|qwen.*[-_]?vl|llava|minicpm[-_]?v|internvl|cogvlm|glm-[0-9.]+v|phi-.*(?:vision|multimodal)|gpt-4o|gpt-5|gemini|claude-3|claude-sonnet|claude-opus|gpt-image/i.test(`${m.alias} ${m.model || ''}`);
     const isAudio = m.category === 'audio' || /(?:^|[-_./: ])(?:audio|whisper|asr|tts|voice|speech|cosyvoice|sensevoice|chat-tts|chattts)(?:[-_./: ]|$)/i.test(`${m.alias} ${m.model || ''}`);
     const isImage = m.category === 'image' || /(?:^|[-_./: ])(?:flux|diffusion|sdxl|sd[0-9.]*|midjourney|dall-e|imagen|image-gen)(?:[-_./: ]|$)/i.test(`${m.alias} ${m.model || ''}`);
     const isVideo = m.category === 'video' || /(?:^|[-_./: ])(?:video|cogvideo|hunyuan-video|kling|sora|svd|videox)(?:[-_./: ]|$)/i.test(`${m.alias} ${m.model || ''}`);
@@ -13607,7 +13615,7 @@ window.fetchAndSyncModelsForProvider = async (providerId, clickBtn) => {
 
     $('quickModelSyncTitle').textContent = `从 [${providerId}] 获取到 ${res.models.length} 个模型`;
     const listEl = $('quickModelSyncList');
-    const isVisionName = (n) => /(?:^|[-_./: ])(?:vl|vision|omni|image)(?:[-_./: ]|$)|[-_]vl(?:[:.]|$)|qwen.*[-_]vl|llava|minicpm[-_]?v|internvl|cogvlm|glm-[0-9.]+v|phi-.*(?:vision|multimodal)|gpt-4o|gpt-5|gemini|claude-3|claude-sonnet|claude-opus|gpt-image/i.test(n);
+    const isVisionName = (n) => /(?:^|[-_./: ])(?:vl|vision|omni|image)(?:[-_./: ]|$)|[-_]vl(?:[:.]|$)|qwen.*[-_]?vl|llava|minicpm[-_]?v|internvl|cogvlm|glm-[0-9.]+v|phi-.*(?:vision|multimodal)|gpt-4o|gpt-5|gemini|claude-3|claude-sonnet|claude-opus|gpt-image/i.test(n);
     listEl.innerHTML = res.models.map((name) => {
       const isVision = isVisionName(name);
       return `

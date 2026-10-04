@@ -6,8 +6,14 @@
 export type ModelCategory = 'coding' | 'reasoning' | 'general' | 'fast' | 'vision' | 'audio' | 'image' | 'video';
 
 export interface CatalogModel {
-  /** Ollama 官方模型拉取标识，如 'qwen2.5-coder:7b' */
+  /** 目录稳定标识，外部模型保留历史键；实际模型名见 modelId。 */
   id: string;
+  /** 实际部署来源。 */
+  deployment: 'ollama' | 'external';
+  /** 外部模型的权威主页或权重仓库。 */
+  sourceUrl?: string;
+  /** 权威仓库 ID；服务端如另设 served-model-name，以服务端为准。 */
+  modelId: string;
   /** 展示名称 */
   name: string;
   /** 完整业务别名展示 */
@@ -48,7 +54,7 @@ export interface CatalogModel {
 
 const GB = 1024 * 1024 * 1024;
 
-export const OPEN_SOURCE_MODEL_CATALOG: CatalogModel[] = [
+const MODEL_ENTRIES: Omit<CatalogModel, 'deployment' | 'sourceUrl' | 'modelId'>[] = [
   // -------------------------------------------------------------
   // 1. 轻量端侧 / 极速日常 / 各种电脑均可运行 (1.5B ~ 3B)
   // -------------------------------------------------------------
@@ -357,7 +363,7 @@ export const OPEN_SOURCE_MODEL_CATALOG: CatalogModel[] = [
   // 5. 多模态视觉大模型 / 图文理解、复杂 OCR 与桌面代答 (Vision / VL)
   // -------------------------------------------------------------
   {
-    id: 'qwen2.5-vl:7b',
+    id: 'qwen2.5vl:7b',
     name: 'Qwen 2.5 VL (7B)',
     displayName: 'Qwen 2.5 VL 7B (全能开源多模态视觉旗舰)',
     family: 'Qwen',
@@ -378,7 +384,7 @@ export const OPEN_SOURCE_MODEL_CATALOG: CatalogModel[] = [
     protocol: 'openai-tools',
   },
   {
-    id: 'qwen2.5-vl:3b',
+    id: 'qwen2.5vl:3b',
     name: 'Qwen 2.5 VL (3B)',
     displayName: 'Qwen 2.5 VL 3B (轻量端侧视觉小钢炮)',
     family: 'Qwen',
@@ -641,3 +647,27 @@ export const OPEN_SOURCE_MODEL_CATALOG: CatalogModel[] = [
     protocol: 'openai-tools',
   },
 ];
+
+/**
+ * 目录中的模型元数据来自不同生态，不能把所有模型都当成 Ollama tag。
+ * 这里声明外部权重仓库映射；这些模型必须先配置
+ * vLLM、ComfyUI、Whisper 服务等专用运行时后才能使用。
+ */
+const EXTERNAL_MODEL_SOURCES: Record<string, string> = {
+  'whisper:large-v3': 'https://huggingface.co/openai/whisper-large-v3',
+  'whisper:base': 'https://huggingface.co/openai/whisper-base',
+  'qwen2-audio:7b': 'https://huggingface.co/Qwen/Qwen2-Audio-7B-Instruct',
+  'cosyvoice:latest': 'https://huggingface.co/FunAudioLLM/CosyVoice-300M',
+  'flux-schnell': 'https://huggingface.co/black-forest-labs/FLUX.1-schnell',
+  'stable-diffusion-3.5:medium': 'https://huggingface.co/stabilityai/stable-diffusion-3.5-medium',
+  'sdxl-turbo': 'https://huggingface.co/stabilityai/sdxl-turbo',
+  'cogvideox:5b': 'https://huggingface.co/THUDM/CogVideoX-5b',
+  'hunyuan-video:latest': 'https://huggingface.co/tencent/HunyuanVideo',
+};
+
+export const OPEN_SOURCE_MODEL_CATALOG: CatalogModel[] = MODEL_ENTRIES.map((model) => ({
+  ...model,
+  modelId: EXTERNAL_MODEL_SOURCES[model.id]?.replace('https://huggingface.co/', '') ?? model.id,
+  deployment: EXTERNAL_MODEL_SOURCES[model.id] === undefined ? 'ollama' : 'external',
+  sourceUrl: EXTERNAL_MODEL_SOURCES[model.id] ?? `https://ollama.com/library/${model.id}`,
+}));

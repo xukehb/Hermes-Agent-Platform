@@ -3162,7 +3162,19 @@ export class GuiService {
 
   // 获取本地 Ollama 引擎状态与已安装模型
   async getOllamaStatus(): Promise<OllamaStatusResult> {
-    return checkOllamaStatus();
+    const status = await checkOllamaStatus();
+    if (status.isRunning && status.installedModels.length > 0) {
+      const models = this.resolver().resolveModels();
+      for (const tag of status.installedModels) {
+        if (!models.has(`ollama/${tag}`)) await this.registerOllamaDownloadedModel(tag);
+      }
+      const state = readState();
+      if (state.hiddenProviders?.includes('ollama')) {
+        state.hiddenProviders = state.hiddenProviders.filter((id) => id !== 'ollama');
+        writeState(state);
+      }
+    }
+    return status;
   }
 
   // 根据电脑硬件配置获取开源大模型推荐矩阵与评分列表
@@ -3192,13 +3204,18 @@ export class GuiService {
 
     try {
       this.info(`开始一键拉取并部署本地模型：${modelTag}`);
+      let completion: OllamaPullProgress | undefined;
       await pullOllamaModelStream(modelTag, {
         signal: controller.signal,
-        onProgress,
+        onProgress: (progress) => {
+          if (progress.done) completion = progress;
+          else onProgress(progress);
+        },
       });
 
       // 拉取成功后自动注册进 HAP 系统服务商与模型列表中
       await this.registerOllamaDownloadedModel(modelTag);
+      if (completion) onProgress(completion);
       this.info(`本地模型 ${modelTag} 已成功部署并就绪！`);
       return { ok: true, message: `模型 ${modelTag} 已成功部署并就绪！` };
     } catch (err) {
@@ -3270,6 +3287,10 @@ export class GuiService {
     const state = readState();
     if (state.hiddenModels?.includes(alias)) {
       state.hiddenModels = state.hiddenModels.filter((m) => m !== alias);
+      writeState(state);
+    }
+    if (state.hiddenProviders?.includes('ollama')) {
+      state.hiddenProviders = state.hiddenProviders.filter((id) => id !== 'ollama');
       writeState(state);
     }
     this.info(`已自动将已下载模型 ${modelTag} 注册进系统配置 (${alias})`);

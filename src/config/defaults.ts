@@ -356,7 +356,7 @@ export function inferModelCapabilities(modelName: string, alias?: string): Model
 
   if (!isPureText) {
     // 多模态视觉匹配（包括 VL 系列、Vision、Llava、MiniCPM-V、GPT-4o/5、Gemini、Claude 等）
-    const visionPattern = /(?:^|[-_./: ])(?:vl|vision|omni|image)(?:[-_./: ]|$)|[-_]vl(?:[:.]|$)|qwen.*[-_]vl|llava|minicpm[-_]?v|internvl|cogvlm|glm-[0-9.]+v|phi-.*(?:vision|multimodal)|gpt-4o|gpt-5|gemini|claude-3|claude-sonnet|claude-opus|gpt-image/i;
+    const visionPattern = /(?:^|[-_./: ])(?:vl|vision|omni|image)(?:[-_./: ]|$)|[-_]vl(?:[:.]|$)|qwen.*[-_]?vl|llava|minicpm[-_]?v|internvl|cogvlm|glm-[0-9.]+v|phi-.*(?:vision|multimodal)|gpt-4o|gpt-5|gemini|claude-3|claude-sonnet|claude-opus|gpt-image/i;
     if (visionPattern.test(target)) {
       caps.add('vision');
     }
