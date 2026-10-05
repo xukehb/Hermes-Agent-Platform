@@ -1,13 +1,21 @@
-# Hermes Agent Platform v0.1.30 发布说明 / Release Notes
+# Hermes Agent Platform v0.1.31 发布说明 / Release Notes
 
-## 本次修复
+## v0.1.31 更新
+
+- 新增 9 个语音、图片和视频模型的 Docker 一键部署。
+- 支持 Docker 条件检查、权重缓存、健康检查、自动注册服务商、日志、停止和删除。
+- macOS Docker 支持 CPU Whisper；其余部署配置要求 x86_64 NVIDIA GPU 主机。安装包不包含模型权重。
+- 验证范围：自动化测试、标准 Docker 镜像构建与接口冒烟测试通过；GPU 模型尚未完成真实推理验证。
+- 使用方法见 [Docker 部署指南](https://github.com/xukehb/Hermes-Agent-Platform/blob/v0.1.31/docs/docker-model-deployment.md)。
+
+## 延续的模型修复
 
 - 修复本地 Ollama 模型因服务商隐藏及刷新时序而不显示的问题；打开模型广场时同步已安装模型。
 
 - 修正 Qwen 2.5 VL 的 Ollama 模型标识为 `qwen2.5vl:3b` / `qwen2.5vl:7b`。
 - 18 个 Ollama 模型保留一键部署；9 个外部语音、图片与视频模型改为官方仓库标识、模型主页和已部署服务配置入口。
 - 后端拒绝把外部模型发送给 Ollama 下载，避免“模型不存在”错误；编辑配置时填入真实上游模型 ID。
-- 外部模型的性能显示改为需专用服务实测。外部推理服务仍需单独部署，本版本不包含模型权重。
+- 外部模型的性能显示改为需专用服务实测。可使用新增的 Docker 流程部署外部推理服务，本版本不包含模型权重。
 
 ## 延续功能 (Existing features)
 
@@ -59,10 +67,10 @@
 
 ### 🪟 Windows (x64)
 - **安装文件**：
-  - **标准安装向导（推荐）**：[`Hermes-Agent-Platform-0.1.30-Windows-x64-Setup.exe`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.30/Hermes-Agent-Platform-0.1.30-Windows-x64-Setup.exe) (经典安装向导，支持选择安装路径、创建桌面快捷方式与开始菜单入口)
-  - **绿色便携免安装版**：[`Hermes-Agent-Platform-0.1.30-Windows-x64-Portable.exe`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.30/Hermes-Agent-Platform-0.1.30-Windows-x64-Portable.exe) (单文件解压即用)
+  - **标准安装向导（推荐）**：[`Hermes-Agent-Platform-0.1.31-Windows-x64-Setup.exe`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.31/Hermes-Agent-Platform-0.1.31-Windows-x64-Setup.exe) (经典安装向导，支持选择安装路径、创建桌面快捷方式与开始菜单入口)
+  - **绿色便携免安装版**：[`Hermes-Agent-Platform-0.1.31-Windows-x64-Portable.exe`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.31/Hermes-Agent-Platform-0.1.31-Windows-x64-Portable.exe) (单文件解压即用)
 - **安装与运行说明**：
-  1. 下载 `Hermes-Agent-Platform-0.1.30-Windows-x64-Setup.exe` 并双击启动安装向导；
+  1. 下载 `Hermes-Agent-Platform-0.1.31-Windows-x64-Setup.exe` 并双击启动安装向导；
   2. 按照向导提示选择安装目录（如 `D:\Program Files\Hermes Agent Platform`）并勾选创建桌面快捷方式，点击“下一步”直到完成；
   3. 若遇到 **Windows Defender SmartScreen** 弹出“Windows 已保护你的电脑 / 未知发布者”提示：
      - 点击提示框中的 **「更多信息」 (More info)**；
@@ -71,11 +79,11 @@
 ### 🍎 macOS (Apple Silicon & Intel)
 - **安装文件**：
   - **Apple Silicon (M1 / M2 / M3 / M4 / M系列芯片)**：
-    - DMG 安装镜像：[`Hermes-Agent-Platform-0.1.30-macOS-arm64.dmg`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.30/Hermes-Agent-Platform-0.1.30-macOS-arm64.dmg)
-    - 免安装压缩包：[`Hermes-Agent-Platform-0.1.30-macOS-arm64.zip`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.30/Hermes-Agent-Platform-0.1.30-macOS-arm64.zip)
+    - DMG 安装镜像：[`Hermes-Agent-Platform-0.1.31-macOS-arm64.dmg`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.31/Hermes-Agent-Platform-0.1.31-macOS-arm64.dmg)
+    - 免安装压缩包：[`Hermes-Agent-Platform-0.1.31-macOS-arm64.zip`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.31/Hermes-Agent-Platform-0.1.31-macOS-arm64.zip)
   - **Intel x64 芯片**：
-    - DMG 安装镜像：[`Hermes-Agent-Platform-0.1.30-macOS-x64.dmg`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.30/Hermes-Agent-Platform-0.1.30-macOS-x64.dmg)
-    - 免安装压缩包：[`Hermes-Agent-Platform-0.1.30-macOS-x64.zip`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.30/Hermes-Agent-Platform-0.1.30-macOS-x64.zip)
+    - DMG 安装镜像：[`Hermes-Agent-Platform-0.1.31-macOS-x64.dmg`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.31/Hermes-Agent-Platform-0.1.31-macOS-x64.dmg)
+    - 免安装压缩包：[`Hermes-Agent-Platform-0.1.31-macOS-x64.zip`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.31/Hermes-Agent-Platform-0.1.31-macOS-x64.zip)
 - **安装与运行说明**：
   1. 双击打开 `.dmg` 镜像，将 `Hermes Agent Platform` 图标拖入 `Applications`（应用程序）文件夹；
   2. 若首次打开出现系统安全阻拦提示：
@@ -87,12 +95,12 @@
 
 ### 🐧 Ubuntu / Debian Linux (x64)
 - **安装文件**：
-  - **DEB 安装包**：[`Hermes-Agent-Platform-0.1.30-Ubuntu-amd64.deb`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.30/Hermes-Agent-Platform-0.1.30-Ubuntu-amd64.deb)
+  - **DEB 安装包**：[`Hermes-Agent-Platform-0.1.31-Ubuntu-amd64.deb`](https://github.com/xukehb/Hermes-Agent-Platform/releases/download/v0.1.31/Hermes-Agent-Platform-0.1.31-Ubuntu-amd64.deb)
 - **安装与运行说明**：
   1. 下载 `.deb` 安装包至本地；
   2. 终端运行：
      ```bash
-     sudo dpkg -i Hermes-Agent-Platform-0.1.30-Ubuntu-amd64.deb
+     sudo dpkg -i Hermes-Agent-Platform-0.1.31-Ubuntu-amd64.deb
      sudo apt-get install -f
      ```
   3. 安装完成后在应用程序列表启动，或在终端输入 `hermes-agent-platform`。
