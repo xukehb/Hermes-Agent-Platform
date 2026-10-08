@@ -1,6 +1,7 @@
 import { normalizeVector } from './vector-math.js';
 
 export interface EmbeddingProvider {
+  readonly version?: string;
   embed(text: string): Promise<number[]>;
   embedBatch(texts: string[]): Promise<number[][]>;
 }
@@ -10,6 +11,7 @@ export interface EmbeddingProvider {
  * 保证无网络、无外部 Key 下依然具备稳健的语义相似度计算能力。
  */
 export class LocalSemanticEmbedder implements EmbeddingProvider {
+  readonly version = 'local-ngram-v1-64';
   private readonly dimensions: number;
 
   constructor(dimensions: number = 64) {
@@ -63,3 +65,194 @@ export class LocalSemanticEmbedder implements EmbeddingProvider {
     vec[idx2] = (vec[idx2] ?? 0) + weight * 0.5;
   }
 }
+
+/** Ollama 本地向量模型提供者配置 */
+export interface OllamaEmbeddingOptions {
+  baseUrl?: string;
+  model?: string;
+  timeoutMs?: number;
+}
+
+/**
+ * Ollama 本地向量模型提供者。
+ * 连接本地部署的 Ollama 服务（如 nomic-embed-text, bge-m3, all-minilm）。
+ */
+export class OllamaEmbeddingProvider implements EmbeddingProvider {
+  readonly version: string;
+  private readonly baseUrl: string;
+  private readonly model: string;
+  private readonly timeoutMs: number;
+
+  constructor(options: OllamaEmbeddingOptions = {}) {
+    this.baseUrl = (options.baseUrl || process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434').replace(/\/+$/, '');
+    this.model = options.model || process.env.OLLAMA_EMBED_MODEL || 'nomic-embed-text';
+    this.timeoutMs = options.timeoutMs || 8000;
+    this.version = `ollama-${this.model}`;
+  }
+
+  async embed(text: string): Promise<number[]> {
+    const clean = text.trim();
+    if (!clean) return [];
+
+    const url = `${this.baseUrl}/api/embeddings`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: this.model, prompt: clean }),
+      signal: AbortSignal.timeout(this.timeoutMs),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Ollama embedding request failed: ${res.status} ${res.statusText}`);
+    }
+
+    const data = (await res.json()) as { embedding?: number[] };
+    if (!Array.isArray(data.embedding) || data.embedding.length === 0) {
+      throw new Error('Ollama returned invalid embedding payload');
+    }
+
+    return normalizeVector(data.embedding);
+  }
+
+  async embedBatch(texts: string[]): Promise<number[][]> {
+    return Promise.all(texts.map((t) => this.embed(t)));
+  }
+}
+
+/** OpenAI 兼容向量提供者配置 */
+export interface OpenAiEmbeddingOptions {
+  baseUrl?: string;
+  apiKey?: string;
+  model?: string;
+  timeoutMs?: number;
+}
+
+/**
+ * OpenAI / 兼容端点向量模型提供者。
+ */
+export class OpenAiEmbeddingProvider implements EmbeddingProvider {
+  readonly version: string;
+  private readonly baseUrl: string;
+  private readonly apiKey: string;
+  private readonly model: string;
+  private readonly timeoutMs: number;
+
+  constructor(options: OpenAiEmbeddingOptions = {}) {
+    this.baseUrl = (options.baseUrl || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, '');
+    this.apiKey = options.apiKey || process.env.OPENAI_API_KEY || '';
+    this.model = options.model || 'text-embedding-3-small';
+    this.timeoutMs = options.timeoutMs || 10000;
+    this.version = `openai-${this.model}`;
+  }
+
+  async embed(text: string): Promise<number[]> {
+    const clean = text.trim();
+    if (!clean) return [];
+
+    const url = `${this.baseUrl}/embeddings`;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (this.apiKey) headers['Authorization'] = `Bearer ${this.apiKey}`;
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ model: this.model, input: clean }),
+      signal: AbortSignal.timeout(this.timeoutMs),
+    });
+
+    if (!res.ok) {
+      throw new Error(`OpenAI embedding request failed: ${res.status} ${res.statusText}`);
+    }
+
+    const data = (await res.json()) as { data?: Array<{ embedding: number[] }> };
+    const vec = data.data?.[0]?.embedding;
+    if (!Array.isArray(vec) || vec.length === 0) {
+      throw new Error('OpenAI returned invalid embedding payload');
+    }
+
+    return normalizeVector(vec);
+  }
+
+  async embedBatch(texts: string[]): Promise<number[][]> {
+    const cleanTexts = texts.map((t) => t.trim()).filter(Boolean);
+    if (cleanTexts.length === 0) return [];
+
+    const url = `${this.baseUrl}/embeddings`;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (this.apiKey) headers['Authorization'] = `Bearer ${this.apiKey}`;
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ model: this.model, input: cleanTexts }),
+      signal: AbortSignal.timeout(this.timeoutMs),
+    });
+
+    if (!res.ok) {
+      throw new Error(`OpenAI batch embedding request failed: ${res.status} ${res.statusText}`);
+    }
+
+    const data = (await res.json()) as { data?: Array<{ embedding: number[] }> };
+    if (!Array.isArray(data.data)) {
+      throw new Error('OpenAI returned invalid batch embedding payload');
+    }
+
+    return data.data.map((item) => normalizeVector(item.embedding));
+  }
+}
+
+/**
+ * 具有自动容错降级能力的智能 Embedding 提供者。
+ * 若主模型（Ollama / OpenAI）发生网络超时、未安装或异常，自动平滑退化为本地 LocalSemanticEmbedder。
+ */
+export class SmartFallbackEmbeddingProvider implements EmbeddingProvider {
+  readonly version: string;
+  private readonly primary: EmbeddingProvider;
+  private readonly fallback: LocalSemanticEmbedder;
+  private primaryFailed = false;
+
+  constructor(primary: EmbeddingProvider, fallback: LocalSemanticEmbedder = new LocalSemanticEmbedder()) {
+    this.primary = primary;
+    this.fallback = fallback;
+    this.version = primary.version || fallback.version;
+  }
+
+  async embed(text: string): Promise<number[]> {
+    if (!this.primaryFailed) {
+      try {
+        return await this.primary.embed(text);
+      } catch {
+        this.primaryFailed = true;
+      }
+    }
+    return this.fallback.embed(text);
+  }
+
+  async embedBatch(texts: string[]): Promise<number[][]> {
+    if (!this.primaryFailed) {
+      try {
+        return await this.primary.embedBatch(texts);
+      } catch {
+        this.primaryFailed = true;
+      }
+    }
+    return this.fallback.embedBatch(texts);
+  }
+}
+
+/**
+ * 创建智能自适应向量提供者。
+ */
+export function createDefaultEmbeddingProvider(options?: {
+  ollama?: OllamaEmbeddingOptions;
+  openai?: OpenAiEmbeddingOptions;
+}): EmbeddingProvider {
+  if (options?.ollama || process.env.OLLAMA_EMBED_MODEL) {
+    return new SmartFallbackEmbeddingProvider(new OllamaEmbeddingProvider(options?.ollama));
+  }
+  if (options?.openai || (process.env.OPENAI_API_KEY && process.env.OPENAI_EMBED_MODEL)) {
+    return new SmartFallbackEmbeddingProvider(new OpenAiEmbeddingProvider(options?.openai));
+  }
+  return new LocalSemanticEmbedder();
+}
+

@@ -299,6 +299,7 @@ describe('工具注册表', () => {
       'desktop_keyboard_press',
       'desktop_window_list',
       'desktop_window_focus',
+      'process_manager',
     ]);
   });
 
@@ -859,5 +860,22 @@ describe('MCP 归一化', () => {
     expect(mcpContentText([{ type: 'resource', resource: { uri: 'file:///x', text: 'body' } }])).toContain('【资源 file:///x】');
     expect(mcpContentText('直接字符串')).toBe('直接字符串');
     expect(mcpContentText(undefined)).toBe('');
+  });
+
+  it('支持远程 SSE MCP 服务器声明解析', () => {
+    const sseConfig = parseConfigText([
+      '[mcp_servers.remote_sse]',
+      'url = "https://mcp.example.com/sse"',
+      'startup_timeout_ms = 8000',
+      'env = { API_KEY = "$KEY" }',
+    ].join('\n'), 'remote.toml');
+    const specs = resolveMcpServers(sseConfig);
+    expect(specs).toHaveLength(1);
+    expect(specs[0]).toMatchObject({
+      id: 'remote_sse',
+      url: 'https://mcp.example.com/sse',
+      startupTimeoutMs: 8000,
+      enabled: true,
+    });
   });
 });

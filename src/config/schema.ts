@@ -278,7 +278,8 @@ export const channelsSchema = z.strictObject({
 
 /** 外部 MCP 服务器（FR-TOOL-002） */
 export const mcpServerSchema = z.strictObject({
-  command: z.string().min(1),
+  command: z.string().min(1).optional(),
+  url: z.string().min(1).optional(),
   args: z.array(z.string()).optional(),
   env: z.record(z.string(), z.string()).optional(),
   cwd: z.string().min(1).optional(),

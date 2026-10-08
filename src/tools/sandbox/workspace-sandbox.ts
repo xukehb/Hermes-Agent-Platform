@@ -39,26 +39,51 @@ const READ_ONLY_TOOL_NAMES = new Set([
 const SENSITIVE_SYSTEM_PATHS = [
   '/etc/shadow',
   '/etc/master.passwd',
+  '/etc/sudoers',
   '/System/Library',
   '/System/Volumes',
   '/Windows/System32/config',
+  '/dev/mem',
+  '/dev/kmem',
+  '/dev/port',
+  '/proc/kcore',
+];
+
+const SENSITIVE_FILE_NAMES = [
+  'id_rsa',
+  'id_ed25519',
+  'id_ecdsa',
+  'authorized_keys',
+  'credentials',
 ];
 
 const DESTRUCTIVE_COMMAND_PATTERNS = [
   /\brm\s+-(?:r|rf|fr)\s+[\/\\]\s*$/i,
   /\brm\s+-(?:r|rf|fr)\s+[\/\\]\*/i,
-  /\bmkfs\b/i,
+  /\brm\s+-(?:r|rf|fr)\s+(?:~|\$HOME|%USERPROFILE%)\b/i,
+  /\bmkfs(?:\.[a-z0-9_-]+)?\b/i,
   /\bdd\s+if=.*of=\/dev\/(?:sd|hd|nvme)/i,
   /\bformat\s+[a-z]:\s*\/y/i,
   /:\(\)\s*\{\s*:\|:&\s*\};\s*:/, // Fork bomb
+  /:[()]\s*\{[^}]*:[|&][^}]*\}/, // Fork bomb generic variant
   /\bchmod\s+-R\s+777\s+[\/\\]\s*$/i,
+  /\b(?:del|rd|rmdir)\s+.*\/(?:s|q)\s+[a-z]:\\/i,
+  /\bRemove-Item\s+.*-Recurse\s+.*-Force\s+[a-z]:\\/i,
+  /\b(?:poweroff|reboot\b|shutdown\s+-[rshf])/i,
 ];
 
 export class WorkspaceSandbox {
   /** 校验某路径是否在工作区允许范围内 */
   static isPathAllowed(rawPath: string, workspace: string): { allowed: boolean; reason?: string } {
     if (!rawPath) return { allowed: true };
-    const fullPath = isAbsolute(rawPath) ? normalize(rawPath) : resolve(workspace, rawPath);
+    let cleaned = rawPath.replace(/\0/g, '');
+    try {
+      if (cleaned.includes('%')) {
+        cleaned = decodeURIComponent(cleaned);
+      }
+    } catch {}
+
+    const fullPath = isAbsolute(cleaned) ? normalize(cleaned) : resolve(workspace, cleaned);
     const normWorkspace = normalize(workspace);
 
     // 严禁直接引用系统高度敏感文件
@@ -67,6 +92,16 @@ export class WorkspaceSandbox {
         return {
           allowed: false,
           reason: `沙箱高危路径拦截：禁止访问或修改系统核心敏感路径 "${fullPath}"`,
+        };
+      }
+    }
+
+    // 严禁访问或窃取敏感密钥文件
+    for (const secretFile of SENSITIVE_FILE_NAMES) {
+      if (fullPath.endsWith('/' + secretFile) || fullPath.endsWith('\\' + secretFile) || fullPath === secretFile) {
+        return {
+          allowed: false,
+          reason: `沙箱高危路径拦截：禁止访问或修改敏感凭据文件 "${fullPath}"`,
         };
       }
     }

@@ -34,6 +34,54 @@ export class DesktopController {
     return DesktopController.instance;
   }
 
+  /** 判断 Linux 当前会话是否处于 Wayland 显示服务器下 */
+  public isWayland(): boolean {
+    return (
+      process.platform === 'linux' &&
+      Boolean(
+        process.env.WAYLAND_DISPLAY ||
+        process.env.XDG_SESSION_TYPE === 'wayland'
+      )
+    );
+  }
+
+  /**
+   * Windows 下统一预定义 Win32 原生 API 类型，避免每次调用重复由 csc.exe 动态编译 C# 产生极高延迟。
+   */
+  private getWindowsPreamble(): string {
+    return `
+Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue;
+Add-Type -AssemblyName System.Drawing -ErrorAction SilentlyContinue;
+if (-not ([System.Management.Automation.PSTypeName]'Win32.NativeInput').Type) {
+  $sig = @'
+  [DllImport("user32.dll")]
+  public static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
+  [DllImport("user32.dll")]
+  public static extern bool SetForegroundWindow(IntPtr hWnd);
+'@
+  Add-Type -MemberDefinition $sig -Name "NativeInput" -Namespace "Win32" -ErrorAction SilentlyContinue;
+}
+`;
+  }
+
+  /** Linux 下执行输入模拟，支持 X11 (xdotool) 与 Wayland (ydotool) 自适应与友好诊断 */
+  private async execLinuxInput(xdotoolArgs: string[], ydotoolArgs?: string[]): Promise<void> {
+    try {
+      await execa('xdotool', xdotoolArgs);
+    } catch (err) {
+      if (this.isWayland() && ydotoolArgs) {
+        try {
+          await execa('ydotool', ydotoolArgs);
+          return;
+        } catch {}
+        throw new Error(
+          '在 Linux Wayland 环境下进行模拟输入受安全限制。请确保已安装并配置 ydotool (启用 ydotoold 服务)，或在系统登录时切换至 X11/Xorg 会话。',
+        );
+      }
+      throw err;
+    }
+  }
+
   /** 获取主显示屏尺寸与当前鼠标物理坐标 */
   async getScreenInfo(): Promise<ScreenInfo> {
     if (process.platform === 'darwin') {
@@ -60,7 +108,7 @@ print(json.dumps({'width': int(rect.size.x), 'height': int(rect.size.y), 'mouseX
       return JSON.parse(res.stdout.trim()) as ScreenInfo;
     } else if (process.platform === 'win32') {
       const psScript = `
-Add-Type -AssemblyName System.Windows.Forms;
+${this.getWindowsPreamble()}
 $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds;
 $pos = [System.Windows.Forms.Cursor]::Position;
 @{ width = $screen.Width; height = $screen.Height; mouseX = $pos.X; mouseY = $pos.Y } | ConvertTo-Json -Compress
@@ -94,8 +142,7 @@ $pos = [System.Windows.Forms.Cursor]::Position;
       await execa('/usr/sbin/screencapture', ['-x', outputPath]);
     } else if (process.platform === 'win32') {
       const psScript = `
-Add-Type -AssemblyName System.Windows.Forms;
-Add-Type -AssemblyName System.Drawing;
+${this.getWindowsPreamble()}
 $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds;
 $bitmap = New-Object System.Drawing.Bitmap $screen.Width, $screen.Height;
 $graphics = [System.Drawing.Graphics]::FromImage($bitmap);
@@ -106,10 +153,29 @@ $bitmap.Dispose();
 `;
       await execa('powershell', ['-NoProfile', '-Command', psScript]);
     } else {
-      try {
-        await execa('scrot', [outputPath]);
-      } catch {
-        await execa('import', ['-window', 'root', outputPath]);
+      let captured = false;
+      if (this.isWayland()) {
+        try {
+          await execa('grim', [outputPath]);
+          captured = true;
+        } catch {}
+        if (!captured) {
+          try {
+            await execa('gnome-screenshot', ['-f', outputPath]);
+            captured = true;
+          } catch {}
+        }
+      }
+      if (!captured) {
+        try {
+          await execa('scrot', [outputPath]);
+          captured = true;
+        } catch {
+          try {
+            await execa('import', ['-window', 'root', outputPath]);
+            captured = true;
+          } catch {}
+        }
       }
     }
 
@@ -142,12 +208,15 @@ cg.CGEventPost(0, evt)
       await execa('python3', ['-c', pyScript]);
     } else if (process.platform === 'win32') {
       const psScript = `
-Add-Type -AssemblyName System.Windows.Forms;
+${this.getWindowsPreamble()}
 [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(${x}, ${y});
 `;
       await execa('powershell', ['-NoProfile', '-Command', psScript]);
     } else {
-      await execa('xdotool', ['mousemove', String(x), String(y)]);
+      await this.execLinuxInput(
+        ['mousemove', String(x), String(y)],
+        ['mousemove', '--absolute', String(x), String(y)],
+      );
     }
   }
 
@@ -194,19 +263,13 @@ for c in range(1, ${clickCount} + 1):
 `;
       await execa('python3', ['-c', pyScript]);
     } else if (process.platform === 'win32') {
-      const btnCode = button === 'right' ? '0x08, 0x10' : '0x02, 0x04';
       const psScript = `
-Add-Type -AssemblyName System.Windows.Forms;
+${this.getWindowsPreamble()}
 [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(${x}, ${y});
-$sig = @'
-[DllImport("user32.dll")]
-public static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
-'@
-$user32 = Add-Type -MemberDefinition $sig -Name "Win32Mouse" -Namespace "Win32" -PassThru;
 for ($i=0; $i -lt ${clickCount}; $i++) {
-  $user32::mouse_event(${button === 'right' ? 0x08 : 0x02}, 0, 0, 0, 0);
+  [Win32.NativeInput]::mouse_event(${button === 'right' ? 0x08 : 0x02}, 0, 0, 0, 0);
   Start-Sleep -Milliseconds 40;
-  $user32::mouse_event(${button === 'right' ? 0x10 : 0x04}, 0, 0, 0, 0);
+  [Win32.NativeInput]::mouse_event(${button === 'right' ? 0x10 : 0x04}, 0, 0, 0, 0);
   Start-Sleep -Milliseconds 60;
 }
 `;
@@ -214,7 +277,10 @@ for ($i=0; $i -lt ${clickCount}; $i++) {
     } else {
       const btn = button === 'right' ? '3' : button === 'middle' ? '2' : '1';
       for (let i = 0; i < clickCount; i++) {
-        await execa('xdotool', ['mousemove', String(x), String(y), 'click', btn]);
+        await this.execLinuxInput(
+          ['mousemove', String(x), String(y), 'click', btn],
+          ['click', btn],
+        );
         await new Promise((r) => setTimeout(r, 60));
       }
     }
@@ -275,17 +341,13 @@ cg.CGEventPost(0, evt)
       await execa('python3', ['-c', pyScript]);
     } else if (process.platform === 'win32') {
       const psScript = `
-$sig = @'
-[DllImport("user32.dll")]
-public static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
-'@
-$user32 = Add-Type -MemberDefinition $sig -Name "Win32Scroll" -Namespace "Win32" -PassThru;
-$user32::mouse_event(0x0800, 0, 0, ${-deltaY}, 0);
+${this.getWindowsPreamble()}
+[Win32.NativeInput]::mouse_event(0x0800, 0, 0, ${-deltaY}, 0);
 `;
       await execa('powershell', ['-NoProfile', '-Command', psScript]);
     } else {
       const btn = deltaY > 0 ? '5' : '4';
-      await execa('xdotool', ['click', btn]);
+      await this.execLinuxInput(['click', btn], undefined);
     }
   }
 
@@ -299,12 +361,12 @@ $user32::mouse_event(0x0800, 0, 0, ${-deltaY}, 0);
     } else if (process.platform === 'win32') {
       const escaped = text.replace(/([+^%~(){}[\]])/g, '{$1}').replace(/"/g, '`"');
       const psScript = `
-Add-Type -AssemblyName System.Windows.Forms;
+${this.getWindowsPreamble()}
 [System.Windows.Forms.SendKeys]::SendWait("${escaped}");
 `;
       await execa('powershell', ['-NoProfile', '-Command', psScript]);
     } else {
-      await execa('xdotool', ['type', '--', text]);
+      await this.execLinuxInput(['type', '--', text], ['type', text]);
     }
   }
 
@@ -373,12 +435,12 @@ Add-Type -AssemblyName System.Windows.Forms;
       if (rawKey.includes('shift+')) sendKeyStr = '+' + (sendKeysMap[rawKey.replace('shift+', '')] || rawKey.replace('shift+', ''));
 
       const psScript = `
-Add-Type -AssemblyName System.Windows.Forms;
+${this.getWindowsPreamble()}
 [System.Windows.Forms.SendKeys]::SendWait("${sendKeyStr}");
 `;
       await execa('powershell', ['-NoProfile', '-Command', psScript]);
     } else {
-      await execa('xdotool', ['key', key]);
+      await this.execLinuxInput(['key', key], ['key', key]);
     }
   }
 
@@ -421,14 +483,10 @@ Add-Type -AssemblyName System.Windows.Forms;
       return true;
     } else if (process.platform === 'win32') {
       const psScript = `
+${this.getWindowsPreamble()}
 $app = Get-Process -Name "${appName.replace(/"/g, '`"')}" -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle } | Select-Object -First 1;
 if ($app) {
-  $sig = @'
-[DllImport("user32.dll")]
-public static extern bool SetForegroundWindow(IntPtr hWnd);
-'@
-  $user32 = Add-Type -MemberDefinition $sig -Name "Win32Focus" -Namespace "Win32" -PassThru;
-  $user32::SetForegroundWindow($app.MainWindowHandle);
+  [Win32.NativeInput]::SetForegroundWindow($app.MainWindowHandle);
 }
 `;
       await execa('powershell', ['-NoProfile', '-Command', psScript]);

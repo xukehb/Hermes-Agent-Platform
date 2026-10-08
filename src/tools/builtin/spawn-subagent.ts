@@ -10,14 +10,21 @@
 import { z } from 'zod';
 import { RecoverableError } from '../../domain/index.js';
 import { defineTool } from '../define.js';
+import type { SubagentRequest } from '../types.js';
 
 export const spawnSubagentTool = defineTool({
   name: 'spawn_subagent',
-  description: '把一个明确、自包含的子任务交给指定子智能体执行，并返回它的结论。只能派给白名单内的智能体。',
+  description: '把一个明确、自包含的子任务交给指定子智能体执行，支持单任务同步/后台模式，及多智能体并发派发。',
   schema: z.object({
-    agent: z.string().min(1).describe('子智能体 id，必须在本智能体的 subagents_allow 白名单内'),
-    task: z.string().min(1).describe('交给子智能体的完整任务描述，需自包含'),
+    agent: z.string().optional().describe('子智能体 id，必须在本智能体的 subagents_allow 白名单内（单任务模式）'),
+    task: z.string().optional().describe('交给子智能体的完整任务描述，需自包含（单任务模式）'),
     context: z.string().optional().describe('可选的背景信息或已知结论'),
+    mode: z.enum(['sync', 'background']).optional().default('sync').describe('执行模式：sync（同步等待，默认）或 background（后台异步）'),
+    subagents: z.array(z.object({
+      agent: z.string().min(1).describe('子智能体 id'),
+      task: z.string().min(1).describe('子任务描述'),
+      context: z.string().optional().describe('可选背景信息'),
+    })).optional().describe('支持多智能体并发派发，传入数组并发执行'),
   }),
   run: async (args, ctx) => {
     const spawn = ctx.spawn;
@@ -33,36 +40,68 @@ export const spawnSubagentTool = defineTool({
         { context: { depth: ctx.depth, maxDepth } },
       );
     }
-    const allow = ctx.agent.subagentAllow;
-    if (!allow.includes(args.agent)) {
-      const allowed = allow.length > 0 ? allow.join('、') : '（空）';
+
+    const tasksToRun: Array<{ agent: string; task: string; context?: string | undefined }> = [];
+    if (Array.isArray(args.subagents) && args.subagents.length > 0) {
+      for (const s of args.subagents) {
+        tasksToRun.push({ agent: s.agent, task: s.task, context: s.context });
+      }
+    } else if (args.agent && args.task) {
+      tasksToRun.push({ agent: args.agent, task: args.task, context: args.context });
+    } else {
       throw new RecoverableError(
         'SUBAGENT_FORBIDDEN',
-        '智能体 ' + args.agent + ' 不在 ' + ctx.agent.id + ' 的 subagents_allow 白名单内。可派生：' + allowed,
-        { context: { requested: args.agent, allow: [...allow] } },
+        '必须指定目标 agent 和 task，或者提供 subagents 列表。',
       );
     }
 
-    const request: {
-      parentAgentId: string;
-      agentId: string;
-      task: string;
-      depth: number;
-      parentTaskId: string;
-      signal: AbortSignal;
-      context?: string;
-    } = {
-      parentAgentId: ctx.agent.id,
-      agentId: args.agent,
-      task: args.task,
-      depth: nextDepth,
-      parentTaskId: ctx.taskId,
-      signal: ctx.signal,
-    };
-    if (args.context !== undefined) request.context = args.context;
+    const allow = ctx.agent.subagentAllow ?? [];
+    for (const item of tasksToRun) {
+      if (!allow.includes(item.agent)) {
+        const allowed = allow.length > 0 ? allow.join('、') : '（空）';
+        throw new RecoverableError(
+          'SUBAGENT_FORBIDDEN',
+          '智能体 ' + item.agent + ' 不在 ' + ctx.agent.id + ' 的 subagents_allow 白名单内。可派生：' + allowed,
+          { context: { requested: item.agent, allow: [...allow] } },
+        );
+      }
+    }
 
-    const outcome = await spawn(request);
-    const suffix = outcome.taskId === undefined ? '' : '（任务 ' + outcome.taskId + '）';
-    return { content: '【' + args.agent + ' 的结论' + suffix + '】\n' + outcome.text };
+    const isBackground = args.mode === 'background';
+
+    // 并发派发执行所有子任务
+    const outcomes = await Promise.all(
+      tasksToRun.map(async (item) => {
+        const req: SubagentRequest = {
+          parentAgentId: ctx.agent.id,
+          agentId: item.agent,
+          task: item.task,
+          depth: nextDepth,
+          parentTaskId: ctx.taskId,
+          signal: ctx.signal,
+          context: item.context,
+          background: isBackground,
+        };
+        const outcome = await spawn(req);
+        return { agent: item.agent, outcome };
+      }),
+    );
+
+    if (outcomes.length === 1 && outcomes[0]) {
+      const { agent, outcome } = outcomes[0];
+      const suffix = outcome.taskId === undefined ? '' : '（任务 ' + outcome.taskId + '）';
+      return { content: '【' + agent + ' 的结论' + suffix + '】\n' + outcome.text };
+    }
+
+    // 多个并发结果格式化聚合
+    const lines = [`【多智能体并发执行结果（共 ${outcomes.length} 项）】`];
+    for (let i = 0; i < outcomes.length; i++) {
+      const item = outcomes[i];
+      if (!item) continue;
+      const { agent, outcome } = item;
+      const suffix = outcome.taskId === undefined ? '' : '（任务 ' + outcome.taskId + '）';
+      lines.push(`\n### [${i + 1}] ${agent} 的结论${suffix}\n${outcome.text}`);
+    }
+    return { content: lines.join('\n') };
   },
 });

@@ -18854,59 +18854,10 @@ async function renderHostingContacts() {
 }
 
 function renderHostingGuideMarkup() {
-  return `
-    <div class="hosting-empty-guide-wrap">
-      <div class="hosting-guide-header">
-        <div style="font-size:36px;margin-bottom:6px;"></div>
-        <h3 style="font-size:16px;font-weight:700;margin:0 0 4px 0;color:var(--text-main);">微信与 QQ 全量自动托管就绪</h3>
-        <p style="font-size:12.5px;color:var(--text-muted);margin:0;max-width:480px;line-height:1.5;">
-          已支持全量好友自动接管，统一由默认智能体代答。当您在手机上亲自回复时，分身将自动静默避让
-        </p>
-      </div>
-      <div style="background:var(--bg-subtle);border:1px solid var(--border-default);border-radius:8px;padding:9px 14px;margin-bottom:14px;max-width:520px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-main);line-height:1.4;">
-        <span style="font-size:16px;"></span>
-        <div><strong>无需手动录入好友：</strong>启动代管后，任何好友发来消息，智能体都会<strong>自动接管回复</strong>并在此自动归档。</div>
-      </div>
-      <div class="hosting-guide-steps">
-        <div class="hosting-guide-step">
-          <div class="step-num">1</div>
-          <div class="step-content">
-            <div class="step-title">启动代管通道（左侧卡片）</div>
-            <div class="step-desc">
-              <strong>桌面视觉免扫码（推荐）</strong>：电脑打开微信，点击左侧「启动代管」即可接管，零封号风险；<br/>
-              <strong>手机扫码登录</strong>：也可随时切换为扫码登录，弹出二维码使用微信扫码授权。
-            </div>
-          </div>
-        </div>
-        <div class="hosting-guide-step">
-          <div class="step-num">2</div>
-          <div class="step-content">
-            <div class="step-title">来信自动接管与归档（零配置）</div>
-            <div class="step-desc">
-              启动代管后，任何微信好友或群发来消息，默认分身智能体都会自动代答并在此归档；仅在需要给特殊重要客户定制专属人设或智能体时才需添加规则。
-            </div>
-          </div>
-        </div>
-        <div class="hosting-guide-step">
-          <div class="step-num">3</div>
-          <div class="step-content">
-            <div class="step-title">右侧分身人设与防撞车保护</div>
-            <div class="step-desc">
-              可在右侧策略栏随时调整默认分身人设、记忆库关联，或套用预设 Prompt；人工回复时自动触发静默冷却。
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="hosting-guide-actions">
-        <button type="button" class="btn primary" id="hostingGuideAddBtn" style="font-size:12.5px;padding:7px 18px;">
-          + 特殊好友定制 (可选)
-        </button>
-        <button type="button" class="btn secondary" id="hostingGuideVisionBtn" style="font-size:12.5px;padding:7px 16px;">
-          测试桌面微信识屏
-        </button>
-      </div>
-    </div>
-  `;
+  if (typeof window !== 'undefined' && window.HostingController && typeof window.HostingController.renderHostingGuideMarkup === 'function') {
+    return window.HostingController.renderHostingGuideMarkup();
+  }
+  return '';
 }
 
 function resetHostingDetailPanes() {

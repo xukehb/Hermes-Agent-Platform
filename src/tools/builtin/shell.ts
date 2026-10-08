@@ -12,6 +12,8 @@ import { z } from 'zod';
 import { defineTool } from '../define.js';
 import { resolveInWorkspace } from '../workspace.js';
 
+import { processManager } from './process-manager.js';
+
 /** execa 的返回类型随选项条件推导，此处按需读取字段，避免与其条件类型缠斗。 */
 interface ExecaLike {
   exitCode?: number | undefined;
@@ -34,14 +36,32 @@ function textOf(value: unknown): string {
 
 export const shellTool = defineTool({
   name: 'shell',
-  description: '在智能体工作目录内执行 shell 命令，返回合并后的 stdout/stderr 与退出码。适合运行构建、测试、git 等命令。',
+  description: '在智能体工作目录内执行 shell 命令，返回合并后的 stdout/stderr 与退出码。适合运行构建、测试、git 等命令。支持通过 daemon: true 启动后台常驻服务。',
   schema: z.object({
     command: z.string().min(1).describe('完整命令行，例如 npm test 或 git status --short'),
     cwd: z.string().optional().describe('相对工作目录的子目录，缺省为工作目录本身'),
     timeout_ms: z.number().positive().optional().describe('单命令超时，缺省受 limits.tool_timeout_ms 约束'),
+    daemon: z.boolean().optional().describe('是否作为后台常驻守护进程启动（例如 npm run dev、后台服务等），启动后立即返回进程 ID'),
   }),
   run: async (args, ctx) => {
     const cwd = resolveInWorkspace(ctx.agent.workspace, args.cwd);
+
+    if (args.daemon) {
+      const proc = processManager.spawnDaemon(args.command, cwd);
+      // 等待 150ms 检查是否在启动瞬间直接报错退出（如命令不存在、语法错误）
+      await new Promise((r) => setTimeout(r, 150));
+      if (proc.status === 'failed' || (proc.exitCode !== null && proc.exitCode !== 0)) {
+        const errorLogs = proc.getRecentOutput(20);
+        return {
+          content: `$ ${args.command}\n（后台常驻进程启动失败，退出码 ${proc.exitCode}）\n${errorLogs}`,
+          isError: true,
+        };
+      }
+      return {
+        content: `$ ${args.command}\n（后台常驻进程已启动，PID: ${proc.pid ?? '未知'}，进程ID: ${proc.id}）\n可通过 process_manager 工具查看状态、日志输出或终止进程。`,
+        isError: false,
+      };
+    }
     const options: {
       shell: boolean;
       cwd: string;
