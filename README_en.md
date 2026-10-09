@@ -1,5 +1,7 @@
 # Hermes Agent Platform (HAP)
 
+Licensed under the [MIT License](LICENSE). Third-party dependencies retain their respective licenses.
+
 A modern multi-agent workbench built with Electron and TypeScript that unifies model configuration, project chat, agent personas, messaging channels, and host management into a single desktop application. It also supports task execution via CLI or HTTP APIs, and manages providers, models, and agents through TOML configuration files.
 
 The official desktop application is branded as **Hermes Agent Platform**, while the source code and CLI retain the **HAP** nomenclature.

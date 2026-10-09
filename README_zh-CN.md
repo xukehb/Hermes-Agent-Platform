@@ -1,5 +1,7 @@
 # Hermes Agent Platform（HAP）
 
+本项目采用 [MIT 许可证](LICENSE)。第三方依赖仍遵循各自的许可证。
+
 一个基于 Electron 和 TypeScript 的多智能体工作台，将模型配置、项目对话、智能体角色、消息通道和主机管理集中在同一个桌面应用中。也可以通过 CLI 或 HTTP 接口运行任务，通过 TOML 文件管理服务商、模型与智能体。
 
 桌面安装包的产品名称为 **Hermes Agent Platform**，源码与命令行沿用 **HAP** 命名。
