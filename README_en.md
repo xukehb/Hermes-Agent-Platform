@@ -6,7 +6,7 @@ The official desktop application is branded as **Hermes Agent Platform**, while 
 
 The packaged desktop app checks GitHub Releases once after startup. When a newer stable version is available, the in-app update dialog shows release notes and download progress, then offers a restart-and-install action. Development runs do not check for updates.
 
-[简体中文](README.md) · [English](README_en.md)
+[English](README.md) · [简体中文](README_zh-CN.md)
 
 [UI Preview](#ui-preview) · [Quick Start](#quick-start) · [Packaging](#packaging) · [CLI Overview](#cli-overview) · [Development](#development)
 
@@ -432,3 +432,7 @@ npm run build        # Compile TypeScript and copy desktop GUI assets
 | `tests` | Automated test suites |
 
 Refer to [Project Specifications](specs/hermes-agent-platform.spec.md) for architectural blueprints. Execute typecheck, tests, and lint prior to submitting changes. Screenshots are archived under `docs/images/`.
+
+### One-Click Docker Deployment for Multimodal Models
+
+The model catalog provides Docker deployment options for 9 external speech, image, and video models, including prerequisite checks, model downloads, health checks, automatic provider registration, and controls to stop or remove deployments. Docker on macOS supports Whisper on CPU; GPU models require an x86_64 NVIDIA host. See the [Docker Deployment Guide](docs/docker-model-deployment.md) (in Chinese).
