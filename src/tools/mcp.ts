@@ -21,6 +21,8 @@ import {
   getDefaultEnvironment,
   type StdioServerParameters,
 } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
+import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { expandHome } from '../config/loader.js';
 import type { HapConfig } from '../config/schema.js';
 import { RecoverableError, describeError } from '../domain/index.js';
@@ -37,11 +39,12 @@ export const DEFAULT_MCP_STARTUP_TIMEOUT_MS = 20000;
 /** 归一化后的 MCP 服务器声明。 */
 export interface McpServerSpec {
   id: string;
-  command: string;
+  command?: string | undefined;
+  url?: string | undefined;
   args: string[];
   /** 原始 env 声明，值里可能含环境变量引用，连接时才展开 */
   env: Record<string, string>;
-  cwd?: string;
+  cwd?: string | undefined;
   startupTimeoutMs: number;
   enabled: boolean;
 }
@@ -76,6 +79,7 @@ export function resolveMcpServers(config: HapConfig): McpServerSpec[] {
     const spec: McpServerSpec = {
       id,
       command: entry.command,
+      url: entry.url,
       args: entry.args === undefined ? [] : [...entry.args],
       env: entry.env === undefined ? {} : { ...entry.env },
       startupTimeoutMs: entry.startup_timeout_ms ?? DEFAULT_MCP_STARTUP_TIMEOUT_MS,
@@ -140,7 +144,7 @@ export class McpToolSource implements ToolSource {
   private readonly spec: McpServerSpec;
   private readonly env: Record<string, string | undefined>;
   private client: Client | undefined;
-  private transport: StdioClientTransport | undefined;
+  private transport: Transport | undefined;
 
   constructor(spec: McpServerSpec, env: Record<string, string | undefined> = process.env) {
     this.spec = spec;
@@ -179,19 +183,38 @@ export class McpToolSource implements ToolSource {
   private async connect(): Promise<Client> {
     if (this.client !== undefined) return this.client;
     const client = new Client({ name: 'hap', version: '1.0.0' });
-    const parameters: StdioServerParameters = {
-      command: this.spec.command,
-      args: [...this.spec.args],
-      env: this.resolveEnv(),
-    };
-    if (this.spec.cwd !== undefined) parameters.cwd = this.spec.cwd;
-    const transport = new StdioClientTransport(parameters);
+    let transport: Transport;
+
+    if (this.spec.url) {
+      const targetUrl = new URL(expandEnvRefs(this.spec.url, this.env));
+      const headers: Record<string, string> = {};
+      for (const [key, val] of Object.entries(this.spec.env)) {
+        headers[key] = expandEnvRefs(val, this.env);
+      }
+      transport = new SSEClientTransport(targetUrl, {
+        requestInit: { headers },
+        eventSourceInit: { headers } as any,
+      });
+    } else if (this.spec.command) {
+      const parameters: StdioServerParameters = {
+        command: this.spec.command,
+        args: [...this.spec.args],
+        env: this.resolveEnv(),
+      };
+      if (this.spec.cwd !== undefined) parameters.cwd = this.spec.cwd;
+      transport = new StdioClientTransport(parameters);
+    } else {
+      throw new RecoverableError('TOOL_FAILED', `MCP 服务器 ${this.spec.id} 既未指定 command 亦未指定 url`, {
+        context: { serverId: this.spec.id },
+      });
+    }
+
     try {
       await client.connect(transport, { timeout: this.spec.startupTimeoutMs });
     } catch (error) {
       await transport.close().catch(() => undefined);
       throw new RecoverableError('TOOL_FAILED', 'MCP 服务器 ' + this.spec.id + ' 启动失败：' + describeError(error), {
-        context: { serverId: this.spec.id, command: this.spec.command },
+        context: { serverId: this.spec.id, command: this.spec.command, url: this.spec.url },
         cause: error,
       });
     }

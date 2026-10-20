@@ -29,19 +29,22 @@ export interface SubagentRequest {
   /** 目标子智能体 id */
   agentId: string;
   task: string;
-  context?: string;
+  context?: string | undefined;
   /** 目标子智能体所处深度，根任务为 0 */
   depth: number;
   /** 父任务 id，用于 trace 串联 */
   parentTaskId: string;
   signal: AbortSignal;
+  /** 是否以异步后台模式运行 */
+  background?: boolean | undefined;
 }
 
 /** 子智能体执行结果。 */
 export interface SubagentOutcome {
   text: string;
-  taskId?: string;
-  usage?: TokenUsage;
+  taskId?: string | undefined;
+  usage?: TokenUsage | undefined;
+  status?: string | undefined;
 }
 
 /** 由 agent 层注入的派生器。 */

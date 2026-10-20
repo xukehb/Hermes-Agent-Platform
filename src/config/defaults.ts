@@ -61,6 +61,7 @@ export const BUILTIN_TOOL_NAMES = [
   'desktop_keyboard_press',
   'desktop_window_list',
   'desktop_window_focus',
+  'process_manager',
 ] as const;
 
 export type BuiltinToolName = (typeof BUILTIN_TOOL_NAMES)[number];
@@ -85,7 +86,7 @@ export const TOOL_PROFILES: Record<ToolProfileName, readonly BuiltinToolName[]> 
     'browser_click', 'browser_type', 'browser_get_content', 'browser_evaluate', 'browser_scroll',
     'browser_close', 'desktop_screenshot', 'desktop_screen_size', 'desktop_mouse_move', 'desktop_mouse_click',
     'desktop_mouse_drag', 'desktop_mouse_scroll', 'desktop_keyboard_type', 'desktop_keyboard_press',
-    'desktop_window_list', 'desktop_window_focus',
+    'desktop_window_list', 'desktop_window_focus', 'process_manager',
   ],
   research: [
     'read_file', 'write_file', 'list_dir', 'search', 'http_fetch', 'web_search', 'open_external',

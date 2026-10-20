@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Hermes Agent Platform - 赫尔墨斯多智能体协同开发平台",
   "author": "Hermes Agent Platform Team",
+  "license": "MIT",
   "desktopName": "hermes-agent-platform.desktop",
   "engines": {
     "node": ">=20"

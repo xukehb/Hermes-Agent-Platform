@@ -38,8 +38,11 @@ describe('GUI Internationalization (i18n)', () => {
       configurable: true,
       value: { getItem: () => null, setItem: () => {} },
     });
-
+    const origLang = g.navigator?.language;
     try {
+      if (g.navigator) {
+        Object.defineProperty(g.navigator, 'language', { value: 'en-US', configurable: true });
+      }
       vi.resetModules();
       await import('../src/gui/renderer/i18n.js');
       const fresh = (globalThis as any).I18N;
@@ -48,6 +51,9 @@ describe('GUI Internationalization (i18n)', () => {
       expect(String(g.navigator?.language ?? '').startsWith('zh')).toBe(false);
       expect(fresh.getLanguage()).toBe('zh-CN');
     } finally {
+      if (g.navigator && origLang !== undefined) {
+        Object.defineProperty(g.navigator, 'language', { value: origLang, configurable: true });
+      }
       if (prevStorage) Object.defineProperty(g, 'localStorage', prevStorage);
       else delete g.localStorage;
       vi.resetModules();

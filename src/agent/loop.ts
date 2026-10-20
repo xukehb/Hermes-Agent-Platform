@@ -418,7 +418,7 @@ export class AgentLoop {
     return { history: compacted.history, compacted: true };
   }
 
-  /** 执行一轮里的全部工具调用，并把参数非法的调用直接短路回灌。 */
+  /** 执行一轮里的全部工具调用，并把参数非法的调用直接短路回灌。只读工具支持批处理并发执行。 */
   private async runTools(
     request: LoopRequest,
     executor: ToolExecutor,
@@ -440,8 +440,7 @@ export class AgentLoop {
       if (request.executionContext.control !== undefined) ctx.control = request.executionContext.control;
     }
 
-    const results: ToolResult[] = [];
-    for (const call of outcome.calls) {
+    const executeOne = async (call: ToolCall): Promise<ToolResult> => {
       this.throwIfAborted(request);
       const argError = outcome.argErrors.get(call.id);
       if (argError !== undefined) {
@@ -457,8 +456,7 @@ export class AgentLoop {
           isError: true,
           truncated: false,
         });
-        results.push(failed);
-        continue;
+        return failed;
       }
 
       // 规划模式拦截非只读工具
@@ -471,8 +469,7 @@ export class AgentLoop {
         };
         request.onEvent?.({ type: 'tool_start', name: call.name, args: call.args });
         request.onEvent?.({ type: 'tool_end', result: blockedPlanResult });
-        results.push(blockedPlanResult);
-        continue;
+        return blockedPlanResult;
       }
 
       // 触发 pre_tool 钩子（含沙箱越界与高危指令防护）
@@ -490,8 +487,7 @@ export class AgentLoop {
         };
         request.onEvent?.({ type: 'tool_start', name: call.name, args: call.args });
         request.onEvent?.({ type: 'tool_end', result: blockedHookResult });
-        results.push(blockedHookResult);
-        continue;
+        return blockedHookResult;
       }
 
       request.onEvent?.({ type: 'tool_start', name: call.name, args: call.args });
@@ -516,7 +512,49 @@ export class AgentLoop {
           });
         }
       }
-      results.push(result);
+      return result;
+    };
+
+    const isParallelSafeReadOnly = (name: string): boolean => {
+      return PLAN_MODE_READ_ONLY_TOOLS.has(name) && name !== 'activate_skill';
+    };
+
+    const results: ToolResult[] = [];
+    let i = 0;
+    while (i < outcome.calls.length) {
+      this.throwIfAborted(request);
+      const call = outcome.calls[i];
+      if (!call) {
+        i++;
+        continue;
+      }
+
+      if (isParallelSafeReadOnly(call.name)) {
+        const batch: ToolCall[] = [call];
+        let j = i + 1;
+        while (j < outcome.calls.length) {
+          const nextCall = outcome.calls[j];
+          if (nextCall && isParallelSafeReadOnly(nextCall.name)) {
+            batch.push(nextCall);
+            j++;
+          } else {
+            break;
+          }
+        }
+
+        if (batch.length === 1) {
+          const res = await executeOne(batch[0]!);
+          results.push(res);
+        } else {
+          const batchResults = await Promise.all(batch.map((c) => executeOne(c)));
+          results.push(...batchResults);
+        }
+        i = j;
+      } else {
+        const res = await executeOne(call);
+        results.push(res);
+        i++;
+      }
     }
     return results;
   }

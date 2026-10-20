@@ -4,7 +4,7 @@ import { dirname, extname, join } from 'node:path';
 import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { cosineSimilarity } from './vector-math.js';
-import { LocalSemanticEmbedder, type EmbeddingProvider } from './embedding.js';
+import { LocalSemanticEmbedder, createDefaultEmbeddingProvider, type EmbeddingProvider } from './embedding.js';
 import type { MemoryCard, MemoryCategory, MemoryLayer, MemoryQuery, MemorySearchResult } from './types.js';
 
 const DATA_PATH = join(homedir(), '.hap', 'memories.json');
@@ -188,7 +188,7 @@ export class MemoryStore {
     this.legacyPath = extname(filePath).toLowerCase() === '.json' && isLegacyJson(filePath) ? filePath : undefined;
     this.filePath = this.legacyPath ? `${filePath}.db` : filePath;
     ensureDir(this.filePath);
-    this.embedder = embedder || new LocalSemanticEmbedder();
+    this.embedder = embedder || createDefaultEmbeddingProvider();
     this.db = new Database(this.filePath);
     this.db.pragma('journal_mode = WAL');
     this.db.pragma('busy_timeout = 5000');
@@ -239,6 +239,7 @@ export class MemoryStore {
     const title = input.title.trim(); const content = input.content.trim(); if (!title || !content) throw new Error('记忆标题和内容不能为空');
     const tags = (input.tags || []).map((tag) => tag.trim()).filter(Boolean); const category = normalizeCategory(input.category); const now = Date.now(); const id = `mem_${now.toString(36)}_${randomUUID().slice(0, 8)}`;
     const embedding = await this.embedder.embed(`${title}\n${content}\n${tags.join(' ')}`);
+    const version = this.embedder.version || EMBEDDING_VERSION;
     let savedId = id;
     await this.enqueueWrite(() => {
       let existing = input.dedupeKey ? this.db.prepare('SELECT id FROM memories WHERE dedupe_key = ? LIMIT 1').get(input.dedupeKey) as { id: string } | undefined : undefined;
@@ -246,8 +247,8 @@ export class MemoryStore {
         const similar = this.listMemories().find((candidate) => candidate.category === category && candidate.agentId === input.agentId && candidate.workspace === (input.workspace?.trim() || undefined) && candidate.embedding && cosineSimilarity(embedding, candidate.embedding) >= 0.92);
         if (similar) existing = { id: similar.id };
       }
-      if (existing) { savedId = existing.id; this.db.prepare('UPDATE memories SET category=?,layer=?,title=?,content=?,tags=?,embedding=?,embedding_version=?,agent_id=?,source_task_id=?,workspace=?,importance=?,confidence=?,expires_at=?,updated_at=? WHERE id=?').run(category, layerFor(category, input.layer), title, content, JSON.stringify(tags), JSON.stringify(embedding), EMBEDDING_VERSION, input.agentId || null, input.sourceTaskId || null, input.workspace?.trim() || null, finiteScore(input.importance, 0.5), finiteScore(input.confidence, 0.7), input.expiresAt ?? null, now, existing.id); }
-      else this.db.prepare(`INSERT INTO memories (id,category,layer,title,content,tags,embedding,embedding_version,agent_id,source_task_id,workspace,importance,confidence,expires_at,dedupe_key,created_at,updated_at,access_count) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0)`).run(id, category, layerFor(category, input.layer), title, content, JSON.stringify(tags), JSON.stringify(embedding), EMBEDDING_VERSION, input.agentId || null, input.sourceTaskId || null, input.workspace?.trim() || null, finiteScore(input.importance, 0.5), finiteScore(input.confidence, 0.7), input.expiresAt ?? null, input.dedupeKey || null, now, now);
+      if (existing) { savedId = existing.id; this.db.prepare('UPDATE memories SET category=?,layer=?,title=?,content=?,tags=?,embedding=?,embedding_version=?,agent_id=?,source_task_id=?,workspace=?,importance=?,confidence=?,expires_at=?,updated_at=? WHERE id=?').run(category, layerFor(category, input.layer), title, content, JSON.stringify(tags), JSON.stringify(embedding), version, input.agentId || null, input.sourceTaskId || null, input.workspace?.trim() || null, finiteScore(input.importance, 0.5), finiteScore(input.confidence, 0.7), input.expiresAt ?? null, now, existing.id); }
+      else this.db.prepare(`INSERT INTO memories (id,category,layer,title,content,tags,embedding,embedding_version,agent_id,source_task_id,workspace,importance,confidence,expires_at,dedupe_key,created_at,updated_at,access_count) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0)`).run(id, category, layerFor(category, input.layer), title, content, JSON.stringify(tags), JSON.stringify(embedding), version, input.agentId || null, input.sourceTaskId || null, input.workspace?.trim() || null, finiteScore(input.importance, 0.5), finiteScore(input.confidence, 0.7), input.expiresAt ?? null, input.dedupeKey || null, now, now);
       this.queryCache.clear();
     });
     return this.getMemory(savedId) as MemoryCard;
@@ -260,7 +261,7 @@ export class MemoryStore {
     const title = patch.title === undefined ? current.title : patch.title.trim(); const content = patch.content === undefined ? current.content : patch.content.trim(); if (!title || !content) throw new Error('记忆标题和内容不能为空');
     const category = patch.category === undefined ? current.category : normalizeCategory(patch.category); const tags = patch.tags === undefined ? current.tags : patch.tags.map((tag) => tag.trim()).filter(Boolean);
     const expiresAt = Object.prototype.hasOwnProperty.call(patch, 'expiresAt') ? (patch.expiresAt ?? null) : (current.expiresAt ?? null);
-    this.db.prepare('UPDATE memories SET category=?,layer=?,title=?,content=?,tags=?,embedding=?,embedding_version=?,agent_id=?,workspace=?,source_task_id=?,importance=?,confidence=?,expires_at=?,dedupe_key=?,updated_at=? WHERE id=?').run(category, layerFor(category, patch.layer || current.layer), title, content, JSON.stringify(tags), current.embedding ? JSON.stringify(current.embedding) : null, current.embeddingVersion || EMBEDDING_VERSION, patch.agentId === undefined ? current.agentId || null : patch.agentId || null, patch.workspace === undefined ? current.workspace || null : patch.workspace || null, patch.sourceTaskId === undefined ? current.sourceTaskId || null : patch.sourceTaskId || null, finiteScore(patch.importance, current.importance), finiteScore(patch.confidence, current.confidence), expiresAt, patch.dedupeKey === undefined ? current.dedupeKey || null : patch.dedupeKey || null, Date.now(), id);
+    this.db.prepare('UPDATE memories SET category=?,layer=?,title=?,content=?,tags=?,embedding=?,embedding_version=?,agent_id=?,workspace=?,source_task_id=?,importance=?,confidence=?,expires_at=?,dedupe_key=?,updated_at=? WHERE id=?').run(category, layerFor(category, patch.layer || current.layer), title, content, JSON.stringify(tags), current.embedding ? JSON.stringify(current.embedding) : null, current.embeddingVersion || (this.embedder.version || EMBEDDING_VERSION), patch.agentId === undefined ? current.agentId || null : patch.agentId || null, patch.workspace === undefined ? current.workspace || null : patch.workspace || null, patch.sourceTaskId === undefined ? current.sourceTaskId || null : patch.sourceTaskId || null, finiteScore(patch.importance, current.importance), finiteScore(patch.confidence, current.confidence), expiresAt, patch.dedupeKey === undefined ? current.dedupeKey || null : patch.dedupeKey || null, Date.now(), id);
     this.queryCache.clear();
     return this.getMemory(id);
   }
@@ -269,8 +270,9 @@ export class MemoryStore {
     const updated = this.updateMemory(id, patch);
     if (!updated) return undefined;
     const embedding = await this.embedder.embed(`${updated.title}\n${updated.content}\n${updated.tags.join(' ')}`);
+    const version = this.embedder.version || EMBEDDING_VERSION;
     await this.enqueueWrite(() => {
-      this.db.prepare('UPDATE memories SET embedding=?, embedding_version=?, updated_at=? WHERE id=?').run(JSON.stringify(embedding), EMBEDDING_VERSION, Date.now(), id);
+      this.db.prepare('UPDATE memories SET embedding=?, embedding_version=?, updated_at=? WHERE id=?').run(JSON.stringify(embedding), version, Date.now(), id);
       this.queryCache.clear();
     });
     return this.getMemory(id);
@@ -285,8 +287,9 @@ export class MemoryStore {
   async rebuildEmbeddings(): Promise<number> {
     const cards = this.listMemories();
     const vectors = await this.embedder.embedBatch(cards.map((card) => `${card.title}\n${card.content}\n${card.tags.join(' ')}`));
+    const version = this.embedder.version || EMBEDDING_VERSION;
     const update = this.db.prepare('UPDATE memories SET embedding=?,embedding_version=?,updated_at=? WHERE id=?');
-    const tx = this.db.transaction(() => cards.forEach((card, index) => update.run(JSON.stringify(vectors[index]), EMBEDDING_VERSION, Date.now(), card.id)));
+    const tx = this.db.transaction(() => cards.forEach((card, index) => update.run(JSON.stringify(vectors[index]), version, Date.now(), card.id)));
     tx();
     this.queryCache.clear();
     return cards.length;

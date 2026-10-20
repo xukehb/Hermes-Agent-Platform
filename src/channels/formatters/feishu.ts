@@ -99,3 +99,94 @@ export function buildFeishuCard(text: string, formatter?: FeishuFormatter): Feis
     ],
   };
 }
+
+export interface FeishuActionOption {
+  text: string;
+  type?: 'primary' | 'danger' | 'default';
+  value: Record<string, unknown> | string;
+}
+
+/**
+ * 构造飞书交互式卡片（支持按钮操作与回调回写）。
+ */
+export function buildFeishuInteractiveCard(
+  title: string,
+  contentMarkdown: string,
+  actions: FeishuActionOption[],
+  options?: { template?: string; note?: string },
+): FeishuCardContent {
+  const template = options?.template ?? 'turquoise';
+  const actionButtons = actions.map((act) => ({
+    tag: 'button',
+    text: { tag: 'plain_text', content: act.text },
+    type: act.type ?? 'default',
+    value: typeof act.value === 'string' ? { action: act.value } : act.value,
+  }));
+
+  return {
+    config: { wide_screen_mode: true },
+    header: {
+      template,
+      title: { tag: 'plain_text', content: title },
+    },
+    elements: [
+      {
+        tag: 'markdown',
+        content: contentMarkdown,
+      },
+      {
+        tag: 'action',
+        actions: actionButtons,
+      },
+      {
+        tag: 'hr',
+      },
+      {
+        tag: 'note',
+        elements: [
+          {
+            tag: 'plain_text',
+            content: options?.note ?? `Hermes Agent Platform · ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`,
+          },
+        ],
+      },
+    ],
+  };
+}
+
+/**
+ * 构造飞书高危操作专属审批卡片。
+ */
+export function buildFeishuApprovalCard(approval: {
+  id: string;
+  agent: string;
+  action: string;
+  reason?: string | undefined;
+}): FeishuCardContent {
+  const content = [
+    `🛡️ **智能体高危操作审批请求**`,
+    `• **执行智能体**: \`${approval.agent}\``,
+    `• **申请执行操作**: \`${approval.action}\``,
+    approval.reason ? `• **操作原因**: ${approval.reason}` : '',
+    '',
+    '> 请在限定时间内审批是否允许执行：',
+  ].filter(Boolean).join('\n');
+
+  return buildFeishuInteractiveCard(
+    '🛡️ 智能体操作审批请求',
+    content,
+    [
+      {
+        text: '🟢 批准执行',
+        type: 'primary',
+        value: { approvalId: approval.id, decision: 'approve' },
+      },
+      {
+        text: '🔴 拒绝拦截',
+        type: 'danger',
+        value: { approvalId: approval.id, decision: 'reject' },
+      },
+    ],
+    { template: 'orange' },
+  );
+}

@@ -39,11 +39,41 @@ export function composeSubagentInput(task: string, context?: string): string {
   return '## 背景\n' + context.trim() + '\n\n## 任务\n' + task;
 }
 
+/** 后台子任务运行记录。 */
+export interface BackgroundSubagentRecord {
+  subtaskId: string;
+  parentTaskId: string;
+  parentAgentId: string;
+  agentId: string;
+  task: string;
+  status: 'running' | 'done' | 'failed';
+  startedAt: string;
+  finishedAt?: string;
+  outcome?: SubagentOutcome;
+  error?: string;
+}
+
+/** 内存中活跃与最近的后台子任务注册表。 */
+export const activeBackgroundSubagents = new Map<string, BackgroundSubagentRecord>();
+
+/** 查询后台子任务状态。 */
+export function getBackgroundSubagent(subtaskId: string): BackgroundSubagentRecord | undefined {
+  return activeBackgroundSubagents.get(subtaskId);
+}
+
+/** 按父任务 ID 查询所有后台子任务。 */
+export function listBackgroundSubagents(parentTaskId?: string): BackgroundSubagentRecord[] {
+  const all = Array.from(activeBackgroundSubagents.values());
+  if (!parentTaskId) return all;
+  return all.filter((item) => item.parentTaskId === parentTaskId);
+}
+
 /**
  * 构造派生器。
  *
  * 子任务的 depth 由调用方（spawn-subagent 工具）算好并传入，本函数原样下传，
  * 循环内部会再把它塞进 ToolContext，于是深度约束沿派生链自然传递。
+ * 支持 background: true 异步派生执行。
  */
 export function createSubagentSpawner(runner: SubagentRunner): SubagentSpawner {
   return async (request: SubagentRequest): Promise<SubagentOutcome> => {
@@ -54,6 +84,46 @@ export function createSubagentSpawner(runner: SubagentRunner): SubagentSpawner {
       depth: request.depth,
       signal: request.signal,
     };
+
+    if (request.background) {
+      const subtaskId = `bg-sub:${request.parentTaskId}:${request.agentId}:${Date.now()}`;
+      const record: BackgroundSubagentRecord = {
+        subtaskId,
+        parentTaskId: request.parentTaskId,
+        parentAgentId: request.parentAgentId,
+        agentId: request.agentId,
+        task: request.task,
+        status: 'running',
+        startedAt: new Date().toISOString(),
+      };
+      activeBackgroundSubagents.set(subtaskId, record);
+
+      // 非阻塞后台异步执行
+      runner.runTask(runRequest)
+        .then((outcome) => {
+          record.status = outcome.status === 'done' ? 'done' : 'failed';
+          record.finishedAt = new Date().toISOString();
+          record.outcome = {
+            text: outcome.text,
+            taskId: outcome.taskId,
+            usage: outcome.usage,
+            status: outcome.status,
+          };
+          if (outcome.error !== undefined) record.error = outcome.error;
+        })
+        .catch((err) => {
+          record.status = 'failed';
+          record.finishedAt = new Date().toISOString();
+          record.error = err instanceof Error ? err.message : String(err);
+        });
+
+      return {
+        text: `子智能体 ${request.agentId} 已在后台启动执行。后台任务句柄：${subtaskId}`,
+        taskId: subtaskId,
+        status: 'running',
+      };
+    }
+
     const outcome = await runner.runTask(runRequest);
 
     // 子任务失败不抛异常：把失败原因当作文本交回父智能体，
@@ -64,7 +134,7 @@ export function createSubagentSpawner(runner: SubagentRunner): SubagentSpawner {
         + (outcome.error === undefined ? '' : '原因：' + outcome.error)
         + (outcome.text === '' ? '' : '\n已产生的中间结论：\n' + outcome.text);
 
-    const result: SubagentOutcome = { text };
+    const result: SubagentOutcome = { text, status: outcome.status };
     if (outcome.taskId !== undefined) result.taskId = outcome.taskId;
     if (outcome.usage !== undefined) result.usage = outcome.usage;
     return result;
