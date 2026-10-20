@@ -5318,6 +5318,9 @@ async function refresh() {
       currentActiveProject = projects[0].path;
     }
 
+    renderProviders();
+    renderModels();
+    fillSelects();
     renderProjects();
     renderSchedules();
     renderMemories();
@@ -5326,8 +5329,6 @@ async function refresh() {
     renderPlugins();
     renderPermissions();
     renderAgents();
-    renderProviders();
-    renderModels();
     renderTargets();
     renderTelemetry();
     renderTelegramView();
@@ -6032,51 +6033,44 @@ window.saveVoiceWakeAutoExec = async (autoExecute) => {
 };
 
 window.testVoiceWakeMic = async (btn) => {
-  const vwc = window.voiceWakeController;
-  if (!vwc) {
-    showToast('语音唤醒控制器尚未就绪', 'warn');
-    return;
-  }
-  const statusBadge = $('voiceWakeStatusBadge');
-  const statusText = $('voiceWakeStatusText');
-  showToast(`正在测试麦克风录音与唤醒词识别（请说出唤醒词: ${vwc.settings.wakeWord || '小赫'}）...`, 'info');
-  vwc.playWakeChime();
-
+  const controller = window.voiceWakeController;
+  if (!controller) { showToast('语音唤醒控制器尚未就绪', 'warning'); return; }
+  if (!controller.settings.enabled) { showToast('请先开启语音唤醒监听', 'warning'); return; }
+  if (btn) btn.disabled = true;
   try {
-    if (vwc.startListening) {
-      vwc.startListening();
-    }
-    if (statusBadge) statusBadge.style.color = 'var(--primary)';
-    if (statusText) statusText.textContent = '收音测试中...';
-
-    setTimeout(() => {
-      showToast('麦克风收音探针测试完毕，声学驱动就绪', 'success');
-      if (statusText) statusText.textContent = '已就绪';
-    }, 2500);
-  } catch (err) {
-    showToast(`麦克风测试失败: ${err.message}`, 'error');
+    const started = await controller.startListening();
+    if (!started) throw new Error(controller.getDiagnostics().detail || '麦克风未启动');
+    showToast('麦克风已连接，请喊“贾维斯”，停顿后等待回应', 'success');
+  } catch (error) {
+    showToast('麦克风测试失败：' + error.message, 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+    window.renderVoiceWakeStatus();
   }
 };
 
+window.renderVoiceWakeStatus = () => {
+  const controller = window.voiceWakeController;
+  const text = $('voiceWakeStatusText');
+  if (!controller || !text) return;
+  const info = controller.getDiagnostics();
+  const labels = { starting: '正在连接麦克风', listening: '监听中', woken: '已唤醒', recording: '正在收音', transcribing: '正在识别语音', executing: '执行操作中', error: '监听异常' };
+  text.textContent = labels[info.status] || (info.listening ? '监听中' : '未监听');
+  const badge = $('voiceWakeStatusBadge');
+  if (badge) {
+    badge.style.color = info.status === 'error' ? 'var(--danger)' : info.listening ? 'var(--primary)' : 'var(--text-muted)';
+    badge.title = info.detail;
+  }
+  const detail = $('voiceWakeDetailText');
+  if (detail) detail.textContent = [info.detail, info.microphone, info.lastRecognizedText ? `最近识别：${info.lastRecognizedText}` : ''].filter(Boolean).join(' · ');
+  const meter = $('voiceWakeInputMeter');
+  if (meter) meter.value = Math.min(1, info.level * 10);
+};
+
 if (window.voiceWakeController) {
-  window.voiceWakeController.onStatusChange((status) => {
-    const textEl = $('voiceWakeStatusText');
-    const badgeEl = $('voiceWakeStatusBadge');
-    if (!textEl || !badgeEl) return;
-    if (status === 'listening') {
-      textEl.textContent = '监听中';
-      badgeEl.style.color = 'var(--primary)';
-    } else if (status === 'woken' || status === 'recording') {
-      textEl.textContent = '已唤醒/收音中';
-      badgeEl.style.color = '#f43f5e';
-    } else if (status === 'executing') {
-      textEl.textContent = '执行操作中';
-      badgeEl.style.color = '#eab308';
-    } else {
-      textEl.textContent = '就绪';
-      badgeEl.style.color = 'var(--text-muted)';
-    }
-  });
+  window.voiceWakeController.onStatusChange(() => window.renderVoiceWakeStatus());
+  window.renderVoiceWakeStatus();
+  setInterval(() => window.renderVoiceWakeStatus(), 500);
 }
 
 window.switchProviderModelView = (mode) => {
@@ -6225,6 +6219,15 @@ window.toggleSelectProvider = (id) => {
   updateBatchBars();
   renderProviders();
 };
+
+function resetProviderModelFilters() {
+  pmSearchKeyword = '';
+  pmStatusFilter = 'all';
+  pmCapabilityFilter = 'all';
+  if ($('pmSearchInput')) $('pmSearchInput').value = '';
+  if ($('pmStatusFilter')) $('pmStatusFilter').value = 'all';
+  if ($('pmCapabilityFilter')) $('pmCapabilityFilter').value = 'all';
+}
 
 function renderProviders() {
   renderProviderMetrics();
@@ -7187,7 +7190,7 @@ function fillSelects() {
 
   const provSelect = $('modelProviderSelect');
   if (provSelect) {
-    provSelect.innerHTML = state.providers.map((p) => `
+    provSelect.innerHTML = (state.providers || []).map((p) => `
       <option value="${esc(p.id)}">${esc(p.name || p.id)}</option>
     `).join('');
   }
@@ -8502,7 +8505,7 @@ window.openProviderDialog = async (id) => {
       .filter(m => (m.providerId || m.provider) === p.id);
     originalDialogModelAliases = new Set(providerModels.map(m => m.alias));
     currentDialogModels = providerModels
-      .map(m => ({ alias: m.alias, model: m.model || m.modelName || m.alias, contextWindow: m.contextWindow || inferDefaultContextWindow(m.model || m.modelName || m.alias) }));
+      .map(m => ({ ...m, model: m.model || m.modelName || m.alias, contextWindow: m.contextWindow || inferDefaultContextWindow(m.model || m.modelName || m.alias) }));
   } else {
     $('providerDialogTitle').textContent = '新增 AI 服务商与模型';
     $('providerPresetRow').style.display = 'block';
@@ -8550,21 +8553,17 @@ $('providerForm')?.addEventListener('submit', async (e) => {
     // 2. 清理在本次编辑中被移除的模型（支持一键清空或单个移除）
     const currentAliases = new Set(currentDialogModels.map(m => m.alias));
     const toDeleteAliases = [...originalDialogModelAliases].filter(alias => !currentAliases.has(alias));
-    if (toDeleteAliases.length > 0) {
-      await window.hap.batchRemoveModels(toDeleteAliases).catch(err => console.warn('批量移除已删除模型警告:', err));
-    }
-
     // 3. 同步保存该服务商名下保留或新增的所有模型
     for (const m of currentDialogModels) {
       const isVision = /(?:^|[-_./: ])(?:vl|vision|omni|image)(?:[-_./: ]|$)|[-_]vl(?:[:.]|$)|qwen.*[-_]?vl|llava|minicpm[-_]?v|internvl|cogvlm|glm-[0-9.]+v|phi-.*(?:vision|multimodal)|gpt-4o|gpt-5|gemini|claude-3|claude-sonnet|claude-opus|gpt-image/i.test(`${m.alias} ${m.model || ''}`);
       const isAudio = m.category === 'audio' || /(?:^|[-_./: ])(?:audio|whisper|asr|tts|voice|speech|cosyvoice|sensevoice|chat-tts|chattts)(?:[-_./: ]|$)/i.test(`${m.alias} ${m.model || ''}`);
       const isImage = m.category === 'image' || /(?:^|[-_./: ])(?:flux|diffusion|sdxl|sd[0-9.]*|midjourney|dall-e|imagen|image-gen)(?:[-_./: ]|$)/i.test(`${m.alias} ${m.model || ''}`);
       const isVideo = m.category === 'video' || /(?:^|[-_./: ])(?:video|cogvideo|hunyuan-video|kling|sora|svd|videox)(?:[-_./: ]|$)/i.test(`${m.alias} ${m.model || ''}`);
-      const caps = ['tools', 'streaming'];
-      if (isVision) caps.push('vision');
-      if (isAudio) caps.push('audio');
-      if (isImage) caps.push('image');
-      if (isVideo) caps.push('video');
+      const caps = Array.isArray(m.capabilities) ? [...m.capabilities] : (isAudio || isImage || isVideo ? [] : ['tools', 'streaming']);
+      if (isVision && !caps.includes('vision')) caps.push('vision');
+      if (isAudio && !caps.includes('audio')) caps.push('audio');
+      if (isImage && !caps.includes('image')) caps.push('image');
+      if (isVideo && !caps.includes('video')) caps.push('video');
       const cat = m.category || (isAudio ? 'audio' : (isImage ? 'image' : (isVideo ? 'video' : (isVision ? 'vision' : undefined))));
       await window.hap.upsertModel({
         alias: m.alias,
@@ -8575,9 +8574,16 @@ $('providerForm')?.addEventListener('submit', async (e) => {
         apiKey: m.apiKey || undefined,
         contextWindow: m.contextWindow || inferDefaultContextWindow(m.model || m.alias),
         capabilities: caps,
-      }).catch(err => console.warn('保存模型警告:', err));
+        maxOutputTokens: m.maxOutputTokens,
+        protocol: m.protocol,
+      });
     }
 
+    if (toDeleteAliases.length > 0) {
+      await window.hap.batchRemoveModels(toDeleteAliases);
+    }
+    resetProviderModelFilters();
+    window.switchProviderModelView('providers');
     $('providerDialog').close();
     showToast(`服务商 ${providerId} 与 ${currentDialogModels.length} 个模型已成功保存！`, 'success');
     await refresh();
@@ -8699,8 +8705,8 @@ window.openModelDialog = (alias) => {
 
   // 确保服务商下拉框已填充
   const provSelect = $('modelProviderSelect');
-  if (provSelect && provSelect.options.length === 0 && state.providers?.length) {
-    provSelect.innerHTML = state.providers.map((p) => `
+  if (provSelect) {
+    provSelect.innerHTML = (state.providers || []).map((p) => `
       <option value="${esc(p.id)}">${esc(p.name || p.id)}</option>
     `).join('');
   }
@@ -8897,7 +8903,7 @@ $('modelForm')?.addEventListener('submit', async (e) => {
     });
 
     if (setAsDefault) {
-      await window.hap.setDefaultModel(alias).catch(err => console.warn('设为主模型警告:', err));
+      await window.hap.setDefaultModel(alias);
       state.defaultModel = alias;
     }
 
@@ -13705,24 +13711,33 @@ window.fetchAndSyncModelsForProvider = async (providerId, clickBtn) => {
         showToast('请至少勾选一个要导入的模型', 'warning');
         return;
       }
-      dialog.close();
-      showToast(`正在导入 ${selectedCbs.length} 个模型...`, 'info');
-      for (const cb of selectedCbs) {
-        const modelName = cb.dataset.model;
-        const alias = modelName.split('/').pop() || modelName;
-        const isVision = isVisionName(modelName);
-        const caps = ['tools', 'streaming'];
-        if (isVision) caps.push('vision');
-        await window.hap.upsertModel({
-          alias,
-          provider: providerId,
-          model: modelName,
-          contextWindow: inferDefaultContextWindow(modelName),
-          capabilities: caps,
-        }).catch(() => {});
+      const confirmButton = $('confirmQuickModelSyncBtn');
+      confirmButton.disabled = true;
+      const importedModels = [];
+      try {
+        for (const cb of selectedCbs) {
+          const modelName = cb.dataset.model;
+          // Reimporting an existing provider model must preserve its settings.
+          if ((state.models || []).some(m => (m.providerId || m.provider) === providerId && m.model === modelName)) continue;
+          const alias = uniqueDialogModelAlias(modelName, undefined, providerId, importedModels);
+          const isVision = isVisionName(modelName);
+          const caps = ['tools', 'streaming'];
+          if (isVision) caps.push('vision');
+          await window.hap.upsertModel({
+            alias, provider: providerId, model: modelName,
+            contextWindow: inferDefaultContextWindow(modelName), capabilities: caps,
+          });
+          importedModels.push({ alias, model: modelName });
+        }
+        dialog.close();
+        resetProviderModelFilters();
+        showToast(`已从 ${providerId} 新增 ${importedModels.length} 个模型，已有模型保持原配置`, 'success');
+      } catch (error) {
+        showToast(`导入中断，已新增 ${importedModels.length} 个模型：${error.message}`, 'error');
+      } finally {
+        confirmButton.disabled = false;
+        await refresh();
       }
-      showToast(`成功从 ${providerId} 导入并生效 ${selectedCbs.length} 个模型！`, 'success');
-      await refresh();
     };
 
     $('closeQuickModelSyncBtn').onclick = () => dialog.close();
@@ -13790,8 +13805,8 @@ $('fetchRemoteModelsInDialogBtn')?.addEventListener('click', async () => {
           const kw = (filterInput?.value || '').trim().toLowerCase();
           const toAdd = kw ? res.models.filter(name => name.toLowerCase().includes(kw)) : res.models;
           toAdd.forEach(name => {
-            if (!currentDialogModels.some(m => m.model === name || m.alias === name)) {
-              currentDialogModels.push({ alias: name.split('/').pop(), model: name, contextWindow: inferDefaultContextWindow(name) });
+            if (!currentDialogModels.some(m => m.model === name)) {
+              currentDialogModels.push({ alias: uniqueDialogModelAlias(name), model: name, contextWindow: inferDefaultContextWindow(name) });
             }
           });
           renderCurrentDialogModels();
@@ -13810,9 +13825,20 @@ $('fetchRemoteModelsInDialogBtn')?.addEventListener('click', async () => {
   }
 });
 
+function uniqueDialogModelAlias(model, preferredAlias, providerId, pendingModels = currentDialogModels) {
+  const used = new Set([...(state.models || []), ...pendingModels].map(m => m.alias));
+  const base = preferredAlias || model.split('/').pop() || model;
+  if (!used.has(base)) return base;
+  const qualified = `${providerId || $('providerInputId')?.value.trim() || 'custom'}/${model}`;
+  let alias = qualified;
+  let suffix = 2;
+  while (used.has(alias)) alias = `${qualified}-${suffix++}`;
+  return alias;
+}
+
 window.addModelToDialogFromRemote = (name) => {
-  if (!currentDialogModels.some(m => m.model === name || m.alias === name)) {
-    currentDialogModels.push({ alias: name.split('/').pop(), model: name, contextWindow: inferDefaultContextWindow(name) });
+  if (!currentDialogModels.some(m => m.model === name)) {
+    currentDialogModels.push({ alias: uniqueDialogModelAlias(name), model: name, contextWindow: inferDefaultContextWindow(name) });
     renderCurrentDialogModels();
     showToast(`已添加模型 ${name}`, 'info');
   }
@@ -13828,7 +13854,12 @@ $('addManualModelBtn')?.addEventListener('click', () => {
     showToast('请填写模型名称（如 deepseek-chat）', 'warning');
     return;
   }
-  const alias = aliasInput?.value.trim() || model.split('/').pop() || model;
+  const preferredAlias = aliasInput?.value.trim();
+  if (preferredAlias && [...(state.models || []), ...currentDialogModels].some(m => m.alias === preferredAlias)) {
+    showToast('该模型别名已存在，请使用其他别名，或打开已有模型进行编辑', 'warning');
+    return;
+  }
+  const alias = uniqueDialogModelAlias(model, preferredAlias);
   const contextWindow = parseInt(contextInput?.value, 10) || inferDefaultContextWindow(model);
 
   currentDialogModels.push({ alias, model, contextWindow });

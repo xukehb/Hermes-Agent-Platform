@@ -1,10 +1,11 @@
+import { SpeechService, type SpeechSettingsPatch } from '../gui/speech-service.js';
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { cors } from 'hono/cors';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { networkInterfaces } from 'node:os';
+import { networkInterfaces, homedir } from 'node:os';
 import { isIP } from 'node:net';
 import { AgentOrchestrator } from '../agent/index.js';
 import { BUILTIN_PROVIDERS, ConfigResolver, loadConfig, resolveConfigPath } from '../config/index.js';
@@ -271,6 +272,26 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
   }
 
   // 1. 系统快照接口
+  const speechService = new SpeechService(process.env.HAP_GUI_DATA_DIR || process.env.HAP_DATA_DIR || join(homedir(), '.hap', 'gui'));
+  app.get('/api/speech/settings', (c) => {
+    try { return c.json({ok: true, data: speechService.getSettings()}); }
+    catch (err) { return c.json({ok: false, error: String(err)}, 400); }
+  });
+  app.post('/api/speech/settings', async (c) => {
+    try { return c.json({ok: true, data: speechService.saveSettings(await c.req.json<SpeechSettingsPatch>())}); }
+    catch (err) { return c.json({ok: false, error: String(err)}, 400); }
+  });
+  app.post('/api/speech/transcribe', async (c) => {
+    try {
+      if (speechService.getSettings().asrProvider !== 'tencent') throw new Error('请在语音设置中选择腾讯云语音识别');
+      return c.json(await speechService.transcribe(await c.req.json()));
+    } catch (err) { return c.json({ok:false,error:String(err)},400); }
+  });
+  app.post('/api/speech/synthesize', async (c) => {
+    try { const body = await c.req.json<{text: string}>(); return c.json({ok: true, data: await speechService.synthesize(body.text)}); }
+    catch (err) { return c.json({ok: false, error: String(err)}, 400); }
+  });
+
   app.get('/api/snapshot', (c) => {
     try {
       const cfg = loadConfig(configPath ? { path: configPath } : {});
@@ -918,6 +939,19 @@ export function createWebApp(options: WebServerOptions = {}): Hono {
         };
 
         window.hap = {
+          getSpeechSettings: async () => {
+            const res = await fetch('/api/speech/settings', {headers: authHeader}).then(r => r.json());
+            if (!res.ok) throw new Error(res.error); return res.data;
+          },
+          saveSpeechSettings: async (patch) => {
+            const res = await fetch('/api/speech/settings', {method: 'POST', headers: {'Content-Type': 'application/json', ...authHeader}, body: JSON.stringify(patch)}).then(r => r.json());
+            if (!res.ok) throw new Error(res.error); return res.data;
+          },
+          transcribeAudio: async (payload) => fetch('/api/speech/transcribe', {method:'POST', headers:{'Content-Type':'application/json', ...authHeader}, body:JSON.stringify(payload)}).then(r => r.json()),
+          synthesizeSpeech: async (text) => {
+            const res = await fetch('/api/speech/synthesize', {method: 'POST', headers: {'Content-Type': 'application/json', ...authHeader}, body: JSON.stringify({text})}).then(r => r.json());
+            if (!res.ok) throw new Error(res.error); return res.data;
+          },
           snapshot: async () => {
             const res = await fetch('/api/snapshot', { headers: authHeader }).then(r => r.json());
             return res.data || {};

@@ -1,3 +1,5 @@
+import { SpeechService, type SpeechSettingsPatch } from './speech-service.js';
+import { homedir } from 'node:os';
 import { app, BrowserWindow, desktopCapturer, dialog, ipcMain, Menu, screen, session, shell } from 'electron';
 import electronUpdater from 'electron-updater';
 import { join } from 'node:path';
@@ -15,6 +17,7 @@ if (process.platform === 'linux') {
 }
 
 const service = new GuiService();
+const speechService = new SpeechService(process.env.HAP_GUI_DATA_DIR || join(homedir(), '.hap', 'gui'));
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const { autoUpdater } = electronUpdater;
 const updaterAdapter: DesktopUpdaterAdapter = {
@@ -92,6 +95,7 @@ function ensureBallWindow(): BrowserWindow {
       preload: rendererPath('preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
+      backgroundThrottling: false,
     },
   });
 
@@ -240,12 +244,15 @@ function registerIpc(): void {
   ipcMain.handle('gui:setDefaultModelCategory', (_event, payload: { category: string; alias: string }) =>
     invoke(() => service.setDefaultModelCategory(payload.category, payload.alias))
   );
+  ipcMain.handle('gui:getSpeechSettings', () => invoke(() => speechService.getSettings()));
+  ipcMain.handle('gui:saveSpeechSettings', (_event, patch: SpeechSettingsPatch) => invoke(() => speechService.saveSettings(patch)));
+  ipcMain.handle('gui:synthesizeSpeech', (_event, text: string) => invoke(() => speechService.synthesize(text)));
   ipcMain.handle('gui:getVoiceWakeSettings', () => invoke(() => service.getVoiceWakeSettings()));
   ipcMain.handle('gui:updateVoiceWakeSettings', (_event, patch: Record<string, unknown>) =>
     invoke(() => service.updateVoiceWakeSettings(patch))
   );
   ipcMain.handle('gui:transcribeAudio', (_event, payload: { audioBase64: string; mimeType?: string; modelAlias?: string }) =>
-    invoke(() => service.transcribeAudio(payload))
+    invoke<{ok: boolean; text?: string; error?: string}>(() => speechService.getSettings().asrProvider === 'tencent' ? speechService.transcribe(payload) : service.transcribeAudio(payload))
   );
   ipcMain.handle('gui:captureScreen', async () => {
     try {
@@ -619,6 +626,7 @@ async function createWindow(): Promise<void> {
       preload: rendererPath('preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
+      backgroundThrottling: false,
     },
   });
 

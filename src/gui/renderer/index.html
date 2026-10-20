@@ -1125,14 +1125,46 @@
                   <div style="display:flex;align-items:center;gap:8px;">
                     <span id="voiceWakeStatusBadge" class="badge" style="font-size:11px;padding:3px 8px;background:var(--bg-surface);border:1px solid var(--border-default);color:var(--primary);display:inline-flex;align-items:center;gap:4px;">
                       <span style="width:6px;height:6px;border-radius:50%;background:var(--primary);display:inline-block;"></span>
-                      <span id="voiceWakeStatusText">监听中</span>
+                      <span id="voiceWakeStatusText">未监听</span>
                     </span>
+                    <meter id="voiceWakeInputMeter" min="0" max="1" value="0" aria-label="麦克风输入电平" style="width:70px;"></meter>
                     <button type="button" class="btn secondary" id="testVoiceMicBtn" onclick="window.testVoiceWakeMic(this)" style="font-size:11.5px;padding:4px 10px;">
                       麦克风测试
                     </button>
                   </div>
                 </div>
               </div>
+
+              <p id="voiceWakeDetailText" role="status" style="font-size:12px;color:var(--text-secondary);margin:0 0 12px;overflow-wrap:anywhere;">语音监听尚未启动</p>
+              <p style="font-size:12px;color:var(--text-secondary);margin:0 0 12px;">播报时可直接说话打断；系统会先识别内容，避免把扬声器回声当成插话。</p>
+              <details class="card" id="speechSettingsPanel" style="padding:14px 16px;margin-bottom:16px;">
+                <summary style="cursor:pointer;font-weight:600;">贾维斯语音设置 · 本地 / 腾讯云 TTS + ASR</summary>
+                <form id="speechSettingsForm" style="margin-top:14px;">
+                  <div class="form-grid">
+                    <div class="form-group"><label for="speechProvider">语音合成服务</label><select id="speechProvider"><option value="local">本地系统语音</option><option value="tencent">腾讯云 TTS</option></select></div>
+                    <div class="form-group"><label for="speechAsrProvider">语音转文字服务</label><select id="speechAsrProvider"><option value="model">已配置的语音模型</option><option value="tencent">腾讯云 ASR（共用下方凭据）</option></select></div>
+                    <div class="form-group"><label for="speechAsrEngine">识别语言</label><select id="speechAsrEngine"><option value="16k_zh">普通话</option><option value="16k_en">英语</option><option value="16k_yue">粤语</option></select></div>
+                    <div class="form-group"><label for="speechRegion">腾讯云地域</label><input id="speechRegion" value="ap-guangzhou" placeholder="ap-guangzhou" /></div>
+                    <div class="form-group"><label for="speechSecretId">SecretId</label><input id="speechSecretId" type="password" autocomplete="off" placeholder="留空保留已保存的凭据" /></div>
+                    <div class="form-group"><label for="speechSecretKey">SecretKey</label><input id="speechSecretKey" type="password" autocomplete="new-password" placeholder="留空保留已保存的凭据" /></div>
+                    <div class="form-group"><label for="speechVoicePreset">男声音色预设</label><select id="speechVoicePreset"><option value="">自定义音色</option><option value="101004">智云 · 通用男声</option><option value="601008">爱小豪 · 多情感聊天男声</option><option value="603006">沉稳青叔 · 自然聊天男声</option></select></div>
+                    <div class="form-group"><label for="speechVoiceType">腾讯云音色 ID</label><input id="speechVoiceType" type="number" min="0" step="1" value="1001" required /><small>按腾讯云控制台中已开通的音色填写</small></div>
+                    <div class="form-group"><label for="speechSpeed">语速（-2 至 6，0 为正常）</label><input id="speechSpeed" type="number" min="-2" max="6" step="0.1" value="0" required /></div>
+                    <div class="form-group"><label for="speechEmotionCategory">语音情感</label><select id="speechEmotionCategory"><option value="">不指定（兼容通用音色）</option><option value="peaceful">平静、温和</option><option value="happy">高兴、亲切</option><option value="neutral">自然中性</option></select><small>仅支持情感控制的音色可用；高级音色需对应资源包。</small></div>
+                    <div class="form-group"><label for="speechEmotionIntensity">情感强度（50 至 200）</label><input id="speechEmotionIntensity" type="number" min="50" max="200" step="1" value="100" required /></div>
+                    <div class="form-group"><label for="speechVolume">音量（-10 至 10，0 为正常）</label><input id="speechVolume" type="number" min="-10" max="10" step="0.1" value="0" required /></div>
+                    <div class="form-group"><label for="speechFallback"><input id="speechFallback" type="checkbox" checked /> 云语音失败时使用本地语音</label></div>
+                  </div>
+                  <p id="speechCredentialStatus" role="status" style="font-size:12px;color:var(--text-secondary);">正在读取配置…</p>
+                  <p style="font-size:12px;color:var(--text-secondary);">腾讯云需先开通语音合成服务；试听和语音回复会调用所选服务。凭据仅保存在本机，设置页不回显密钥。</p>
+                  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <button type="submit" id="saveSpeechSettingsBtn" class="btn primary">保存语音设置</button>
+                    <button type="button" id="testSpeechSettingsBtn" class="btn secondary">保存并试听</button>
+                    <button type="button" id="stopSpeechTestBtn" class="btn secondary">停止播报</button>
+                    <span id="speechPlaybackStatus" role="status" style="font-size:12px;"></span>
+                  </div>
+                </form>
+              </details>
 
               <!-- 控制台主卡片 -->
               <div class="card" style="border:1px solid var(--border-default);border-radius:12px;box-shadow:var(--shadow-sm);background:var(--bg-surface);overflow:hidden;">
@@ -6170,6 +6202,7 @@
     <script src="./modules/git-controller.js"></script>
     <script src="./modules/terminal-controller.js"></script>
     <script src="./jarvis-speech.js"></script>
+    <script src="./speech-settings.js"></script>
     <script src="./voice-wake.js"></script>
     <script src="./app.js"></script>
   </body>

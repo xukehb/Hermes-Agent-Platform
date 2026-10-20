@@ -26,6 +26,16 @@
         arcReactorTheme: true,
       };
 
+      this.statusDetail = '语音监听尚未启动';
+      this.lastRecognizedText = '';
+      this.inputLevel = 0;
+      this.noiseFloor = 0.002;
+      this.voiceThreshold = 0.007;
+      this.startPromise = null;
+      this.listenGeneration = 0;
+      this.isTranscribing = false;
+      this.recordingLimitTimer = null;
+      this.recordedDuringPlayback = false;
       this.status = 'idle'; // idle | listening | woken | recording | transcribing | executing
       this.statusListeners = new Set();
       this.wakeListeners = new Set();
@@ -94,7 +104,7 @@
 
     onStatusChange(fn) {
       this.statusListeners.add(fn);
-      fn(this.status, '');
+      fn(this.status, this.statusDetail);
       return () => this.statusListeners.delete(fn);
     }
 
@@ -115,6 +125,7 @@
 
     _notifyStatus(newStatus, detail = '') {
       this.status = newStatus;
+      this.statusDetail = detail;
       for (const fn of this.statusListeners) {
         try {
           fn(newStatus, detail);
@@ -172,93 +183,97 @@
       }
     }
 
-    async startListening() {
-      if (!this.settings.enabled) return;
-      if (this.status === 'listening' || this.status === 'woken' || this.status === 'recording') return;
+    getDiagnostics() {
+      const track = this.mediaStream?.getAudioTracks()[0];
+      return {
+        status: this.status, detail: this.statusDetail,
+        listening: Boolean(track?.readyState === 'live' && track.enabled && !track.muted && this.audioContext?.state === 'running' && this.vadTimer),
+        microphone: track?.label || '', level: this.inputLevel, threshold: this.voiceThreshold,
+        lastRecognizedText: this.lastRecognizedText,
+      };
+    }
 
+    startListening() {
+      if (!this.settings.enabled) return Promise.resolve(false);
+      if (this.startPromise) return this.startPromise;
+      if (this.getDiagnostics().listening) return Promise.resolve(true);
+      this.startPromise = this._openMicrophone().finally(() => { this.startPromise = null; });
+      return this.startPromise;
+    }
+
+    async _openMicrophone() {
+      const generation = ++this.listenGeneration;
+      this._notifyStatus('starting', '正在连接麦克风…');
       try {
-        if (!navigator.mediaDevices?.getUserMedia) {
-          this._notifyStatus('idle', '当前系统不支持麦克风音频采集');
-          return;
-        }
-
-        if (!this.mediaStream) {
-          this.mediaStream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true,
-            },
-            video: false,
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error('当前系统不支持麦克风音频采集');
+        if (!this.mediaStream?.active) {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false,
           });
+          if (generation !== this.listenGeneration || !this.settings.enabled) {
+            stream.getTracks().forEach(track => track.stop());
+            return false;
+          }
+          this.mediaStream = stream;
         }
-
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (!AudioCtx) {
-          this._notifyStatus('idle', '当前环境不支持 AudioContext');
-          return;
-        }
-
-        if (!this.audioContext || this.audioContext.state === 'closed') {
-          this.audioContext = new AudioCtx();
-        }
-
-        if (this.audioContext.state === 'suspended') {
-          await this.audioContext.resume();
-        }
-
+        const AudioCtx = global.AudioContext || global.webkitAudioContext;
+        if (!AudioCtx) throw new Error('当前环境不支持 AudioContext');
+        if (!this.audioContext || this.audioContext.state === 'closed') this.audioContext = new AudioCtx();
+        if (this.audioContext.state === 'suspended') await this.audioContext.resume();
+        if (generation !== this.listenGeneration || !this.settings.enabled) return false;
+        if (this.audioContext.state !== 'running') throw new Error('音频设备尚未启动，请点击麦克风测试重试');
+        this.sourceNode?.disconnect();
         this.sourceNode = this.audioContext.createMediaStreamSource(this.mediaStream);
         this.analyser = this.audioContext.createAnalyser();
-        this.analyser.fftSize = 512;
+        this.analyser.fftSize = 1024;
         this.analyser.smoothingTimeConstant = 0.3;
         this.sourceNode.connect(this.analyser);
-
-        this._notifyStatus('listening', `贾维斯待命（喊“${this.settings.wakeWord || '贾维斯'}”对话）`);
+        const track = this.mediaStream.getAudioTracks()[0];
+        if (!track || track.readyState !== 'live') throw new Error('麦克风设备已断开，请连接后重试');
+        track.onended = () => {
+          this.stopListening();
+          this._notifyStatus('error', '麦克风设备已断开，请连接后点击麦克风测试');
+        };
+        this.noiseFloor = 0.002;
         this._startVadMonitor();
-      } catch (err) {
-        console.warn('[VoiceWake] startListening failed:', err);
-        this._notifyStatus('idle', '麦克风权限未授予或音频设备忙');
+        this._restoreStandbyStatus();
+        return true;
+      } catch (error) {
+        if (generation !== this.listenGeneration) return false;
+        const messages = {
+          NotAllowedError: '麦克风权限未授予，请在系统设置中允许 Hermes / Electron 使用麦克风',
+          NotFoundError: '未找到麦克风，请连接音频输入设备后重试',
+          NotReadableError: '麦克风设备无法读取，可能被其他应用占用，请重试',
+        };
+        this.stopListening();
+        this._notifyStatus('error', messages[error.name] || error.message || '麦克风启动失败');
+        return false;
       }
     }
 
     _startVadMonitor() {
       clearInterval(this.vadTimer);
-      const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-
-      const sensitivity = Math.max(0.1, Math.min(1.0, this.settings.sensitivity ?? 0.7));
-      const threshold = Math.round(18 * (1.1 - sensitivity * 0.6)); // 8 ~ 18 之间
-
+      const samples = new Float32Array(this.analyser.fftSize);
+      const sensitivity = Math.max(0.1, Math.min(1, this.settings.sensitivity ?? 0.7));
+      const minimum = 0.012 - sensitivity * 0.007;
       this.vadTimer = setInterval(() => {
-        if (!this.analyser || this.isManualRecording || this.isProcessingCommand) return;
-
-        this.analyser.getByteFrequencyData(dataArray);
-
-        let sum = 0;
-        const validBins = Math.min(dataArray.length, 120);
-        for (let i = 2; i < validBins; i++) {
-          sum += dataArray[i];
-        }
-        const avg = sum / (validBins - 2);
-
-        if (avg >= threshold) {
-          // 检测到说话声音
-          // 全双工打断 (Barge-in)：如果贾维斯正在播报，用户一开口立刻中断 TTS！
-          if (global.jarvisSpeech?.isSpeaking()) {
-            global.jarvisSpeech.cancel();
-          }
-
+        if (!this.analyser || this.isManualRecording || this.isProcessingCommand || this.isTranscribing) return;
+        this.analyser.getFloatTimeDomainData(samples);
+        this.inputLevel = Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length);
+        this.voiceThreshold = Math.max(minimum, this.noiseFloor * 2.5);
+        const threshold = this.isSpeaking ? this.voiceThreshold * 0.7 : this.voiceThreshold;
+        if (this.inputLevel >= threshold) {
+          if (global.jarvisSpeech?.isSpeaking()) this.recordedDuringPlayback = true;
           clearTimeout(this.silenceTimer);
+          this.silenceTimer = null;
           if (!this.isSpeaking) {
             this.isSpeaking = true;
             this._startChunkRecording();
           }
-        } else if (this.isSpeaking) {
-          // 声音低于阈值，进入静音判定
-          if (!this.silenceTimer) {
-            this.silenceTimer = setTimeout(() => {
-              this.isSpeaking = false;
-              this._stopChunkRecordingAndAnalyze();
-            }, 1200); // 停顿 1.2 秒判定当前语句说完
+        } else {
+          if (!this.isSpeaking) this.noiseFloor = this.noiseFloor * 0.95 + Math.min(this.inputLevel, minimum) * 0.05;
+          if (this.isSpeaking && !this.silenceTimer) {
+            this.silenceTimer = setTimeout(() => { this._stopChunkRecordingAndAnalyze(); }, 900);
           }
         }
       }, 100);
@@ -270,6 +285,7 @@
 
       try {
         this.recordedChunks = [];
+        this.recordedDuringPlayback = Boolean(global.jarvisSpeech?.isSpeaking());
         const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
           ? 'audio/webm;codecs=opus'
           : MediaRecorder.isTypeSupported('audio/webm')
@@ -282,6 +298,8 @@
         };
         recorder.start(100);
         this.mediaRecorder = recorder;
+        clearTimeout(this.recordingLimitTimer);
+        this.recordingLimitTimer = setTimeout(() => this._stopChunkRecordingAndAnalyze(), this.recordedDuringPlayback ? 2000 : 15000);
 
         if (this.status === 'woken' || this.isInActiveDialogue) {
           this._notifyStatus('recording', '正在倾听口述指令...');
@@ -289,17 +307,27 @@
           this._notifyStatus('listening', '检测到语音输入...');
         }
       } catch (err) {
-        console.warn('[VoiceWake] Start chunk recording error:', err);
+        this.isSpeaking = false;
+        this._notifyStatus('error', '录音启动失败：' + err.message);
       }
     }
 
     _stopChunkRecordingAndAnalyze() {
       clearTimeout(this.silenceTimer);
       this.silenceTimer = null;
+      clearTimeout(this.recordingLimitTimer);
+      this.recordingLimitTimer = null;
+      this.isSpeaking = false;
 
       if (!this.mediaRecorder || this.mediaRecorder.state !== 'recording') return;
 
-      this.mediaRecorder.onstop = async () => {
+      const recorder = this.mediaRecorder;
+      const duringPlayback = this.recordedDuringPlayback;
+      this.isTranscribing = true;
+      const generation = this.listenGeneration;
+      recorder.onstop = async () => {
+        try {
+        if (generation !== this.listenGeneration) return;
         const chunks = this.recordedChunks;
         this.recordedChunks = [];
         if (!chunks || chunks.length === 0) {
@@ -307,19 +335,25 @@
           return;
         }
 
-        const blob = new Blob(chunks, { type: this.mediaRecorder.mimeType || 'audio/webm' });
-        // 音频如果太短（小于 0.4 秒或小于 3KB），可能是轻微杂音，直接忽略
-        if (blob.size < 3072) {
+        const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+        // Short wake words can produce small Opus chunks; discard only empty/nearly empty recordings.
+        if (blob.size < 256) {
           this._restoreStandbyStatus();
           return;
         }
 
-        await this._processAudioChunk(blob);
+        await this._processAudioChunk(blob, duringPlayback);
+        } finally {
+          this.isTranscribing = false;
+        }
       };
 
       try {
         this.mediaRecorder.stop();
-      } catch (_) {}
+      } catch (error) {
+        this.isTranscribing = false;
+        this._notifyStatus('error', '录音提交失败：' + error.message);
+      }
     }
 
     _restoreStandbyStatus() {
@@ -330,26 +364,60 @@
       }
     }
 
-    async _processAudioChunk(blob) {
+    async _processAudioChunk(blob, duringPlayback = false) {
       if (this.isProcessingCommand) return;
 
+      const generation = this.listenGeneration;
       this._notifyStatus('transcribing', '正在识别语音...');
       try {
-        const base64Audio = await this._blobToBase64(blob);
-        const res = await window.hap.transcribeAudio({
-          audioBase64,
-          mimeType: blob.type,
-        });
+        const res = await window.hap.transcribeAudio(await this._audioPayload(blob));
 
+        if (generation !== this.listenGeneration) return;
         if (res && res.ok && res.text) {
           const rawText = res.text.trim();
-          this._handleTranscribedText(rawText);
+          this.lastRecognizedText = rawText.slice(0, 140);
+          this._handleTranscribedText(rawText, duringPlayback);
         } else {
-          this._restoreStandbyStatus();
+          if (res?.error) this._notifyStatus('error', res.error);
+          else this._restoreStandbyStatus();
         }
       } catch (err) {
-        console.warn('[VoiceWake] Chunk transcription failed:', err);
-        this._restoreStandbyStatus();
+        if (generation !== this.listenGeneration) return;
+        this._notifyStatus('error', '语音识别失败：' + err.message);
+      }
+    }
+
+    async _audioPayload(blob) {
+      const settings = await global.hap.getSpeechSettings?.();
+      if (settings?.asrProvider !== 'tencent') {
+        return {audioBase64: await this._blobToBase64(blob), mimeType: blob.type};
+      }
+      // MediaRecorder emits WebM/Opus; Tencent SentenceRecognition requires WAV or another supported container.
+      const context = new (global.AudioContext || global.webkitAudioContext)();
+      try {
+        const decoded = await context.decodeAudioData(await blob.arrayBuffer());
+        if (!decoded.length || decoded.duration > 60) throw new Error('单次录音请控制在 60 秒以内');
+        const offline = new global.OfflineAudioContext(1, Math.ceil(decoded.duration * 16000), 16000);
+        const source = offline.createBufferSource();
+        source.buffer = decoded;
+        source.connect(offline.destination);
+        source.start();
+        const rendered = await offline.startRendering();
+        const pcm = rendered.getChannelData(0);
+        const buffer = new ArrayBuffer(44 + pcm.length * 2);
+        const view = new DataView(buffer);
+        const write = (offset, text) => { for (let i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i)); };
+        write(0, 'RIFF'); view.setUint32(4, buffer.byteLength - 8, true); write(8, 'WAVE');
+        write(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+        view.setUint16(22, 1, true); view.setUint32(24, 16000, true); view.setUint32(28, 32000, true);
+        view.setUint16(32, 2, true); view.setUint16(34, 16, true); write(36, 'data'); view.setUint32(40, pcm.length * 2, true);
+        for (let i = 0; i < pcm.length; i++) {
+          const sample = Math.max(-1, Math.min(1, pcm[i]));
+          view.setInt16(44 + i * 2, Math.round(sample * (sample < 0 ? 32768 : 32767)), true);
+        }
+        return {audioBase64: await this._blobToBase64(new Blob([buffer], {type:'audio/wav'})), mimeType:'audio/wav'};
+      } finally {
+        await context.close();
       }
     }
 
@@ -368,9 +436,25 @@
       });
     }
 
-    _handleTranscribedText(rawText) {
+    _handleTranscribedText(rawText, duringPlayback = false) {
       if (!rawText) {
         this._restoreStandbyStatus();
+        return;
+      }
+
+      const speech = global.jarvisSpeech;
+      const playing = Boolean(duringPlayback || speech?.isSpeaking());
+      if (speech?.matchesRecentSpeech?.(rawText)) { this._restoreStandbyStatus(); return; }
+      const matchedWake = this._matchWakeWord(rawText);
+      if (playing) {
+        if (/停止播报|停止播放|暂停播报|别说了|停一下|stop speaking|stop talking/i.test(rawText)) {
+          speech?.cancel();
+          this._startActiveDialogueWindow();
+          return;
+        }
+        speech?.cancel();
+        if (matchedWake) this._triggerWake(matchedWake, rawText);
+        else this.executeCommand(rawText);
         return;
       }
 
@@ -397,6 +481,10 @@
       const wakeWords = [
         wake,
         '贾维斯',
+        '贾维思',
+        '加维斯',
+        '嘉维斯',
+        '家维斯',
         'jarvis',
         '小赫',
         'hermes',
@@ -430,11 +518,6 @@
       this.playWakeChime();
       this._notifyStatus('woken', `已唤醒 [${matchedWord}]`);
 
-      // 贾维斯磁性语音回应：“随时为您效劳，先生。”
-      if (global.jarvisSpeech) {
-        void global.jarvisSpeech.speakGreeting(matchedWord);
-      }
-
       for (const fn of this.wakeListeners) {
         try {
           fn(matchedWord);
@@ -448,6 +531,7 @@
         // 连贯口述：“贾维斯 帮我看看屏幕”
         this.executeCommand(inlineInstruction);
       } else {
+        if (global.jarvisSpeech) void global.jarvisSpeech.speakGreeting(matchedWord);
         // 仅说了唤醒词，开启 10 秒连续倾听窗口
         this._startActiveDialogueWindow();
       }
@@ -712,6 +796,8 @@
 
         recorder.start(100);
         this.mediaRecorder = recorder;
+        clearTimeout(this.recordingLimitTimer);
+        this.recordingLimitTimer = setTimeout(() => this._stopChunkRecordingAndAnalyze(), 15000);
         this.isManualRecording = true;
         this._notifyStatus('recording', '正在录制口述指令...');
       } catch (err) {
@@ -728,18 +814,14 @@
           this._notifyStatus('transcribing', '正在调用语音模型转写...');
           try {
             const blob = new Blob(this.recordedChunks, { type: this.mediaRecorder.mimeType || 'audio/webm' });
-            const base64Audio = await this._blobToBase64(blob);
-            const res = await window.hap.transcribeAudio({
-              audioBase64,
-              mimeType: blob.type,
-            });
+            const res = await window.hap.transcribeAudio(await this._audioPayload(blob));
 
             if (res && res.ok && res.text) {
               const text = res.text.trim();
               resolve(text);
               await this.executeCommand(text);
             } else {
-              const err = res?.error || '未识别到有效语音，请检查是否已在设置中配置语音模型（如 Whisper）';
+              const err = res?.error || '未识别到有效语音，请检查语音设置中的识别服务和凭据';
               this._notifyStatus('idle', err);
               resolve('');
             }
@@ -758,16 +840,23 @@
     }
 
     stopListening() {
+      this.listenGeneration++;
+      clearTimeout(this.recordingLimitTimer);
+      this.recordingLimitTimer = null;
       clearInterval(this.vadTimer);
       clearTimeout(this.silenceTimer);
       clearTimeout(this.wakeStateTimer);
       clearTimeout(this.activeDialogueTimer);
+      this.vadTimer = null;
+      this.silenceTimer = null;
 
       if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
         try {
+          this.mediaRecorder.onstop = null;
           this.mediaRecorder.stop();
         } catch (_) {}
       }
+      this.mediaRecorder = null;
       if (this.sourceNode) {
         try {
           this.sourceNode.disconnect();
@@ -780,7 +869,7 @@
       }
       if (this.mediaStream) {
         try {
-          this.mediaStream.getTracks().forEach((t) => t.stop());
+          this.mediaStream.getTracks().forEach((t) => { t.onended = null; t.stop(); });
         } catch (_) {}
         this.mediaStream = null;
       }
@@ -790,6 +879,10 @@
         } catch (_) {}
         this.audioContext = null;
       }
+      this.sourceNode = null;
+      this.analyser = null;
+      this.inputLevel = 0;
+      this.isTranscribing = false;
       this.isSpeaking = false;
       this.isManualRecording = false;
       this.isProcessingCommand = false;
@@ -798,17 +891,13 @@
     }
 
     async updateSettings(patch) {
+      if (window.hap?.updateVoiceWakeSettings) await window.hap.updateVoiceWakeSettings({ ...this.settings, ...patch });
       this.settings = { ...this.settings, ...patch };
       if (global.jarvisSpeech) {
         global.jarvisSpeech.configure(this.settings);
       }
-      if (window.hap?.updateVoiceWakeSettings) {
-        try {
-          await window.hap.updateVoiceWakeSettings(this.settings);
-        } catch (err) {
-          console.warn('[VoiceWake] Failed to persist settings:', err);
-        }
-      }
+      if (patch.enabled === false) this.stopListening();
+      else if (patch.enabled === true) await this.startListening();
       if (window.hap?.broadcastVoiceWake) {
         try {
           await window.hap.broadcastVoiceWake({
