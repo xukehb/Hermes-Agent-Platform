@@ -28,6 +28,8 @@
       this.cloudApi = global.hap;
       this.currentAudio = null;
       this.finishAudio = null;
+      this._speechQueue = [];
+      this._queueBusy = false;
       this.reloadCloudSettings();
       global.hap?.onVoiceWakeEvent?.((event) => {
         if (event?.type === 'speech_settings_updated') this.reloadCloudSettings();
@@ -92,10 +94,9 @@
     }
 
     /**
-     * 立即打断当前朗读 (全双工打断 / Barge-in)
+     * 仅停止当前正在播放的语音（不清理播报队列），内部错误回退时复用。
      */
-    cancel() {
-      this.lastSpeechAt = Date.now();
+    _stopCurrentUtterance() {
       this.speechId++;
       if (this.finishAudio) this.finishAudio(false);
       this.finishAudio = null;
@@ -104,17 +105,26 @@
         this.currentAudio.removeAttribute('src');
         this.currentAudio = null;
       }
+      this.speaking = false;
+      this.currentUtterance = null;
+    }
+
+    /**
+     * 立即打断当前朗读并清空待播队列 (全双工打断 / Barge-in)
+     */
+    cancel() {
+      this.lastSpeechAt = Date.now();
+      this._stopCurrentUtterance();
       const finish = this.finishCurrent;
       this.finishCurrent = null;
-      this.currentUtterance = null;
       if (finish) finish(false);
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         try {
           window.speechSynthesis.cancel();
         } catch (_) {}
       }
-      this.speaking = false;
-      this.currentUtterance = null;
+      const queued = this._speechQueue.splice(0);
+      for (const entry of queued) entry.resolve(false);
     }
 
     _pickBestVoice(isChinese = true) {
@@ -154,14 +164,42 @@
       if (!this.enabled && !options.preview) return Promise.resolve(false);
       const text = String(rawText || '').trim();
       if (!text) return Promise.resolve(false);
-      this.lastSpokenText = text;
+      return new Promise((resolve) => {
+        const entry = { text, options, priority: options.priority === 'high' ? 2 : 1, resolve };
+        if (entry.priority >= 2) {
+          // 高优先级（如错误）抢先打断当前播报。
+          this.cancel();
+          this._speechQueue.unshift(entry);
+        } else {
+          this._speechQueue.push(entry);
+        }
+        this._drainSpeech();
+      });
+    }
+
+    /**
+     * 单一播报队列：任意时刻只读一段，杜绝插话确认、问候、汇报等多段语音交叠与乱序。
+     */
+    _drainSpeech() {
+      if (this._queueBusy) return;
+      const entry = this._speechQueue.shift();
+      if (!entry) return;
+      this._queueBusy = true;
+      this.lastSpokenText = entry.text;
       this.lastSpeechAt = Date.now();
-      if (this.cloudSettings.provider === 'tencent') return this._speakTencent(text, options);
-      return this._speakLocal(text, options);
+      const task = this.cloudSettings.provider === 'tencent'
+        ? this._speakTencent(entry.text, entry.options)
+        : this._speakLocal(entry.text, entry.options);
+      task
+        .then((ok) => entry.resolve(ok))
+        .catch(() => entry.resolve(false))
+        .finally(() => {
+          this._queueBusy = false;
+          this._drainSpeech();
+        });
     }
 
     _speakTencent(text, options) {
-      this.cancel();
       const id = this.speechId;
       this.speaking = true;
       return new Promise((resolve) => {
@@ -201,10 +239,10 @@
             global.dispatchEvent?.(new CustomEvent('jarvis-speech-error', { detail: { message: error.message, fallback: this.cloudSettings.fallbackToLocal } }));
             if (this.cloudSettings.fallbackToLocal) {
               this.finishCurrent = null;
-              this.cancel();
+              this._stopCurrentUtterance();
               resolve(await this._speakLocal(text, options));
             } else {
-              this.cancel();
+              this._stopCurrentUtterance();
               finish(false);
             }
           }
@@ -220,8 +258,6 @@
 
       const text = String(rawText || '').trim();
       if (!text) return Promise.resolve(false);
-
-      this.cancel();
 
       return new Promise((resolve) => {
         try {
@@ -315,7 +351,7 @@
      */
     speakSummary(rawReply, hasError = false) {
       if (hasError) {
-        return this.speak('抱歉先生，执行过程中出现了一点异常。');
+        return this.speak('抱歉先生，执行过程中出现了一点异常。', { priority: 'high' });
       }
 
       if (!rawReply || typeof rawReply !== 'string') {

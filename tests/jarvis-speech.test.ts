@@ -13,10 +13,10 @@ function engine(){
 describe('Jarvis playback lifecycle',()=>{
   it('settles a cancelled utterance even when the browser never emits onend',async()=>{
     const {speech}=engine();let settled=false;
-    void speech.speak('你好').then(()=>{settled=true;});speech.cancel();await Promise.resolve();expect(settled).toBe(true);
+    void speech.speak('你好').then(()=>{settled=true;});speech.cancel();await vi.waitFor(()=>expect(settled).toBe(true));
   });
-  it('does not let a cancelled utterance clear the next speech state',()=>{
-    const {speech,utterances}=engine();void speech.speak('第一段');void speech.speak('第二段');utterances[1]!.onstart();utterances[0]!.onend();expect(speech.isSpeaking()).toBe(true);
+  it('serializes replies so a new one queues instead of stomping the one playing',()=>{
+    const {speech,utterances}=engine();void speech.speak('第一段');void speech.speak('第二段');expect(utterances).toHaveLength(1);utterances[0]!.onstart();expect(speech.isSpeaking()).toBe(true);
   });
   it('prefers the named Chinese voice before a generic Chinese fallback',()=>{
     const {speech,utterances}=engine();void speech.speak('你好');expect(utterances[0]!.voice?.name).toBe('Yunxi');
@@ -28,8 +28,8 @@ describe('Jarvis cloud playback',()=>{
     const {speech}=engine();let release: (value:unknown)=>void = ()=>{};
     speech.cloudSettings={provider:'tencent',fallbackToLocal:false};
     speech.cloudApi={synthesizeSpeech:vi.fn(()=>new Promise(resolve=>{release=resolve;}))};
-    let settled=false;const pending=speech.speak('测试').then(()=>{settled=true;});expect(speech.cloudApi.synthesizeSpeech).toHaveBeenCalled();speech.cancel();await Promise.resolve();
-    expect(settled).toBe(true);release({audioBase64:'YWJj',mimeType:'audio/mpeg'});await pending;expect(speech.isSpeaking()).toBe(false);
+    let settled=false;const pending=speech.speak('测试').then(()=>{settled=true;});expect(speech.cloudApi.synthesizeSpeech).toHaveBeenCalled();speech.cancel();
+    await vi.waitFor(()=>expect(settled).toBe(true));release({audioBase64:'YWJj',mimeType:'audio/mpeg'});await pending;expect(speech.isSpeaking()).toBe(false);
   });
 });
 

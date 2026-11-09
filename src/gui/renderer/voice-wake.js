@@ -57,6 +57,7 @@
       this.isManualRecording = false;
       this.isProcessingCommand = false;
       this.isInActiveDialogue = false;
+      this.commandGeneration = 0;
 
       this.init();
     }
@@ -445,13 +446,19 @@
       const speech = global.jarvisSpeech;
       const playing = Boolean(duringPlayback || speech?.isSpeaking());
       if (speech?.matchesRecentSpeech?.(rawText)) { this._restoreStandbyStatus(); return; }
+
+      // 万能停止：无论在播报还是执行中，都立即打断语音并中止正在生成的指令
+      const trimmed = rawText.trim();
+      const isStop =
+        /^(停止|停|取消|别说了|别做了|别执行|暂停|停下|住手|全部停止|取消执行|stop|cancel|halt|abort|quit)$/i.test(trimmed) ||
+        /停止播报|停止播放|暂停播报|别说了|停一下|stop speaking|stop talking/i.test(trimmed);
+      if (isStop) {
+        this.cancelCommand();
+        return;
+      }
+
       const matchedWake = this._matchWakeWord(rawText);
       if (playing) {
-        if (/停止播报|停止播放|暂停播报|别说了|停一下|stop speaking|stop talking/i.test(rawText)) {
-          speech?.cancel();
-          this._startActiveDialogueWindow();
-          return;
-        }
         speech?.cancel();
         if (matchedWake) this._triggerWake(matchedWake, rawText);
         else this.executeCommand(rawText);
@@ -471,6 +478,20 @@
       } else {
         this._restoreStandbyStatus();
       }
+    }
+
+    /**
+     * 中断当前语音播报与正在执行的指令（喊“停止/取消”时调用）。
+     */
+    cancelCommand() {
+      this.commandGeneration++;
+      this.isProcessingCommand = false;
+      try {
+        void window.hap?.abortChat?.('voice_wake_session');
+      } catch (_) {}
+      if (global.jarvisSpeech) global.jarvisSpeech.cancel();
+      this._notifyStatus('idle', '已停止当前任务');
+      if (global.jarvisSpeech) void global.jarvisSpeech.speakFastAction('已停止，先生。');
     }
 
     _matchWakeWord(text) {
@@ -615,6 +636,7 @@
       const text = instructionText.trim();
       if (!text || this.isProcessingCommand) return;
       this.isProcessingCommand = true;
+      const gen = ++this.commandGeneration;
       clearTimeout(this.silenceTimer);
       clearTimeout(this.activeDialogueTimer);
 
@@ -679,6 +701,7 @@
                 input: visionPrompt,
                 sessionKey: 'voice_wake_session',
               });
+              if (gen !== this.commandGeneration) return;
               const outcomeText = res?.outcome?.text || res?.output || (typeof res === 'string' ? res : '');
               reply = outcomeText || '屏幕内容已完成分析，先生。';
             } else {
@@ -710,8 +733,10 @@
               }
             }
           } finally {
-            this._startActiveDialogueWindow();
-            this.isProcessingCommand = false;
+            if (gen === this.commandGeneration) {
+              this._startActiveDialogueWindow();
+              this.isProcessingCommand = false;
+            }
           }
           return;
         }
@@ -734,6 +759,7 @@
             sessionKey: 'voice_wake_session',
           });
 
+          if (gen !== this.commandGeneration) return;
           const outcomeText = res?.outcome?.text || res?.output || (typeof res === 'string' ? res : '');
           reply = outcomeText || '指令已成功派发执行完成，先生。';
         } else {
@@ -768,8 +794,10 @@
           }
         }
       } finally {
-        this.isProcessingCommand = false;
-        this._startActiveDialogueWindow();
+        if (gen === this.commandGeneration) {
+          this.isProcessingCommand = false;
+          this._startActiveDialogueWindow();
+        }
       }
     }
 
